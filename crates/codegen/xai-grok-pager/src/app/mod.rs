@@ -662,7 +662,7 @@ async fn bounded_connect(
                 });
             }
             () = tokio::time::sleep(slice) => {
-                let profile = xai_grok_cloud_config::managed_config::startup_profile();
+                let profile = xai_grok_shell::managed_config::startup_profile();
                 let floor = connect_timeout::resolve(connect_ui_timeout_env, profile);
                 let escalated = started + floor;
                 if escalated > deadline {
@@ -1050,7 +1050,7 @@ pub async fn run(mut args: PagerArgs) -> anyhow::Result<bool> {
     let connect_ui_timeout_env = std::env::var(connect_timeout::CONNECT_UI_TIMEOUT_ENV).ok();
     let connect_ui_timeout = connect_timeout::resolve(
         connect_ui_timeout_env.as_deref(),
-        xai_grok_cloud_config::managed_config::startup_profile(),
+        xai_grok_shell::managed_config::startup_profile(),
     );
     if let Some(ref raw) = connect_ui_timeout_env {
         crate::unified_log::write_direct_info(

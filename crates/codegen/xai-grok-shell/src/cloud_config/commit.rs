@@ -56,7 +56,7 @@ fn identity_still_current(
     alpha: Option<&str>,
 ) -> bool {
     match resolve_disk_auth(auth_config.cloned()) {
-        Some(auth) => crate::settings_cache_identity(&auth, alpha) == expected_identity,
+        Some(auth) => crate::cloud_config::settings_cache_identity(&auth, alpha) == expected_identity,
         None => expected_identity.is_empty(),
     }
 }

@@ -14,10 +14,10 @@ use xai_grok_config::effective_config::remote_campaigns_from_settings;
 use xai_grok_login::AuthManager;
 use xai_grok_login::GrokComConfig;
 
-use crate::SettingsEndpoint;
-use crate::settings_cache::Freshness;
-use crate::settings_cache::SettingsCacheManager;
-use crate::settings_cache::SettingsCacheMode;
+use crate::cloud_config::SettingsEndpoint;
+use crate::cloud_config::settings_cache::Freshness;
+use crate::cloud_config::settings_cache::SettingsCacheManager;
+use crate::cloud_config::settings_cache::SettingsCacheMode;
 
 /// Login settings and the auth file's location come from the process environment, not these inputs.
 pub struct CachedConfigInputs<'a> {

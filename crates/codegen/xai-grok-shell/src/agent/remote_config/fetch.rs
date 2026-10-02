@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use super::{ModelFetchAuth, ModelsCacheManager, resolve_models_cache_scope};
 use crate::agent::config::{self, ModelEntry};
 use crate::remote::{FetchModelsResult, ModelSource, active_model_source};
-use xai_grok_cloud_config::remote_settings::{
+use crate::cloud_config::remote_settings::{
     ModelsPrefetch, fetch_catalog, prefetch_catalog_blocking,
 };
 use xai_grok_login::GrokAuth;

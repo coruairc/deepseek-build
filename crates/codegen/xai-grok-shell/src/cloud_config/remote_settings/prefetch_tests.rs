@@ -3,7 +3,7 @@ use std::cell::Cell;
 use indexmap::IndexMap;
 
 use super::run_catalog_prefetch;
-use crate::remote_settings::{
+use crate::cloud_config::remote_settings::{
     CacheAuthMethod, ModelsCacheManager, ModelsCacheScope, ModelsPrefetch, fetch_catalog,
 };
 

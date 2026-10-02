@@ -24,6 +24,7 @@ pub mod builtin;
 pub mod claude_import;
 pub mod claude_import_state;
 pub mod cli_models;
+pub mod cloud_config;
 pub mod config;
 #[cfg(all(test, feature = "config-docs"))]
 pub mod config_docs;
@@ -38,7 +39,7 @@ pub mod inspect;
 pub mod instrumentation;
 pub use xai_grok_telemetry::instrumentation_timer;
 pub mod leader;
-pub use xai_grok_cloud_config::managed_config;
+pub use cloud_config::managed_config;
 pub mod mcp_doctor;
 pub use xai_grok_models as models;
 pub mod plugin;

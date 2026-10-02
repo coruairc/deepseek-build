@@ -939,7 +939,7 @@ impl acp::Agent for MvpAgent {
                 self.auth_manager.hot_swap(auth.clone());
                 self.enforce_grok_code_access(&auth).await;
                 tokio::task::spawn_local(
-                    xai_grok_cloud_config::managed_config::post_login_sync(
+                    crate::cloud_config::managed_config::post_login_sync(
                         Some(auth.clone()),
                     ),
                 );

@@ -1046,7 +1046,7 @@ impl ModelsManager {
             credentials,
             config.endpoints.alpha_test_key.clone(),
             config.client_version.clone(),
-            xai_grok_cloud_config::managed_config::resolve_deployment_id(
+            crate::cloud_config::managed_config::resolve_deployment_id(
                 config.endpoints.deployment_key.as_deref(),
             ),
             None,

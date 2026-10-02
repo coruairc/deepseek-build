@@ -6,8 +6,8 @@ use xai_grok_login::GrokAuth;
 use xai_grok_login::model::AuthStore;
 
 use super::*;
-use crate::settings_cache::SettingsCacheManager;
-use crate::settings_cache::SettingsCacheScope;
+use crate::cloud_config::settings_cache::SettingsCacheManager;
+use crate::cloud_config::settings_cache::SettingsCacheScope;
 
 const LOCAL_PROXY: &str = "https://proxy.example/v1";
 const CAMPAIGN_PROXY: &str = "https://campaign.example/v1";

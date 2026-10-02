@@ -3007,8 +3007,8 @@ impl SessionActor {
                 (transient_retry_attempts > 0).then(|| transient_retry_attempts.to_string());
             if request.x_grok_deployment_id.is_none() {
                 request.x_grok_deployment_id =
-                    xai_grok_cloud_config::managed_config::resolve_deployment_id(
-                        xai_grok_cloud_config::managed_config::resolve_deployment_key().as_deref(),
+                    crate::cloud_config::managed_config::resolve_deployment_id(
+                        crate::cloud_config::managed_config::resolve_deployment_key().as_deref(),
                     );
             }
             if structured_output_native {

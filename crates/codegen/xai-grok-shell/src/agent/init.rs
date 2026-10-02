@@ -11,20 +11,20 @@ use indexmap::IndexMap;
 use std::sync::{Arc, Mutex, TryLockError};
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
-use xai_grok_cloud_config::managed_config::LaunchProfile;
+use crate::cloud_config::managed_config::LaunchProfile;
 use xai_grok_login::{AuthManager, GrokAuth};
 /// The policy refusal stays typed; stringify only at the process boundary.
 #[derive(Debug, thiserror::Error)]
 pub enum BootstrapError {
     #[error("{0}")]
-    PolicyRefusal(xai_grok_cloud_config::managed_config::ManagedPolicyRefusal),
+    PolicyRefusal(crate::cloud_config::managed_config::ManagedPolicyRefusal),
     #[error("{0}")]
     Config(String),
     #[error("bootstrap cancelled")]
     Cancelled,
 }
-impl From<xai_grok_cloud_config::managed_config::ManagedPolicyRefusal> for BootstrapError {
-    fn from(refusal: xai_grok_cloud_config::managed_config::ManagedPolicyRefusal) -> Self {
+impl From<crate::cloud_config::managed_config::ManagedPolicyRefusal> for BootstrapError {
+    fn from(refusal: crate::cloud_config::managed_config::ManagedPolicyRefusal) -> Self {
         Self::PolicyRefusal(refusal)
     }
 }
@@ -132,12 +132,12 @@ pub fn bootstrap_with_cancel(
     ensure_bootstrap_not_cancelled(cancel)?;
     if !cfg!(test) {
         let _timer = crate::instrumentation_timer!("startup.bootstrap.policy_gate");
-        xai_grok_cloud_config::managed_config::managed_policy_gate()?;
+        crate::cloud_config::managed_config::managed_policy_gate()?;
     }
     ensure_bootstrap_not_cancelled(cancel)?;
     if !cfg!(test) {
         let _timer = crate::instrumentation_timer!("startup.bootstrap.refresh_supervisor");
-        xai_grok_cloud_config::managed_config::start_refresh_supervisor(auth_manager);
+        crate::cloud_config::managed_config::start_refresh_supervisor(auth_manager);
     }
     let cfg = {
         let mut timer = crate::instrumentation_timer!("startup.bootstrap.resolve_config");
@@ -310,7 +310,7 @@ fn install_allowed(
     outcome.install_allowed(
         &cfg.grok_com_config,
         warmed_auth,
-        xai_grok_cloud_config::managed_config::policy_repair_pending,
+        crate::cloud_config::managed_config::policy_repair_pending,
     )
 }
 /// Fill `remote_settings` if absent and apply process-global remote side effects.
@@ -372,7 +372,7 @@ fn observed_launch_profile() -> LaunchProfile {
     if cfg!(test) {
         LaunchProfile::Personal
     } else {
-        xai_grok_cloud_config::managed_config::startup_profile()
+        crate::cloud_config::managed_config::startup_profile()
     }
 }
 fn startup_settings_deadline(profile: LaunchProfile) -> std::time::Duration {
@@ -555,15 +555,15 @@ pub fn build_default_otel_layer_config() -> xai_grok_telemetry::otel_layer::Otel
 pub async fn apply_post_login_config(
     authenticated: xai_grok_login::GrokAuth,
 ) -> anyhow::Result<()> {
-    let outcome = xai_grok_cloud_config::managed_config::post_login_sync(Some(authenticated)).await;
+    let outcome = crate::cloud_config::managed_config::post_login_sync(Some(authenticated)).await;
     match outcome {
-        xai_grok_cloud_config::managed_config::ManagedConfigSync::Updated { is_team: true } => {
+        crate::cloud_config::managed_config::ManagedConfigSync::Updated { is_team: true } => {
             eprintln!("Applied your team's managed configuration.");
         }
-        xai_grok_cloud_config::managed_config::ManagedConfigSync::Updated { is_team: false } => {
+        crate::cloud_config::managed_config::ManagedConfigSync::Updated { is_team: false } => {
             eprintln!("Applied your deployment's managed configuration.");
         }
-        xai_grok_cloud_config::managed_config::ManagedConfigSync::Staged => {
+        crate::cloud_config::managed_config::ManagedConfigSync::Staged => {
             eprintln!(
                 "Managed configuration update verified; it takes effect the next time Grok starts."
             );
@@ -584,7 +584,7 @@ pub fn run_cli_logout(grok_com_config: &xai_grok_login::GrokComConfig) -> anyhow
     let result = xai_grok_login::perform_logout(
         &auth_manager,
         None,
-        xai_grok_cloud_config::managed_config::clear_orphan,
+        crate::cloud_config::managed_config::clear_orphan,
     )
     .map_err(|e| anyhow::anyhow!("Failed to clear auth: {e}"))?;
     if !result.was_logged_in {

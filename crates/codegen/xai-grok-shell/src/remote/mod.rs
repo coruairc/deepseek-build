@@ -37,4 +37,4 @@ pub use skills_client::{
 };
 pub use sync::RemoteSync;
 pub use workspaces_client::{ListWorkspacesPage, Workspace, WorkspacesClient, WsError, WsQuery};
-pub use xai_grok_cloud_config::{SettingsFetch, fetch_settings_blocking};
+pub use crate::cloud_config::{SettingsFetch, fetch_settings_blocking};

@@ -14,9 +14,9 @@ use xai_grok_telemetry::instrumentation::{
     InstrumentationMode, InstrumentationTimer, TARGET, current_mode,
 };
 
-use crate::commit::evaluate_commit;
-use crate::settings_cache::{SettingsCacheManager, SettingsCacheMode, SettingsLoad};
-use crate::{Commit, PolicyRepairPending, SettingsEndpoint, SettingsFetch};
+use crate::cloud_config::commit::evaluate_commit;
+use crate::cloud_config::settings_cache::{SettingsCacheManager, SettingsCacheMode, SettingsLoad};
+use crate::cloud_config::{Commit, PolicyRepairPending, SettingsEndpoint, SettingsFetch};
 
 /// A settings load request, built by [`resolve`](Self::resolve) for a startup warm.
 #[derive(Clone)]
@@ -57,7 +57,7 @@ impl SettingsQuery {
     /// `auth` takes priority over the on-disk session for `grok_com_config`.
     pub fn resolve(auth: Option<GrokAuth>, grok_com_config: Option<GrokComConfig>) -> Self {
         let endpoint = SettingsEndpoint::from(&EndpointsConfig::from_effective_config());
-        let auth = auth.or_else(|| crate::resolve_disk_auth(grok_com_config.clone()));
+        let auth = auth.or_else(|| crate::cloud_config::resolve_disk_auth(grok_com_config.clone()));
         Self {
             auth,
             endpoint,
@@ -279,7 +279,7 @@ pub async fn fetch_settings_live(
     };
     let loaded = tokio::task::spawn_blocking(move || {
         let fetched_at = chrono::Utc::now();
-        let fetch = crate::fetch_settings_blocking(
+        let fetch = crate::cloud_config::fetch_settings_blocking(
             query.endpoint.origin(),
             &auth,
             query.endpoint.alpha_test_key(),
@@ -508,7 +508,7 @@ fn load_settings_blocking(
     let origin = scope.account.origin.clone();
     let identity = scope.account.identity.clone();
     let load = settings_cache().load_or_fetch(scope, || {
-        crate::fetch_settings_blocking(
+        crate::cloud_config::fetch_settings_blocking(
             query.endpoint.origin(),
             &auth,
             query.endpoint.alpha_test_key(),
@@ -595,7 +595,7 @@ mod tests {
 
     use tokio_util::sync::CancellationToken;
 
-    use crate::SettingsEndpoint;
+    use crate::cloud_config::SettingsEndpoint;
 
     use super::{
         SettingsOutcome, SettingsQuery, SettingsWait, await_startup_settings,

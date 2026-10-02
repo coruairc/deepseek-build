@@ -41,15 +41,6 @@ pub const SESSION_START_AUTH_DEADLINE: std::time::Duration = std::time::Duration
 
 pub const SESSION_START_SYNC_DEADLINE: std::time::Duration = std::time::Duration::from_secs(8);
 
-/// Base 1s; `GROK_DEPLOYMENT_CONFIG_BACKOFF_MS` overrides it for tests.
-fn retry_backoff(attempt: u32) -> std::time::Duration {
-    let base = std::env::var("GROK_DEPLOYMENT_CONFIG_BACKOFF_MS")
-        .ok()
-        .and_then(|s| s.parse::<u64>().ok())
-        .unwrap_or(1000);
-    std::time::Duration::from_millis(base << attempt.saturating_sub(1))
-}
-
 /// Remote managed-config fetch removed: never touches the network.
 async fn fetch_managed_config(
     _url: &str,
@@ -61,89 +52,6 @@ async fn fetch_managed_config(
     Err(ManagedConfigError::Network(
         "remote managed config is disabled in this build".to_owned(),
     ))
-}
-
-pub(super) fn map_transport_failure(
-    failure: xai_grok_http::TransportFailure,
-) -> ManagedConfigError {
-    use xai_grok_http::TransportFailureKind;
-    match failure.kind {
-        TransportFailureKind::CertificateUntrusted => {
-            ManagedConfigError::CertificateUntrusted(policy::certificate_detail(
-                failure.detail,
-                xai_grok_extra_ca::configured_bundle_env(),
-                xai_grok_extra_ca::extra_root_ders().len(),
-            ))
-        }
-        TransportFailureKind::CertificateInvalid => {
-            ManagedConfigError::CertificateInvalid(failure.detail)
-        }
-        TransportFailureKind::Unreachable => ManagedConfigError::Network(failure.detail),
-        TransportFailureKind::Interrupted => {
-            ManagedConfigError::ConnectionInterrupted(failure.detail)
-        }
-        // A builder/redirect failure is a client-side defect, not a bad server response: terminal.
-        TransportFailureKind::Permanent => ManagedConfigError::RequestFailed(failure.detail),
-    }
-}
-
-fn map_send_error(e: &reqwest::Error) -> ManagedConfigError {
-    map_transport_failure(xai_grok_http::TransportFailure::classify(e))
-}
-
-async fn fetch_managed_config_once(
-    client: &reqwest::Client,
-    url: &str,
-    token: &str,
-    source: ManagedConfigSource,
-    echo_principal: Option<&str>,
-) -> Result<ManagedConfigResponse, ManagedConfigError> {
-    let mut request = client
-        .get(url)
-        .header("Authorization", format!("Bearer {}", token))
-        .timeout(std::time::Duration::from_secs(15));
-    // Replay-probe echo (telemetry only); fail-open so a corrupt sidecar never bricks the fetch.
-    if let Some(nonce) = xai_grok_config::signed_policy::stored_envelope_nonce(
-        &xai_dirs::grok_home(),
-        echo_principal,
-    ) && let Ok(value) = reqwest::header::HeaderValue::from_str(&nonce)
-    {
-        request = request.header(
-            xai_grok_config::signed_policy::MANAGED_CONFIG_NONCE_ECHO_HEADER,
-            value,
-        );
-    }
-
-    let resp = match request.send().await {
-        Ok(r) if r.status().is_success() => r,
-        Ok(r) => {
-            let status = r.status().as_u16();
-            tracing::debug!(status, "managed config fetch failed");
-            return Err(if status == 401 || status == 403 {
-                source.auth_rejected_error()
-            } else {
-                ManagedConfigError::ServerError { status }
-            });
-        }
-        Err(e) => {
-            let err = map_send_error(&e);
-            tracing::debug!(error = %err, "managed config fetch error");
-            return Err(err);
-        }
-    };
-
-    // reqwest's `json()` tags a mid-body drop and malformed JSON both as `Kind::Decode`;
-    // reading `bytes()` first keeps interruption (retryable) apart from bad JSON (terminal).
-    let bytes = match resp.bytes().await {
-        Ok(b) => b,
-        Err(e) => {
-            return Err(ManagedConfigError::ConnectionInterrupted(
-                xai_grok_http::error_cause_chain(&e),
-            ));
-        }
-    };
-    serde_json::from_slice::<ManagedConfigResponse>(&bytes)
-        .map_err(|e| ManagedConfigError::InvalidResponse(e.to_string()))
 }
 
 /// Clamped >= 1s: `tokio::time::interval` panics on a zero period.

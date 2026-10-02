@@ -1,4 +1,4 @@
-use crate::managed_config::LaunchProfile;
+use crate::cloud_config::managed_config::LaunchProfile;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, strum::AsRefStr, strum::IntoStaticStr)]
 pub enum DegradedStartCause {

@@ -4,7 +4,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 use super::{ModelsCacheManager, ModelsCacheScope, evaluate_models_commit};
-use crate::Commit;
+use crate::cloud_config::Commit;
 
 pub enum ModelsPrefetch<E> {
     Cached(IndexMap<String, E>),
@@ -146,7 +146,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::remote_settings::CacheAuthMethod;
+    use crate::cloud_config::remote_settings::CacheAuthMethod;
 
     fn scope(origin: &str, identity: &str) -> ModelsCacheScope {
         ModelsCacheScope {

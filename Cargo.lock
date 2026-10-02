@@ -12607,41 +12607,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xai-grok-cloud-config"
-version = "0.1.0"
-dependencies = [
- "axum",
- "blake3",
- "chrono",
- "fs2",
- "futures",
- "globset",
- "hmac",
- "indexmap",
- "prod-mc-cli-chat-proxy-types",
- "reqwest 0.12.24",
- "serde",
- "serde_json",
- "serial_test",
- "sha2 0.10.9",
- "strum 0.27.2",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
- "toml",
- "tracing",
- "xai-dirs",
- "xai-grok-config",
- "xai-grok-env",
- "xai-grok-extra-ca",
- "xai-grok-http",
- "xai-grok-login",
- "xai-grok-telemetry",
- "xai-grok-version",
-]
-
-[[package]]
 name = "xai-grok-compaction"
 version = "0.1.0"
 dependencies = [
@@ -13181,7 +13146,6 @@ dependencies = [
  "xai-fast-worktree",
  "xai-grok-active-sessions",
  "xai-grok-agent",
- "xai-grok-cloud-config",
  "xai-grok-config",
  "xai-grok-dashboard-store",
  "xai-grok-external-agent-migration",
@@ -13243,7 +13207,6 @@ dependencies = [
  "xai-acp-lib",
  "xai-crash-handler",
  "xai-dirs",
- "xai-grok-cloud-config",
  "xai-grok-config",
  "xai-grok-extra-ca",
  "xai-grok-login",
@@ -13621,6 +13584,8 @@ dependencies = [
  "gethostname",
  "git2",
  "glob",
+ "globset",
+ "hmac",
  "ignore",
  "image",
  "indexmap",
@@ -13679,7 +13644,6 @@ dependencies = [
  "xai-fsnotify",
  "xai-grok-agent",
  "xai-grok-auth",
- "xai-grok-cloud-config",
  "xai-grok-compaction",
  "xai-grok-config",
  "xai-grok-config-types",

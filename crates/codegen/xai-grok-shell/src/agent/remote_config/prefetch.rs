@@ -7,7 +7,7 @@ use super::{
     resolve_disk_auth, resolve_live_models_cache_scope, resolve_models_cache_scope,
 };
 use crate::agent::config::{self, ModelEntry};
-use xai_grok_cloud_config::remote_settings::{
+use crate::cloud_config::remote_settings::{
     InitialModelsLoad, fetch_catalog_blocking, run_catalog_prefetch, start_catalog_load,
 };
 use xai_grok_login::{GrokAuth, GrokComConfig};
@@ -22,7 +22,7 @@ pub(crate) struct PrefetchInputs {
 pub(in crate::agent::remote_config) fn resolve_startup_endpoints() -> config::EndpointsConfig {
     let mut endpoints = config::EndpointsConfig::from_effective_config();
     if endpoints.deployment_key.is_none() {
-        endpoints.deployment_key = xai_grok_cloud_config::managed_config::resolve_deployment_key();
+        endpoints.deployment_key = crate::cloud_config::managed_config::resolve_deployment_key();
     }
     endpoints
 }
@@ -67,7 +67,7 @@ fn models_prefetch_inputs(
     grok_com_config: Option<GrokComConfig>,
     warmed_auth: Option<GrokAuth>,
 ) -> Option<ModelsPrefetchPlan> {
-    if xai_grok_cloud_config::managed_config::policy_repair_pending() {
+    if crate::cloud_config::managed_config::policy_repair_pending() {
         return None;
     }
     // Prefer the live in-memory session so a just-refreshed or just-logged-in

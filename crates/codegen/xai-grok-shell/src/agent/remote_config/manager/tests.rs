@@ -1497,11 +1497,11 @@ fn models_cache_read_is_scoped_by_alpha_test_key() {
     let auth = GrokAuth::test_default();
     let base = mgr.cache_scope();
     let scope_a = ModelsCacheScope {
-        identity: xai_grok_cloud_config::settings_cache_identity(&auth, Some("alpha-a")),
+        identity: crate::cloud_config::settings_cache_identity(&auth, Some("alpha-a")),
         ..base.clone()
     };
     let scope_b = ModelsCacheScope {
-        identity: xai_grok_cloud_config::settings_cache_identity(&auth, Some("alpha-b")),
+        identity: crate::cloud_config::settings_cache_identity(&auth, Some("alpha-b")),
         ..base
     };
     cache.persist(
@@ -1609,7 +1609,7 @@ fn models_commit_gate_detects_account_switch() {
     let scope_for = |user_id: &str| ModelsCacheScope {
         auth_method: CacheAuthMethod::Session,
         origin: "https://origin.example/v1/models".to_string(),
-        identity: xai_grok_cloud_config::settings_cache_identity(
+        identity: crate::cloud_config::settings_cache_identity(
             &GrokAuth {
                 user_id: user_id.to_string(),
                 ..GrokAuth::test_default()
@@ -2202,7 +2202,7 @@ async fn identity_switch_clears_user_pick_latch() {
 }
 #[test]
 fn personal_offline_boot_does_not_emit_a_managed_degraded_warn() {
-    use xai_grok_cloud_config::managed_config::LaunchProfile;
+    use crate::cloud_config::managed_config::LaunchProfile;
     use xai_grok_telemetry::unified_log::LogLevel;
     assert_eq!(
         degraded_log_level(LaunchProfile::Personal),

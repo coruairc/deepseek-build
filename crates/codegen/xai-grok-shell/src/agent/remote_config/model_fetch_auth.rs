@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use crate::agent::auth_method::read_xai_api_key_env;
 use crate::agent::config::{self, ModelEntry};
 use crate::remote::{ModelSource, active_model_source};
-use xai_grok_cloud_config::remote_settings::{CacheAuthMethod, ModelsCacheScope, scope_hash};
+use crate::cloud_config::remote_settings::{CacheAuthMethod, ModelsCacheScope, scope_hash};
 use xai_grok_login::{AuthMode, GrokAuth, GrokComConfig};
 
 /// Returns a login minted by an `auth_provider_command`, which issues it for the operator's own endpoints.
@@ -70,7 +70,7 @@ pub(in crate::agent::remote_config) fn resolve_models_cache_scope(
         // hitting its existing entry; the empty fallback (no credential) still
         // misses safely.
         ModelFetchAuth::Session => auth
-            .map(|a| xai_grok_cloud_config::settings_cache_identity(a, alpha))
+            .map(|a| crate::cloud_config::settings_cache_identity(a, alpha))
             .unwrap_or_default(),
         ModelFetchAuth::ApiKey => {
             let key = read_xai_api_key_env().unwrap_or_default();
@@ -88,7 +88,7 @@ pub(in crate::agent::remote_config) fn resolve_models_cache_scope(
                 (Err(_), Some(provider)) => scope_hash(&[
                     "models-custom-endpoint-external",
                     origin.as_str(),
-                    xai_grok_cloud_config::settings_cache_identity(provider, alpha).as_str(),
+                    crate::cloud_config::settings_cache_identity(provider, alpha).as_str(),
                 ]),
                 (key, _) => scope_hash(&[
                     "models-custom-endpoint",

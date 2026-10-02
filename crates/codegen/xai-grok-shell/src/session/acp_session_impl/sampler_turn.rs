@@ -769,8 +769,8 @@ impl SessionActor {
             stream_tool_calls: cfg.stream_tool_calls.unwrap_or(false),
             idle_timeout_secs: None,
             client_identifier: self.client_identifier.clone(),
-            deployment_id: xai_grok_cloud_config::managed_config::resolve_deployment_id(
-                xai_grok_cloud_config::managed_config::resolve_deployment_key().as_deref(),
+            deployment_id: crate::cloud_config::managed_config::resolve_deployment_id(
+                crate::cloud_config::managed_config::resolve_deployment_key().as_deref(),
             ),
             user_id: self
                 .auth_manager

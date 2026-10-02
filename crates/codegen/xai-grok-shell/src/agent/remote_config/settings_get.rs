@@ -6,20 +6,20 @@ use tokio_util::sync::CancellationToken;
 use xai_grok_login::{GrokAuth, GrokComConfig};
 
 use crate::util::config::RemoteSettings;
-use xai_grok_cloud_config::managed_config::policy_repair_pending;
+use crate::cloud_config::managed_config::policy_repair_pending;
 
 #[cfg(any(test, feature = "test-support"))]
-pub use xai_grok_cloud_config::settings_get::reset_startup_settings_for_tests;
+pub use crate::cloud_config::settings_get::reset_startup_settings_for_tests;
 
-pub use xai_grok_cloud_config::settings_get::{SettingsOutcome, SettingsQuery, SettingsWait};
+pub use crate::cloud_config::settings_get::{SettingsOutcome, SettingsQuery, SettingsWait};
 
 pub fn is_eligible(query: &SettingsQuery) -> bool {
-    xai_grok_cloud_config::settings_get::is_eligible(query, policy_repair_pending)
+    crate::cloud_config::settings_get::is_eligible(query, policy_repair_pending)
 }
 
 #[cfg(any(test, feature = "test-support"))]
 pub async fn get_settings(query: SettingsQuery) -> SettingsOutcome {
-    xai_grok_cloud_config::settings_get::get_settings(query, policy_repair_pending).await
+    crate::cloud_config::settings_get::get_settings(query, policy_repair_pending).await
 }
 
 pub async fn await_startup_settings(
@@ -27,7 +27,7 @@ pub async fn await_startup_settings(
     deadline: Duration,
     cancel: &CancellationToken,
 ) -> SettingsWait {
-    xai_grok_cloud_config::settings_get::await_startup_settings(
+    crate::cloud_config::settings_get::await_startup_settings(
         query,
         deadline,
         cancel,
@@ -41,7 +41,7 @@ pub fn consume_wait(
     auth: Option<&GrokAuth>,
     grok_com_config: &GrokComConfig,
 ) -> Option<RemoteSettings> {
-    xai_grok_cloud_config::settings_get::consume_wait(
+    crate::cloud_config::settings_get::consume_wait(
         wait,
         auth,
         grok_com_config,
@@ -51,11 +51,11 @@ pub fn consume_wait(
 
 #[cfg(any(test, feature = "test-support"))]
 pub async fn get_startup_settings(query: SettingsQuery) -> SettingsOutcome {
-    xai_grok_cloud_config::settings_get::get_startup_settings(query, policy_repair_pending).await
+    crate::cloud_config::settings_get::get_startup_settings(query, policy_repair_pending).await
 }
 
 pub fn warm_startup_settings(query: SettingsQuery) {
-    xai_grok_cloud_config::settings_get::warm_startup_settings(query, policy_repair_pending);
+    crate::cloud_config::settings_get::warm_startup_settings(query, policy_repair_pending);
 }
 
 pub fn block_on_startup_settings(
@@ -63,7 +63,7 @@ pub fn block_on_startup_settings(
     deadline: Duration,
     cancel: &CancellationToken,
 ) -> SettingsWait {
-    xai_grok_cloud_config::settings_get::block_on_startup_settings(
+    crate::cloud_config::settings_get::block_on_startup_settings(
         query,
         deadline,
         cancel,

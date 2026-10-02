@@ -1,6 +1,6 @@
 use globset::{Glob, GlobSet, GlobSetBuilder};
 
-use crate::Commit;
+use crate::cloud_config::Commit;
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -38,7 +38,7 @@ pub fn evaluate_models_commit(
     live: &ModelsCacheScope,
     models_fetch_enabled: bool,
 ) -> Commit {
-    if crate::managed_config::policy_repair_pending() {
+    if crate::cloud_config::managed_config::policy_repair_pending() {
         return Commit::Retry;
     }
     if !models_fetch_enabled || live.origin != expected.origin {

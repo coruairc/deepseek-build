@@ -32,7 +32,7 @@ pub fn build_storage_client_for_proxy(
                 am.clone(),
                 deployment_key,
                 alpha_test_key,
-                std::sync::Arc::new(xai_grok_cloud_config::managed_config::resolve_deployment_id),
+                std::sync::Arc::new(crate::cloud_config::managed_config::resolve_deployment_id),
             ));
         crate::file_utils_compat::storage_client::StorageClient::with_provider(
             proxy_base_url,
@@ -69,6 +69,6 @@ pub fn build_bootstrap_otel_credentials() -> (Arc<dyn AuthCredentialProvider>, S
     let proxy_base_url = crate::agent::config::EndpointsConfig::from_effective_config().proxy_url();
     xai_grok_login::credential_provider::install_bootstrap_otel_provider(
         proxy_base_url,
-        std::sync::Arc::new(xai_grok_cloud_config::managed_config::resolve_deployment_id),
+        std::sync::Arc::new(crate::cloud_config::managed_config::resolve_deployment_id),
     )
 }

@@ -3,7 +3,7 @@
 use xai_grok_config::EndpointsConfig;
 use xai_grok_login::{AuthMode, GrokAuth};
 
-use crate::settings_cache::{SettingsCacheAccount, SettingsCacheScope};
+use crate::cloud_config::settings_cache::{SettingsCacheAccount, SettingsCacheScope};
 
 /// A hash of the account that stays the same when the bearer token refreshes.
 /// The issuer and auth mode separate accounts that share ids across identity providers.
@@ -19,7 +19,7 @@ pub fn settings_cache_identity(auth: &GrokAuth, alpha_test_key: Option<&str>) ->
         AuthMode::External => "external",
         AuthMode::ApiKey => "api_key",
     };
-    crate::remote_settings::scope_hash(&[
+    crate::cloud_config::remote_settings::scope_hash(&[
         principal,
         auth.team_id.as_deref().unwrap_or(""),
         auth.organization_id.as_deref().unwrap_or(""),

@@ -1590,9 +1590,9 @@ impl MvpAgent {
                 cfg.grok_com_config.clone(),
             )
         };
-        xai_grok_cloud_config::settings_get::fetch_settings_live(
+        crate::cloud_config::settings_get::fetch_settings_live(
                 query,
-                xai_grok_cloud_config::managed_config::policy_repair_pending,
+                crate::cloud_config::managed_config::policy_repair_pending,
             )
             .await
     }
@@ -1992,7 +1992,7 @@ impl MvpAgent {
         let cfg = self.cfg.borrow();
         let alpha_test_key = cfg.endpoints.alpha_test_key.clone();
         let client_version = cfg.client_version.clone();
-        let deployment_id = xai_grok_cloud_config::managed_config::resolve_deployment_id(
+        let deployment_id = crate::cloud_config::managed_config::resolve_deployment_id(
             cfg.endpoints.deployment_key.as_deref(),
         );
         drop(cfg);

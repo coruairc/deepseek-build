@@ -1,5 +1,5 @@
 //! This module caches no settings.
-//! [`crate::settings_cache`] keeps settings on disk between launches.
+//! [`crate::cloud_config::settings_cache`] keeps settings on disk between launches.
 
 use tokio::sync::watch;
 use xai_grok_login::GrokAuth;
@@ -15,10 +15,10 @@ impl SettingsRefresh {
 
     /// A caller that joins a running fetch for `auth` never calls its own `leader`.
     /// Returns `None` when leaders keep dropping before they publish a result.
-    pub async fn refresh<F, Fut>(&self, auth: &GrokAuth, leader: F) -> Option<crate::SettingsFetch>
+    pub async fn refresh<F, Fut>(&self, auth: &GrokAuth, leader: F) -> Option<crate::cloud_config::SettingsFetch>
     where
         F: FnOnce() -> Fut,
-        Fut: std::future::Future<Output = crate::SettingsFetch>,
+        Fut: std::future::Future<Output = crate::cloud_config::SettingsFetch>,
     {
         let identity = CredentialIdentity::from(auth);
         let mut leader = Some(leader);
@@ -108,7 +108,7 @@ struct RefreshState {
     /// A leader from before a switch back to its credential cannot clear the newer `running_fetch`.
     epoch: u64,
     identity: Option<CredentialIdentity>,
-    running_fetch: Option<watch::Receiver<Option<crate::SettingsFetch>>>,
+    running_fetch: Option<watch::Receiver<Option<crate::cloud_config::SettingsFetch>>>,
 }
 
 impl RefreshState {
@@ -120,8 +120,8 @@ impl RefreshState {
 }
 
 enum RefreshPlan {
-    Join(watch::Receiver<Option<crate::SettingsFetch>>),
-    Lead(watch::Sender<Option<crate::SettingsFetch>>),
+    Join(watch::Receiver<Option<crate::cloud_config::SettingsFetch>>),
+    Lead(watch::Sender<Option<crate::cloud_config::SettingsFetch>>),
 }
 
 struct RefreshLeaderGuard<'a> {
@@ -142,7 +142,7 @@ impl Drop for RefreshLeaderGuard<'_> {
 #[cfg(test)]
 mod tests {
     use super::SettingsRefresh;
-    use crate::SettingsFetch;
+    use crate::cloud_config::SettingsFetch;
 
     #[tokio::test(flavor = "current_thread")]
     async fn refresh_coalesces_concurrent_callers() {

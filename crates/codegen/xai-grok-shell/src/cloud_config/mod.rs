@@ -1,6 +1,10 @@
-//! This crate fetches, caches, and refreshes the Grok config delivered from the cloud.
-//! Parsing and composition stay in `xai-grok-config`.
+//! Local compatibility shim for the former `xai-grok-cloud-config` crate.
+//!
+//! Remote fetching was already removed before this module was vendored into the
+//! shell crate; it now consists only of inert types and on-disk cache helpers
+//! kept so the local startup/model-catalog paths keep compiling.
 
+#![allow(unreachable_pub)]
 #![deny(clippy::indexing_slicing)]
 
 mod cached_config;

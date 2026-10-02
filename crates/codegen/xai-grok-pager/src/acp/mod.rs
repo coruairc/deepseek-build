@@ -294,7 +294,7 @@ pub async fn connect_via_leader(
     );
     apply_config_writes(&flags);
     startup::enter(StartupPhase::ConfigLoad);
-    startup::set_auth_mode(xai_grok_cloud_config::managed_config::classify_auth_mode());
+    startup::set_auth_mode(xai_grok_shell::managed_config::classify_auth_mode());
     let mut agent_config = AgentConfig::new_from_toml_cfg(raw_config)
         .map_err(|e| anyhow::anyhow!("Failed to create agent config: {e}"))?;
     agent_config.remote_settings = flags.remote_settings.clone();
