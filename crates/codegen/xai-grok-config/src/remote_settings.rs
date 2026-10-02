@@ -1,5 +1,5 @@
-//! Remote settings fetched from cli-chat-proxy `GET /v1/settings`, and the value types its fields
-//! share with local config tables.
+//! Remote settings value types shared with local config tables.
+//! The remote fetch is disabled; these shapes remain for config deserialization.
 use crate::{DisplayRefreshSettings, MemoryV2Settings, RemoteAnnouncement};
 use serde::{Deserialize, Serialize};
 /// A remote `campaigns[]` entry: an `id` gate plus a flattened patch that can set any config key.
@@ -270,7 +270,7 @@ pub struct ConsentGate {
     #[serde(default)]
     pub accept_label: Option<String>,
 }
-/// Remote settings fetched from cli-chat-proxy `GET /v1/settings`.
+/// Remote settings value shape. The remote fetch is disabled.
 ///
 /// All fields are `Option` with `#[serde(default)]` so that:
 /// - Missing fields from old servers are ignored
@@ -367,21 +367,21 @@ pub struct RemoteSettings {
     pub dream_check_interval_secs: Option<u64>,
     /// Cadence (seconds) of the pager's watch for a free account becoming paid.
     /// `0` disables it; the pager clamps and defaults (see its `app::subscription` module).
-    /// It arrives from the `grok_build_settings` remote settings flag via the cli-chat-proxy `/settings` flatten catch-all.
+    /// It arrives from the remote settings flag; the remote fetch is disabled.
     #[serde(default)]
     pub subscription_watch_interval_secs: Option<u64>,
     #[serde(default)]
     pub writeback_enabled: Option<bool>,
-    /// OAuth2 provider issuer URL (e.g., "https://auth.x.ai").
-    /// When present together with `oauth2_client_id`, the client uses the OAuth2 authorization code flow.
-    /// Remote settings control it so the rollout can be gradual.
+    /// OAuth2 provider issuer URL.
+    /// When present together with `oauth2_client_id`, the client uses an authorization-code flow.
+    /// Retained as a remote-settings field shape; the remote fetch is disabled.
     #[serde(default)]
     pub oauth2_issuer: Option<String>,
     /// OAuth2 client_id for the CLI. It pairs with `oauth2_issuer`.
     #[serde(default)]
     pub oauth2_client_id: Option<String>,
-    /// When `Some(true)`, enables grok's default OAuth2 (xAI auth.x.ai).
-    /// Enterprise OIDC (user's own IdP via `oidc` config) always wins.
+    /// When `Some(true)`, enables the default OAuth2 provider.
+    /// Enterprise OIDC (user's own IdP) always wins.
     /// The `--oauth` CLI flag overrides it.
     #[serde(default)]
     pub grok_oauth_enabled: Option<bool>,

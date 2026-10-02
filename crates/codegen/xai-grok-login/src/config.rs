@@ -48,7 +48,7 @@ fn default_team_oauth2_scopes() -> Vec<String> {
 pub enum PreferredAuthMethod {
     /// `XAI_API_KEY` / auth.json `xai::api_key` / per-model BYOK (`xai.api_key`).
     ApiKey,
-    /// OIDC / OAuth2 session (`cached_token`, interactive `grok.com` / `oidc`, including devbox-minted OIDC).
+    /// Session token (`cached_token`, interactive login, including devbox-minted sessions).
     Oidc,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -121,57 +121,16 @@ pub struct OAuth2ProviderConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub referrer: Option<String>,
 }
-pub const XAI_OAUTH2_ISSUER: &str = "https://auth.x.ai";
-/// A separate const so the frozen contract test pins the production allowlist even when the non-production feature adds staging and local origins.
-const PROD_ACCOUNTS_APP_ORIGINS: &[&str] = &["https://accounts.x.ai"];
-/// Production build: accepts only the production accounts app.
-pub fn allowed_accounts_app_origins() -> Vec<String> {
-    PROD_ACCOUNTS_APP_ORIGINS
-        .iter()
-        .map(|o| o.to_string())
-        .collect()
-}
-/// Builds a CORS layer accepting requests from the deployments in [`allowed_accounts_app_origins`] for the given HTTP method.
-pub fn accounts_app_cors_layer(method: axum::http::Method) -> tower_http::cors::CorsLayer {
-    tower_http::cors::CorsLayer::new()
-        .allow_origin(tower_http::cors::AllowOrigin::list(
-            allowed_accounts_app_origins()
-                .iter()
-                .filter_map(|origin| match origin.parse() {
-                    Ok(value) => Some(value),
-                    Err(_) => {
-                        tracing::warn!(origin, "skipping malformed accounts-app CORS origin");
-                        None
-                    }
-                }),
-        ))
-        .allow_methods([method])
-}
-/// Local-dev OAuth2 issuer (accounts-app running on localhost).
-const XAI_OAUTH2_LOCAL_ISSUER: &str = "http://localhost:22255";
 const DEFAULT_OAUTH2_REFERRER: &str = "grok-build";
-/// Returns `true` when `GROK_LOCAL_AUTH=1` is set, indicating the local accounts-app should be used as the OAuth2 issuer.
-pub fn use_local_auth() -> bool {
-    std::env::var("GROK_LOCAL_AUTH")
-        .map(|v| !v.is_empty() && v != "0")
-        .unwrap_or(false)
-}
-/// Returns the active xAI OAuth2 issuer: the local-dev issuer when `GROK_LOCAL_AUTH=1` is set, otherwise the production issuer.
-pub fn xai_oauth2_issuer() -> &'static str {
-    if use_local_auth() {
-        XAI_OAUTH2_LOCAL_ISSUER
-    } else {
-        XAI_OAUTH2_ISSUER
-    }
-}
-/// Whether `issuer` is a recognised xAI OAuth2 issuer (production or local-dev).
-/// Use this instead of comparing to [`XAI_OAUTH2_ISSUER`] so local-dev counts as first-party xAI auth.
-pub fn is_xai_oauth2_issuer(issuer: &str) -> bool {
-    issuer == XAI_OAUTH2_ISSUER || issuer == XAI_OAUTH2_LOCAL_ISSUER
+/// The interactive first-party issuer stack has been removed. No issuer is
+/// first-party xAI auth in this build.
+pub fn is_xai_oauth2_issuer(_issuer: &str) -> bool {
+    false
 }
 /// auth.json scope key used by the pre-OIDC `grok login --legacy` flow.
-/// Matches the key format produced by the original `accounts.x.ai` relay auth.
-pub const LEGACY_AUTH_SCOPE: &str = "https://accounts.x.ai/sign-in";
+/// The remote relay that produced this key is gone; the string is retained
+/// only so legacy local auth.json files can still be recognized and skipped.
+pub const LEGACY_AUTH_SCOPE: &str = "legacy::sign-in";
 /// `[grok_com_config]` as a config writes it. A field it omits keeps the value it is merged over,
 /// down to a single field of a provider table: the provider fields' serde default is `None`, so
 /// parsing the section as a [`GrokComConfig`] would drop the default provider instead.
@@ -376,8 +335,8 @@ impl Default for GrokComConfig {
         } else {
             Some(
                 OAuth2ProviderConfig::from_env().unwrap_or_else(|| OAuth2ProviderConfig {
-                    issuer: xai_oauth2_issuer().to_owned(),
-                    client_id: obfstr::obfstr!("b1a00492-073a-47ea-816f-4c329264a828").to_owned(),
+                    issuer: String::new(),
+                    client_id: String::new(),
                     scopes: default_oauth2_scopes(),
                     principal_type: None,
                     principal_id: None,

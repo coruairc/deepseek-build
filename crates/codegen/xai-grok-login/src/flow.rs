@@ -971,51 +971,9 @@ struct LoginConfigResponse {
     #[serde(default)]
     device_flow: Option<bool>,
 }
-/// Fetch the remote device-flow flag from unauthenticated `GET /v1/login-config`.
-/// Best-effort: any error or unset flag returns `None` so the caller keeps the loopback default.
-/// Caps at 1.5s with no retries since it's on the login path.
-async fn fetch_login_device_flow(cli_chat_proxy_base_url: &str) -> Option<bool> {
-    let agent_id = tokio::task::spawn_blocking(xai_grok_telemetry::id::agent_id)
-        .await
-        .ok()?;
-    let client = xai_grok_http::shared_client();
-    let url = format!("{}/login-config", cli_chat_proxy_base_url);
-    let response = client
-        .get(&url)
-        .timeout(std::time::Duration::from_millis(1500))
-        .header("x-grok-agent-id", agent_id)
-        .header("x-grok-client-version", xai_grok_version::VERSION)
-        .header(
-            "x-grok-client-identifier",
-            xai_grok_http::process_client_identifier(),
-        )
-        .header(
-            xai_grok_http::CLIENT_MODE_HEADER,
-            xai_grok_http::process_client_mode(),
-        )
-        .send()
-        .await;
-    let resp = match response {
-        Ok(resp) if resp.status().is_success() => resp,
-        Ok(resp) => {
-            tracing::debug!(status = resp.status().as_u16(), "login-config fetch failed");
-            return None;
-        }
-        Err(e) => {
-            tracing::debug!("login-config fetch error: {e}");
-            return None;
-        }
-    };
-    match resp.json::<LoginConfigResponse>().await {
-        Ok(cfg) => {
-            tracing::debug!(device_flow = ?cfg.device_flow, "Fetched remote login-config");
-            cfg.device_flow
-        }
-        Err(e) => {
-            tracing::debug!("Failed to parse login-config response: {e}");
-            None
-        }
-    }
+/// Remote login-config fetch removed. Always keeps the local transport default.
+async fn fetch_login_device_flow(_cli_chat_proxy_base_url: &str) -> Option<bool> {
+    None
 }
 #[cfg(test)]
 mod tests {

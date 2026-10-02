@@ -1,12 +1,11 @@
-//! The bearer for a call that goes straight to an xAI host outside a model turn: the Imagine
+//! The bearer for a call that goes straight to a provider host outside a model turn: the Imagine
 //! tools and pager voice dictation.
 //!
-//! An xAI host accepts two credential kinds and nothing else: an xAI API key, or an xAI OAuth2
-//! access token (JWT header `typ` `at+jwt`, issuer `auth.x.ai`). The login this manager holds may
-//! have been issued by a foreign authority, and such a login is never a side-call bearer. The
-//! model turn already refuses it for chat (`WireValidBearerResolver`); this module is the single
-//! place that refuses it for everything else, so no tool client and no voice client reads the
-//! manager's key on its own.
+//! A provider host accepts two credential kinds and nothing else: an API key, or a session access
+//! token. The login this manager holds may have been issued by a foreign authority, and such a
+//! login is never a side-call bearer. The model turn already refuses it for chat
+//! (`WireValidBearerResolver`); this module is the single place that refuses it for everything
+//! else, so no tool client and no voice client reads the manager's key on its own.
 //!
 //! Invariants:
 //! - A session whose issuer is a foreign login authority is never returned.
