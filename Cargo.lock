@@ -15011,7 +15011,6 @@ dependencies = [
  "xai-grok-session-events",
  "xai-grok-test-support",
  "xai-grok-version",
- "xai-mixpanel",
  "xai-token-estimation",
  "xai-tty-utils",
 ]
@@ -15414,19 +15413,6 @@ dependencies = [
 [[package]]
 name = "xai-message-delivery-core"
 version = "0.1.0"
-
-[[package]]
-name = "xai-mixpanel"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "reqwest 0.12.24",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "wiremock",
- "xai-grok-secrets",
-]
 
 [[package]]
 name = "xai-prompt-queue"
