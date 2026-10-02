@@ -229,7 +229,7 @@ pub fn toolset_for_preset(preset: &str) -> Option<ToolServerConfig> {
         .or_else(|| registered_toolset_preset(&normalized))
 }
 fn default_grok_build_toolset() -> ToolServerConfig {
-    grok_build_core_toolset_with(true, true)
+    grok_build_core_toolset_with(true)
 }
 fn default_agent_toolset() -> ToolServerConfig {
     grok_build_core_toolset(true)
@@ -240,12 +240,9 @@ fn general_purpose_toolset() -> ToolServerConfig {
     grok_build_core_toolset(false)
 }
 fn grok_build_core_toolset(include_workflow: bool) -> ToolServerConfig {
-    grok_build_core_toolset_with(include_workflow, false)
+    grok_build_core_toolset_with(include_workflow)
 }
-fn grok_build_core_toolset_with(
-    include_workflow: bool,
-    include_send_feedback: bool,
-) -> ToolServerConfig {
+fn grok_build_core_toolset_with(include_workflow: bool) -> ToolServerConfig {
     let mut tools = vec![
         bash_tool_config(),
         (&grok_build::ReadFileTool).into(),
@@ -267,9 +264,6 @@ fn grok_build_core_toolset_with(
     ];
     if include_workflow {
         tools.push((&grok_build::WorkflowTool).into());
-    }
-    if include_send_feedback {
-        tools.push((&grok_build::SendFeedbackTool).into());
     }
     ToolServerConfig {
         tools,

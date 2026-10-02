@@ -16,6 +16,13 @@ use xai_grok_tools::registry::types::{
     FinalizedToolset, ToolConfig, ToolRegistryBuilder, ToolServerConfig,
 };
 use xai_grok_tools::types::tool::ToolKind;
+
+fn sha256_hex(content: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(content);
+    format!("{:x}", hasher.finalize())
+}
 /// Test helper: same as [`resolve_session_toolset_for_host`] with a default truncation config.
 /// Production binds go through `resolve_session_toolset_for_host` so a sandbox host can cap polls.
 #[cfg(test)]
@@ -301,7 +308,7 @@ fn sanitize_session_id(session_id: &str) -> String {
         modified = true;
     }
     if modified {
-        let digest = xai_file_utils::sha256_hex(session_id.as_bytes());
+        let digest = sha256_hex(session_id.as_bytes());
         safe.push('-');
         if let Some(prefix) = digest.get(..8) {
             safe.push_str(prefix);

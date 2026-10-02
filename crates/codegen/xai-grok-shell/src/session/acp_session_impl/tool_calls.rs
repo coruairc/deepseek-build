@@ -164,15 +164,7 @@ pub(super) enum PlanEditGate {
 /// Compat-toolset `Delete` is not on the markdown carve-out: it maps to `AccessKind::Edit` and is plan-file-only (same as grok edits).
 /// `apply_patch` is `AccessKind::Tool` (its files are named inside the patch text) and is always rejected: it could touch anything.
 /// `enter_plan_mode` / `exit_plan_mode` map to `AccessKind::Read` and are likewise never gated.
-fn access_kind_for_resolved_tool(tool_name: &str, tool_input: &ToolInput) -> AccessKind {
-    if tool_name == xai_grok_tools::implementations::grok_build::SEND_FEEDBACK_TOOL_NAME {
-        return match tool_input {
-            ToolInput::SendFeedback(_) | ToolInput::Dynamic(_) => {
-                AccessKind::Tool("send_feedback".to_owned())
-            }
-            other => AccessKind::from(other),
-        };
-    }
+fn access_kind_for_resolved_tool(_tool_name: &str, tool_input: &ToolInput) -> AccessKind {
     AccessKind::from(tool_input)
 }
 pub(super) fn plan_mode_edit_gate(
@@ -2461,23 +2453,6 @@ impl SessionActor {
                 vec![],
                 vec![],
             ),
-            ToolInput::SendFeedback(_) => (
-                "Feedback drafted".to_string(),
-                acp::ToolKind::Other,
-                vec![],
-                vec![],
-            ),
-            ToolInput::Dynamic(_)
-                if wire_name
-                    == xai_grok_tools::implementations::grok_build::SEND_FEEDBACK_TOOL_NAME =>
-            {
-                (
-                    "Feedback drafted".to_string(),
-                    acp::ToolKind::Other,
-                    vec![],
-                    vec![],
-                )
-            }
             ToolInput::Dynamic(_) => (
                 "Dynamic tool call".to_string(),
                 acp::ToolKind::Other,

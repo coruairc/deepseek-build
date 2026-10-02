@@ -40,11 +40,7 @@ pub(super) fn read_log_for_archive(mut file: File) -> io::Result<Vec<u8>> {
 }
 
 /// Adds `terminal/` logs, newest first, until [`MAX_ARCHIVED_TERMINAL_BYTES`] is spent: a long session keeps thousands.
-pub(super) fn collect_terminal_logs(
-    base: &Path,
-    files: &mut Vec<CopiedSessionFile>,
-    artifacts: &xai_grok_feedback::FeedbackDraftArtifactSet,
-) {
+pub(super) fn collect_terminal_logs(base: &Path, files: &mut Vec<CopiedSessionFile>) {
     let dir = base.join(TERMINAL_DIR);
     // `read_dir` follows a symlinked `terminal/`, which would upload its target's files; the session walker skips symlinks too.
     if !std::fs::symlink_metadata(&dir).is_ok_and(|m| m.is_dir()) {
@@ -72,7 +68,7 @@ pub(super) fn collect_terminal_logs(
         let Some(name) = path.strip_prefix(base).ok().and_then(Path::to_str) else {
             continue;
         };
-        let Ok(Some(file)) = artifacts.open_non_artifact(&path) else {
+        let Ok(file) = std::fs::File::open(&path) else {
             continue;
         };
         match read_log_for_archive(file) {

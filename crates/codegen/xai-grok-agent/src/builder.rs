@@ -741,17 +741,7 @@ impl AgentBuilder {
                     | BuiltinAgentName::GrokBuildAskUser
             )
         );
-        if self.prompt_audience == PromptAudience::Primary
-            && is_parent_grok_build
-            && !tool_config
-                .tools
-                .iter()
-                .any(|tool| tool.kind == Some(ToolKind::Feedback))
-        {
-            tool_config
-                .tools
-                .push((&xai_grok_tools::implementations::grok_build::SendFeedbackTool).into());
-        }
+        let _ = is_parent_grok_build;
         if definition.inject_default_tools {
             if self.memory_backend.is_some() {
                 use xai_grok_tools::implementations::memory;
@@ -826,22 +816,11 @@ impl AgentBuilder {
                 .retain(|tc| tc.id != mem_search_id && tc.id != mem_get_id);
         }
         if self.prompt_audience == crate::prompt::context::PromptAudience::Subagent {
-            let feedback_id = xai_grok_tools::registry::types::ToolConfig::for_tool::<
-                xai_grok_tools::implementations::grok_build::SendFeedbackTool,
-            >()
-            .id;
-            let feedback_name =
-                xai_grok_tools::implementations::grok_build::SEND_FEEDBACK_TOOL_NAME;
             tool_config.tools.retain(|tool| {
                 !matches!(
                     tool.kind,
-                    Some(
-                        xai_grok_tools::types::tool::ToolKind::AskUser
-                            | xai_grok_tools::types::tool::ToolKind::Feedback
-                    )
-                ) && tool.id != feedback_id
-                    && tool.id != feedback_name
-                    && tool.name_override.as_deref() != Some(feedback_name)
+                    Some(xai_grok_tools::types::tool::ToolKind::AskUser)
+                )
             });
         } else if !self.ask_user_question_enabled {
             let ask_user_id = format!(

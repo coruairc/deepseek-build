@@ -127,7 +127,7 @@ fn make_handle_with_factory(
         false,
         rewind_all_outcomes,
         false,
-        crate::upload::environment::WorkspaceIdentity::default(),
+        crate::identity::WorkspaceIdentity::default(),
     )
     .expect("handle construction should succeed");
     handle
@@ -1292,7 +1292,7 @@ fn make_persistent_shell_handle() -> WorkspaceHandle {
         false,
         false,
         false,
-        crate::upload::environment::WorkspaceIdentity::default(),
+        crate::identity::WorkspaceIdentity::default(),
     )
     .expect("handle construction should succeed")
 }
@@ -1746,7 +1746,7 @@ pub(crate) fn make_handle_with_events() -> (WorkspaceHandle, tempfile::TempDir) 
         true,
         false,
         false,
-        crate::upload::environment::WorkspaceIdentity::default(),
+        crate::identity::WorkspaceIdentity::default(),
     )
     .expect("handle construction should succeed");
     (handle, home)
@@ -2328,7 +2328,7 @@ async fn tool_state_upload_is_noop_when_flag_off() {
         Some(queue.clone()),
         false,
         false,
-        crate::upload::environment::WorkspaceIdentity::default(),
+        crate::identity::WorkspaceIdentity::default(),
     )
     .expect("queue-backed handle construction");
     handle.create_session("main").expect("create main session");
@@ -3646,7 +3646,7 @@ fn workspace_shared_auth_provider_uses_workspace_config() {
         false,
         false,
         false,
-        crate::upload::environment::WorkspaceIdentity::default(),
+        crate::identity::WorkspaceIdentity::default(),
     )
     .expect("handle construction should succeed");
     let shared_auth = handle
@@ -8493,7 +8493,7 @@ fn make_handle_with_queue_routing(
     let proxy = Arc::new(crate::upload::ProxyStorageConfig::new(
         auth,
         "https://proxy.example/v1".to_string(),
-        crate::upload::environment::WorkspaceIdentity::default(),
+        crate::identity::WorkspaceIdentity::default(),
     ));
     let source: Arc<dyn xai_file_utils::queue::TraceExportSource> =
         Arc::new(crate::upload::WorkspaceTraceExportSource::new(proxy));
@@ -8511,7 +8511,7 @@ fn make_handle_with_queue_routing(
         false,
         false,
         tool_defs_enabled,
-        crate::upload::environment::WorkspaceIdentity::default(),
+        crate::identity::WorkspaceIdentity::default(),
     )
     .expect("handle construction should succeed");
     handle.create_session("main").expect("create main session");
@@ -8807,7 +8807,7 @@ async fn two_phase_drain_waits_for_producer_then_drains_queue() {
         Some(queue.clone()),
         true,
         false,
-        crate::upload::environment::WorkspaceIdentity::default(),
+        crate::identity::WorkspaceIdentity::default(),
     )
     .expect("queue-backed handle construction");
     let produced = Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -8872,7 +8872,7 @@ async fn drain_wedged_producer_does_not_starve_queue_flush() {
         Some(queue.clone()),
         true,
         false,
-        crate::upload::environment::WorkspaceIdentity::default(),
+        crate::identity::WorkspaceIdentity::default(),
     )
     .expect("queue-backed handle construction");
     let outcome = enqueue_workspace_tool_definitions(&queue, "main", "main/pre.json", b"{}").await;

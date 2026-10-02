@@ -18,7 +18,6 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
 use dashmap::DashMap;
-use xai_file_utils::queue::UploadQueueStats;
 use xai_grok_session_events::{Event, EventWriter, ToolCompletedSource, ToolOutcome};
 use xai_tool_protocol::{IdleWithholdReason, ToolServerLifecycleStatus, ToolServerStatusPayload};
 
@@ -99,10 +98,8 @@ pub struct ActivityTracker {
     idle_since_ms: AtomicU64,
     started_at: Instant,
     lifecycle: AtomicU8,
-    /// `Arc` so the upload queue (via [`notify_handle`](Self::notify_handle)) can wake the same waiter the status publisher blocks on.
+    /// `Arc` so background work (via [`notify_handle`](Self::notify_handle)) can wake the same waiter the status publisher blocks on.
     notify: Arc<tokio::sync::Notify>,
-    /// Coupled upload-queue stats; unset for bare trackers (tests, queue-less mode).
-    upload_queue_stats: OnceLock<Arc<UploadQueueStats>>,
     /// Epoch ms a graceful drain began; `0` means "not draining".
     drain_started_ms: AtomicU64,
     /// Coupled artifact-producer task tracker; unset for bare trackers.
@@ -200,7 +197,6 @@ impl ActivityTracker {
             started_at: Instant::now(),
             lifecycle: AtomicU8::new(LIFECYCLE_NONE),
             notify: Arc::new(tokio::sync::Notify::new()),
-            upload_queue_stats: OnceLock::new(),
             drain_started_ms: AtomicU64::new(0),
             producer_tasks: OnceLock::new(),
             durability_busy_since_ms: AtomicU64::new(0),
@@ -310,12 +306,6 @@ impl ActivityTracker {
         let _ = self.event_writers.set(writers);
     }
 
-    /// Couple upload-queue stats (status reports queue depth; `is_drained` waits for the queue).
-    /// Set once; a second call is a no-op.
-    pub fn set_upload_queue_stats(&self, stats: Arc<UploadQueueStats>) {
-        let _ = self.upload_queue_stats.set(stats);
-    }
-
     /// Couple the artifact-producer tracker (status counts producers, withholds idle while they run).
     /// Set once; a second call is a no-op.
     pub fn set_producer_tasks(&self, tasks: tokio_util::task::TaskTracker) {
@@ -403,31 +393,12 @@ impl ActivityTracker {
         self.preview_activity_window_ms
     }
 
-    /// Pending upload-queue items (0 when no queue is coupled).
-    fn upload_queue_pending(&self) -> u64 {
-        self.upload_queue_stats
-            .get()
-            .map(|s| s.pending.load(Ordering::Relaxed))
-            .unwrap_or(0)
-    }
-
-    /// Queue/drain status fields shared by both snapshot paths; all zero when no queue is coupled.
-    /// Best-effort: independent `Relaxed` loads can transiently show `inflight > pending` (cosmetic; the drain reads `pending` alone).
-    fn drain_status_fields(&self) -> (u32, u64, u32, bool, Option<u64>) {
-        let (pending, pending_bytes, inflight, breaker) = match self.upload_queue_stats.get() {
-            Some(s) => (
-                s.pending.load(Ordering::Relaxed) as u32,
-                s.pending_bytes.load(Ordering::Relaxed),
-                s.inflight.load(Ordering::Relaxed) as u32,
-                s.circuit_breaker_active.load(Ordering::Relaxed),
-            ),
-            None => (0, 0, 0, false),
-        };
-        let drain_started = match self.drain_started_ms.load(Ordering::Relaxed) {
+    /// Drain status fields shared by both snapshot paths.
+    fn drain_status_fields(&self) -> Option<u64> {
+        match self.drain_started_ms.load(Ordering::Relaxed) {
             0 => None,
             ms => Some(ms),
-        };
-        (pending, pending_bytes, inflight, breaker, drain_started)
+        }
     }
 
     /// Whether a drain has been started (`set_draining` ran) in this process.
@@ -437,9 +408,8 @@ impl ActivityTracker {
 
     /// Durability tail shared by [`Self::snapshot`] and [`Self::snapshot_session`] (one construction site so the two payloads can't drift).
     fn durability_payload_fields(&self, idle_since: u64) -> DurabilityPayloadFields {
-        let (queue_pending, queue_pending_bytes, queue_inflight, breaker, drain_started) =
-            self.drain_status_fields();
-        let (producers, durability_withhold) = self.durability_gate(queue_pending, breaker);
+        let drain_started = self.drain_status_fields();
+        let (producers, durability_withhold) = self.durability_gate();
         let now = now_ms();
         let (preview_withhold, preview_reason, preview_anchor) = self.client_withholds_idle(now);
         // Withhold idle on durability work OR preview activity, decided here once so both snapshot paths agree
@@ -466,24 +436,19 @@ impl ActivityTracker {
             withhold_reason,
             withhold_since_ms,
             preview_ws_tunnels_open: self.preview_ws_tunnels_open().min(u32::MAX as u64) as u32,
-            upload_queue_pending: queue_pending,
-            upload_queue_pending_bytes: queue_pending_bytes,
-            upload_queue_inflight: queue_inflight,
-            upload_queue_circuit_breaker_tripped: breaker,
             artifact_producers_inflight: producers,
             drain_started_ms: drain_started,
         }
     }
 
-    /// Durability gate: producers in flight, and whether idle must be withheld while producers or queued uploads are outstanding.
-    /// A tripped breaker lifts the hold for queued items only (they survive on disk); an in-flight producer has nothing on disk yet.
-    fn durability_gate(&self, queue_pending: u32, breaker_tripped: bool) -> (u32, bool) {
+    /// Durability gate: producers in flight, and whether idle must be withheld while producers are outstanding.
+    fn durability_gate(&self) -> (u32, bool) {
         let producers = self
             .producer_tasks
             .get()
             .map(|t| t.len() as u32)
             .unwrap_or(0);
-        let withholding = producers > 0 || (queue_pending > 0 && !breaker_tripped);
+        let withholding = producers > 0;
         if !withholding {
             self.durability_busy_since_ms.store(0, Ordering::Relaxed);
             return (producers, false);
@@ -790,10 +755,10 @@ impl ActivityTracker {
         self.lifecycle.load(Ordering::Acquire) >= LIFECYCLE_DRAINING
     }
 
-    /// Fully drained: draining, no active tools/tasks, and the upload queue empty.
-    /// In-flight producers are omitted here; the drain awaits them before the queue flush, and [`Self::durability_gate`] already withholds idle for them.
+    /// Fully drained: draining and no active tools/tasks.
+    /// In-flight producers are omitted here; the drain awaits them and [`Self::durability_gate`] already withholds idle for them.
     pub fn is_drained(&self) -> bool {
-        self.is_draining() && self.total_active() == 0 && self.upload_queue_pending() == 0
+        self.is_draining() && self.total_active() == 0
     }
 
     /// Phase-1 drain condition: all in-flight tool calls and background tasks finished, independent of the upload queue.
@@ -925,10 +890,6 @@ impl ActivityTracker {
             last_tool_call_completed_ms: last_completed,
             uptime_ms: self.started_at.elapsed().as_millis() as u64,
             idle_since_ms: d.idle_since_ms,
-            upload_queue_pending: d.upload_queue_pending,
-            upload_queue_pending_bytes: d.upload_queue_pending_bytes,
-            upload_queue_inflight: d.upload_queue_inflight,
-            upload_queue_circuit_breaker_tripped: d.upload_queue_circuit_breaker_tripped,
             artifact_producers_inflight: d.artifact_producers_inflight,
             drain_started_ms: d.drain_started_ms,
             turn_active,
@@ -982,10 +943,6 @@ impl ActivityTracker {
             last_tool_call_completed_ms: self.last_call_completed_ms.load(Ordering::Relaxed),
             uptime_ms: self.started_at.elapsed().as_millis() as u64,
             idle_since_ms: d.idle_since_ms,
-            upload_queue_pending: d.upload_queue_pending,
-            upload_queue_pending_bytes: d.upload_queue_pending_bytes,
-            upload_queue_inflight: d.upload_queue_inflight,
-            upload_queue_circuit_breaker_tripped: d.upload_queue_circuit_breaker_tripped,
             artifact_producers_inflight: d.artifact_producers_inflight,
             drain_started_ms: d.drain_started_ms,
             turn_active: self.any_turn_active(),
@@ -1005,10 +962,6 @@ struct DurabilityPayloadFields {
     withhold_reason: Option<IdleWithholdReason>,
     withhold_since_ms: Option<u64>,
     preview_ws_tunnels_open: u32,
-    upload_queue_pending: u32,
-    upload_queue_pending_bytes: u64,
-    upload_queue_inflight: u32,
-    upload_queue_circuit_breaker_tripped: bool,
     artifact_producers_inflight: u32,
     drain_started_ms: Option<u64>,
 }

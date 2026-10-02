@@ -20,7 +20,6 @@ xai-grok-auth = { workspace = true }
 xai-grok-config = { path = "../xai-grok-config" }
 xai-grok-permission-rules = { workspace = true }
 xai-grok-extra-ca = { workspace = true }
-xai-grok-feedback = { workspace = true }
 xai-grok-tools-api = { path = "../xai-grok-tools-api" }
 xai-grok-workspace-types = { path = "../xai-grok-workspace-types" }
 xai-grok-version = { workspace = true }
@@ -93,7 +92,6 @@ which = { workspace = true }
 chrono = { workspace = true }
 futures-util = { workspace = true }
 xai-grok-sandbox = { path = "../xai-grok-sandbox", default-features = false }
-xai-file-utils = { path = "../xai-file-utils" }
 dhat = { workspace = true, optional = true }
 zstd = { workspace = true }
 

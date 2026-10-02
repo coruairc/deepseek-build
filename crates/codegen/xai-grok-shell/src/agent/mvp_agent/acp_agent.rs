@@ -540,7 +540,6 @@ impl acp::Agent for MvpAgent {
             });
         }
         self.spawn_announcements_refresh();
-        self.spawn_heap_profile_monitor();
         let init_model_state = {
             let _t = xai_grok_telemetry::instrumentation::timer(
                 "startup.acp_initialize.model_state",
@@ -2054,10 +2053,6 @@ impl acp::Agent for MvpAgent {
                 )
             }
             "x.ai/interject" => crate::extensions::interject::handle(self, &args).await,
-            "x.ai/feedback" | "x.ai/feedback/dismiss" | "x.ai/feedback/drafts/list"
-            | "x.ai/feedback/drafts/get" | "x.ai/feedback/drafts/delete"
-            | "x.ai/feedback/drafts/update" | "x.ai/feedback/upload-trace"
-            | "x.ai/btw" => crate::extensions::feedback::handle(self, &args).await,
             "x.ai/recap" => crate::extensions::recap::handle(self, &args).await,
             "x.ai/cloud/terminate" => {
                 crate::extensions::auth_gate::require_xai_auth(
@@ -2264,7 +2259,6 @@ impl acp::Agent for MvpAgent {
             "x.ai/auto-topup-rule" => {
                 crate::extensions::billing::handle(self, &args).await
             }
-            "x.ai/share_session" => crate::extensions::share::handle(self, &args).await,
             "x.ai/privacy/setCodingDataRetention" => {
                 crate::extensions::privacy::handle(self, &args).await
             }
@@ -2348,9 +2342,6 @@ impl acp::Agent for MvpAgent {
                         compat,
                     )
                     .await
-            }
-            s if s.starts_with("x.ai/review") => {
-                crate::extensions::feedback::handle(self, &args).await
             }
             s if s.starts_with("x.ai/debug/") => {
                 crate::extensions::debug::handle(self, &args).await

@@ -28,6 +28,7 @@ pub mod hub_auth;
 pub mod hub_channel;
 pub mod hub_ids;
 pub mod hub_server;
+pub mod identity;
 pub mod image_capabilities;
 pub mod mcp;
 pub(crate) mod mcp_claim;
@@ -50,7 +51,6 @@ pub mod status_config;
 pub(crate) mod telemetry;
 pub use status_config::{ProactiveRefreshConfig, StatusConfig};
 pub mod trust;
-pub(crate) mod upload;
 pub mod util;
 pub mod workspace_ops;
 pub mod worktree;
@@ -68,6 +68,7 @@ pub use handle::{
 };
 pub use host_kind::WorkspaceHostKind;
 pub use hub::HubConfig;
+pub use identity::WorkspaceIdentity;
 pub use path_virtualization::{
     ARTIFACTS_ALIAS, BindLifecycleCtx, BindMountError, BindMountHook, PathVirtualization,
     VISIBLE_ROOT,
@@ -75,7 +76,6 @@ pub use path_virtualization::{
 pub use permission::*;
 pub use session::{McpServerOutcome, WorkspaceSession, WorkspaceShared};
 pub use session::{file_state, git, jj};
-pub use upload::environment::{WorkspaceEnvironment, WorkspaceIdentity};
 pub use workspace_ops::{WorkspaceOp, WorkspaceOps};
 pub use xai_grok_workspace_client::WorkspaceClient;
 pub use xai_grok_workspace_types::WorkspaceEvent;
@@ -86,7 +86,6 @@ pub fn init_metrics() {
     handle::init_metrics();
     recovery::init_metrics();
     session::swap_policy::init_metrics();
-    upload::init_metrics();
     permission::init_metrics();
     sandbox::metrics::init_metrics();
     hub_server::init_metrics();
@@ -222,10 +221,6 @@ mod init_metrics_tests {
                     })
                 })
         };
-        assert!(has(
-            "grok_workspace_upload_outcome_total",
-            &[("phase", "tool_state"), ("outcome", "succeeded")]
-        ));
         assert!(has(
             "grok_workspace_rpc_requests_total",
             &[("method", "unknown"), ("result", "error")]

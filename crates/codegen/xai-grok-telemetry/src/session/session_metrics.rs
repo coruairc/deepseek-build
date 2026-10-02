@@ -186,21 +186,8 @@ pub enum TraceUploadReason {
     SessionNotFound,
 }
 
-impl TraceUploadReason {
-    pub fn from_upload_method(method: &Option<xai_file_utils::UploadMethod>) -> Self {
-        match method {
-            Some(xai_file_utils::UploadMethod::Proxy { .. }) => Self::Proxy,
-            Some(xai_file_utils::UploadMethod::S3 { .. }) => Self::DirectS3,
-            Some(xai_file_utils::UploadMethod::Direct { .. }) => Self::DirectGcs,
-            None => Self::NoCredentials,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use xai_file_utils::UploadMethod;
-
     use super::TraceUploadReason;
 
     #[test]
@@ -386,40 +373,6 @@ mod tests {
         assert_eq!(
             TraceUploadReason::SessionNotFound.as_ref(),
             "session_not_found"
-        );
-    }
-
-    /// Each `UploadMethod` maps to its corresponding reason; `None` (no credentials resolved) maps to `NoCredentials`.
-    #[test]
-    fn from_upload_method_maps_each_variant() {
-        assert_eq!(
-            TraceUploadReason::from_upload_method(&None),
-            TraceUploadReason::NoCredentials
-        );
-        assert_eq!(
-            TraceUploadReason::from_upload_method(&Some(UploadMethod::Direct {
-                service_account_key: None,
-            })),
-            TraceUploadReason::DirectGcs
-        );
-        assert_eq!(
-            TraceUploadReason::from_upload_method(&Some(UploadMethod::Proxy {
-                proxy_base_url: String::new(),
-                user_token: String::new(),
-                deployment_key: None,
-                alpha_test_key: None,
-            })),
-            TraceUploadReason::Proxy
-        );
-        assert_eq!(
-            TraceUploadReason::from_upload_method(&Some(UploadMethod::S3 {
-                bucket: String::new(),
-                region: String::new(),
-                credentials_file: None,
-                credentials_content: None,
-                endpoint_url: None,
-            })),
-            TraceUploadReason::DirectS3
         );
     }
 }

@@ -1851,18 +1851,6 @@ fn jemalloc_stats_dump() -> String {
     out
 }
 #[cfg(all(feature = "jemalloc", unix))]
-fn jemalloc_heap_stats() -> Option<xai_grok_shell::heap_profile::JemallocStats> {
-    unsafe {
-        tikv_jemalloc_ctl::raw::write(b"epoch\0", 1u64).ok()?;
-        let allocated = tikv_jemalloc_ctl::raw::read::<usize>(b"stats.allocated\0").ok()? as u64;
-        let resident = tikv_jemalloc_ctl::raw::read::<usize>(b"stats.resident\0").ok()? as u64;
-        Some(xai_grok_shell::heap_profile::JemallocStats {
-            allocated,
-            resident,
-        })
-    }
-}
-#[cfg(all(feature = "jemalloc", unix))]
 fn jemalloc_set_prof_active(active: bool) -> bool {
     unsafe { tikv_jemalloc_ctl::raw::write(b"prof.active\0", active).is_ok() }
 }
@@ -1882,15 +1870,6 @@ fn jemalloc_dump_to_path(path: &std::path::Path) -> Result<(), String> {
     }
     let c = std::ffi::CString::new(path.as_os_str().as_bytes()).map_err(|e| e.to_string())?;
     unsafe { tikv_jemalloc_ctl::raw::write(b"prof.dump\0", c.as_ptr()) }.map_err(|e| e.to_string())
-}
-#[cfg(all(feature = "jemalloc", unix))]
-fn install_heap_profile_hooks() {
-    xai_grok_shell::heap_profile::install(xai_grok_shell::heap_profile::HeapProfileHooks {
-        stats: jemalloc_heap_stats,
-        set_prof_active: jemalloc_set_prof_active,
-        dump_to_path: jemalloc_dump_to_path,
-        prof_available: jemalloc_prof_available,
-    });
 }
 fn version_text(channel_label: &str) -> String {
     format!(
@@ -1963,8 +1942,6 @@ fn main() {
         xai_grok_pager::memory_trace::install_allocator_stats_provider(jemalloc_allocator_stats);
         xai_grok_pager::memory_trace::install_allocator_dump_provider(jemalloc_stats_dump);
     }
-    #[cfg(all(feature = "jemalloc", unix))]
-    install_heap_profile_hooks();
     let args = configure_process_env(args).unwrap_or_else(|err| {
         eprintln!("grok: {err:#}");
         std::process::exit(1);

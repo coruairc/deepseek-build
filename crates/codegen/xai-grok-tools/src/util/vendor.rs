@@ -1,6 +1,36 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+fn sha256_hex(content: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(content);
+    format!("{:x}", hasher.finalize())
+}
+
+fn sha256_hex_from_file(path: &Path, max_bytes: Option<u64>) -> std::io::Result<String> {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+    let file = std::fs::File::open(path)?;
+    let mut reader: Box<dyn Read> = if let Some(limit) = max_bytes {
+        Box::new(file.take(limit))
+    } else {
+        Box::new(file)
+    };
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 8192];
+    loop {
+        let n = reader.read(&mut buffer)?;
+        if n == 0 {
+            break;
+        }
+        if let Some(chunk) = buffer.get(..n) {
+            hasher.update(chunk);
+        }
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
 /// A failure while installing a bundled binary.
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum InstallError {
@@ -49,7 +79,7 @@ fn install(
             "bundled {versioned_name} failed to decompress: {e}"
         ))
     })?;
-    if xai_file_utils::sha256_hex(&decoded) != expected_sha256 {
+    if sha256_hex(&decoded) != expected_sha256 {
         return Err(InstallError::Integrity(format!(
             "bundled {versioned_name} does not match its pinned SHA-256"
         )));
@@ -74,8 +104,7 @@ fn install(
 fn is_verified(path: &Path, expected_sha256: &str) -> bool {
     // Reject a planted symlink instead of following it during verification.
     std::fs::symlink_metadata(path).is_ok_and(|meta| meta.is_file())
-        && xai_file_utils::sha256_hex_from_file(path, None)
-            .is_ok_and(|actual| actual == expected_sha256)
+        && sha256_hex_from_file(path, None).is_ok_and(|actual| actual == expected_sha256)
 }
 
 #[cfg(test)]
@@ -90,7 +119,7 @@ mod tests {
     fn installs_then_reuses_verified_binary() {
         let dir = tempfile::tempdir().unwrap();
         let body = b"#!/bin/sh\necho hi\n";
-        let sha = xai_file_utils::sha256_hex(body);
+        let sha = sha256_hex(body);
 
         let path = install(dir.path(), "tool-1", &zst(body), &sha).expect("install");
         assert_eq!(std::fs::read(&path).unwrap(), body);
@@ -132,7 +161,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("tool-4"), b"stale or tampered").unwrap();
         let body = b"trusted";
-        let sha = xai_file_utils::sha256_hex(body);
+        let sha = sha256_hex(body);
 
         let path = install(dir.path(), "tool-4", &zst(body), &sha).expect("self-heal");
         assert_eq!(std::fs::read(path).unwrap(), body);

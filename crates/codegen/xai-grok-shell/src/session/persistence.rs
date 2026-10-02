@@ -2652,16 +2652,14 @@ fn collect_mcp_stderr_logs(files: &mut Vec<CopiedSessionFile>) {
 /// Recursively collect all files from `dir` into `files`, using paths relative to `base`.
 /// This captures subdirectories like `prompts/` which contain large-prompt files referenced by truncated chat history entries.
 fn collect_session_files_recursive(base: &Path, dir: &Path, files: &mut Vec<CopiedSessionFile>) {
-    let artifacts = xai_grok_feedback::FeedbackDraftArtifactSet::for_session(base);
-    collect_session_files_recursive_with_artifacts(base, dir, files, &artifacts);
-    archive_logs::collect_terminal_logs(base, files, &artifacts);
+    collect_session_files_recursive_inner(base, dir, files);
+    archive_logs::collect_terminal_logs(base, files);
 }
 
-fn collect_session_files_recursive_with_artifacts(
+fn collect_session_files_recursive_inner(
     base: &Path,
     dir: &Path,
     files: &mut Vec<CopiedSessionFile>,
-    artifacts: &xai_grok_feedback::FeedbackDraftArtifactSet,
 ) {
     let entries = match std::fs::read_dir(dir) {
         Ok(e) => e,
@@ -2673,9 +2671,6 @@ fn collect_session_files_recursive_with_artifacts(
     };
 
     for entry in entries.flatten() {
-        if xai_grok_feedback::is_feedback_draft_artifact_name(&entry.file_name()) {
-            continue;
-        }
         let path = entry.path();
         let Ok(file_type) = entry.file_type() else {
             continue;
@@ -2688,7 +2683,7 @@ fn collect_session_files_recursive_with_artifacts(
             let Some(name) = rel_path.to_str() else {
                 continue;
             };
-            let Ok(Some(mut file)) = artifacts.open_non_artifact(&path) else {
+            let Ok(mut file) = std::fs::File::open(&path) else {
                 continue;
             };
             let mut data = Vec::new();
@@ -2701,7 +2696,7 @@ fn collect_session_files_recursive_with_artifacts(
                 data,
             });
         } else if file_type.is_dir() && path != base.join(archive_logs::TERMINAL_DIR) {
-            collect_session_files_recursive_with_artifacts(base, &path, files, artifacts);
+            collect_session_files_recursive_inner(base, &path, files);
         }
     }
 }

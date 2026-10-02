@@ -1132,23 +1132,8 @@ pub struct ToolServerStatusPayload {
     /// `None` while busy; epoch ms of the last busy→ready transition.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub idle_since_ms: Option<u64>,
-    /// Items accepted by the durable upload queue but not yet uploaded
-    /// (includes `upload_queue_inflight`). `0` when no queue is configured.
-    #[serde(default)]
-    pub upload_queue_pending: u32,
-    /// Total bytes of the pending upload-queue spill files on disk.
-    #[serde(default)]
-    pub upload_queue_pending_bytes: u64,
-    /// Pending items the worker is actively uploading right now (a subset of
-    /// `upload_queue_pending`).
-    #[serde(default)]
-    pub upload_queue_inflight: u32,
-    /// `true` while the upload queue's circuit breaker is paused on a run of
-    /// transient upload failures.
-    #[serde(default)]
-    pub upload_queue_circuit_breaker_tripped: bool,
     /// Detached artifact-producer tasks (archive build, tool_state, tool
-    /// definitions) still running — work not yet handed to the upload queue.
+    /// definitions) still running.
     #[serde(default)]
     pub artifact_producers_inflight: u32,
     /// Epoch ms when a graceful drain began (SIGTERM or hub evict); `None`

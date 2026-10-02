@@ -643,16 +643,6 @@ impl MvpAgent {
             );
         }
     }
-    pub(crate) fn feedback_client(&self) -> Option<FeedbackClient> {
-        let (base_url, user_token, alpha_test_key, deployment_key) = self
-            .feedback_credentials()?;
-        Some(
-            FeedbackClient::new(base_url, user_token)
-                .with_alpha_test_key(alpha_test_key)
-                .with_deployment_key(deployment_key)
-                .with_auth_manager(self.auth_manager.clone()),
-        )
-    }
     /// Build a `RegistryConfig` if the feature is enabled (for passing to persistence actor).
     pub(super) fn build_registry_config(
         &self,
@@ -1546,7 +1536,6 @@ impl MvpAgent {
         self.sync_collection_config_gate();
         self.emit_settings_update_notification();
         self.emit_announcements(AnnouncementsPushMode::IfChanged);
-        self.reconfigure_heap_profile_monitor();
     }
     /// Re-evaluates the official-marketplace auto-register gate now that remote settings exist.
     /// `init_process` ran the same gate at boot without them, so a settings-targeted (not env-set) team would otherwise never register.
@@ -1781,7 +1770,6 @@ impl MvpAgent {
         self.sync_collection_config_gate();
         self.emit_settings_update_notification();
         self.emit_announcements(AnnouncementsPushMode::Force);
-        self.reconfigure_heap_profile_monitor();
     }
     /// Spawns a background task coalesced on `in_flight`: a request while one is in flight is dropped.
     /// The task is bounded by `SETTINGS_REAPPLY_TIMEOUT`.
@@ -2406,10 +2394,6 @@ impl MvpAgent {
             announcements_gen: std::cell::Cell::new(0),
             last_emitted_announcements: RefCell::new(Vec::new()),
             announcements_refresh_started: std::cell::Cell::new(false),
-            heap_profile_monitor: RefCell::new(
-                crate::heap_profile::HeapProfileMonitor::new(),
-            ),
-            heap_profile_started: std::cell::Cell::new(false),
             #[cfg(test)]
             finalize_spy: RefCell::new(Vec::new()),
             #[cfg(test)]
@@ -3157,7 +3141,18 @@ impl MvpAgent {
                 None
             }
         };
-        let reason = crate::upload::turn::TraceUploadReason::from_upload_method(&method);
+        let reason = match &method {
+            Some(crate::session::repo_changes::UploadMethod::Proxy { .. }) => {
+                crate::upload::turn::TraceUploadReason::Proxy
+            }
+            Some(crate::session::repo_changes::UploadMethod::S3 { .. }) => {
+                crate::upload::turn::TraceUploadReason::DirectS3
+            }
+            Some(crate::session::repo_changes::UploadMethod::Direct { .. }) => {
+                crate::upload::turn::TraceUploadReason::DirectGcs
+            }
+            None => crate::upload::turn::TraceUploadReason::NoCredentials,
+        };
         (method, reason)
     }
     /// Resolve client version: prefer the value from the initialize request _meta.
@@ -4921,7 +4916,6 @@ impl MvpAgent {
         super::test_hooks::pause_at(super::test_hooks::AttachPause::AfterSpawn).await;
         self.set_session_live_state(&session_info.id, SessionLiveState::IdleResident);
         self.ensure_session_supervisor();
-        self.heap_profile_set_session_id(&session_info.id.0);
         self.push_roster_delta_upserted(&session_info.id);
         if chat_history.is_empty() {
             let _timer = crate::instrumentation_timer!("session.system_prompt_inject");

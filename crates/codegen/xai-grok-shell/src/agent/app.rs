@@ -231,9 +231,9 @@ pub async fn run_stdio_agent(
         );
     }
     xai_grok_telemetry::unified_log::set_version(xai_grok_version::VERSION);
-    xai_file_utils::queue::cleanup_orphaned_uploads(
+    crate::file_utils_compat::queue::cleanup_orphaned_uploads(
         &grok_home::grok_home(),
-        xai_file_utils::queue::DEFAULT_MAX_AGE,
+        crate::file_utils_compat::queue::DEFAULT_MAX_AGE,
     );
     if let Ok(version) = std::env::var("GROK_CLIENT_VERSION") {
         crate::unified_log::info(
@@ -323,9 +323,9 @@ pub async fn run_headless(
     use tokio_util::sync::CancellationToken;
     const HEADLESS_NO_SESSION: &str = "Headless mode requires a grok.com session. \
         Run `grok login` to sign in, or use `grok agent stdio` for API-key access.";
-    xai_file_utils::queue::cleanup_orphaned_uploads(
+    crate::file_utils_compat::queue::cleanup_orphaned_uploads(
         &grok_home::grok_home(),
-        xai_file_utils::queue::DEFAULT_MAX_AGE,
+        crate::file_utils_compat::queue::DEFAULT_MAX_AGE,
     );
     let mut agent_config = agent_config.clone();
     agent_config.mode = crate::agent::config::AgentMode::Headless;
@@ -769,9 +769,9 @@ pub async fn run_leader(
     lock.cleanup_socket()?;
     info!("Leader server starting");
     tokio::task::spawn_blocking(|| {
-        xai_file_utils::queue::cleanup_orphaned_uploads(
+        crate::file_utils_compat::queue::cleanup_orphaned_uploads(
             &grok_home::grok_home(),
-            xai_file_utils::queue::DEFAULT_MAX_AGE,
+            crate::file_utils_compat::queue::DEFAULT_MAX_AGE,
         );
     });
     let (ipc_to_agent_tx, mut ipc_to_agent_rx) = mpsc::unbounded_channel::<String>();

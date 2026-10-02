@@ -1424,17 +1424,13 @@ pub(crate) async fn spawn_session_actor(
         persist_chat_history_jsonl_sync(&session_info, &conversation);
     }
     chat_state_handle.replace_conversation(conversation);
-    let feedback_client = feedback_proxy_url.map(|base_url| {
-        let mut client =
-            crate::agent::feedback_client::FeedbackClient::new(base_url, feedback_user_token)
-                .with_alpha_test_key(feedback_alpha_test_key)
-                .with_deployment_key(deployment_key);
-        if let Some(am) = auth_manager.as_ref() {
-            client = client.with_auth_manager(am.clone());
-        }
-        client
-    });
-    let has_feedback_client = feedback_client.is_some();
+    let _ = (
+        feedback_proxy_url,
+        feedback_user_token,
+        feedback_alpha_test_key,
+    );
+    let feedback_client: Option<()> = None;
+    let has_feedback_client = false;
     tracing::info!(
         session_id = %session_info.id.0,
         has_feedback_client = has_feedback_client,

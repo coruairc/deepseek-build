@@ -1,5 +1,8 @@
 //! Per-turn trace artifact uploads to cloud storage.
 use super::turn::{PromptTraceContext, UploadWait};
+use crate::file_utils_compat::queue::{
+    EnqueueOutcome, TraceExportSource, UploadQueue, UploadRetryPolicy,
+};
 use crate::sampling::types::ToolDefinition;
 use crate::session::repo_changes::{TraceExportConfig, UploadMethod};
 use base64::Engine as _;
@@ -7,7 +10,6 @@ use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::oneshot;
 use url::Url;
-use xai_file_utils::queue::{EnqueueOutcome, TraceExportSource, UploadQueue, UploadRetryPolicy};
 use xai_grok_workspace::permission::PermissionEvent;
 /// Upload the canonical tool definitions trace and wait for completion.
 /// `ToolDefinition` serializes in Chat Completions format: `{ "type": "function", "function": { ... } }`.
@@ -36,7 +38,7 @@ pub(crate) async fn upload_tool_definitions(
         format!("{prefix}/tool_definitions.json")
     };
     use crate::upload::gcs::WithAuth as _;
-    let ok = xai_file_utils::gcs::upload_bytes(
+    let ok = crate::file_utils_compat::gcs::upload_bytes(
         &gcs_config.with_auth(auth_manager),
         &object_path,
         &bytes,
@@ -250,7 +252,7 @@ fn classify_workspace(cwd: &str) -> String {
     let path = std::path::Path::new(cwd);
     if path.ancestors().any(|p| p.join(".git").exists()) {
         "git".to_owned()
-    } else if xai_file_utils::workspace_classifier::is_project_dir(path) {
+    } else if crate::file_utils_compat::workspace_classifier::is_project_dir(path) {
         "project".to_owned()
     } else {
         "non_project".to_owned()
@@ -379,7 +381,7 @@ pub(crate) async fn upload_subagent_metadata(
     let config = base_config.with_auth(Some(auth_manager));
     match tokio::time::timeout(
         SUBAGENT_METADATA_UPLOAD_BOUND,
-        xai_file_utils::gcs::upload_bytes(&config, &gcs_path, &json, "application/json"),
+        crate::file_utils_compat::gcs::upload_bytes(&config, &gcs_path, &json, "application/json"),
     )
     .await
     {
@@ -551,7 +553,7 @@ pub(crate) async fn upload_plugin_state(
     .await;
 }
 use super::gcs::WithAuth as _;
-use xai_file_utils::gcs::upload_bytes;
+use crate::file_utils_compat::gcs::upload_bytes;
 pub(crate) async fn upload_artifact_to_gcs(
     ctx: &PromptTraceContext,
     gcs_path: &str,
@@ -576,8 +578,8 @@ pub(crate) async fn upload_artifact_to_gcs(
         }
         Err(e) => {
             let status_code = e
-                .downcast_ref::<xai_file_utils::storage_client::HttpUploadError>()
-                .map(|e| e.status_code);
+                .downcast_ref::<crate::file_utils_compat::storage_client::HttpUploadError>()
+                .and_then(|e| e.status_code);
             record_upload_failure(
                 ctx,
                 UploadFailure {
@@ -987,13 +989,6 @@ pub(crate) struct DynamicResolver {
     auth_manager: Arc<xai_grok_login::AuthManager>,
     base_config: TraceExportConfig,
 }
-impl DynamicResolver {
-    /// Build the auth-bearing wrapper used by all three `proxy_*` methods.
-    fn with_auth(&self) -> crate::upload::gcs::TraceExportConfigWithAuth {
-        use crate::upload::gcs::WithAuth as _;
-        self.base_config.with_auth(Some(self.auth_manager.clone()))
-    }
-}
 impl TraceExportSource for DynamicResolver {
     fn resolve(&self) -> TraceExportConfig {
         let mut config = self.base_config.clone();
@@ -1010,17 +1005,6 @@ impl TraceExportSource for DynamicResolver {
             }
         }
         config
-    }
-    fn proxy_attribution(
-        &self,
-    ) -> Option<Arc<dyn xai_file_utils::storage_client::Auth401AttributionCallback>> {
-        xai_file_utils::gcs::StorageConfig::proxy_attribution(&self.with_auth())
-    }
-    fn proxy_credentials(&self) -> Option<Arc<dyn xai_grok_auth::AuthCredentialProvider>> {
-        xai_file_utils::gcs::StorageConfig::proxy_credentials(&self.with_auth())
-    }
-    fn proxy_http_client(&self) -> Option<reqwest::Client> {
-        xai_file_utils::gcs::StorageConfig::proxy_http_client(&self.with_auth())
     }
     fn has_usable_credential(&self) -> bool {
         if let crate::session::repo_changes::UploadMethod::Proxy {
@@ -1111,36 +1095,11 @@ fn claim_spill_reconcile(state: &std::sync::atomic::AtomicU8, collection_enabled
 /// Re-enqueue them when uploads are enabled (`queue` present); purge them when data collection is disabled (`None`).
 /// This runs detached so session setup never waits on disk or cloud I/O.
 pub(crate) fn spawn_startup_spill_reconcile(
-    grok_home: std::path::PathBuf,
-    queue: Option<UploadQueue>,
+    _grok_home: std::path::PathBuf,
+    _queue: Option<UploadQueue>,
 ) {
-    if !claim_spill_reconcile(&SPILL_RECONCILE_STATE, queue.is_some()) {
-        return;
-    }
-    tokio::spawn(async move {
-        match queue {
-            Some(queue) => {
-                let report =
-                    xai_grok_workspace::recovery::run_startup_recovery(&grok_home, &queue).await;
-                tracing::info!(?report, "startup spill recovery complete");
-                queue.cleanup_orphans(xai_file_utils::queue::DEFAULT_MAX_AGE);
-            }
-            None => {
-                let purged = tokio::task::spawn_blocking(move || {
-                    xai_grok_workspace::recovery::purge_spilled_items(&grok_home)
-                })
-                .await;
-                match purged {
-                    Ok(removed) => {
-                        tracing::info!(removed, "purged spilled uploads from a prior run");
-                    }
-                    Err(e) => {
-                        tracing::warn!(error = %e, "startup spill purge task failed")
-                    }
-                }
-            }
-        }
-    });
+    // The on-disk upload spill and its restart-recovery scan were deleted with
+    // the object-storage stack; there is nothing to reconcile.
 }
 /// Bounded, non-terminal flush of the session's upload queue: wait until every queued item settles or the deadline passes.
 /// The worker stays alive either way, so later turns (and the flush-timeout stragglers themselves) keep uploading in the background.
@@ -1293,7 +1252,7 @@ pub(crate) async fn upload_trace_artifact_blocking(
                 Some(Ok(()))
             }
             Err(e)
-                if e.downcast_ref::<xai_file_utils::queue::QueueClosed>()
+                if e.downcast_ref::<crate::file_utils_compat::queue::QueueClosed>()
                     .is_some() =>
             {
                 tracing::debug!(
@@ -2165,8 +2124,8 @@ pub(crate) mod tests {
     /// Without these, the worker falls back to the static `user_token` snapshot baked into `TraceExportConfig` and emits no attribution.
     #[test]
     fn dynamic_resolver_supplies_proxy_credentials_and_attribution() {
+        use crate::file_utils_compat::queue::TraceExportSource;
         use crate::session::repo_changes::UploadMethod;
-        use xai_file_utils::queue::TraceExportSource;
         let dir = tempfile::tempdir().unwrap();
         let auth_manager = Arc::new(xai_grok_login::AuthManager::new(
             dir.path(),
@@ -2206,8 +2165,8 @@ pub(crate) mod tests {
     /// A rotation that lands between park wait slices is invisible to the notifier; the bearer comparison must wake the parked item immediately.
     #[tokio::test]
     async fn dynamic_resolver_auth_recovery_wakes_on_already_rotated_token() {
+        use crate::file_utils_compat::queue::TraceExportSource;
         use crate::session::repo_changes::UploadMethod;
-        use xai_file_utils::queue::TraceExportSource;
         let dir = tempfile::tempdir().unwrap();
         let auth_manager = Arc::new(xai_grok_login::AuthManager::new(
             dir.path(),
@@ -2248,8 +2207,8 @@ pub(crate) mod tests {
     /// The wake comparison must use the deployment key (wire precedence) or parking becomes a hot retry loop.
     #[tokio::test]
     async fn dynamic_resolver_auth_recovery_ignores_session_token_for_deployment_key() {
+        use crate::file_utils_compat::queue::TraceExportSource;
         use crate::session::repo_changes::UploadMethod;
-        use xai_file_utils::queue::TraceExportSource;
         let dir = tempfile::tempdir().unwrap();
         let auth_manager = Arc::new(xai_grok_login::AuthManager::new(
             dir.path(),
@@ -2598,7 +2557,7 @@ pub(crate) mod tests {
         if home.ancestors().any(|p| p.join(".git").exists()) {
             return None;
         }
-        if !xai_file_utils::workspace_classifier::is_project_dir(&home.join("probe")) {
+        if !crate::file_utils_compat::workspace_classifier::is_project_dir(&home.join("probe")) {
             return None;
         }
         tempfile::tempdir_in(home).ok()

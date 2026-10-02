@@ -45,7 +45,6 @@ xai-grok-session-events = { workspace = true }
 # `session_metrics::TraceUploadReason::from_upload_method` matches on the shared
 # `UploadMethod` enum (small, dependency-light types crate) so the reason->wire
 # mapping lives next to the trace-upload lifecycle events it labels.
-xai-file-utils = { path = "../xai-file-utils" }
 xai-tty-utils = { workspace = true }
 xai-grok-version = { workspace = true }
 whoami = { workspace = true }

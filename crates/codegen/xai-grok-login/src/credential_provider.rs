@@ -224,41 +224,6 @@ pub fn embedding_session_credentials(
     )
 }
 
-/// Lets `StorageClient` (in xai-file-utils) emit shell's 401-attribution event without xai-file-utils depending on shell.
-/// Holds the live `AuthManager` so attribution events carry the correct user_id.
-pub struct StorageClientAttributionBridge {
-    auth_manager: Arc<AuthManager>,
-    session_id: Option<String>,
-}
-
-impl std::fmt::Debug for StorageClientAttributionBridge {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StorageClientAttributionBridge")
-            .finish_non_exhaustive()
-    }
-}
-
-impl StorageClientAttributionBridge {
-    pub fn new(auth_manager: Arc<AuthManager>, session_id: Option<String>) -> Self {
-        Self {
-            auth_manager,
-            session_id,
-        }
-    }
-}
-
-impl xai_file_utils::storage_client::Auth401AttributionCallback for StorageClientAttributionBridge {
-    fn record_401(&self, operation: &str, sent_bearer_prefix: Option<&str>) {
-        crate::attribution::record_consumer_401(
-            self.auth_manager.as_ref(),
-            self.session_id.as_deref(),
-            crate::attribution::ConsumerKind::StorageClient,
-            operation,
-            sent_bearer_prefix,
-        );
-    }
-}
-
 /// Credential provider for the OTel layer's `RefreshableSpanExporter`. Starts with a bootstrap `AuthManager` (disk-read-only, no refresher).
 /// [`Self::set_live`] upgrades it to the agent's live `Arc<AuthManager>` once the agent is initialized.
 /// After upgrade: `snapshot()` reads from the live manager's in-memory cache (kept hot by the proactive refresh task) instead of re-reading disk. `refresh_after_unauthorized()` routes through `unauthorized_recovery` for active OIDC or external-binary refresh. Before upgrade, the bootstrap manager only reads from disk.

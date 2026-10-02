@@ -194,7 +194,6 @@ use crate::telemetry::dc_log;
 use crate::workspace_ops::{
     GetFileEntry, GetFileResult, GetFilesRes, PutFileEntry, PutFileResult, PutFilesRes,
 };
-use xai_file_utils::queue::EnqueueOutcome;
 use xai_grok_diag_server::DiagHandle;
 use xai_grok_session_events::types::CancellationCategory;
 use xai_grok_session_events::{Event, SessionRelationship, TurnOutcomeLabel};
@@ -486,30 +485,23 @@ impl WorkspaceHandle {
         Self::build(
             config,
             ephemeral_workspace_home(),
-            None,
-            true,
             false,
             events_enabled(),
             rewind_all_outcomes_from_env(),
             tool_defs_enabled(),
-            crate::upload::environment::WorkspaceIdentity::default(),
+            crate::identity::WorkspaceIdentity::default(),
         )
     }
-    /// Construct a handle with an explicit `$GROK_WORKSPACE_HOME` and a pre-spawned [`UploadQueue`](xai_file_utils::queue::UploadQueue),
-    /// or none for a host that cannot upload. [`connect_local_workspace`] calls this; [`Self::new`] takes the queue-less path for tests and local mode.
+    /// Construct a handle with an explicit `$GROK_WORKSPACE_HOME`.
     pub(crate) fn new_with_data_collection(
         config: WorkspaceConfig,
         workspace_home: std::path::PathBuf,
-        upload_queue: Option<Arc<xai_file_utils::queue::UploadQueue>>,
-        upload_queue_enabled: bool,
         data_collection_disabled: bool,
-        identity: crate::upload::environment::WorkspaceIdentity,
+        identity: crate::identity::WorkspaceIdentity,
     ) -> WorkspaceResult<Self> {
         Self::build(
             config,
             workspace_home,
-            upload_queue,
-            upload_queue_enabled,
             data_collection_disabled,
             events_enabled(),
             rewind_all_outcomes_from_env(),
@@ -520,13 +512,11 @@ impl WorkspaceHandle {
     fn build(
         config: WorkspaceConfig,
         workspace_home: std::path::PathBuf,
-        upload_queue: Option<Arc<xai_file_utils::queue::UploadQueue>>,
-        _upload_queue_enabled: bool,
         data_collection_disabled: bool,
         events_enabled: bool,
         workspace_rewind_all_outcomes: bool,
         tool_defs_enabled: bool,
-        identity: crate::upload::environment::WorkspaceIdentity,
+        identity: crate::identity::WorkspaceIdentity,
     ) -> WorkspaceResult<Self> {
         let sessions = std::collections::HashMap::new();
         let local_registry = xai_computer_hub_sdk::LocalRegistry::new();
@@ -616,12 +606,6 @@ impl WorkspaceHandle {
                 ),
             );
         activity_tracker.set_event_writers(session_event_writers.clone());
-        if let Some(queue) = &upload_queue {
-            activity_tracker.set_upload_queue_stats(queue.stats_arc());
-            queue
-                .stats()
-                .set_transition_notify(activity_tracker.notify_handle());
-        }
         let producer_tasks = tokio_util::task::TaskTracker::new();
         activity_tracker.set_producer_tasks(producer_tasks.clone());
         let shared = WorkspaceShared {
@@ -644,7 +628,6 @@ impl WorkspaceHandle {
             skills_config: config.skills_config,
             plugin_discovery_config: config.plugin_discovery_config,
             hub_handle: tokio::sync::Mutex::new(None),
-            queue_stats_sampler: parking_lot::Mutex::new(None),
             hub_tools_snapshot: arc_swap::ArcSwap::new(Arc::new(vec![])),
             hub_config: config.hub_config,
             auth_provider: config.auth_provider,
@@ -665,13 +648,11 @@ impl WorkspaceHandle {
             )),
             workspace_rewind_all_outcomes,
             workspace_home,
-            upload_queue,
             data_collection_disabled,
             events_enabled,
             tool_defs_enabled,
             tool_defs_last_emit: dashmap::DashMap::new(),
             session_event_writers,
-            inflight_enqueues: dashmap::DashMap::new(),
             producer_tasks,
             bind_mount_hook: arc_swap::ArcSwap::from_pointee(
                 crate::path_virtualization::BindMountHook::noop(),
@@ -1286,11 +1267,7 @@ impl WorkspaceHandle {
                 schema_version: payload.schema_version.clone(),
                 redirect_kind: None,
             });
-        if let Some(handle) = before_handle {
-            self.shared
-                .inflight_enqueues
-                .insert((session_id.to_owned(), payload.turn_number), handle);
-        }
+        let _ = before_handle;
     }
     /// Fire-and-forget `after_turn` hook path (legacy shells / local mode): turn-end work with detached enqueue handles, no ack.
     /// New shells use the request/response path ([`Self::compute_turn_injections`]) instead.
@@ -1305,11 +1282,8 @@ impl WorkspaceHandle {
         &self,
         session_id: &str,
         payload: &xai_tool_protocol::turn_hook::AfterTurnPayload,
-    ) -> (
-        Option<tokio::task::JoinHandle<EnqueueOutcome>>,
-        Option<tokio::task::JoinHandle<EnqueueOutcome>>,
     ) {
-        let after_handle = self
+        let _after_handle = self
             .on_turn_boundary(
                 session_id,
                 crate::session::checkpoint::TurnBoundary::turn_end(
@@ -1336,12 +1310,6 @@ impl WorkspaceHandle {
                 cancellation_context: payload.cancellation_context.clone(),
             });
         self.spawn_tool_state_upload(session_id, payload.turn_number);
-        let before_handle = self
-            .shared
-            .inflight_enqueues
-            .remove(&(session_id.to_owned(), payload.turn_number))
-            .map(|(_, handle)| handle);
-        (before_handle, after_handle)
     }
     /// Answer a request/response `turn_hook` (sampler/shell to workspace). The server-side sampler signals turns ONLY through this request channel.
     /// `Before` drives [`Self::on_before_turn`] (including the YOLO-state sync) and answers with a no-op reply (injections are not computed yet).
@@ -1357,33 +1325,13 @@ impl WorkspaceHandle {
                 HookReply::default()
             }
             TurnHookRequest::After(payload) => {
-                let (before_handle, after_handle) =
-                    self.process_after_turn(session_id, payload).await;
-                let no_handle_skip_reason = if self.shared.data_collection_disabled {
-                    "data_collection_disabled"
-                } else {
-                    "no_upload_queue"
-                };
-                let (status, artifact_count, error_message) = resolve_after_turn_ack(
-                    before_handle,
-                    after_handle,
-                    after_turn_watchdog(),
-                    no_handle_skip_reason,
-                )
-                .await;
-                tracing::debug!(
-                    session_id = %session_id,
-                    turn_number = payload.turn_number,
-                    ?status,
-                    artifact_count,
-                    "after_turn ack returned on hook reply"
-                );
+                self.process_after_turn(session_id, payload).await;
                 HookReply {
                     after_turn_ack: Some(AfterTurnAckPayload {
                         turn_number: payload.turn_number,
-                        status,
-                        error_message,
-                        artifact_count,
+                        status: AfterTurnAckStatus::Skipped,
+                        error_message: Some("artifacts_removed".to_owned()),
+                        artifact_count: 0,
                     }),
                     ..HookReply::default()
                 }
@@ -1431,107 +1379,18 @@ impl WorkspaceHandle {
         self.shared.activity_tracker.poke();
         handle
     }
-    /// Spawn a fire-and-forget per-turn `tool_state.json` snapshot and upload to `{session_id}/turn_{N}/tool_state.json`.
-    /// No-op when `GROK_WORKSPACE_TOOL_STATE_ENABLED` is off, opted out, there is no upload queue (local/test mode), or the session is unknown.
-    fn spawn_tool_state_upload(&self, session_id: &str, turn_number: u64) {
-        if !crate::session::tool_config::tool_state_enabled() {
-            return;
-        }
-        if self.shared.data_collection_disabled {
-            return;
-        }
-        let Some(upload_queue) = self.shared.upload_queue.clone() else {
-            dc_log!(
-                debug,
-                session_id = %session_id,
-                turn_number,
-                phase = "tool_state",
-                outcome = "skipped",
-                skip_reason = "no_upload_queue",
-                "workspace: tool_state upload skipped — no upload queue"
-            );
-            crate::upload::record_upload_outcome("tool_state", "skipped");
-            crate::upload::record_upload_skipped("tool_state", "no_upload_queue");
-            return;
-        };
-        let Some(session) = self.session(session_id) else {
-            dc_log!(
-                warn,
-                session_id = %session_id,
-                turn_number,
-                phase = "tool_state",
-                outcome = "skipped",
-                skip_reason = "no_session",
-                "workspace: tool_state upload skipped — no bound session"
-            );
-            crate::upload::record_upload_outcome("tool_state", "skipped");
-            crate::upload::record_upload_skipped("tool_state", "no_session");
-            return;
-        };
-        let session_id = session_id.to_owned();
-        self.spawn_producer(async move {
-            if persist_and_enqueue_tool_state(
-                session,
-                session_id.clone(),
-                turn_number,
-                upload_queue,
-            )
-            .await
-            .is_err()
-            {
-                dc_log!(
-                    warn,
-                    session_id = %session_id,
-                    turn_number,
-                    error_category = "enqueue_failed",
-                    "workspace: tool_state upload failed"
-                );
-                crate::upload::record_upload_failed("tool_state", "enqueue_failed");
-                crate::upload::record_upload_outcome("tool_state", "failed");
-            }
-        });
+    /// tool_state/tool-definitions/workspace-environment artifact uploads were
+    /// removed with the upload/exfiltration pipeline; this is intentionally a no-op.
+    fn spawn_tool_state_upload(&self, _session_id: &str, _turn_number: u64) {}
+
+    /// No-op: the durable upload queue was removed.
+    pub async fn drain_deferred(&self, _deadline: std::time::Duration) -> usize {
+        0
     }
-    /// Drain the workspace's upload queue, waiting up to `deadline` for in-flight uploads to finish.
-    /// Returns the number of items still pending after the deadline (0 when no queue is configured).
-    /// Called from the workspace-server SIGTERM handler on graceful shutdown.
-    pub async fn drain_upload_queue(&self, deadline: std::time::Duration) -> usize {
-        match &self.shared.upload_queue {
-            Some(queue) => queue.drain(deadline).await,
-            None => 0,
-        }
-    }
-    /// Serialize the session's workspace-side toolset to the Chat Completions tool-definitions shape. Ordering is best-effort: the bind emission bypasses the 5s debounce (so it can't suppress the immediate post-bind `ToolsChanged` re-emit).
-    /// Queue dispatch has no per-path ordering, so a stale baseline-only write may rarely clobber a fresher write that also carries the MCP tools.
-    pub(crate) fn emit_workspace_tool_definitions(&self, session_id: &str) {
-        if !self.shared.tool_defs_enabled {
-            return;
-        }
-        if !is_safe_object_segment(session_id) {
-            self.shared.tool_defs_last_emit.remove(session_id);
-            tracing::warn!(%session_id, "tool_defs: unsafe session id, skipping");
-            return;
-        }
-        let Some(upload_queue) = self.shared.upload_queue.clone() else {
-            return;
-        };
-        let Some((object_path, bytes)) = self.workspace_tool_definitions_payload(session_id) else {
-            if self.session(session_id).is_none() {
-                self.shared.tool_defs_last_emit.remove(session_id);
-            }
-            tracing::debug!(%session_id, "tool_defs: no payload, skipping");
-            return;
-        };
-        let session_id = session_id.to_owned();
-        self.spawn_producer(async move {
-            let _ = enqueue_workspace_tool_definitions(
-                &upload_queue,
-                &session_id,
-                &object_path,
-                &bytes,
-            )
-            .await;
-        });
-    }
+
+    /// No-op: workspace tool-definition artifacts were only produced for upload.
+    pub(crate) fn emit_workspace_tool_definitions(&self, _session_id: &str) {}
+
     /// Build the `(gcs_path, json_bytes)` payload for a session's workspace-side tool definitions, or `None` for an unknown session.
     /// Uses the same serializer as the shell's `tool_definitions.json`, so the two artifacts share a byte-identical element shape.
     /// Free of flag/queue gating for direct unit testing.
@@ -1560,19 +1419,14 @@ impl WorkspaceHandle {
             .with_label_values(&[reason.as_ref()])
             .inc();
         let active_at_start = tracker.total_active() as usize;
-        let pending_at_start = self.upload_queue_pending();
         let producers_at_start = self.shared.producer_tasks.len();
         let drain_file = draining_file_path();
-        write_draining_marker(
-            &drain_file,
-            active_at_start + producers_at_start + pending_at_start,
-        );
+        write_draining_marker(&drain_file, active_at_start + producers_at_start);
         dc_log!(
             info,
             drain_reason = reason.as_ref(),
             grace_ms = grace_budget.as_millis() as u64,
             active_at_start,
-            pending_at_start,
             producers_at_start,
             "workspace: two-phase drain commencing"
         );
@@ -1600,7 +1454,7 @@ impl WorkspaceHandle {
         }
         write_draining_marker(&drain_file, self.outstanding_drain_work());
         let phase2 = grace_budget.saturating_sub(start.elapsed());
-        let unfinished = self.drain_upload_queue(phase2).await;
+        let unfinished = self.drain_deferred(phase2).await;
         let producers_unfinished = self.shared.producer_tasks.len();
         let active_unfinished = self.shared.activity_tracker.total_active() as usize;
         let total_unfinished = active_unfinished + producers_unfinished + unfinished;
@@ -1635,21 +1489,11 @@ impl WorkspaceHandle {
         }
         total_unfinished
     }
-    /// Live pending upload-queue depth (0 when no queue is configured).
-    fn upload_queue_pending(&self) -> usize {
-        self.shared
-            .upload_queue
-            .as_ref()
-            .map(|q| q.stats().pending.load(std::sync::atomic::Ordering::Relaxed) as usize)
-            .unwrap_or(0)
-    }
     /// Live total of outstanding durability work the two-phase drain must wait on.
-    /// It sums active tool calls and background tasks (phase 1), producers that have not yet enqueued (phase 1.5), and queued uploads (phase 2).
+    /// It sums active tool calls and background tasks (phase 1), and producers that have not yet finished (phase 1.5).
     /// Used to refresh the preStop drain marker at each phase boundary so it is never `0` while any phase still has work.
     fn outstanding_drain_work(&self) -> usize {
-        self.shared.activity_tracker.total_active() as usize
-            + self.shared.producer_tasks.len()
-            + self.upload_queue_pending()
+        self.shared.activity_tracker.total_active() as usize + self.shared.producer_tasks.len()
     }
     /// Bookkeeping for a cancelled in-flight tool call: marks it as completed in the activity tracker.
     /// Does **not** abort execution of the tool; nothing carries a `CancellationToken` to it yet.
@@ -1680,9 +1524,6 @@ impl WorkspaceHandle {
             owner.spawn_owned(async move { sandbox.end_session(&session_id).await });
         }
         self.shared.session_event_writers.remove(session_id);
-        self.shared
-            .inflight_enqueues
-            .retain(|(sid, _), _| sid != session_id);
         self.shared.tool_defs_last_emit.remove(session_id);
         tracing::info!(%session_id, "session_ended cleanup completed");
     }
@@ -2462,130 +2303,9 @@ impl WorkspaceHandle {
         self.emit_workspace_tool_definitions(session.session_id());
         self.maybe_emit_environment(session.session_id(), session.cwd());
     }
-    /// Emit `workspace_environment.json` once at session bind. A no-op when opted out or when there is no upload queue.
-    /// Runs as a tracked producer task so the bind path never waits on the enqueue and the drain/idle gating still sees the in-flight work.
-    fn maybe_emit_environment(&self, session_id: &str, cwd: &std::path::Path) {
-        if self.shared.data_collection_disabled {
-            return;
-        }
-        let trace_parent = fastrace::collector::SpanContext::current_local_parent();
-        let this = self.clone();
-        let session_id = session_id.to_owned();
-        let cwd = cwd.to_path_buf();
-        self.spawn_producer(async move {
-            let _ = this
-                .emit_environment_artifact(&session_id, &cwd, trace_parent)
-                .await;
-        });
-    }
-    /// Build and enqueue the environment artifact at the session-root path.
-    /// Flag-independent core (the flag check lives in `maybe_emit_environment`) so it is unit-testable; returns `None` when there is no upload queue.
-    async fn emit_environment_artifact(
-        &self,
-        session_id: &str,
-        cwd: &std::path::Path,
-        trace_parent: Option<fastrace::collector::SpanContext>,
-    ) -> Option<xai_file_utils::queue::EnqueueOutcome> {
-        let upload_queue = self.shared.upload_queue.clone()?;
-        if !is_safe_object_segment(session_id) {
-            tracing::warn!(%session_id, "environment: unsafe session id, skipping");
-            return None;
-        }
-        let env = {
-            let session_id_owned = session_id.to_owned();
-            let cwd = cwd.to_path_buf();
-            let identity = self.shared.identity().clone();
-            let server_id = self.shared.server_id();
-            let sandbox_id = self.shared.server_metadata_typed().sandbox_id;
-            match tokio::task::spawn_blocking(move || {
-                crate::upload::environment::WorkspaceEnvironment::capture(
-                    &session_id_owned,
-                    &cwd,
-                    &identity,
-                    server_id,
-                    sandbox_id,
-                )
-            })
-            .in_span(
-                fastrace::Span::root(
-                    "tool_server.session_bind.environment_capture",
-                    trace_parent.unwrap_or_else(xai_tracing::local_or_random_span_ctx),
-                )
-                .with_properties(|| {
-                    [
-                        ("session_id", session_id.to_owned()),
-                        ("force_tracing", "true".to_owned()),
-                    ]
-                }),
-            )
-            .await
-            {
-                Ok(env) => env,
-                Err(e) if e.is_cancelled() => {
-                    tracing::debug!(%session_id, "environment: capture cancelled during shutdown");
-                    return None;
-                }
-                Err(e) => {
-                    dc_log!(
-                        warn,
-                        session_id = %session_id,
-                        "workspace: environment capture panicked"
-                    );
-                    ENV_CAPTURE_PANIC_TOTAL.inc();
-                    tracing::warn!(
-                        %session_id,
-                        error = %e,
-                        "workspace: environment capture task panicked"
-                    );
-                    return None;
-                }
-            }
-        };
-        let bytes = match env.to_json_bytes() {
-            Ok(b) => b,
-            Err(e) => {
-                tracing::warn!(
-                    session_id = %session_id,
-                    error = %e,
-                    "workspace: failed to serialize workspace_environment.json"
-                );
-                return None;
-            }
-        };
-        let gcs_path = format!("{session_id}/workspace_environment.json");
-        let outcome = upload_queue
-            .enqueue_bytes_blocking(
-                &bytes,
-                &gcs_path,
-                "application/json",
-                "workspace_environment",
-                session_id,
-                0,
-            )
-            .await;
-        match &outcome {
-            xai_file_utils::queue::EnqueueOutcome::Failed { reason: _ } => {
-                dc_log!(
-                    warn,
-                    session_id = %session_id,
-                    error_category = "enqueue_failed",
-                    "workspace: environment artifact enqueue failed"
-                );
-                crate::upload::record_upload_failed("workspace_environment", "enqueue_failed");
-                crate::upload::record_upload_outcome("workspace_environment", "failed");
-            }
-            _ => {
-                dc_log!(
-                    info,
-                    session_id = %session_id,
-                    bytes = bytes.len(),
-                    "workspace: environment artifact enqueued"
-                );
-                crate::upload::record_upload_outcome("workspace_environment", "succeeded");
-            }
-        }
-        Some(outcome)
-    }
+    /// Workspace environment artifacts were only produced for upload; this is now a no-op.
+    fn maybe_emit_environment(&self, _session_id: &str, _cwd: &std::path::Path) {}
+
     /// Replace a session's MCP servers with `configs` (`workspace.configure_mcp`). Client-driven, so it is refused on a workspace whose MCP servers come from local configuration — there, the machine owns the set and [`Self::reload_bind_mcp`] is how it changes.
     pub async fn start_session_mcp_servers(
         &self,
@@ -4224,9 +3944,6 @@ impl WorkspaceHandle {
     }
     /// Shutdown the server connection, if active.
     pub async fn shutdown_hub(&self) {
-        if let Some(sampler) = self.shared.queue_stats_sampler.lock().take() {
-            sampler.abort();
-        }
         let handle = self.shared.hub_handle.lock().await.take();
         if let Some(h) = handle {
             h.shutdown().await;
@@ -4466,8 +4183,6 @@ pub struct LocalWorkspaceConnectOptions {
     pub allow_insecure_ws: bool,
     /// Runtime-tunable timing/threshold config for the tool server.
     pub status_config: crate::status_config::StatusConfig,
-    /// Enable the durable artifact upload queue.
-    pub upload_queue_enabled: bool,
     /// Folder-trust verdict for project-scoped LSP servers.
     pub project_lsp_trusted: bool,
     /// Diagnostics server handle, when the embedder runs one.
@@ -4514,13 +4229,6 @@ pub async fn connect_local_workspace(
         time_to_ready_started.elapsed().as_secs_f64(),
     );
     connect_result?;
-    if let Some(upload_queue) = &ws_handle.shared.upload_queue {
-        *ws_handle.shared.queue_stats_sampler.lock() =
-            Some(crate::upload::spawn_queue_stats_sampler(
-                upload_queue.clone(),
-                std::time::Duration::from_secs(15),
-            ));
-    }
     Ok(ws_handle)
 }
 /// Everything [`connect_local_workspace`] builds short of the hub connection: the catalog, session
@@ -4537,7 +4245,6 @@ pub(crate) async fn build_local_workspace(
         alpha_test_key,
         allow_insecure_ws,
         status_config,
-        upload_queue_enabled,
         project_lsp_trusted,
         diag,
         require_explicit_toolset,
@@ -4547,7 +4254,7 @@ pub(crate) async fn build_local_workspace(
         host_kind,
         sandbox,
     } = options;
-    let identity: crate::upload::environment::WorkspaceIdentity =
+    let identity: crate::identity::WorkspaceIdentity =
         auth.identity().map(Into::into).unwrap_or_default();
     let workspace_home = resolve_workspace_home();
     std::fs::create_dir_all(&workspace_home).map_err(|e| {
@@ -4614,44 +4321,6 @@ pub(crate) async fn build_local_workspace(
             .extend(bundled_allowlist_ignore_dirs(&dir, allowlist.as_deref()));
         ws_config.skills_config.bundled_skill_dirs = vec![dir];
     }
-    let proxy_storage = (!host_kind.is_hub_only()).then(|| {
-        Arc::new(crate::upload::ProxyStorageConfig::new(
-            auth.clone(),
-            api_base_url.clone(),
-            identity.clone(),
-        ))
-    });
-    let upload_queue = proxy_storage.as_ref().map(|proxy_storage| {
-        let trace_source: Arc<dyn xai_file_utils::queue::TraceExportSource> = Arc::new(
-            crate::upload::WorkspaceTraceExportSource::new(proxy_storage.clone()),
-        );
-        Arc::new(xai_file_utils::queue::UploadQueue::spawn(
-            &workspace_home,
-            trace_source,
-            xai_file_utils::queue::UploadRetryPolicy::default(),
-        ))
-    });
-    {
-        let recovery_started = std::time::Instant::now();
-        match &upload_queue {
-            Some(upload_queue) if !data_collection_disabled => {
-                let report =
-                    crate::recovery::run_startup_recovery(&workspace_home, upload_queue).await;
-                tracing::info!(?report, "workspace startup restart-recovery scan complete");
-            }
-            _ => {
-                crate::recovery::purge_spilled_items(&workspace_home);
-            }
-        }
-        observe_startup_stage(
-            STARTUP_STAGE_STARTUP_RECOVERY,
-            STARTUP_OUTCOME_OK,
-            recovery_started.elapsed().as_secs_f64(),
-        );
-    }
-    if let Some(upload_queue) = &upload_queue {
-        upload_queue.cleanup_orphans(xai_file_utils::queue::DEFAULT_MAX_AGE);
-    }
     if crate::session::tool_config::tool_state_enabled() {
         let home = workspace_home.clone();
         tokio::spawn(async move {
@@ -4668,8 +4337,6 @@ pub(crate) async fn build_local_workspace(
     let ws_handle = WorkspaceHandle::new_with_data_collection(
         ws_config,
         workspace_home,
-        upload_queue,
-        upload_queue_enabled,
         data_collection_disabled,
         identity,
     )
@@ -4790,49 +4457,6 @@ fn tool_defs_reemit_gate(
         }
     }
 }
-/// Enqueue serialized workspace tool definitions at `object_path`, mapping the outcome to a log line.
-/// Shared by `emit_workspace_tool_definitions` (which spawns it) and the unit tests (which await it).
-async fn enqueue_workspace_tool_definitions(
-    upload_queue: &xai_file_utils::queue::UploadQueue,
-    session_id: &str,
-    object_path: &str,
-    bytes: &[u8],
-) -> xai_file_utils::queue::EnqueueOutcome {
-    use xai_file_utils::queue::EnqueueOutcome;
-    let outcome = upload_queue
-        .enqueue_bytes_blocking(
-            bytes,
-            object_path,
-            "application/json",
-            "workspace_tool_definitions",
-            session_id,
-            0,
-        )
-        .await;
-    match &outcome {
-        EnqueueOutcome::Enqueued
-        | EnqueueOutcome::FellBackToInline
-        | EnqueueOutcome::Deduplicated
-        | EnqueueOutcome::Skipped { .. } => {
-            tracing::info!(
-                %session_id,
-                object_path = %object_path,
-                bytes = bytes.len(),
-                outcome = ?outcome,
-                "workspace: tool definitions enqueued"
-            );
-        }
-        EnqueueOutcome::Failed { reason } => {
-            tracing::warn!(
-                %session_id,
-                object_path = %object_path,
-                error = %reason,
-                "workspace: tool definitions enqueue failed"
-            );
-        }
-    }
-    outcome
-}
 /// Single source of truth for mapping a turn-hook outcome to the `events.jsonl` [`TurnOutcomeLabel`].
 /// Kept as one `match` so the two enums cannot drift and the mapping is never duplicated across call sites.
 fn turn_outcome_label(outcome: xai_tool_protocol::turn_hook::TurnHookOutcome) -> TurnOutcomeLabel {
@@ -4859,69 +4483,6 @@ fn decode_cancellation_category(s: Option<&str>) -> Option<CancellationCategory>
         serde_json::from_value::<CancellationCategory>(serde_json::Value::String(s.to_owned())).ok()
     })
 }
-/// Await both per-phase enqueue handles and reduce them to the wire ack triple `(status, artifact_count, error_message)`.
-/// No handles at all means nothing is on disk: `Skipped`, with `no_handle_skip_reason` as the diagnostic.
-async fn resolve_after_turn_ack(
-    before_handle: Option<tokio::task::JoinHandle<EnqueueOutcome>>,
-    after_handle: Option<tokio::task::JoinHandle<EnqueueOutcome>>,
-    watchdog: std::time::Duration,
-    no_handle_skip_reason: &str,
-) -> (AfterTurnAckStatus, u32, Option<String>) {
-    if before_handle.is_none() && after_handle.is_none() {
-        return (
-            AfterTurnAckStatus::Skipped,
-            0,
-            Some(no_handle_skip_reason.to_owned()),
-        );
-    }
-    let (before, after) = tokio::join!(
-        await_enqueue_outcome(before_handle, watchdog, "before_enqueue"),
-        await_enqueue_outcome(after_handle, watchdog, "after_enqueue"),
-    );
-    reduce_enqueue_outcomes(&before, &after)
-}
-/// Await one enqueue handle under a watchdog, mapping every failure mode (missing handle, join error, timeout) to [`EnqueueOutcome::Failed`].
-/// On timeout the task is detached, not aborted; we only stop blocking the ack.
-async fn await_enqueue_outcome(
-    handle: Option<tokio::task::JoinHandle<EnqueueOutcome>>,
-    watchdog: std::time::Duration,
-    phase: &str,
-) -> EnqueueOutcome {
-    let Some(handle) = handle else {
-        return EnqueueOutcome::Failed {
-            reason: format!("no inflight enqueue for {phase}"),
-        };
-    };
-    match tokio::time::timeout(watchdog, handle).await {
-        Ok(Ok(outcome)) => outcome,
-        Ok(Err(join_err)) => EnqueueOutcome::Failed {
-            reason: format!("{phase} enqueue task failed to join: {join_err}"),
-        },
-        Err(_elapsed) => EnqueueOutcome::Failed {
-            reason: "watchdog_timeout".to_owned(),
-        },
-    }
-}
-/// Reduce the two per-phase [`EnqueueOutcome`]s to the wire ack triple. `artifact_count` counts only durably-spilled phases (`FellBackToInline` is a success for `status` but not durable, so it does not count).
-/// collect deadline) is a non-failure and not a durable enqueue.
-fn reduce_enqueue_outcomes(
-    before: &EnqueueOutcome,
-    after: &EnqueueOutcome,
-) -> (AfterTurnAckStatus, u32, Option<String>) {
-    let durable = |o: &EnqueueOutcome| matches!(o, EnqueueOutcome::Enqueued);
-    let artifact_count = durable(before) as u32 + durable(after) as u32;
-    let first_failure = [before, after].into_iter().find_map(|o| match o {
-        EnqueueOutcome::Failed { reason } => Some(reason.clone()),
-        EnqueueOutcome::Enqueued
-        | EnqueueOutcome::FellBackToInline
-        | EnqueueOutcome::Deduplicated
-        | EnqueueOutcome::Skipped { .. } => None,
-    });
-    match first_failure {
-        Some(reason) => (AfterTurnAckStatus::Failed, artifact_count, Some(reason)),
-        None => (AfterTurnAckStatus::Enqueued, artifact_count, None),
-    }
-}
 /// Per-process ephemeral workspace home for handles constructed without a backing upload queue (tests, local mode).
 /// Never the real grok home: only [`connect_local_workspace`] resolves `$GROK_WORKSPACE_HOME`.
 /// The queue-less default path can therefore never collide with a real workspace's state dir.
@@ -4931,42 +4492,6 @@ fn ephemeral_workspace_home() -> std::path::PathBuf {
 /// Resolve `workspace_rewind_all_outcomes` from `GROK_WORKSPACE_REWIND_ALL_OUTCOMES` (default off).
 fn rewind_all_outcomes_from_env() -> bool {
     xai_grok_config::env_bool("GROK_WORKSPACE_REWIND_ALL_OUTCOMES").unwrap_or(false)
-}
-/// Flush the session toolset's `ResourcesPersistence` to disk (a fresh snapshot, waiting for the atomic-rename write to land).
-/// Then read the bytes back and enqueue them for the given turn.
-/// Extracted from `spawn_tool_state_upload` so the path is unit-testable without a live turn.
-async fn persist_and_enqueue_tool_state(
-    session: Arc<crate::session::WorkspaceSession>,
-    session_id: String,
-    turn_number: u64,
-    upload_queue: Arc<xai_file_utils::queue::UploadQueue>,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let toolset = session.toolset();
-    let Some(state_path) = toolset
-        .save_and_flush_persistence()
-        .await
-        .map(std::path::Path::to_path_buf)
-    else {
-        dc_log!(
-            debug,
-            session_id = %session_id,
-            turn_number,
-            phase = "tool_state",
-            outcome = "skipped",
-            skip_reason = "no_state_path",
-            "workspace: tool_state upload skipped, session has no state directory"
-        );
-        crate::upload::record_upload_outcome("tool_state", "skipped");
-        crate::upload::record_upload_skipped("tool_state", "no_state_path");
-        return Ok(());
-    };
-    let bytes = tokio::fs::read(&state_path).await.map_err(|e| {
-        format!(
-            "failed to read flushed tool_state from {}: {e}",
-            state_path.display()
-        )
-    })?;
-    crate::upload::upload_tool_state_queued(bytes, session_id, turn_number, upload_queue).await
 }
 /// `ToolHandle` adapter that delegates to a workspace session's [`FinalizedToolset`]. It implements `ToolHandle` (for `LocalRegistry`) instead of `ToolServerHandler` (for `ToolServer`).
 struct SessionToolHandle {
@@ -5141,7 +4666,7 @@ impl WorkspaceHandle {
     /// `identity` is stored for parity with the standalone path; this local path has no upload queue, so no environment artifact is emitted.
     pub fn new_minimal(
         cwd: std::path::PathBuf,
-        identity: crate::upload::environment::WorkspaceIdentity,
+        identity: crate::identity::WorkspaceIdentity,
         project_lsp_trusted: bool,
     ) -> WorkspaceResult<Self> {
         use crate::session::tool_config::WorkspaceSessionContextFactory;
@@ -5174,8 +4699,6 @@ impl WorkspaceHandle {
         Self::build(
             config,
             ephemeral_workspace_home(),
-            None,
-            true,
             false,
             events_enabled(),
             rewind_all_outcomes_from_env(),

@@ -124,16 +124,6 @@ struct Args {
     /// Only for a mesh-secured transport; the bearer crosses the network otherwise.
     #[arg(long)]
     allow_insecure_ws: bool,
-    /// Route per-turn uploads through the durable on-disk upload queue (retries and spill-to-disk) instead of the legacy `gcs::upload_bytes` path.
-    /// Enabled by default. Accepts `true`/`false`.
-    /// Pass `--upload-queue-enabled false` (or set `GROK_WORKSPACE_UPLOAD_QUEUE_ENABLED=false`) to fall back to the legacy inline path.
-    #[arg(
-        long,
-        env = "GROK_WORKSPACE_UPLOAD_QUEUE_ENABLED",
-        default_value_t = true,
-        action = clap::ArgAction::Set,
-    )]
-    upload_queue_enabled: bool,
     /// Fail `session.bind`s without an explicit toolset closed (RPC-only) instead of widening to the built-in default catalog.
     #[arg(long)]
     require_explicit_toolset: bool,
@@ -543,7 +533,6 @@ async fn run(
             alpha_test_key: None,
             allow_insecure_ws: args.allow_insecure_ws,
             status_config,
-            upload_queue_enabled: args.upload_queue_enabled,
             project_lsp_trusted: args.project_lsp_trusted,
             diag: Some(diag_handle.clone()),
             require_explicit_toolset: args.require_explicit_toolset,

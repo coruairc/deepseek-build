@@ -679,27 +679,8 @@ async fn upload_with_retries(
     object_path: &str,
     archive: &[u8],
 ) -> anyhow::Result<String> {
-    use backon::{ExponentialBuilder, Retryable};
-
-    let backoff = ExponentialBuilder::default()
-        .with_min_delay(std::time::Duration::from_secs(2))
-        .with_max_delay(std::time::Duration::from_secs(8))
-        .with_max_times(3);
-
-    (|| async {
-        tokio::time::timeout(
-            UPLOAD_TIMEOUT,
-            xai_file_utils::gcs::upload_bytes(config, object_path, archive, "application/gzip"),
-        )
-        .await
-        .map_err(|_| anyhow::anyhow!("Upload timed out after {}s", UPLOAD_TIMEOUT.as_secs()))?
-    })
-    .retry(backoff)
-    .notify(|err, dur| {
-        tracing::warn!(error = %err, retry_in = ?dur, "trace_cmd: upload attempt failed, retrying");
-        eprintln!("  Upload failed, retrying in {}s...", dur.as_secs());
-    })
-    .await
+    let _ = (config, object_path, archive);
+    anyhow::bail!("trace upload removed: object storage stack deleted")
 }
 
 pub(crate) enum UploadGate {

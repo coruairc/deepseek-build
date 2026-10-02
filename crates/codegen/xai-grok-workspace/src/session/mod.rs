@@ -641,8 +641,6 @@ pub struct WorkspaceShared {
     /// Live server connection handle. `None` until [`WorkspaceHandle::connect_hub`](crate::handle::WorkspaceHandle::connect_hub) is called (or if no [`HubConfig`] was provided).
     /// Uses `tokio::sync::Mutex` so the guard can be held across the async `HubHandle::connect()` call, preventing TOCTOU races.
     pub(crate) hub_handle: tokio::sync::Mutex<Option<HubHandle>>,
-    pub(crate) queue_stats_sampler:
-        parking_lot::Mutex<Option<crate::upload::QueueStatsSamplerGuard>>,
     /// Remote-origin tool configs (consumer direction), updated by the notification listener.
     pub(crate) hub_tools_snapshot: arc_swap::ArcSwap<Vec<ToolConfig>>,
     /// Server config stashed at construction time for deferred connect.
@@ -669,7 +667,7 @@ pub struct WorkspaceShared {
     pub(crate) server_metadata: Option<serde_json::Value>,
     /// Owner identity, captured at construction; stamps `workspace_environment.json` and attributes uploads.
     /// Empty in test and local-only contexts.
-    pub(crate) identity: crate::upload::environment::WorkspaceIdentity,
+    pub(crate) identity: crate::identity::WorkspaceIdentity,
     /// Workspace-level fuzzy search manager.
     /// Separate from the shell's own `FuzzySearchManager`; this instance serves remote (hub/RPC) clients.
     pub(crate) fuzzy_searches:
@@ -680,9 +678,7 @@ pub struct WorkspaceShared {
     /// Finalize the FS rewind checkpoint on non-`Completed` turn-end outcomes (from `GROK_WORKSPACE_REWIND_ALL_OUTCOMES`, default off).
     pub(crate) workspace_rewind_all_outcomes: bool,
     /// Resolved `$GROK_WORKSPACE_HOME`, the workspace-owned on-disk state root (`<grok_home>/workspace` by default).
-    /// The upload queue spills here.
     pub(crate) workspace_home: std::path::PathBuf,
-    pub(crate) upload_queue: Option<std::sync::Arc<xai_file_utils::queue::UploadQueue>>,
     /// Whether collection is disabled (opt-out, or the fail-closed default).
     pub(crate) data_collection_disabled: bool,
     /// Whether per-session `events.jsonl` recording is enabled (`GROK_WORKSPACE_EVENTS_ENABLED=true`).
@@ -697,13 +693,6 @@ pub struct WorkspaceShared {
     /// Held in an `Arc` shared with [`ActivityTracker`](crate::activity::ActivityTracker). That sharing lets `Tool*` events resolve the right writer without a back-reference to `WorkspaceShared`.
     pub(crate) session_event_writers:
         Arc<dashmap::DashMap<String, xai_grok_session_events::EventWriter>>,
-    /// In-flight before-turn enqueue tasks, keyed by `(session_id, turn)`.
-    /// Stored by `on_before_turn`; evicted on every turn-end path.
-    /// The `After` turn-hook handler awaits the handle for its ack's `artifact_count`; the fire-and-forget path just drops it (detach, not abort).
-    pub(crate) inflight_enqueues: dashmap::DashMap<
-        (String, u64),
-        tokio::task::JoinHandle<xai_file_utils::queue::EnqueueOutcome>,
-    >,
     /// Artifact-producer tasks, awaited by the drain and counted by the status publisher.
     /// See [`WorkspaceHandle::spawn_producer`](crate::handle::WorkspaceHandle).
     pub(crate) producer_tasks: tokio_util::task::TaskTracker,
@@ -723,11 +712,6 @@ impl WorkspaceShared {
     /// Resolved `$GROK_WORKSPACE_HOME`, the workspace-owned on-disk state root.
     pub fn workspace_home(&self) -> &std::path::Path {
         &self.workspace_home
-    }
-    /// The durable upload queue used for archives.
-    /// `None` in tests and local mode; see [`WorkspaceShared::upload_queue`].
-    pub fn upload_queue(&self) -> Option<&std::sync::Arc<xai_file_utils::queue::UploadQueue>> {
-        self.upload_queue.as_ref()
     }
     /// Whether hub tool calls pass the approval gate; see [`crate::permission::approval_gate_for`].
     pub fn tool_approval(&self) -> crate::permission::ToolApprovalGate {
@@ -766,7 +750,7 @@ impl WorkspaceShared {
             .map(|w| w.value().clone())
     }
     /// Resolved owner identity of this workspace.
-    pub(crate) fn identity(&self) -> &crate::upload::environment::WorkspaceIdentity {
+    pub(crate) fn identity(&self) -> &crate::identity::WorkspaceIdentity {
         &self.identity
     }
     /// Stable hub server id (`--server-id`), if a hub config is present.

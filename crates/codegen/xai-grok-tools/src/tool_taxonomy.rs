@@ -123,7 +123,6 @@ pub const WRITING_TOOL_WIRE_NAMES: &[(&str, ToolKind)] = &[
     ("todo_write", ToolKind::Plan),
     ("todowrite", ToolKind::Plan),
     ("workflow", ToolKind::Workflow),
-    ("send_feedback", ToolKind::Feedback),
     ("ask_user_question", ToolKind::AskUser),
 ];
 /// [`ToolKind`] of a wire name in [`WRITING_TOOL_WIRE_NAMES`]. Keyed by wire name because that is

@@ -86,7 +86,7 @@ pub(crate) struct PromptTraceContext {
     pub(crate) session_handle: crate::session::SessionHandle,
     pub(crate) memory_mode: Option<crate::config::MemoryMode>,
     pub(crate) session_registry_enabled: bool,
-    pub(crate) upload_queue: Option<xai_file_utils::queue::UploadQueue>,
+    pub(crate) upload_queue: Option<crate::file_utils_compat::queue::UploadQueue>,
     pub(crate) artifact_tracker: super::manifest::ArtifactTracker,
     pub(crate) auth_manager: std::sync::Arc<xai_grok_login::AuthManager>,
 }

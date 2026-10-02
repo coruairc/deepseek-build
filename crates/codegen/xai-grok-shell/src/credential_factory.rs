@@ -9,9 +9,7 @@ use std::sync::Arc;
 use xai_grok_auth::{AuthCredentialProvider, StaticAuthCredentialProvider};
 
 use xai_grok_login::AuthManager;
-use xai_grok_login::credential_provider::{
-    ShellAuthCredentialProvider, StorageClientAttributionBridge,
-};
+use xai_grok_login::credential_provider::ShellAuthCredentialProvider;
 use xai_grok_login::grok_auth_credentials::GrokAuthCredentials;
 
 /// Build a `StorageClient` for proxy uploads. Pass the correct `client_identifier` so requests can be attributed.
@@ -25,8 +23,9 @@ pub fn build_storage_client_for_proxy(
     user_token: Option<String>,
     session_id: Option<String>,
     client_identifier: &str, // "grok-shell" or "grok-pager" etc.
-) -> xai_file_utils::storage_client::StorageClient {
+) -> crate::file_utils_compat::storage_client::StorageClient {
     let http_client = xai_grok_http::shared_upload_client();
+    let _ = session_id;
     if let Some(am) = auth_manager {
         let provider: Arc<dyn AuthCredentialProvider> =
             Arc::new(ShellAuthCredentialProvider::with_deployment_id_resolver(
@@ -35,16 +34,13 @@ pub fn build_storage_client_for_proxy(
                 alpha_test_key,
                 std::sync::Arc::new(xai_grok_cloud_config::managed_config::resolve_deployment_id),
             ));
-        let bridge: Arc<dyn xai_file_utils::storage_client::Auth401AttributionCallback> =
-            Arc::new(StorageClientAttributionBridge::new(am, session_id));
-        xai_file_utils::storage_client::StorageClient::with_provider(
+        crate::file_utils_compat::storage_client::StorageClient::with_provider(
             proxy_base_url,
             http_client,
             provider,
         )
         .with_client_identity(xai_grok_version::VERSION, client_identifier)
         .with_client_mode(xai_grok_http::process_client_mode())
-        .with_attribution(bridge)
     } else {
         let mut creds = GrokAuthCredentials::new(user_token);
         creds.deployment_key = deployment_key;
@@ -56,7 +52,7 @@ pub fn build_storage_client_for_proxy(
         let provider: Arc<dyn AuthCredentialProvider> = Arc::new(
             StaticAuthCredentialProvider::new(Box::new(creds), wire_bearer),
         );
-        xai_file_utils::storage_client::StorageClient::with_provider(
+        crate::file_utils_compat::storage_client::StorageClient::with_provider(
             proxy_base_url,
             http_client,
             provider,

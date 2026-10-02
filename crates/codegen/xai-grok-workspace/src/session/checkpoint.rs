@@ -209,7 +209,7 @@ impl WorkspaceHandle {
         &self,
         session_id: &str,
         boundary: TurnBoundary,
-    ) -> Option<tokio::task::JoinHandle<xai_file_utils::queue::EnqueueOutcome>> {
+    ) -> Option<()> {
         match boundary {
             TurnBoundary::Start {
                 prompt_index: Some(idx),

@@ -730,7 +730,10 @@ impl SessionSignalsHandle {
     /// Snapshot GCS upload queue stats into signals.
     ///
     /// Reads the atomics from `UploadQueueStats` once and sends plain u64 values to the actor; the Arc is NOT retained in the signal event.
-    pub(crate) fn snapshot_gcs_queue(&self, stats: &xai_file_utils::queue::UploadQueueStats) {
+    pub(crate) fn snapshot_gcs_queue(
+        &self,
+        stats: &crate::file_utils_compat::queue::UploadQueueStats,
+    ) {
         use std::sync::atomic::Ordering;
         let _ = self.tx.send(SignalEvent::RecordGcsQueueSnapshot {
             enqueued: stats.enqueued.load(Ordering::Relaxed),
@@ -740,7 +743,7 @@ impl SessionSignalsHandle {
             circuit_breaker_trips: stats.circuit_breaker_trips.load(Ordering::Relaxed),
             pending: stats.pending.load(Ordering::Relaxed),
             pending_bytes: stats.pending_bytes.load(Ordering::Relaxed),
-            orphans_cleaned: xai_file_utils::queue::last_orphans_cleaned(),
+            orphans_cleaned: crate::file_utils_compat::queue::last_orphans_cleaned(),
         });
     }
 
