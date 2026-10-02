@@ -1,4 +1,4 @@
-//! The remote `/settings` request to the cli-chat-proxy.
+//! The remote `/settings` request (fetch removed).
 //!
 //! The fetch has been removed. The outcome type is retained so the startup
 //! settings gate keeps compiling; every fetch reports `Retry` (no remote

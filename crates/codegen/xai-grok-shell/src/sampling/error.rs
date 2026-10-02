@@ -261,8 +261,6 @@ fn error_message_from_data(data: &serde_json::Value) -> serde_json::Value {
 /// Internal service names that upstream error bodies echo, rewritten to distinct sentence-friendly backend labels before display. The labels stay distinct so a user paste keeps the failing hop.
 /// Shared by shell and pager so the redaction cannot drift; apply via [`rewrite_service_names`] (case-insensitive, no cased variants here). No replacement value may re-match a pattern (pinned by test).
 pub const SERVICE_NAME_REWRITES: &[(&str, &str)] = &[
-    ("cli-chat-proxy", "build backend"),
-    ("cli_chat_proxy", "build backend"),
     ("inference-api", "inference backend"),
     ("inference_api", "inference backend"),
     ("research-api", "research backend"),

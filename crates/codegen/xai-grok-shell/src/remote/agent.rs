@@ -1,4 +1,4 @@
-//! HTTP client for managing sandbox sessions and environments via the cli-chat-proxy REST API.
+//! HTTP client for managing sandbox sessions and environments via the sandbox REST API.
 
 use std::sync::Arc;
 
@@ -6,7 +6,7 @@ use anyhow::{Context, Result, bail};
 use serde::de::DeserializeOwned;
 use xai_grok_login::{AuthManager, GrokComConfig};
 
-// Re-export sandbox API types from cli-chat-proxy-types for convenience.
+// Re-export sandbox API types from proxy types crate for convenience.
 // Sorted alphabetically; see sandbox_types.rs for logical grouping.
 pub use prod_mc_cli_chat_proxy_types::{
     SandboxCreateEnvironmentRequest, SandboxEnvironment, SandboxEnvironmentResponse,
@@ -23,7 +23,7 @@ pub use prod_mc_cli_chat_proxy_types::{
 // Sandbox Client
 // ============================================================================
 
-/// HTTP client for interacting with the sandbox API via cli-chat-proxy. Path parameters (`session_id`, `environment_id`) are interpolated directly into URLs without percent-encoding.
+/// HTTP client for interacting with the sandbox API via chat proxy. Path parameters (`session_id`, `environment_id`) are interpolated directly into URLs without percent-encoding.
 /// This is safe because these IDs are UUIDs in practice. If ID formats ever change to include URL-unsafe characters, the `format!()` calls should be updated to use percent-encoding.
 pub struct SandboxClient {
     client: reqwest::Client,

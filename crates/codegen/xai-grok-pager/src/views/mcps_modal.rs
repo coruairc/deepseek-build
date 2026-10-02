@@ -47,7 +47,7 @@ pub fn section_key(section: &McpSectionId) -> String {
 /// Display label for a section header, e.g. `"Managed by grok.com (3)"`.
 pub fn section_label(section: &McpSectionId, count: usize) -> String {
     match section {
-        McpSectionId::Managed => format!("Managed by grok.com ({count})"),
+        McpSectionId::Managed => format!("Managed ({count})"),
         McpSectionId::Plugin(name) => format!("Plugin: {name} ({count})"),
         McpSectionId::Local => format!("Local ({count})"),
     }

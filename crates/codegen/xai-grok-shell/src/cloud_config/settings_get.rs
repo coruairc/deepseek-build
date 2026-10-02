@@ -23,7 +23,7 @@ use crate::cloud_config::{Commit, PolicyRepairPending, SettingsEndpoint, Setting
 pub struct SettingsQuery {
     auth: Option<GrokAuth>,
     endpoint: SettingsEndpoint,
-    /// The grok.com config that disk auth was resolved under, for the commit-time identity recheck.
+    /// The first-party backend config that disk auth was resolved under, for the commit-time identity recheck.
     /// The env-only default config would see a file or managed IdP as a changed credential.
     auth_config: Option<GrokComConfig>,
 }
@@ -35,7 +35,7 @@ impl SettingsQuery {
     }
 
     /// A live refresh query for `endpoints`.
-    /// `--cli-chat-proxy-base-url` can point them away from the startup endpoints.
+    /// `--chat proxy-base-url` can point them away from the startup endpoints.
     pub fn from_endpoints(
         endpoints: &EndpointsConfig,
         auth: GrokAuth,

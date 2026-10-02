@@ -1,4 +1,4 @@
-//! The grok.com chat model catalog (`POST /rest/modes`): the models grok-web's chat picker shows, distinct from the CLI `/v1/models` build catalog.
+//! The remote chat model catalog (`POST /rest/modes`): the models grok-web's chat picker shows, distinct from the CLI `/v1/models` build catalog.
 //! Transport only; the cache and the ACP mapping live in [`crate::agent::chat_modes`].
 
 use std::sync::Arc;
@@ -101,7 +101,7 @@ impl ChatModelsClient {
         }
     }
 
-    /// Gated only on a valid grok.com bearer, not `is_xai_auth()` like workspaces/conversations.
+    /// Gated only on a valid first-party backend bearer, not `is_xai_auth()` like workspaces/conversations.
     /// `/rest/modes` is the public chat endpoint, and that gate would exclude API-key and cached-token chat users.
     pub(crate) async fn list_modes(
         &self,

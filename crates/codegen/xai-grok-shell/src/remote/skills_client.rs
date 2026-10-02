@@ -1,4 +1,4 @@
-//! grok.com product Skills catalog, served by the same REST sources grok-web uses:
+//! first-party backend product Skills catalog, served by the same REST sources grok-web uses:
 //! - `POST /rest/skills`: first-party bundled skills (docx, pdf, ffmpeg, …)
 //! - `GET  /rest/user-skills`: enabled user-uploaded skills
 //!
@@ -33,7 +33,7 @@ pub const CHAT_PRODUCT_META_KEY: &str = "product";
 const LIST_CATALOG_ATTEMPTS: u32 = 3;
 const LIST_CATALOG_BACKOFF: Duration = Duration::from_millis(100);
 /// Per-request budget for product Skills REST.
-/// The shared client only sets a connect timeout; without this a hung grok.com stalls the session actor.
+/// The shared client only sets a connect timeout; without this a hung first-party backend stalls the session actor.
 const LIST_REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -415,7 +415,7 @@ impl SkillsClient {
         xai_grok_telemetry::inject_trace_context_into_request(builder)
     }
 
-    /// Grok.com product Skills require first-party session auth (the same gate as managed MCP and sibling grok.com clients), not plain BYOK API keys.
+    /// Grok.com product Skills require first-party session auth (the same gate as managed MCP and sibling first-party backend clients), not plain BYOK API keys.
     async fn require_skills_auth(&self) -> Result<xai_grok_login::GrokAuth, SkillsError> {
         let auth = self.auth.auth().await.map_err(|_| SkillsError::NoAuth)?;
         if !auth.is_managed_mcp_eligible() {
@@ -424,7 +424,7 @@ impl SkillsClient {
         Ok(auth)
     }
 
-    /// Credentials to try for grok.com product Skills REST. Primary first. When primary is OIDC on the default grok.com host, also try non-OIDC keys for the same user from this AuthManager's `auth.json`.
+    /// Credentials to try for first-party backend product Skills REST. Primary first. When primary is OIDC on the default first-party backend host, also try non-OIDC keys for the same user from this AuthManager's `auth.json`.
     /// Team OIDC is often rejected with `oauth2-auth-forbidden`.
     /// Order / isolation (see [`skills_auth_alt_candidates`]): same-tenant-tagged alts first when primary is tagged untagged same-user alts as 403 recovery when primary is tagged untagged primary never accepts team-tagged alts
     fn skills_auth_candidates(

@@ -36,7 +36,7 @@ pub struct SettingsEndpoint {
 }
 
 impl SettingsEndpoint {
-    /// `origin` is the cli-chat-proxy base URL the fetch goes to.
+    /// `origin` is the chat proxy base URL the fetch goes to.
     pub fn new(origin: String, alpha_test_key: Option<String>) -> SettingsEndpoint {
         SettingsEndpoint {
             origin,

@@ -638,7 +638,7 @@ impl DeferredRelayArm {
         ) else {
             return Some(self);
         };
-        info!("Relay-eligible auth token appeared after startup — arming grok.com relay");
+        info!("Relay-eligible auth token appeared after startup — arming relay");
         spawn_leader_relay(
             self.slot,
             relay_config,
@@ -1083,7 +1083,7 @@ pub async fn run_leader(
                 );
             } else {
                 info!(
-                    "Relay not started: no grok.com session token \
+                    "Relay not started: no session token \
                      (BYOK / local-only leader); will arm if an eligible \
                      token is hot-reloaded"
                 );

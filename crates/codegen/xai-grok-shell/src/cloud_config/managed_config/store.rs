@@ -105,7 +105,7 @@ pub(super) fn eligible_team_principal(auth: GrokAuth) -> Option<GrokAuth> {
     (auth.is_team_principal() && !xai_grok_login::is_expired(&auth)).then_some(auth)
 }
 
-/// Single-team: managed config is a grok.com feature with one grok.com auth.
+/// Single-team: managed config is a first-party backend feature with one first-party backend auth.
 fn read_team_principal() -> std::io::Result<Option<GrokAuth>> {
     let home = xai_dirs::grok_home();
     let store = xai_grok_login::read_auth_json(&xai_grok_login::auth_json_path(&home))?;
