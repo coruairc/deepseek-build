@@ -1,17 +1,17 @@
-//! Changelog fetching from CDN with local disk cache.
+//! Changelog loading from the local disk cache.
 //!
-//! Both markdown (`*.external.md`) and JSON (`*.external.json`) changelogs are published per-version to the CDN at `x.ai/cli/changelogs/`.
+//! Both markdown (`*.external.md`) and JSON (`*.external.json`) changelogs are read from `$GROK_HOME`.
+//! Remote CDN fetching was removed from this build; the manager only reads the on-disk copies.
 //!
-//! `ChangelogManager::fetch()` retrieves both formats in parallel and returns a `Changelog` with optional markdown and structured entries.
+//! `ChangelogManager::fetch()` returns a `Changelog` with optional markdown and structured entries.
 //! Consumers pick the format they need:
 //! - `/release-notes` uses `changelog.markdown` for rich scrollback display
 //! - The welcome screen uses `changelog.entries` for bullet rendering
 
 use std::path::PathBuf;
 
-/// CDN base for all changelogs (proxies to GCS, cache-friendly).
-const CHANGELOG_BASE: &str = "https://x.ai/cli/changelogs";
-const FETCH_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(3);
+/// Retained for callers/tests that pass an explicit base; this build performs no remote fetch.
+const CHANGELOG_BASE: &str = "";
 
 /// A single structured changelog entry from the published JSON changelog. Shape must match the output of `render_external_json` in `changelog.sh`: `{category, description, breaking_change}`
 /// If you change fields here, update `changelog.sh:render_external_json` too. All fields use `#[serde(default)]` so a single malformed entry doesn't kill the entire array parse.
@@ -71,72 +71,20 @@ impl ChangelogManager {
         }
     }
 
-    /// Fetch both markdown and JSON changelogs for the current version. Each format is fetched independently (CDN, 3 s timeout) and cached to disk, falling back to the cached copy on failure.
-    /// Either field may be `None` if offline with no cache. When `GROK_CHANGELOG_OFFLINE` is set (PTY / integration tests), the CDN is skipped and only the disk cache is read.
-    /// JSON is cached only after a successful parse; the markdown cache is write-through since it's consumed as raw text.
+    /// Read both markdown and JSON changelogs for the current version from the local disk cache.
+    /// Either field may be `None` when no cache is present. Remote CDN fetching was removed from this build.
     pub fn fetch(&self) -> Changelog {
         // Always re-resolve from env so a caller holding an older manager (or a stale OnceLock) still reads the live harness home
         Self::from_env_home().fetch_with(changelog_offline(), CHANGELOG_BASE)
     }
 
-    /// Fetch using this manager's already-resolved cache paths, an explicit offline flag, and an explicit CDN base. Split out of [`fetch`] so unit tests can drive it against a temp home without touching process-global env.
-    /// Mutating `GROK_HOME` / `GROK_CHANGELOG_OFFLINE` races across the parallel test harness. Passing an unreachable `base` forces a deterministic CDN miss instead of depending on whether the sandbox happens to block network.
-    /// Production callers always go through [`fetch`].
-    fn fetch_with(&self, offline: bool, base: &str) -> Changelog {
-        if offline {
-            return Changelog {
-                markdown: read_cache(&self.md_cache),
-                entries: self.read_json_cache(),
-            };
+    /// Read from this manager's already-resolved cache paths. The `offline` flag and `base` are retained for call-site compatibility; this build performs no remote fetch.
+    /// Split out of [`fetch`] so unit tests can drive it against a temp home without touching process-global env.
+    fn fetch_with(&self, _offline: bool, _base: &str) -> Changelog {
+        Changelog {
+            markdown: read_cache(&self.md_cache),
+            entries: self.read_json_cache(),
         }
-
-        let version = xai_grok_version::VERSION;
-        let md_url = format!("{}/{}.external.md", base, version);
-
-        // Fetch both formats in parallel: 3s timeout each means 3s total, not 6s
-        let mut markdown = None;
-        let mut entries = None;
-        std::thread::scope(|s| {
-            let md_handle = s.spawn(|| self.fetch_and_cache(&md_url, &self.md_cache));
-            let json_handle = s.spawn(|| self.fetch_json(base, version));
-            markdown = md_handle.join().ok().flatten();
-            entries = json_handle.join().ok().flatten();
-        });
-
-        // If the CDN is unreachable (CI sandboxes, airplane mode), fall back to any on-disk seed under `$GROK_HOME`
-        // This applies even when offline mode was not requested, keeping PTY/integration tests deterministic
-        if markdown.is_none() {
-            markdown = read_cache(&self.md_cache);
-        }
-        if entries.is_none() {
-            entries = self.read_json_cache();
-        }
-
-        Changelog { markdown, entries }
-    }
-
-    /// Fetch and parse JSON changelog, caching only after successful parse.
-    fn fetch_json(&self, base: &str, version: &str) -> Option<Vec<ChangelogEntry>> {
-        let url = format!("{}/{}.external.json", base, version);
-
-        // Try remote first; only cache after successful parse
-        if let Ok(raw) = fetch_blocking(&url)
-            && !raw.trim().is_empty()
-        {
-            match serde_json::from_str::<Vec<ChangelogEntry>>(&raw) {
-                Ok(entries) => {
-                    if let Err(e) = std::fs::write(&self.json_cache, &raw) {
-                        tracing::debug!(error = %e, "JSON changelog cache write failed");
-                    }
-                    return Some(entries);
-                }
-                Err(e) => {
-                    tracing::debug!(error = %e, "failed to parse JSON changelog from CDN");
-                }
-            }
-        }
-
-        self.read_json_cache()
     }
 
     fn read_json_cache(&self) -> Option<Vec<ChangelogEntry>> {
@@ -149,23 +97,9 @@ impl ChangelogManager {
             }
         }
     }
-
-    /// Try remote (3 s timeout), cache on success, fall back to disk cache on failure.
-    fn fetch_and_cache(&self, url: &str, cache_path: &std::path::Path) -> Option<String> {
-        if let Ok(content) = fetch_blocking(url)
-            && !content.trim().is_empty()
-        {
-            if let Err(e) = std::fs::write(cache_path, &content) {
-                tracing::debug!(error = %e, path = %cache_path.display(), "cache write failed");
-            }
-            return Some(content);
-        }
-        read_cache(cache_path)
-    }
 }
 
-/// When set, `ChangelogManager::fetch` skips the CDN and only reads disk cache.
-/// Used by PTY harness tests that seed `CHANGELOG.{md,json}` under a temp home.
+/// Retained for callers that set it; this build always reads only the disk cache.
 fn changelog_offline() -> bool {
     std::env::var_os("GROK_CHANGELOG_OFFLINE").is_some_and(|v| !v.is_empty() && v != "0")
 }
@@ -191,18 +125,6 @@ pub fn bullets_from_entries(entries: &[ChangelogEntry], max: usize) -> Vec<Strin
         .take(max)
         .map(|e| strip_markdown_inline(&e.description))
         .collect()
-}
-
-/// Blocking HTTP fetch.
-/// Callers (`std::thread::scope` threads) are already off the tokio runtime, so no extra thread spawn is needed.
-fn fetch_blocking(url: &str) -> anyhow::Result<String> {
-    let client =
-        xai_grok_extra_ca::build_blocking_reqwest_client(|builder| builder.timeout(FETCH_TIMEOUT))?;
-    let resp = client.get(url).send()?;
-    if !resp.status().is_success() {
-        anyhow::bail!("HTTP {}", resp.status());
-    }
-    Ok(resp.text()?)
 }
 
 #[cfg(test)]

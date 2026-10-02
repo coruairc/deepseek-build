@@ -993,7 +993,6 @@ fn leader_info_payload(control_state: &LeaderServerControlState) -> ControlPaylo
         cursor_worker: Some(control_state.cursor_worker.info_summary()),
     }
 }
-use crate::env::PROD_COMPUTER_HUB_WS_URL as PROD_COMPUTER_HUB_URL;
 const WORKSPACE_DRAIN_TIMEOUT: Duration = Duration::from_secs(10);
 fn workspace_err(message: impl Into<String>) -> ControlError {
     ControlError {
@@ -1109,7 +1108,7 @@ async fn handle_workspace_start(
     let url_str = hub_url
         .filter(|u| !u.trim().is_empty())
         .or_else(|| ws.default_hub_url.clone())
-        .unwrap_or_else(|| PROD_COMPUTER_HUB_URL.to_string());
+        .ok_or_else(|| workspace_err("no hub url configured for workspace exposure"))?;
     let url = url::Url::parse(&url_str)
         .map_err(|e| workspace_err(format!("invalid hub url {url_str}: {e}")))?;
     let cwd_path = PathBuf::from(&cwd);
