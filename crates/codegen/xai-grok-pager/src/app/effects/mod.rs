@@ -2124,7 +2124,7 @@ pub(crate) fn execute(
         Effect::PersistAnnouncementsHidden { hidden_ids } => {
             tasks
                 .spawn(async move {
-                    xai_grok_announcements::write_hidden_announcement_ids(&hidden_ids)
+                    xai_grok_shell::util::config::write_hidden_announcement_ids(&hidden_ids)
                         .await;
                     TaskResult::AnnouncementsHiddenPersisted {
                         result: Ok(()),
@@ -5301,7 +5301,7 @@ fn session_info_fields(
     }
     push(
         "Shell version",
-        xai_grok_version::display_version(xai_grok_update::channel_label()),
+        xai_grok_version::display_version(xai_grok_version::channel_label()),
         false,
     );
     push("Session ID", info.session_id.to_string(), false);

@@ -45,7 +45,7 @@ fn should_warn_missing_session(ctx: MissingSessionCtx) -> bool {
 }
 /// The stored fields a settings poll may replace. Snapshotted before the fetch so a full reapply landing mid-fetch makes the poll skip.
 type PolledFields = (
-    Option<Vec<xai_grok_announcements::RemoteAnnouncement>>,
+    Option<Vec<crate::util::config::RemoteAnnouncement>>,
     Vec<xai_grok_config_types::RemoteRequestEncoding>,
 );
 fn polled_fields(settings: &crate::util::config::RemoteSettings) -> PolledFields {
@@ -2382,7 +2382,6 @@ impl MvpAgent {
                 tokio::sync::Semaphore::new(cfg.subagents_sampling_limit),
             ),
             monitor_event_buffer: xai_grok_tools::implementations::grok_build::monitor::types::MonitorEventBuffer::default(),
-            bundle_sync_in_flight: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             post_unblock_jwt_retry_in_flight: Arc::new(
                 std::sync::atomic::AtomicBool::new(false),
             ),

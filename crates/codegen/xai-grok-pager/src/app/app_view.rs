@@ -564,13 +564,13 @@ pub struct AppView {
     pub scroll_debug_hud: crate::views::scroll_debug_hud::ScrollDebugHud,
     /// Release-safe FPS HUD (`/debug fps`; `GROK_FPS` env on release builds, where the dev overlay is compiled out); see the module doc.
     pub fps_hud: crate::views::fps_hud::FpsHud,
-    pub active_announcements: Vec<xai_grok_announcements::RemoteAnnouncement>,
+    pub active_announcements: Vec<xai_grok_shell::util::config::RemoteAnnouncement>,
     /// Persisted hide keys, filtered at the banner selection gate.
     /// Hiding one critical reveals the next unhidden one, and a NEW id shows the banner again.
     pub hidden_announcement_ids: std::collections::BTreeSet<String>,
     pub announcements_last_gen: u64,
     /// Selected welcome announcement for this pager launch.
-    pub announcement: Option<xai_grok_announcements::RemoteAnnouncement>,
+    pub announcement: Option<xai_grok_shell::util::config::RemoteAnnouncement>,
     /// Cached changelog markdown (for `/release-notes`).
     /// Populated by `FetchChangelog` at startup; `None` until the fetch completes.
     pub changelog_markdown: Option<String>,
@@ -4948,7 +4948,7 @@ impl AppView {
         ) else {
             return;
         };
-        let key = xai_grok_announcements::announcement_hide_key(owner);
+        let key = xai_grok_shell::util::config::announcement_hide_key(owner);
         let id = owner.id.clone();
         let surfaces = [
             (AnnouncementCtaSurface::Banner, banner),

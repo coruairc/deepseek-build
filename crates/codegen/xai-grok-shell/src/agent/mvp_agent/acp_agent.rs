@@ -209,7 +209,6 @@ impl acp::Agent for MvpAgent {
         if !self.tier_allowed.get() {
             self.spawn_tier_recheck();
         }
-        self.maybe_sync_bundle_in_background(false);
         let mut client_type = arguments
             .meta
             .as_ref()
@@ -798,7 +797,6 @@ impl acp::Agent for MvpAgent {
                         .await;
                 }
                 self.enforce_grok_code_access(&auth).await;
-                self.maybe_sync_bundle_in_background(false);
                 let auth_for_settings = auth.clone();
                 {
                     let mut sampling_config = self.sampling_config.borrow_mut();
@@ -949,7 +947,6 @@ impl acp::Agent for MvpAgent {
                 }
                 self.auth_manager.hot_swap(auth.clone());
                 self.enforce_grok_code_access(&auth).await;
-                self.maybe_sync_bundle_in_background(false);
                 tokio::task::spawn_local(
                     xai_grok_cloud_config::managed_config::post_login_sync(
                         Some(auth.clone()),
@@ -2335,9 +2332,6 @@ impl acp::Agent for MvpAgent {
             }
             s if s.starts_with("x.ai/search/") => {
                 crate::extensions::search::handle(self, &args).await
-            }
-            s if s.starts_with("x.ai/bundle/") => {
-                crate::extensions::bundle::handle(self, &args).await
             }
             s if s.starts_with("x.ai/code/") => {
                 let ops = self.resolve_workspace_ops()?;

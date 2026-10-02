@@ -1036,7 +1036,7 @@ fn dispatch_inner(action: Action, app: &mut AppView) -> Vec<Effect> {
                 &app.hidden_announcement_ids,
             )
             .filter(|a| crate::views::announcements::is_dismissible(a))
-            .map(xai_grok_announcements::announcement_hide_key);
+            .map(xai_grok_shell::util::config::announcement_hide_key);
             if let Some(key) = shown_key
                 && app.hidden_announcement_ids.insert(key)
             {

@@ -8509,8 +8509,8 @@ fn interactive_trust_prompt_reprompts_after_untrust() {
         );
     });
 }
-fn ann(id: &str) -> xai_grok_announcements::RemoteAnnouncement {
-    xai_grok_announcements::RemoteAnnouncement {
+fn ann(id: &str) -> crate::util::config::RemoteAnnouncement {
+    crate::util::config::RemoteAnnouncement {
         id: Some(id.to_string()),
         message: Some(format!("{id}-msg")),
         severity: Some("critical".to_string()),
@@ -8519,7 +8519,7 @@ fn ann(id: &str) -> xai_grok_announcements::RemoteAnnouncement {
 }
 /// `RemoteSettings` with only `announcements` set (callers add sentinel fields as needed).
 fn settings_with(
-    announcements: Option<Vec<xai_grok_announcements::RemoteAnnouncement>>,
+    announcements: Option<Vec<crate::util::config::RemoteAnnouncement>>,
 ) -> crate::util::config::RemoteSettings {
     crate::util::config::RemoteSettings {
         announcements,
@@ -8644,7 +8644,7 @@ fn announcements_push_gate_force_mode_pushes_unchanged_and_empty() {
 #[test]
 fn announcements_push_gate_ignores_expired_only_addition() {
     let now = test_now();
-    let expired = xai_grok_announcements::RemoteAnnouncement {
+    let expired = crate::util::config::RemoteAnnouncement {
         expires_at: Some("2000-01-01T00:00:00Z".to_string()),
         ..ann("expired")
     };
@@ -8665,7 +8665,7 @@ fn announcements_push_gate_ignores_expired_only_addition() {
 /// Live banners then clear on time instead of outliving their own expiry.
 #[test]
 fn announcements_push_gate_emits_on_expiry_crossing() {
-    let expiring = xai_grok_announcements::RemoteAnnouncement {
+    let expiring = crate::util::config::RemoteAnnouncement {
         expires_at: Some("2026-06-01T00:00:00Z".to_string()),
         ..ann("soon")
     };

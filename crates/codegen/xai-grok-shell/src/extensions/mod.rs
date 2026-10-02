@@ -4,7 +4,6 @@ pub(crate) mod auth_gate;
 pub(crate) mod background_task;
 pub mod billing;
 pub mod btw;
-pub mod bundle;
 pub(crate) mod chat_conversation_history;
 pub mod code_nav;
 pub mod consent;

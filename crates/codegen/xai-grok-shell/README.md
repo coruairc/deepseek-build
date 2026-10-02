@@ -7,9 +7,6 @@ Use it interactively as a TUI, or integrate it into your own apps via headless m
 ## Quick Start
 
 ```bash
-# Install
-curl -fsSL https://x.ai/cli/install.sh | bash
-
 # Interactive TUI
 grok
 
@@ -57,24 +54,13 @@ grok agent stdio
 
 ## Installation
 
-```bash
-# Install latest stable
-curl -fsSL https://x.ai/cli/install.sh | bash
-
-# Install a specific version
-curl -fsSL https://x.ai/cli/install.sh | bash -s 0.1.42
-```
+Build the binary from source in this repository and place it on your `PATH`.
+The previous network installers and the auto-updater were removed.
 
 Verify installation:
 
 ```bash
 grok --version
-```
-
-Update to the latest version:
-
-```bash
-grok update
 ```
 
 ---

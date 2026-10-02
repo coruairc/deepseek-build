@@ -1,9 +1,9 @@
 use semver::Version;
 use toml::Value as TomlValue;
 
-/// Machine-readable channel name derived from the GCS stable pointer cache.
-/// Reads `stable_version` from `~/.grok/version.json` (written by the auto-updater) and compares the compiled-in version against it: `Some("alpha")` when the current version is ahead of stable, `Some("stable")` when at or behind stable, `None` when no cached pointer is available (first launch, old cache).
-/// This is a lightweight duplicate of `xai_grok_update::channel_name()` for use in `xai-grok-shell` which cannot depend on `xai-grok-update`.
+/// Machine-readable channel name derived from a cached stable pointer, when one exists.
+/// Reads `stable_version` from `~/.grok/version.json` and compares the compiled-in version against it: `Some("alpha")` when the current version is ahead of stable, `Some("stable")` when at or behind stable, `None` when no cached pointer is available (first launch, old cache).
+/// The auto-updater that wrote this cache was removed; the cache simply decays to absent on fresh installs.
 pub(crate) fn channel_name_from_cache() -> Option<&'static str> {
     use std::sync::OnceLock;
     static NAME: OnceLock<Option<&'static str>> = OnceLock::new();

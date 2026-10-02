@@ -1372,7 +1372,7 @@ impl AgentView {
         usage_command_visible: bool,
         chat_mode: bool,
         screen_mode: crate::app::ScreenMode,
-        announcements: &[xai_grok_announcements::RemoteAnnouncement],
+        announcements: &[xai_grok_shell::util::config::RemoteAnnouncement],
         restricted_commands: &[String],
     ) {
         self.set_sharing_enabled(sharing_enabled);

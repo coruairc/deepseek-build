@@ -632,7 +632,7 @@ async fn bounded_connect(
         attempt,
         version: xai_grok_version::display_version_with_commit(
             xai_grok_version::full_version(),
-            xai_grok_update::channel_label(),
+            xai_grok_version::channel_label(),
         ),
         log_path: xai_grok_telemetry::unified_log::path(),
     };
@@ -704,12 +704,7 @@ async fn bounded_connect(
 /// Main entry point: connect to agent, init terminal, run event loop, restore.
 /// If a session ID is provided via `--resume` / `--load` / `--continue`, the pager skips the welcome screen and immediately loads that session.
 /// The load replays the session's history; sessions not found locally are restored from remote storage.
-pub async fn run(
-    mut args: PagerArgs,
-    bg_update_rx: Option<
-        tokio::sync::oneshot::Receiver<Option<xai_grok_update::auto_update::UpdateAvailable>>,
-    >,
-) -> anyhow::Result<bool> {
+pub async fn run(mut args: PagerArgs) -> anyhow::Result<bool> {
     let screen_mode_override = screen_mode_relaunch::take_screen_mode_env_override();
     let cancel = CancellationToken::new();
     let startup_start = std::time::Instant::now();
@@ -1186,7 +1181,6 @@ pub async fn run(
         remote_settings,
         term_state,
         materialized,
-        bg_update_rx,
         writer_event_rx,
         &mut reader_thread,
     )

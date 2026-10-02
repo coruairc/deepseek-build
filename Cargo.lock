@@ -1921,19 +1921,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "console"
-version = "0.16.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b430743a6eb14e9764d4260d4c0d8123087d504eeb9c48f2b2a5e810dd369df4"
-dependencies = [
- "encode_unicode",
- "libc",
- "once_cell",
- "unicode-width 0.2.0",
- "windows-sys 0.61.2",
-]
-
-[[package]]
 name = "const-hex"
 version = "1.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5321,19 +5308,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "indicatif"
-version = "0.18.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9375e112e4b463ec1b1c6c011953545c65a30164fbab5b581df32b3abf0dcb88"
-dependencies = [
- "console 0.16.1",
- "portable-atomic",
- "unicode-width 0.2.0",
- "unit-prefix",
- "web-time",
-]
-
-[[package]]
 name = "indoc"
 version = "2.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5405,7 +5379,7 @@ version = "1.43.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46fdb647ebde000f43b5b53f773c30cf9b0cb4300453208713fa38b2c70935a0"
 dependencies = [
- "console 0.15.11",
+ "console",
  "once_cell",
  "similar",
 ]
@@ -11389,12 +11363,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 
 [[package]]
-name = "unit-prefix"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "323402cff2dd658f39ca17c789b502021b3f18707c91cdf22e3838e1b4023817"
-
-[[package]]
 name = "unsafe-libyaml"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -13137,20 +13105,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xai-grok-announcements"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "ts-rs",
- "xai-grok-config",
- "xai-grok-tools",
-]
-
-[[package]]
 name = "xai-grok-auth"
 version = "0.1.0"
 dependencies = [
@@ -13161,21 +13115,6 @@ dependencies = [
  "reqwest-middleware 0.4.2",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "xai-grok-bundle"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "flate2",
- "prod-mc-cli-chat-proxy-types",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tar",
- "tempfile",
- "xai-grok-config",
 ]
 
 [[package]]
@@ -13755,7 +13694,6 @@ dependencies = [
  "xai-file-utils",
  "xai-grok-active-sessions",
  "xai-grok-agent",
- "xai-grok-announcements",
  "xai-grok-cloud-config",
  "xai-grok-config",
  "xai-grok-dashboard-store",
@@ -13778,7 +13716,6 @@ dependencies = [
  "xai-grok-telemetry",
  "xai-grok-test-support",
  "xai-grok-tools",
- "xai-grok-update",
  "xai-grok-version",
  "xai-grok-workspace",
  "xai-hooks-plugins-types",
@@ -13828,7 +13765,6 @@ dependencies = [
  "xai-grok-sandbox",
  "xai-grok-shell",
  "xai-grok-telemetry",
- "xai-grok-update",
  "xai-grok-version",
  "xai-grok-workspace",
  "xai-tty-utils",
@@ -14256,9 +14192,7 @@ dependencies = [
  "xai-file-utils",
  "xai-fsnotify",
  "xai-grok-agent",
- "xai-grok-announcements",
  "xai-grok-auth",
- "xai-grok-bundle",
  "xai-grok-cloud-config",
  "xai-grok-compaction",
  "xai-grok-config",
@@ -14600,42 +14534,6 @@ dependencies = [
  "tonic-prost",
  "xai-proto-build",
  "xai-tool-protocol",
-]
-
-[[package]]
-name = "xai-grok-update"
-version = "0.1.220-alpha.4"
-dependencies = [
- "anyhow",
- "dunce",
- "flate2",
- "futures",
- "indicatif",
- "libc",
- "reqwest 0.12.24",
- "semver",
- "serde",
- "serde_json",
- "serial_test",
- "sha2 0.10.9",
- "tempfile",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tracing",
- "url",
- "wiremock",
- "xai-dirs",
- "xai-grok-cloud-config",
- "xai-grok-extra-ca",
- "xai-grok-login",
- "xai-grok-shell",
- "xai-grok-telemetry",
- "xai-grok-tools",
- "xai-grok-version",
- "xai-tty-utils",
- "zip 3.0.0",
- "zstd",
 ]
 
 [[package]]

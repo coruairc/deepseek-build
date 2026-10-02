@@ -692,15 +692,6 @@ impl SkillsFileWatcher {
         let project_root = cwd.map(crate::session::workflow::registry::project_root);
         let (mut watcher, rx) =
             Self::start_with_dirs(&dirs_to_watch, &grok_home, project_root.as_deref())?;
-        // In-process bundle sync re-advertises itself; this catches a sync by another grok process
-        // The `bundled` basename rule sees the root appear; the root watch sees its subdirs appear
-        let bundled_root = crate::bundle::bundled_root();
-        watcher
-            .refresh_dirs
-            .extend(vendor_skill_refresh_dirs(&bundled_root));
-        watcher
-            .refresh_dirs
-            .push((bundled_root, RecursiveMode::NonRecursive));
         watcher.refresh_new_discovery_dirs();
         Some((watcher, rx))
     }

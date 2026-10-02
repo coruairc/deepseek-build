@@ -21,7 +21,6 @@ pub mod auth {
     pub use xai_grok_login::*;
 }
 pub mod builtin;
-pub use xai_grok_bundle as bundle;
 pub mod claude_import;
 pub mod claude_import_state;
 pub mod cli_models;
