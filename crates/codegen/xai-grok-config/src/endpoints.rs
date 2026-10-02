@@ -267,7 +267,9 @@ fn parse_otlp_header_list(raw: &str) -> Vec<(String, String)> {
         })
         .collect()
 }
-const XAI_API_BASE_URL_DEFAULT: &str = "https://api.x.ai/v1";
+/// Default OpenAI-compatible provider base URL. DeepSeek is the shipped default; users may
+/// override it via `[endpoints] xai_api_base_url` or the corresponding env var.
+const XAI_API_BASE_URL_DEFAULT: &str = "https://api.deepseek.com";
 impl Default for EndpointsConfig {
     fn default() -> Self {
         Self {
