@@ -1,9 +1,93 @@
 {
-  "default": "grok-4.6",
-  "web_search": "grok-4.6",
-  "image_description": "grok-4.6",
-  "session_summary": "grok-4.6",
+  "default": "deepseek-v4-pro",
+  "web_search": "deepseek-flash",
+  "image_description": "deepseek-flash",
+  "session_summary": "deepseek-flash",
   "models": [
+    {
+      "id": "deepseek-v4-pro",
+      "model": "deepseek-v4-pro",
+      "model_family": "deepseek",
+      "name": "DeepSeek V4 Pro",
+      "description": "DeepSeek's flagship reasoning and coding model",
+      "base_url": "https://api.deepseek.com",
+      "env_key": ["DEEPSEEK_API_KEY", "DEEPSEEK_BUILD_API_KEY"],
+      "context_window": 1000000,
+      "max_completion_tokens": 65536,
+      "api_backend": "chat_completions",
+      "supports_backend_search": false,
+      "system_prompt_label": "DeepSeek V4 Pro",
+      "supports_reasoning_effort": true,
+      "reasoning_effort": "high",
+      "auto_compact_threshold_percent": 80,
+      "compaction_at_tokens": true,
+      "compactions_remaining": 1,
+      "reasoning_efforts": [
+        {
+          "value": "none",
+          "label": "Off",
+          "description": "No thinking; fastest replies"
+        },
+        {
+          "value": "low",
+          "label": "Low Effort",
+          "description": "Quick implementations"
+        },
+        {
+          "value": "high",
+          "label": "High Effort",
+          "description": "Balanced reasoning (default)",
+          "default": true
+        },
+        {
+          "value": "max",
+          "label": "Max Effort",
+          "description": "Deepest reasoning"
+        }
+      ]
+    },
+    {
+      "id": "deepseek-flash",
+      "model": "deepseek-flash",
+      "model_family": "deepseek",
+      "name": "DeepSeek Flash",
+      "description": "Fast, low-cost DeepSeek model for research and simple tasks",
+      "base_url": "https://api.deepseek.com",
+      "env_key": ["DEEPSEEK_API_KEY", "DEEPSEEK_BUILD_API_KEY"],
+      "context_window": 1000000,
+      "max_completion_tokens": 32768,
+      "api_backend": "chat_completions",
+      "supports_backend_search": false,
+      "system_prompt_label": "DeepSeek Flash",
+      "supports_reasoning_effort": true,
+      "reasoning_effort": "low",
+      "auto_compact_threshold_percent": 80,
+      "compaction_at_tokens": true,
+      "compactions_remaining": 1,
+      "reasoning_efforts": [
+        {
+          "value": "none",
+          "label": "Off",
+          "description": "No thinking; fastest replies"
+        },
+        {
+          "value": "low",
+          "label": "Low Effort",
+          "description": "Quick tasks (default)",
+          "default": true
+        },
+        {
+          "value": "high",
+          "label": "High Effort",
+          "description": "More reasoning"
+        },
+        {
+          "value": "max",
+          "label": "Max Effort",
+          "description": "Deepest reasoning"
+        }
+      ]
+    },
     {
       "id": "grok-4.6",
       "model": "grok-4.6",

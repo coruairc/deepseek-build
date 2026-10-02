@@ -18,6 +18,33 @@ use crate::events::{SamplingChannel, SamplingErrorInfo, SamplingEvent};
 use crate::metrics::InferenceLatencyStats;
 use crate::types::RequestId;
 
+/// Normalize typographic Unicode punctuation that DeepSeek occasionally emits inside tool-call
+/// JSON string literals, which makes the JSON malformed.
+fn normalize_typographic_punctuation(s: &str) -> String {
+    s.chars()
+        .map(|c| match c {
+            '\u{201C}' | '\u{201D}' => '"',
+            '\u{2018}' | '\u{2019}' => '\'',
+            '\u{00A0}' => ' ',
+            other => other,
+        })
+        .collect()
+}
+
+/// Repair malformed tool-call JSON caused by typographic quotes. Returns the input unchanged when
+/// it already parses or when normalization still does not parse, so a genuinely broken payload is
+/// not silently corrupted; downstream argument sanitization still applies.
+pub fn repair_tool_call_arguments(raw: &str) -> String {
+    if serde_json::from_str::<serde_json::Value>(raw).is_ok() {
+        return raw.to_owned();
+    }
+    let normalized = normalize_typographic_punctuation(raw);
+    if serde_json::from_str::<serde_json::Value>(&normalized).is_ok() {
+        return normalized;
+    }
+    raw.to_owned()
+}
+
 /// The output stream emits exactly one terminal event per request.
 /// Callers must not consume past the terminal event (the implementation `return`s after yielding it).
 pub fn stream_chat_completions<'a>(
@@ -235,7 +262,7 @@ pub fn stream_chat_completions<'a>(
             .map(|(id, name, arguments)| ToolCall {
                 id: std::sync::Arc::<str>::from(id),
                 name,
-                arguments: std::sync::Arc::<str>::from(arguments),
+                arguments: std::sync::Arc::<str>::from(repair_tool_call_arguments(&arguments)),
             })
             .collect();
 
@@ -871,5 +898,23 @@ mod tests {
             }
             other => panic!("expected Completed, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn repair_fixes_typographic_quotes_only_when_needed() {
+        // Curly double quotes around keys/values make the JSON malformed; repair straightens them.
+        let broken = "{\u{201C}path\u{201D}: \u{201C}src/main.rs\u{201D}}";
+        assert_eq!(
+            repair_tool_call_arguments(broken),
+            "{\"path\": \"src/main.rs\"}"
+        );
+
+        // Valid JSON is never rewritten.
+        let valid = "{\"path\":\"src/main.rs\"}";
+        assert_eq!(repair_tool_call_arguments(valid), valid);
+
+        // Genuinely broken payloads are preserved for downstream sanitization.
+        let broken = "{\"path\":";
+        assert_eq!(repair_tool_call_arguments(broken), broken);
     }
 }

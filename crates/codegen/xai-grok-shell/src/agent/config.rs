@@ -3151,6 +3151,12 @@ struct DefaultModelJson {
     model_family: Option<String>,
     name: Option<String>,
     description: Option<String>,
+    /// Overrides the xAI inference base URL for this catalog entry (e.g. `https://api.deepseek.com`).
+    #[serde(default)]
+    base_url: Option<String>,
+    /// Environment variable(s) holding a model-scoped API key (BYOK providers).
+    #[serde(default)]
+    env_key: Option<EnvKeys>,
     context_window: Option<NonZeroU64>,
     context_windows: Option<Vec<NonZeroU64>>,
     temperature: Option<f32>,
@@ -3221,7 +3227,10 @@ fn default_models(endpoints: &EndpointsConfig) -> IndexMap<String, ModelEntryCon
                 id: m.id,
                 model: m.model,
                 model_family: m.model_family,
-                base_url: endpoints.resolve_inference_base_url(),
+                base_url: m
+                    .base_url
+                    .filter(|b| !b.trim().is_empty())
+                    .unwrap_or_else(|| endpoints.resolve_inference_base_url()),
                 api_base_url: Some(endpoints.xai_api_base_url.clone()),
                 name: m.name,
                 description: m.description,
@@ -3242,7 +3251,7 @@ fn default_models(endpoints: &EndpointsConfig) -> IndexMap<String, ModelEntryCon
                 rate_limit_retry_threshold: None,
                 subagent_rate_limit_max_attempts: None,
                 api_key: None,
-                env_key: None,
+                env_key: m.env_key,
                 extra_headers: IndexMap::new(),
                 use_concise: false,
                 hidden: m.hidden,

@@ -214,7 +214,33 @@ pub fn conversation_to_chat_messages(items: Vec<ConversationItem>) -> Vec<ChatRe
         }
     }
 
+    // Final-pass sanitizer: guarantee non-empty `reasoning_content` on every assistant
+    // tool-call message before it is replayed to the API.
+    ensure_reasoning_content_for_tool_calls(&mut out);
     out
+}
+
+/// Placeholder replayed for an assistant tool-call message whose `reasoning_content` is missing.
+pub const REASONING_PLACEHOLDER: &str = "(reasoning content omitted)";
+
+/// Guarantee non-empty `reasoning_content` on every assistant message that requested tools.
+///
+/// In thinking mode DeepSeek requires the reasoning trace to be passed back with a tool-call
+/// chain; omitting it on any intermediate assistant message yields a 400. Messages produced by
+/// older sessions or by non-thinking turns may lack it, so backfill a placeholder.
+pub fn ensure_reasoning_content_for_tool_calls(messages: &mut [ChatRequestMessage]) {
+    for msg in messages.iter_mut() {
+        if msg.role != Role::Assistant || msg.tool_calls.is_empty() {
+            continue;
+        }
+        let missing = msg
+            .reasoning_content
+            .as_deref()
+            .is_none_or(|s| s.trim().is_empty());
+        if missing {
+            msg.reasoning_content = Some(REASONING_PLACEHOLDER.to_owned());
+        }
+    }
 }
 
 impl From<ChatResponseMessage> for ConversationItem {
@@ -258,14 +284,26 @@ impl From<ConversationRequest> for ChatCompletionRequest {
             )
         };
 
-        // only set `tool_choice` when there are `tools` to avoid OpenAI client errors
+        // DeepSeek: `reasoning_effort: "none"` disables thinking; any other effort enables it.
+        // With no effort configured we leave the server default (enabled) alone.
+        let thinking = req.reasoning_effort.map(|effort| match effort {
+            ReasoningEffort::None => ThinkingConfig::disabled(),
+            _ => ThinkingConfig::enabled(),
+        });
+        let thinking_enabled = thinking.is_some_and(ThinkingConfig::is_enabled);
+
+        // only set `tool_choice` when there are `tools` to avoid OpenAI client errors.
+        // DeepSeek rejects `required`/named tool choices while thinking is enabled (400), so
+        // downgrade them to `auto` for thinking models.
         let tool_choice = req
             .tool_choice
             .filter(|_| !tools_is_empty)
             .map(|tc| match tc {
                 ConversationToolChoice::Auto => ToolChoice::auto(),
                 ConversationToolChoice::None => ToolChoice::none(),
+                ConversationToolChoice::Required if thinking_enabled => ToolChoice::auto(),
                 ConversationToolChoice::Required => ToolChoice::required(),
+                ConversationToolChoice::Function(_) if thinking_enabled => ToolChoice::auto(),
                 ConversationToolChoice::Function(name) => ToolChoice::function(name),
             });
 
@@ -294,6 +332,7 @@ impl From<ConversationRequest> for ChatCompletionRequest {
             search_parameters: None,
             response_format,
             reasoning_effort: req.reasoning_effort,
+            thinking,
             x_grok_conv_id: req.x_grok_conv_id,
             x_grok_req_id: req.x_grok_req_id,
             x_grok_session_id: req.x_grok_session_id,
@@ -305,5 +344,68 @@ impl From<ConversationRequest> for ChatCompletionRequest {
             trace: None,
             traceparent: req.traceparent,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    fn assistant_with_tool_call() -> ConversationItem {
+        ConversationItem::Assistant(AssistantItem {
+            content: Arc::<str>::from(""),
+            tool_calls: vec![ToolCall {
+                id: Arc::<str>::from("call_1"),
+                name: "read_file".to_owned(),
+                arguments: Arc::<str>::from("{\"path\":\"a\"}"),
+            }],
+            model_id: Some("deepseek-v4-pro".to_owned()),
+            model_fingerprint: None,
+            reasoning_effort: None,
+        })
+    }
+
+    #[test]
+    fn tool_call_without_reasoning_gets_placeholder() {
+        let messages = conversation_to_chat_messages(vec![assistant_with_tool_call()]);
+        assert_eq!(
+            messages[0].reasoning_content.as_deref(),
+            Some(REASONING_PLACEHOLDER)
+        );
+    }
+
+    #[test]
+    fn tool_call_with_reasoning_is_preserved() {
+        let messages = conversation_to_chat_messages(vec![
+            ConversationItem::Reasoning(synthesized_reasoning_item("because".to_owned())),
+            assistant_with_tool_call(),
+        ]);
+        assert_eq!(messages[0].reasoning_content.as_deref(), Some("because"));
+    }
+
+    #[test]
+    fn plain_assistant_without_tools_is_left_alone() {
+        let messages =
+            conversation_to_chat_messages(vec![ConversationItem::Assistant(AssistantItem {
+                content: Arc::<str>::from("hi"),
+                tool_calls: Vec::new(),
+                model_id: None,
+                model_fingerprint: None,
+                reasoning_effort: None,
+            })]);
+        assert_eq!(messages[0].reasoning_content, None);
+    }
+
+    #[test]
+    fn thinking_config_serializes_as_deepseek_expects() {
+        assert_eq!(
+            serde_json::to_value(ThinkingConfig::enabled()).unwrap(),
+            serde_json::json!({"type": "enabled"})
+        );
+        assert_eq!(
+            serde_json::to_value(ThinkingConfig::disabled()).unwrap(),
+            serde_json::json!({"type": "disabled"})
+        );
     }
 }

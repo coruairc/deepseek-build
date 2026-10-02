@@ -81,6 +81,9 @@ pub struct ChatCompletionRequest {
     pub response_format: Option<crate::rs::ResponseFormat>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reasoning_effort: Option<ReasoningEffort>,
+    /// DeepSeek thinking-mode switch; `None` omits the field (server default: enabled).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thinking: Option<ThinkingConfig>,
 
     /// custom headers
     #[serde(skip)]
@@ -125,6 +128,7 @@ impl ChatCompletionRequest {
             search_parameters: None,
             response_format: None,
             reasoning_effort: None,
+            thinking: None,
             x_grok_conv_id: None,
             x_grok_req_id: None,
             x_grok_session_id: None,
@@ -153,6 +157,7 @@ impl ChatCompletionRequest {
             search_parameters: None,
             response_format: None,
             reasoning_effort: None,
+            thinking: None,
             x_grok_conv_id: None,
             x_grok_req_id: None,
             x_grok_session_id: None,
@@ -799,6 +804,41 @@ impl ReasoningEffort {
             Self::None | Self::Minimal => None,
             _ => Some(self.into()),
         }
+    }
+}
+
+/// DeepSeek thinking-mode switch: `{"thinking": {"type": "enabled" | "disabled"}}`.
+/// DeepSeek enables thinking by default, so this is only serialized when the caller
+/// wants to be explicit (including disabling it).
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ThinkingConfig {
+    #[serde(rename = "type")]
+    pub kind: ThinkingKind,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum ThinkingKind {
+    #[default]
+    Enabled,
+    Disabled,
+}
+
+impl ThinkingConfig {
+    pub fn enabled() -> Self {
+        Self {
+            kind: ThinkingKind::Enabled,
+        }
+    }
+
+    pub fn disabled() -> Self {
+        Self {
+            kind: ThinkingKind::Disabled,
+        }
+    }
+
+    pub fn is_enabled(self) -> bool {
+        matches!(self.kind, ThinkingKind::Enabled)
     }
 }
 

@@ -57,8 +57,8 @@ use crate::rs;
 use crate::tool_overrides::{ToolOverrides, WebSearchOptions, XSearchOptions, drop_empty};
 use crate::types::{
     ChatCompletionRequest, ChatContentBlock, ChatRequestMessage, ChatResponseMessage, FinishReason,
-    ImageUrl, MessageContent, Role, ToolCallRequest, ToolChoice, ToolDefinition, TraceContext,
-    Usage,
+    ImageUrl, MessageContent, ReasoningEffort, Role, ThinkingConfig, ToolCallRequest, ToolChoice,
+    ToolDefinition, TraceContext, Usage,
 };
 
 // ============================================================================
@@ -793,6 +793,20 @@ impl TokenUsage {
         span.record("completion_tokens", self.completion_tokens);
         span.record("reasoning_tokens", self.reasoning_tokens);
         span.record("cached_prompt_tokens", self.cached_prompt_tokens);
+    }
+
+    /// Prompt tokens that missed the cache. DeepSeek reports `prompt_cache_miss_tokens`
+    /// explicitly; on every backend this is the uncached remainder of the full prompt.
+    pub fn cache_miss_prompt_tokens(&self) -> u32 {
+        self.prompt_tokens.saturating_sub(self.cached_prompt_tokens)
+    }
+
+    /// Fraction of prompt tokens served from cache in `0.0..=1.0`; `0.0` when the prompt is empty.
+    pub fn cache_hit_rate(&self) -> f64 {
+        if self.prompt_tokens == 0 {
+            return 0.0;
+        }
+        f64::from(self.cached_prompt_tokens) / f64::from(self.prompt_tokens)
     }
 }
 
