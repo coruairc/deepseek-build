@@ -4910,66 +4910,9 @@ impl AppView {
         self.log_announcement_cta_impressions();
         self.maybe_evict_offscreen_caches();
     }
-    /// Log [`xai_grok_telemetry::events::AnnouncementCtaShown`] for each surface whose CTA button is painted this frame.
-    /// (Armed hit rect, not covered by a frame occluder: the click/OSC 8 truth the impression pairs with.)
-    /// The owner resolves through the same slot gate as the click dispatch, so a critical preempting the slot or a hidden promo emits nothing.
-    pub(crate) fn log_announcement_cta_impressions(&mut self) {
-        use xai_grok_telemetry::events::AnnouncementCtaSurface;
-        let (banner, welcome, header, dashboard) = match self.active_view {
-            ActiveView::Welcome => (false, self.welcome_upgrade_cta_rect.is_some(), false, false),
-            ActiveView::Agent(agent_id) => match self.agents.get(&agent_id) {
-                Some(a) => {
-                    let cta_rect = a.hit_announcement_cta.rect;
-                    let header_rect = a.hit_upgrade_cta.rect;
-                    (
-                        cta_rect.is_some_and(|r| !a.rect_occluded(r)),
-                        false,
-                        header_rect.is_some_and(|r| !a.rect_occluded(r)),
-                        false,
-                    )
-                }
-                None => return,
-            },
-            ActiveView::AgentDashboard => (
-                false,
-                false,
-                false,
-                self.dashboard
-                    .as_ref()
-                    .is_some_and(|d| d.upgrade_cta_hit.rect.is_some()),
-            ),
-        };
-        if !(banner || welcome || header || dashboard) {
-            return;
-        }
-        let Some((owner, _label, _url)) = crate::views::announcements::promo_cta(
-            &self.active_announcements,
-            &self.hidden_announcement_ids,
-        ) else {
-            return;
-        };
-        let key = xai_grok_shell::util::config::announcement_hide_key(owner);
-        let id = owner.id.clone();
-        let surfaces = [
-            (AnnouncementCtaSurface::Banner, banner),
-            (AnnouncementCtaSurface::Welcome, welcome),
-            (AnnouncementCtaSurface::Header, header),
-            (AnnouncementCtaSurface::Dashboard, dashboard),
-        ];
-        for (surface, _) in surfaces.into_iter().filter(|(_, painted)| *painted) {
-            if self
-                .announcement_cta_impressions_logged
-                .insert((key.clone(), surface))
-            {
-                xai_grok_telemetry::session_ctx::log_event(
-                    xai_grok_telemetry::events::AnnouncementCtaShown {
-                        id: id.clone(),
-                        source: surface,
-                    },
-                );
-            }
-        }
-    }
+    /// The former announcement-CTA impression logger. The announcement CTA surfaces
+    /// have been removed, so there is nothing to log.
+    pub(crate) fn log_announcement_cta_impressions(&mut self) {}
     /// Interval between off-screen render-cache eviction sweeps.
     const CACHE_EVICT_INTERVAL: Duration = Duration::from_secs(5);
     /// Throttled sweep of off-screen render caches for the active view's scrollback (parent agent, or the open fullscreen subagent child).

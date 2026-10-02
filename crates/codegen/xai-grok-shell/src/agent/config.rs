@@ -829,9 +829,6 @@ pub struct Config {
     /// `[desktop]` section: owned by grok-desktop (Electron app), opaque to the CLI agent.
     #[serde(default, skip_serializing)]
     pub desktop: Option<toml::Value>,
-    /// Top-level `announcements` array: consumed by `resolve_announcements`.
-    #[serde(default, skip_serializing)]
-    pub announcements: Vec<crate::util::config::RemoteAnnouncement>,
     /// `[tips]` section: consumed by `merge_tips`.
     #[serde(default, skip_serializing)]
     pub tips: Option<crate::util::config::TipsOverride>,
@@ -1159,7 +1156,6 @@ impl Default for Config {
             managed_mcps: crate::config::ManagedMcpsConfig::default(),
             auth: None,
             desktop: None,
-            announcements: Vec::new(),
             tips: None,
             permission: PermissionKnownKeys::default(),
             tools: crate::config::ToolsConfig::default(),

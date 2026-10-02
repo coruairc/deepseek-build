@@ -1,6 +1,5 @@
 // `McpOAuthConfig` / `McpOAuthConfigMap` are re-exported via `mcp` (see `mcp.rs`)
 
-mod announcements;
 mod campaigns;
 mod consent;
 mod hints;
@@ -14,7 +13,8 @@ mod settings_writes;
 mod tips;
 mod worktree;
 
-pub use announcements::*;
+// Announcement types live in `xai-grok-config`; re-exported so pager type paths keep working.
+pub use xai_grok_config::{AnnouncementCta, RemoteAnnouncement};
 pub use campaigns::{
     CampaignModelsDefault, campaign_driven_models_default, persist_models_default,
     sync_campaign_fields,

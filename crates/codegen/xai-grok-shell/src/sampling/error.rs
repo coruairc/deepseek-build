@@ -14,23 +14,22 @@ use agent_client_protocol as acp;
 /// Clients derive user-facing text via [`format_rate_limited_user_message`]. The desktop path (`prompt_complete_fields`) reports the stop reason with no detail.
 pub const RATE_LIMITED_ERROR_CODE: i32 = -32003;
 
-/// OAuth / session rate-limit copy (personal plan upgrade path).
+/// OAuth / session rate-limit copy.
 pub const RATE_LIMITED_USER_MESSAGE_OAUTH: &str =
-    "You\u{2019}ve hit the rate limit for your plan. Upgrade your account or try again later.";
+    "You\u{2019}ve hit the rate limit for your plan. Try again later.";
 
 /// API key / team rate-limit copy.
-/// Personal grok.com upgrades do not raise API team limits; admins purchase credits or a higher spend-based tier.
-/// See https://docs.x.ai/developers/rate-limits#rate-limit-tiers
-pub const RATE_LIMITED_USER_MESSAGE_API_KEY: &str = "You\u{2019}ve hit your team\u{2019}s API rate limit. Ask a team admin to purchase more credits for higher limits, or try again later. See https://docs.x.ai/developers/rate-limits#rate-limit-tiers";
+pub const RATE_LIMITED_USER_MESSAGE_API_KEY: &str = "You\u{2019}ve hit your team\u{2019}s API rate limit. Ask a team admin to purchase more credits for higher limits, or try again later.";
 
 /// Well-known free-usage exhaustion code CCP returns on HTTP 429.
 /// Matches `prod_util_well_known_errors::SUBSCRIPTION_FREE_USAGE_EXHAUSTED`.
 /// sampling-types' `parse_error_bytes` prepends the flat `code` to the flattened message, so this reaches clients embedded in error detail.
 pub const FREE_USAGE_EXHAUSTED_ERROR_CODE: &str = "subscription:free-usage-exhausted";
 
-/// User-facing free-usage exhaustion copy (paywall).
+/// User-facing free-usage exhaustion copy.
 /// Promises no reset duration; the backend config drives the quota window.
-pub const FREE_USAGE_USER_MESSAGE: &str = "You\u{2019}ve reached your free Grok Build usage limit for now. Get SuperGrok for much higher limits, or try again later: https://grok.com/supergrok?referrer=grok-build";
+pub const FREE_USAGE_USER_MESSAGE: &str =
+    "You\u{2019}ve reached your usage limit for now. Try again later.";
 
 /// Whether flattened server detail is free-usage-quota exhaustion (paywall), not transient throttling.
 /// Sniffs the well-known code embedded by `parse_error_bytes`.
@@ -38,8 +37,8 @@ pub fn is_free_usage_exhausted_error(detail: &str) -> bool {
     detail.contains(FREE_USAGE_EXHAUSTED_ERROR_CODE)
 }
 
-/// User-facing text for an ACP -32003 rate-limit error. The free-usage code wins first (consumer-only; checked before the API-key rewrite).
-/// An API-key caller whose detail pushes the personal SuperGrok upsell gets the team credits copy instead. Otherwise the body is shown after stripping the `API error (status …):` prefix (SamplingError Display).
+/// User-facing text for an ACP -32003 rate-limit error. The free-usage code wins first.
+/// Otherwise the body is shown after stripping the `API error (status …):` prefix (SamplingError Display).
 /// An empty detail falls back to the OAuth or API-key message. Callers that show this in UI should still run their usual sanitizer (scrub/cap).
 pub fn format_rate_limited_user_message(
     server_detail: Option<&str>,
@@ -51,9 +50,6 @@ pub fn format_rate_limited_user_message(
     }
     if let Some(detail) = server_detail.map(str::trim).filter(|s| !s.is_empty()) {
         let detail = strip_sampling_api_error_prefix(detail);
-        if is_api_key_auth && pushes_consumer_subscription_upsell(detail) {
-            return RATE_LIMITED_USER_MESSAGE_API_KEY.to_string();
-        }
         return detail.to_string();
     }
     if is_api_key_auth {
@@ -75,13 +71,6 @@ fn strip_sampling_api_error_prefix(detail: &str) -> &str {
         return body.trim();
     }
     detail.trim()
-}
-
-/// IC sometimes reuses OAuth free-tier upsell copy on 429s ("upgrade to a Grok subscription" / grok.com/supergrok).
-/// That is wrong for API-key / team auth: higher limits come from credits and spend-based rate-limit tiers, not a personal SuperGrok plan.
-fn pushes_consumer_subscription_upsell(detail: &str) -> bool {
-    let d = detail.to_ascii_lowercase();
-    d.contains("grok.com/supergrok") || d.contains("upgrade to a grok subscription")
 }
 
 /// User-facing copy for capacity/overload failures (stream `overloaded_error`, HTTP 529, proxy-wrapped 5xx).

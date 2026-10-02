@@ -471,7 +471,6 @@ fn is_machine_wide_broadcast_notification(json: &serde_json::Value) -> bool {
             "x.ai/sessions/changed"
                 | "x.ai/models/update"
                 | "x.ai/mcp/servers_updated"
-                | "x.ai/announcements/update"
         )
     )
 }

@@ -110,10 +110,7 @@ use session_notification::{
 #[cfg(test)]
 #[allow(unused_imports)]
 use settings::*;
-use settings::{
-    handle_announcements_update, handle_models_update, handle_sessions_changed,
-    handle_settings_update,
-};
+use settings::{handle_models_update, handle_sessions_changed, handle_settings_update};
 pub(crate) use subagent_activity::finalize_killed_subagent;
 #[cfg(test)]
 #[allow(unused_imports)]
@@ -639,7 +636,6 @@ fn handle_ext_notification(notif: &acp::ExtNotification, app: &mut AppView) -> b
         "x.ai/scheduled_task_created" => handle_scheduled_task_created(notif, app),
         "x.ai/scheduled_task_fired" => handle_scheduled_task_fired(notif, app),
         "x.ai/scheduled_task_deleted" => handle_scheduled_task_deleted(notif, app),
-        "x.ai/announcements/update" => handle_announcements_update(notif, app),
         "x.ai/git_head_changed" => handle_git_head_changed(notif, app),
         "x.ai/leader/version_mismatch" => handle_version_mismatch(notif, app),
         "x.ai/mcp/init_progress" => handle_mcp_init_progress(notif, app),

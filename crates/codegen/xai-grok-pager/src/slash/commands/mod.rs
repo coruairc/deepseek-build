@@ -1,6 +1,5 @@
 //! Each command lives in its own submodule. This module re-exports command structs and provides `builtin_commands()` for registry construction.
 pub mod always_approve;
-pub mod announcements;
 pub mod auto;
 pub mod btw;
 pub mod cd;
@@ -142,7 +141,6 @@ pub fn builtin_commands() -> Vec<Arc<dyn SlashCommand>> {
         // Docs, account and one-off maintenance.
         Arc::new(docs::DocsCommand),
         Arc::new(release_notes::ReleaseNotesCommand),
-        Arc::new(announcements::AnnouncementsCommand),
         Arc::new(feedback::FeedbackCommand),
         Arc::new(privacy::PrivacyCommand),
         Arc::new(doctor::DoctorCommand),
