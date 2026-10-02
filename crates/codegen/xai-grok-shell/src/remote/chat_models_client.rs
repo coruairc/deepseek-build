@@ -59,7 +59,7 @@ pub struct ListModesResponse {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ChatModelsError {
-    #[error("no grok.com credentials")]
+    #[error("no session credentials")]
     NoAuth,
     #[error("request timed out")]
     Timeout,

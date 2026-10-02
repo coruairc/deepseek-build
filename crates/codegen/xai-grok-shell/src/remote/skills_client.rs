@@ -266,7 +266,7 @@ fn product_skill_info(
 
 #[derive(Debug, thiserror::Error)]
 pub enum SkillsError {
-    #[error("no grok.com credentials")]
+    #[error("no session credentials")]
     NoAuth,
     #[error("network error: {0}")]
     Network(#[from] reqwest::Error),
