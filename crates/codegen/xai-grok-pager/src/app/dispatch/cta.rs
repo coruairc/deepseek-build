@@ -50,19 +50,8 @@ pub(super) fn plugin_cta_candidates(
     Option<String>,
 ) {
     let mut sources = response.sources;
-    let winner = match cta_marketplace {
-        Some(name) => sources.iter().position(|s| s.source_name == name),
-        None => sources
-            .iter()
-            .position(|s| {
-                xai_grok_plugin_marketplace::is_official_source_url(&s.source_url_or_path)
-            })
-            .or_else(|| {
-                sources.iter().position(|s| {
-                    s.source_name == xai_grok_plugin_marketplace::OFFICIAL_SOURCE_NAME
-                })
-            }),
-    };
+    let winner =
+        cta_marketplace.and_then(|name| sources.iter().position(|s| s.source_name == name));
     let Some(idx) = winner else {
         return (Vec::new(), None);
     };

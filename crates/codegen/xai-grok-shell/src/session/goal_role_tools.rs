@@ -21,8 +21,6 @@ pub(crate) struct RoleToolNames {
     pub write: String,
     /// `{EXECUTE_TOOL}`: `ToolKind::Execute` (terminal/bash maps here).
     pub execute: String,
-    /// `{WEB_SEARCH_TOOL}`: `ToolKind::WebSearch` (planner template only).
-    pub web_search: String,
     /// `{WEB_FETCH_TOOL}`: `ToolKind::WebFetch` (planner template only).
     pub web_fetch: String,
     /// `{TOOLSET_TOOLS}` block (verifier-only placeholder).
@@ -36,7 +34,6 @@ impl RoleToolNames {
     const SEARCH_FALLBACK: &'static str = "grep";
     const WRITE_FALLBACK: &'static str = "write";
     const EXECUTE_FALLBACK: &'static str = "run_terminal_command";
-    const WEB_SEARCH_FALLBACK: &'static str = "web_search";
     const WEB_FETCH_FALLBACK: &'static str = "web_fetch";
 
     /// Single fallback-and-sanitize applier shared by every constructor.
@@ -46,7 +43,6 @@ impl RoleToolNames {
         search: Option<String>,
         write: Option<String>,
         execute: Option<String>,
-        web_search: Option<String>,
         web_fetch: Option<String>,
         toolset_tools: String,
     ) -> Self {
@@ -56,7 +52,6 @@ impl RoleToolNames {
             search: sanitized_or_default(search, Self::SEARCH_FALLBACK),
             write: sanitized_or_default(write, Self::WRITE_FALLBACK),
             execute: sanitized_or_default(execute, Self::EXECUTE_FALLBACK),
-            web_search: sanitized_or_default(web_search, Self::WEB_SEARCH_FALLBACK),
             web_fetch: sanitized_or_default(web_fetch, Self::WEB_FETCH_FALLBACK),
             toolset_tools,
         }
@@ -65,7 +60,7 @@ impl RoleToolNames {
     /// All-fallback names with an empty `{TOOLSET_TOOLS}` block.
     /// Used as the per-index default when no assignment exists, and by tests.
     pub(crate) fn inherit_defaults() -> Self {
-        Self::from_parts(None, None, None, None, None, None, None, String::new())
+        Self::from_parts(None, None, None, None, None, None, String::new())
     }
 
     /// Inherit / fail-open path: the role runs on the parent toolset, so the names come from the parent tool bridge (already resolved by the caller).
@@ -77,7 +72,6 @@ impl RoleToolNames {
         write: Option<String>,
         edit: Option<String>,
         execute: Option<String>,
-        web_search: Option<String>,
         web_fetch: Option<String>,
     ) -> Self {
         Self::from_parts(
@@ -86,7 +80,6 @@ impl RoleToolNames {
             search,
             first_safe_tool_name(write, edit),
             execute,
-            web_search,
             web_fetch,
             String::new(),
         )
@@ -106,7 +99,6 @@ impl RoleToolNames {
             // The injection-only `write`/`Write` tool is absent there
             first_safe_tool_name(get(ToolKind::Write), get(ToolKind::Edit)),
             get(ToolKind::Execute),
-            get(ToolKind::WebSearch),
             get(ToolKind::WebFetch),
             enumerate_toolset_tools(&summary.tool_names),
         )
@@ -123,7 +115,6 @@ impl RoleToolNames {
                 "SEARCH_TOOL" => self.search.as_str(),
                 "WRITE_TOOL" => self.write.as_str(),
                 "EXECUTE_TOOL" => self.execute.as_str(),
-                "WEB_SEARCH_TOOL" => self.web_search.as_str(),
                 "WEB_FETCH_TOOL" => self.web_fetch.as_str(),
                 "TOOLSET_TOOLS" => self.toolset_tools.as_str(),
                 _ => return None,

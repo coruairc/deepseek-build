@@ -24,7 +24,7 @@ use xai_grok_agent::plugins::source_identity::normalize_git_url;
 use xai_grok_plugin_marketplace::git;
 use xai_grok_plugin_marketplace::{
     MarketplaceEntry, MarketplaceRelativePath, MarketplaceSource, SourceKind, install_resolve,
-    installer, is_official_source_url, scan_marketplace,
+    installer, scan_marketplace,
 };
 
 use acquire::resolve_source_root_for_install;
@@ -854,15 +854,11 @@ fn plan_install(
                     });
                 }
             };
-            let Some(&(chosen_source_index, _)) = owned.get(selection.chosen) else {
+            let Some(&(_, _)) = owned.get(selection.chosen) else {
                 return Err(MarketplaceInstallError::NameNotFound {
                     name: name.to_string(),
                     skipped_sources,
                 });
-            };
-            let chosen_is_official = match sources.get(chosen_source_index).map(|s| &s.kind) {
-                Some(SourceKind::Git { url, .. }) => is_official_source_url(url),
-                _ => false,
             };
             let other_copies_note = (selection.other_count > 0).then(|| {
                 format!(
@@ -872,7 +868,7 @@ fn plan_install(
                 )
             });
             drop(scanned);
-            if !chosen_is_official && !skipped_sources.is_empty() {
+            if !skipped_sources.is_empty() {
                 return Err(MarketplaceInstallError::PartialScan {
                     name: name.to_string(),
                     skipped_sources,
@@ -1319,25 +1315,12 @@ pub fn remove_marketplace_source_from_stores(
     config_path: &Path,
     source_identity: &str,
 ) -> std::io::Result<MarketplaceSourceRemoval> {
-    let is_official = is_official_source_url(source_identity);
     let (dest, content) = crate::util::config::read_follow_bound(config_path)?;
     if let Some(removed) = remove_toml_marketplace_block(&content, source_identity) {
-        let final_content = if is_official {
-            set_official_flag_in_toml(&removed)?
-        } else {
-            removed
-        };
-        crate::util::config::atomic_write_follow_bound(config_path, &dest, &final_content)?;
+        crate::util::config::atomic_write_follow_bound(config_path, &dest, &removed)?;
         return Ok(MarketplaceSourceRemoval::ConfigToml);
     }
     if try_remove_source_from_json_files(source_identity) {
-        if is_official && let Err(e) = set_official_marketplace_auto_installed(config_path) {
-            tracing::warn!(
-                error = %e,
-                path = %config_path.display(),
-                "failed to set official_marketplace_auto_installed flag",
-            );
-        }
         return Ok(MarketplaceSourceRemoval::JsonStore);
     }
     Ok(MarketplaceSourceRemoval::NotFound)

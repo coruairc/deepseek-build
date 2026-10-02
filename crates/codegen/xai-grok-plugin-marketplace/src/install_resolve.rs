@@ -1,7 +1,7 @@
 //! Pure resolution logic for `grok plugin install <name>` marketplace refs.
 
+use crate::canonical_github_owner_repo;
 use crate::types::{MarketplaceEntry, MarketplaceSource, SourceKind};
-use crate::{canonical_github_owner_repo, is_official_source_url};
 
 /// A parsed marketplace install ref: a plugin `name` with an optional source `qualifier` (`owner/repo` for git, `local/<slug>` for local sources).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -164,23 +164,7 @@ pub fn select_bare_name(
             chosen: *index,
             other_count: 0,
         }),
-        _ => {
-            let official: Vec<usize> = matched
-                .iter()
-                .copied()
-                .filter(|&index| match scanned.get(index).map(|c| &c.source.kind) {
-                    Some(SourceKind::Git { url, .. }) => is_official_source_url(url),
-                    _ => false,
-                })
-                .collect();
-            match official.as_slice() {
-                [index] => Ok(BareNameSelection {
-                    chosen: *index,
-                    other_count: matched.len() - 1,
-                }),
-                _ => Err(BareNameError::Ambiguous { matched }),
-            }
-        }
+        _ => Err(BareNameError::Ambiguous { matched }),
     }
 }
 

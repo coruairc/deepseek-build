@@ -50,18 +50,6 @@ const FORMER_PLATFORM_SKILL_HASHES: &[(&str, &str)] = &[
         "df6f708a5207f34e1d8b7775982788406d7c46e722d50aedde2d0300f420a10a",
     ),
     (
-        "imagine",
-        "1754ff52d1d043841fde3cd9ed0f715315b8f06dc18bf2995be59bcde5960def",
-    ),
-    (
-        "imagine",
-        "34f024b6636495bf1d453072fde41fd7cb8726d57436c8b1d4773fbe1c112a56",
-    ),
-    (
-        "imagine",
-        "ced79ca46b183e21c3ef484f199870c265d0a6c5f3a4f25470079816af2bcb20",
-    ),
-    (
         "create-workflow",
         "51345342753d1c7b0e8d3a671458df4a3bc0b1c94e683ab5dc1c3c97c2bf652e",
     ),
@@ -184,7 +172,6 @@ mod tests {
             "help",
             "create-skill",
             "code-review",
-            "imagine",
             "check-work",
             "check",
             "best-of-n",
@@ -330,7 +317,6 @@ mod tests {
                 "create-workflow",
                 "docx",
                 "help",
-                "imagine",
                 "pptx",
                 "xlsx",
             ]

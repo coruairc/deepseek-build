@@ -121,6 +121,7 @@ use crate::app::app_view::{ActiveView, AppView, AuthState};
 use crate::app::consent::ConsentState;
 use crate::scrollback::types::DisplayMode;
 use crate::views::session_picker::CONTENT_EXPAND_OFFSET;
+use crate::xai_grok_voice;
 use xai_grok_telemetry::session_ctx::log_event;
 pub(super) fn dispatch_copy_auth_url(
     app: &mut AppView,

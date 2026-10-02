@@ -779,7 +779,6 @@ impl SessionActor {
             bridge.tool_for_kind(ToolKind::Write).await,
             bridge.tool_for_kind(ToolKind::Edit).await,
             bridge.tool_for_kind(ToolKind::Execute).await,
-            bridge.tool_for_kind(ToolKind::WebSearch).await,
             bridge.tool_for_kind(ToolKind::WebFetch).await,
         )
     }

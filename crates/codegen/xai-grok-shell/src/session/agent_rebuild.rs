@@ -44,15 +44,12 @@ use xai_grok_agent::{Agent, AgentBuilder, CompactionPolicy, ReminderPolicy};
 use xai_grok_tools::computer::types::{AsyncFileSystem, TerminalBackend};
 use xai_grok_tools::implementations::grok_build::app_builder::AppBuilderDeployerConfig;
 use xai_grok_tools::implementations::grok_build::ask_user_question::types::UserQuestionRequest;
-use xai_grok_tools::implementations::grok_build::image_gen::ImageGenConfig;
 use xai_grok_tools::implementations::grok_build::monitor::types::MonitorEventBuffer;
 use xai_grok_tools::implementations::grok_build::task::types::{
     AgentMessageSender, SubagentCapabilityModeExt, SubagentEvent, TaskModelValidator,
 };
-use xai_grok_tools::implementations::grok_build::video_gen::VideoGenConfig;
 use xai_grok_tools::implementations::grok_build::web_fetch::WebFetchConfig;
 use xai_grok_tools::implementations::lsp::LspBackend;
-use xai_grok_tools::implementations::web_search::WebSearchConfig;
 use xai_grok_tools::notification::ToolNotificationHandle;
 use xai_grok_tools::types::SharedApiKeyProvider;
 use xai_grok_tools::types::compat::CompatConfig;
@@ -110,14 +107,8 @@ pub(crate) struct AgentRebuildSpec {
     /// replaces it so a later zero-turn rebuild renders the same prompt as a fresh spawn.
     pub memory_v2_access: MemoryV2AccessSlot,
     pub memory_v2_exposed: bool,
-    pub web_search_config: WebSearchConfig,
-    /// `[toolset.web_search]` domain policy, resolved once at spawn.
-    /// It is applied to both search paths (the hosted `tool_overrides` merge and the client-side `WebSearchConfig`) so they never diverge.
-    pub web_search_domains: Option<xai_grok_sampling_types::WebSearchOptions>,
     pub backend_search: bool,
     pub web_fetch_config: WebFetchConfig,
-    pub image_gen_config: ImageGenConfig,
-    pub video_gen_config: VideoGenConfig,
     pub app_builder_deployer_config: AppBuilderDeployerConfig,
     pub media_gen_batch_limits: xai_grok_tools::media_gen_limits::MediaGenBatchLimits,
     pub write_file_enabled: bool,
@@ -223,12 +214,8 @@ impl AgentRebuildSpec {
             memory_backend,
             memory_v2_access,
             memory_v2_exposed,
-            web_search_config,
-            web_search_domains,
             backend_search,
             web_fetch_config,
-            image_gen_config,
-            video_gen_config,
             app_builder_deployer_config,
             media_gen_batch_limits: _,
             write_file_enabled,
@@ -288,12 +275,6 @@ impl AgentRebuildSpec {
         let is_cursor_template =
             crate::session::is_cursor_system_template(&definition.system_prompt);
         let mut definition = definition;
-        if let Some(cfg_opts) = web_search_domains.clone() {
-            definition
-                .tool_overrides
-                .get_or_insert_with(Default::default)
-                .web_search = Some(cfg_opts);
-        }
         let session_env = {
             let mut env = session_env.as_ref().clone();
             env.insert("GROK_SESSION_ID".to_string(), session_id_str.clone());
@@ -315,10 +296,7 @@ impl AgentRebuildSpec {
         .with_system_prompt_label(system_prompt_label)
         .with_session_env(session_env.clone())
         .with_state_path(bridge_state_path.clone())
-        .with_web_search_config(web_search_config.clone())
         .with_backend_search(*backend_search)
-        .with_image_gen_config(image_gen_config.clone())
-        .with_video_gen_config(video_gen_config.clone())
         .with_app_builder_deployer_config(app_builder_deployer_config.clone())
         .with_web_fetch_config(web_fetch_config.clone())
         .with_write_file_enabled(*write_file_enabled)
@@ -507,12 +485,8 @@ pub(crate) fn test_rebuild_spec_default() -> Arc<AgentRebuildSpec> {
         memory_backend: None,
         memory_v2_access: MemoryV2AccessSlot::new(None),
         memory_v2_exposed: false,
-        web_search_config: WebSearchConfig::default(),
-        web_search_domains: None,
         backend_search: false,
         web_fetch_config: WebFetchConfig::Disabled,
-        image_gen_config: ImageGenConfig::default(),
-        video_gen_config: VideoGenConfig::default(),
         app_builder_deployer_config: AppBuilderDeployerConfig::default(),
         media_gen_batch_limits: xai_grok_tools::media_gen_limits::MediaGenBatchLimits::default(),
         write_file_enabled: true,

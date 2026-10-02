@@ -9,6 +9,7 @@ use super::registry::{
 use crate::appearance::ScrollMode;
 use crate::appearance::TextSelection;
 use crate::appearance::permission_cursor::DefaultSelectedPermission;
+use crate::xai_grok_voice;
 
 use xai_grok_shell::agent::config::{Feature, UiConfig};
 use xai_grok_shell::util::config::DISPLAY_REFRESH_DEFAULT_AUTO_CADENCE_ENABLED;

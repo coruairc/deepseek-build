@@ -763,15 +763,9 @@ async fn handle_add_source(url: &str) -> xai_hooks_plugins_types::ActionOutcome 
         }
     }
 
-    let is_official = matches!(&input, MarketplaceAddInput::GitUrl(u)
-        if xai_grok_plugin_marketplace::is_official_source_url(u));
-    let name = if is_official {
-        xai_grok_plugin_marketplace::OFFICIAL_SOURCE_NAME.to_string()
-    } else {
-        match &input {
-            MarketplaceAddInput::GitUrl(u) => plugin::name_from_url(u),
-            MarketplaceAddInput::LocalPath(p) => plugin::name_from_path(p),
-        }
+    let name = match &input {
+        MarketplaceAddInput::GitUrl(u) => plugin::name_from_url(u),
+        MarketplaceAddInput::LocalPath(p) => plugin::name_from_path(p),
     };
 
     // Run the write under the config write guard (SAVE_LOCK + init flock), off the reactor; an
@@ -791,7 +785,7 @@ async fn handle_add_source(url: &str) -> xai_hooks_plugins_types::ActionOutcome 
     let write = {
         let name = name.clone();
         save_guard
-            .run_blocking(move || add_marketplace_source(&config_path, &name, &input, is_official))
+            .run_blocking(move || add_marketplace_source(&config_path, &name, &input, false))
             .await
     };
     match write {
@@ -1087,117 +1081,9 @@ fn purge_default_skills_installs_impl(
     }
 }
 
-/// Auto-register the official xAI marketplace source on first run. Gated by the caller (`init_process`); see `Config::resolve_official_marketplace_auto_register`. No-op once `official_marketplace_auto_installed` is set.
-/// Under a process-wide flock it adds the source (or just sets the flag if it's already present in config.toml or a JSON store). Best-effort: errors are logged and never block startup.
-pub(crate) fn ensure_official_marketplace_source(grok_home: &std::path::Path) {
-    ensure_official_marketplace_source_with(
-        grok_home,
-        &xai_grok_workspace::permission::resolution::managed_settings().marketplace_allowlist,
-    );
-}
-
-/// [`ensure_official_marketplace_source`] with the marketplace policy injected — the OnceLock
-/// seam, so tests can pin the blocked-skip behavior.
-fn ensure_official_marketplace_source_with(
-    grok_home: &std::path::Path,
-    policy: &xai_grok_workspace::permission::resolution::MarketplacePolicy,
-) {
-    let config_path = grok_home.join("config.toml");
-
-    if read_official_marketplace_auto_installed(&config_path) {
-        return;
-    }
-
-    // Auto-register is a `marketplace add` on the user's behalf: it fails closed against every
-    // strict list; the flag stays unset so the register retries if the policy lifts.
-    if policy
-        .add_block_reason(xai_grok_plugin_marketplace::OFFICIAL_SOURCE_GIT_URL)
-        .is_some()
-    {
-        // Log the full-path reason (the add gate's refusal reduces the
-        // policy file to its name for users).
-        tracing::info!(
-            reason = %policy.block_reason(
-                xai_grok_plugin_marketplace::OFFICIAL_SOURCE_GIT_URL,
-                xai_grok_workspace::permission::resolution::PolicySubjectOrigin::Foreign,
-            ),
-            "skipping official marketplace auto-register: blocked by marketplace policy"
-        );
-        return;
-    }
-
-    let _lock = match acquire_init_lock(grok_home) {
-        Ok(f) => f,
-        Err(e) => {
-            tracing::warn!(
-                error = %e,
-                path = %grok_home.join(".config-init.lock").display(),
-                "skipping official marketplace auto-register: failed to acquire init lock"
-            );
-            return;
-        }
-    };
-
-    // Re-check under the lock: another process may have registered meanwhile.
-    if read_official_marketplace_auto_installed(&config_path) {
-        return;
-    }
-
-    let raw = match crate::util::config::read_to_string_or_empty(&config_path) {
-        Ok(s) => s,
-        Err(e) => {
-            tracing::warn!(error = %e, "skipping official marketplace auto-register: cannot read config.toml");
-            return;
-        }
-    };
-    let parsed: toml::Value = match toml::from_str(&raw) {
-        Ok(v) => v,
-        Err(e) => {
-            tracing::warn!(error = %e, "skipping official marketplace auto-register: invalid config.toml");
-            return;
-        }
-    };
-
-    // "Already present" means the official URL is in the config.toml sources or in a JSON store (settings.json, known_marketplaces.json) under grok_home
-    // The scan is scoped to grok_home only (not ~/.claude) to keep tests hermetic
-    // A user with the URL solely in ~/.claude gets one duplicate entry that the UI dedupes by URL
-    let toml_sources = xai_grok_plugin_marketplace::load_sources(&parsed);
-    let json_sources = xai_grok_plugin_marketplace::load_extra_sources_from_settings_in(
-        &toml_sources,
-        std::slice::from_ref(&grok_home.to_path_buf()),
-    );
-    let already_present = toml_sources.iter().chain(json_sources.iter()).any(|s| {
-        matches!(&s.kind, xai_grok_plugin_marketplace::SourceKind::Git { url, .. }
-            if xai_grok_plugin_marketplace::is_official_source_url(url))
-    });
-
-    let write_result = if already_present {
-        // Already present: just set the flag.
-        set_official_marketplace_auto_installed(&config_path)
-    } else {
-        add_marketplace_source(
-            &config_path,
-            xai_grok_plugin_marketplace::OFFICIAL_SOURCE_NAME,
-            &crate::plugin::MarketplaceAddInput::GitUrl(
-                xai_grok_plugin_marketplace::OFFICIAL_SOURCE_GIT_URL.to_string(),
-            ),
-            true,
-        )
-    };
-
-    match write_result {
-        Ok(()) if !already_present => {
-            tracing::info!(
-                url = xai_grok_plugin_marketplace::OFFICIAL_SOURCE_GIT_URL,
-                "auto-registered official xAI marketplace source"
-            );
-        }
-        Ok(()) => {}
-        Err(e) => {
-            tracing::warn!(error = %e, "failed to auto-register official marketplace source");
-        }
-    }
-}
+/// Auto-registering an official marketplace source has been removed.
+/// Kept as a no-op so existing startup call sites continue to compile.
+pub(crate) fn ensure_official_marketplace_source(_grok_home: &std::path::Path) {}
 
 #[cfg(test)]
 mod official_source_tests {

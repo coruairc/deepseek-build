@@ -5,6 +5,7 @@ use crate::app::dispatch::queue::maybe_drain_queue;
 use crate::app::workspace_test_fixtures::{
     member, new_member, snapshot as workspace_snapshot, temp_store,
 };
+use crate::xai_grok_voice;
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };

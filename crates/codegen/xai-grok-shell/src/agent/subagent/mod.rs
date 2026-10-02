@@ -247,10 +247,7 @@ pub(crate) struct SubagentSpawnContext {
     pub memory_config: Option<crate::config::MemoryConfig>,
     /// Parent's selected memory implementation, retained even when memory is disabled.
     pub memory_mode: crate::config::MemoryMode,
-    pub web_search_sampling_config: Option<xai_grok_sampler::SamplerConfig>,
     pub web_fetch_config: xai_grok_tools::implementations::grok_build::web_fetch::WebFetchConfig,
-    pub image_gen_config: xai_grok_tools::implementations::grok_build::image_gen::ImageGenConfig,
-    pub video_gen_config: xai_grok_tools::implementations::grok_build::video_gen::VideoGenConfig,
     pub app_builder_deployer_config:
         xai_grok_tools::implementations::grok_build::app_builder::AppBuilderDeployerConfig,
     pub write_file_enabled: bool,

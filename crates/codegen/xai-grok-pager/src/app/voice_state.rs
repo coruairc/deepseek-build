@@ -4,9 +4,10 @@
 //! only through the `AppView::voice_*` methods below; the pipeline's events land through
 //! [`crate::voice::handle_voice_event`].
 
+use crate::xai_grok_voice;
 use std::time::{Duration, Instant};
 
-use xai_grok_voice::VoiceRoute;
+use crate::xai_grok_voice::VoiceRoute;
 
 use crate::app::agent::AgentId;
 use crate::app::app_view::AppView;

@@ -907,15 +907,9 @@ fn marketplace_add(url: &str, force: bool) -> Result<()> {
         })?;
     }
 
-    let is_official = matches!(&input, MarketplaceAddInput::GitUrl(u)
-        if xai_grok_plugin_marketplace::is_official_source_url(u));
-    let name = if is_official {
-        xai_grok_plugin_marketplace::OFFICIAL_SOURCE_NAME.to_string()
-    } else {
-        match &input {
-            MarketplaceAddInput::GitUrl(u) => plugin::name_from_url(u),
-            MarketplaceAddInput::LocalPath(p) => plugin::name_from_path(p),
-        }
+    let name = match &input {
+        MarketplaceAddInput::GitUrl(u) => plugin::name_from_url(u),
+        MarketplaceAddInput::LocalPath(p) => plugin::name_from_path(p),
     };
 
     // Shared locked add core (same as the shell modal): init flock across the
@@ -926,7 +920,7 @@ fn marketplace_add(url: &str, force: bool) -> Result<()> {
         &grok_home.join(xai_grok_config::USER_CONFIG_FILENAME),
         &name,
         &input,
-        is_official,
+        false,
     )?;
 
     println!("Added marketplace source: {name} ({identity})");

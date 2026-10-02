@@ -45,7 +45,6 @@ impl ToolKind {
             ToolKind::Lsp => "Code Intelligence",
             ToolKind::Execute => "Run Command",
             ToolKind::Plan => "Plan",
-            ToolKind::WebSearch => "Web Search",
             ToolKind::WebFetch => "Web Fetch",
             ToolKind::BackgroundTaskAction => "Background Task",
             ToolKind::WaitTasksAction => "Wait for Tasks",
@@ -58,10 +57,6 @@ impl ToolKind {
             ToolKind::EnterPlan => "Enter Plan Mode",
             ToolKind::ExitPlan => "Exit Plan Mode",
             ToolKind::AskUser => "Ask User",
-            ToolKind::ImageGen => "Generate Image",
-            ToolKind::VideoGen => "Generate Video",
-            ToolKind::ImageToVideo => "Generate Video",
-            ToolKind::ReferenceToVideo => "Generate Video",
             ToolKind::DeployApp => "Deploy App",
             ToolKind::InitOrUpdateApp => "Init or Update App",
             ToolKind::SearchTool => "Search Tools",
@@ -85,7 +80,6 @@ impl ToolKind {
             | ToolKind::List
             | ToolKind::MemorySearch
             | ToolKind::MemoryGet
-            | ToolKind::WebSearch
             | ToolKind::WebFetch
             | ToolKind::EnterPlan
             | ToolKind::ExitPlan
@@ -102,10 +96,6 @@ impl ToolKind {
             | ToolKind::Skill
             | ToolKind::Task
             | ToolKind::ActiveAgentMessage
-            | ToolKind::ImageGen
-            | ToolKind::VideoGen
-            | ToolKind::ImageToVideo
-            | ToolKind::ReferenceToVideo
             | ToolKind::DeployApp
             | ToolKind::InitOrUpdateApp
             | ToolKind::SearchTool
@@ -134,10 +124,6 @@ pub const WRITING_TOOL_WIRE_NAMES: &[(&str, ToolKind)] = &[
     ("todowrite", ToolKind::Plan),
     ("workflow", ToolKind::Workflow),
     ("send_feedback", ToolKind::Feedback),
-    ("image_gen", ToolKind::ImageGen),
-    ("image_edit", ToolKind::ImageGen),
-    ("image_to_video", ToolKind::ImageToVideo),
-    ("reference_to_video", ToolKind::ReferenceToVideo),
     ("ask_user_question", ToolKind::AskUser),
 ];
 /// [`ToolKind`] of a wire name in [`WRITING_TOOL_WIRE_NAMES`]. Keyed by wire name because that is

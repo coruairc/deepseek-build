@@ -36,15 +36,10 @@ impl From<&crate::types::ToolInput> for AccessKind {
             ToolInput::SchedulerCreate(_) => AccessKind::Tool("scheduler_create".to_owned()),
             ToolInput::SchedulerDelete(_) => AccessKind::Tool("scheduler_delete".to_owned()),
             ToolInput::Workflow(_) => AccessKind::Tool("workflow".to_owned()),
-            ToolInput::ImageGen(_) => AccessKind::Tool("image_gen".to_owned()),
-            ToolInput::ImageEdit(_) => AccessKind::Tool("image_edit".to_owned()),
-            ToolInput::ImageToVideo(_) => AccessKind::Tool("image_to_video".to_owned()),
-            ToolInput::ReferenceToVideo(_) => AccessKind::Tool("reference_to_video".to_owned()),
             ToolInput::SendSubagentMessage(message) => AccessKind::AgentMessage {
                 subagent_id: message.subagent_id.clone(),
             },
             ToolInput::SendFeedback(_) => AccessKind::Tool("send_feedback".to_owned()),
-            ToolInput::WebSearch(ws) => AccessKind::WebSearch(ws.query.clone()),
             ToolInput::SearchReplace(search_replace) => {
                 AccessKind::Edit(search_replace.file_path.to_string())
             }

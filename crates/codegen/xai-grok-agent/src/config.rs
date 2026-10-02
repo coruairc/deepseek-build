@@ -147,10 +147,6 @@ pub fn workspace_grok_build_toolset() -> ToolServerConfig {
     tools.push((&grok_build::EnterPlanModeTool).into());
     tools.push((&grok_build::ExitPlanModeTool).into());
     tools.push((&grok_build::AskUserQuestionTool).into());
-    tools.push((&grok_build::WebSearchTool).into());
-    tools.push((&grok_build::ImageGenTool).into());
-    tools.push((&grok_build::ImageToVideoTool).into());
-    tools.push((&grok_build::ReferenceToVideoTool).into());
     tools.push((&grok_build::WebFetchTool).into());
     tools.push((&memory::search_tool::MemorySearchImpl).into());
     tools.push((&memory::get_tool::MemoryGetImpl).into());
@@ -163,14 +159,7 @@ pub fn workspace_grok_build_toolset() -> ToolServerConfig {
 /// Fully qualified ids of the workspace tools that call the Grok API with the workspace server's own credential.
 /// A server whose credential only serves the hub cannot run them, so it neither advertises nor serves them.
 pub fn api_backed_tool_ids() -> Vec<String> {
-    #[allow(unused_mut)]
-    let mut ids = vec![
-        ToolConfig::from(&grok_build::WebSearchTool).id,
-        ToolConfig::from(&grok_build::ImageGenTool).id,
-        ToolConfig::from(&grok_build::ImageToVideoTool).id,
-        ToolConfig::from(&grok_build::ReferenceToVideoTool).id,
-    ];
-    ids
+    Vec::new()
 }
 /// Toolset for the `grok-computer` (workspace/sandbox) preset.
 fn grok_computer_toolset() -> ToolServerConfig {
@@ -322,7 +311,6 @@ pub fn grok_build_hashline_toolset(
         task_output_tool_config(),
         wait_tasks_tool_config(),
         task_tool_config(),
-        (&grok_build::WebSearchTool).into(),
         (&grok_build::SchedulerCreateTool).into(),
         (&grok_build::SchedulerDeleteTool).into(),
         (&grok_build::SchedulerListTool).into(),
@@ -445,12 +433,7 @@ fn orchestrator_toolset() -> ToolServerConfig {
             (&grok_build::SchedulerListTool).into(),
             (&grok_build::MonitorTool).into(),
             // Web tools
-            (&grok_build::WebSearchTool).into(),
             (&grok_build::WebFetchTool).into(),
-            // Imagine
-            (&grok_build::ImageGenTool).into(),
-            (&grok_build::ImageToVideoTool).into(),
-            (&grok_build::ReferenceToVideoTool).into(),
             // Memory
             (&memory::MemorySearchImpl).into(),
             (&memory::MemoryGetImpl).into(),

@@ -18,6 +18,7 @@ use crate::render::draw::CursorState;
 use crate::scrollback::render::ScratchBuffer;
 use crate::views::prompt_widget::PromptWidget;
 use crate::views::welcome::WelcomePromptFocus;
+use crate::xai_grok_voice;
 use agent_client_protocol as acp;
 use crossterm::event::{Event, KeyCode, KeyEventKind, MouseButton, MouseEventKind};
 use indexmap::IndexMap;
@@ -449,8 +450,7 @@ fn parse_esc_ttl(raw: Option<String>) -> Duration {
 /// Slash commands unavailable on the free and X Basic subscription tiers.
 /// To restrict another command for these tiers, add its canonical name (no leading `/`) here.
 /// Matching covers aliases automatically via [`crate::slash::registry::CommandRegistry::set_restricted_commands`].
-pub(crate) const TIER_RESTRICTED_COMMANDS: &[&str] =
-    &["usage", "imagine", "imagine-video", "voice"];
+pub(crate) const TIER_RESTRICTED_COMMANDS: &[&str] = &["usage", "voice"];
 /// Whether a subscription-tier display name is a tier with restricted commands: the free tier and X Basic.
 /// Free covers no subscription (`None`) or an explicit "Free"; X Basic covers CCP display name "X Basic" with JWT claim fallback "x_basic".
 /// The pager's *cosmetic* slash-command gate treats an absent tier (`None`) as restricted (it recovers live on the next settings update).

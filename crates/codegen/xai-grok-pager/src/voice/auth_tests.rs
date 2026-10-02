@@ -1,10 +1,10 @@
 use super::{build_stt_routes, build_voice_auth};
+use crate::xai_grok_voice::VoiceAuthError;
 use chrono::{Duration, Utc};
 use pretty_assertions::assert_eq;
 use std::sync::Arc;
 use xai_grok_login::{AuthManager, AuthMode, GrokAuth, GrokComConfig};
 use xai_grok_test_support::EnvGuard;
-use xai_grok_voice::VoiceAuthError;
 fn session(issuer: &str) -> GrokAuth {
     GrokAuth {
         key: "session-token".to_owned(),

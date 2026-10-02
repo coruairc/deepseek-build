@@ -3,8 +3,8 @@
 //! Expected format:
 //! ```toml
 //! [[marketplace.sources]]
-//! name = "xAI Official"
-//! git = "https://github.com/xai-org/xai-plugin-marketplace.git"
+//! name = "My Plugins"
+//! git = "https://github.com/example/my-plugins.git"
 //!
 //! [[marketplace.sources]]
 //! name = "Local Dev"

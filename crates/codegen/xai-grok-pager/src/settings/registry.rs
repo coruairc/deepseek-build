@@ -2,6 +2,7 @@
 //!
 //! See the module-level docs in `mod.rs` for the architectural rationale.
 
+use crate::xai_grok_voice;
 use agent_client_protocol as acp;
 use xai_grok_shell::agent::config::{
     ConfigSource, Feature, FeatureConfigLayers, FeatureSources, Resolved, UiConfig,

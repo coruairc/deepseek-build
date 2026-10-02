@@ -205,10 +205,6 @@ impl WritingToolCall {
                             ToolKind::Plan => Some("Updating todo list"),
                             ToolKind::Workflow => Some("Writing workflow"),
                             ToolKind::Feedback => Some("Writing feedback draft"),
-                            ToolKind::ImageGen => Some("Writing image prompt"),
-                            ToolKind::ImageToVideo | ToolKind::ReferenceToVideo => {
-                                Some("Writing video prompt")
-                            }
                             ToolKind::AskUser => Some("Preparing question"),
                             _ => None,
                         }
@@ -2091,21 +2087,10 @@ fn tool_call_to_block(
                         .collect();
                     block.content = Some(sources_list.join("\n"));
                 }
-            } else {
-                if let Some(ref raw) = tc.raw_output
-                    && let Ok(ToolOutput::WebSearch(ws)) =
-                        serde_json::from_value::<ToolOutput>(raw.clone())
-                {
-                    if !ws.content.is_empty() {
-                        block.content = Some(ws.content);
-                    }
-                    block.citations = ws.citations;
-                }
-                if success && block.content.is_none() {
-                    let text = content_text(tc);
-                    if !text.is_empty() {
-                        block.content = Some(text);
-                    }
+            } else if success && block.content.is_none() {
+                let text = content_text(tc);
+                if !text.is_empty() {
+                    block.content = Some(text);
                 }
             }
             if !success {
@@ -2388,17 +2373,8 @@ fn media_gen_text(tc: &acp::ToolCall) -> Option<String> {
 /// Local `(path, is_video)` from typed `raw_output`.
 ///
 /// Returns `None` when `raw_output` is missing/unparseable, not a media variant, or has no openable local file (ZDR `uploaded_url` / empty path).
-fn media_gen_ref(tc: &acp::ToolCall) -> Option<(std::path::PathBuf, bool)> {
-    let (media, is_video) =
-        match serde_json::from_value::<ToolOutput>(tc.raw_output.clone()?).ok()? {
-            ToolOutput::ImageGen(m) | ToolOutput::ImageEdit(m) => (m, false),
-            ToolOutput::ImageToVideo(m) | ToolOutput::ReferenceToVideo(m) => (m, true),
-            _ => return None,
-        };
-    if media.uploaded_url.is_some() || media.path.as_os_str().is_empty() {
-        return None;
-    }
-    Some((media.path, is_video))
+fn media_gen_ref(_tc: &acp::ToolCall) -> Option<(std::path::PathBuf, bool)> {
+    None
 }
 /// Extract text content from a ContentBlock.
 fn extract_text_from_content(content: &acp::ContentBlock) -> String {

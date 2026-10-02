@@ -2,6 +2,7 @@
 //!
 //! Warnings are data-only; the engine returns `Vec<TerminalWarning>` for downstream banner rendering.
 
+use crate::xai_grok_voice;
 use std::path::Path;
 
 use crate::notifications::protocol::NotificationProtocol;

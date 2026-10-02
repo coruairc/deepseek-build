@@ -28,8 +28,6 @@ pub mod gboom;
 pub mod help;
 pub mod history;
 pub mod home;
-pub mod imagine;
-pub mod imagine_video;
 pub mod import_claude;
 pub mod jump;
 pub mod login;
@@ -141,8 +139,6 @@ pub fn builtin_commands() -> Vec<Arc<dyn SlashCommand>> {
         // Reached for occasionally.
         Arc::new(timeline::TimelineCommand),
         Arc::new(cd::CdCommand),
-        Arc::new(imagine::ImagineCommand),
-        Arc::new(imagine_video::ImagineVideoCommand),
         // Docs, account and one-off maintenance.
         Arc::new(docs::DocsCommand),
         Arc::new(release_notes::ReleaseNotesCommand),
