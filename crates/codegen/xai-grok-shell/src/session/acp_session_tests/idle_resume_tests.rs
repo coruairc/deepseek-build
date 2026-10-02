@@ -3,7 +3,7 @@ use super::*;
 use tokio::sync::mpsc;
 /// Test that `last_api_request_at` is recorded and used for idle detection.
 ///
-/// `maybe_refresh_model_metadata_on_resume` checks this timestamp to decide whether to proactively refresh model metadata from cli-chat-proxy.
+/// `maybe_refresh_model_metadata_on_resume` checks this timestamp to decide whether to proactively refresh model metadata from api.deepseek.com.
 #[tokio::test(flavor = "current_thread")]
 async fn test_last_api_request_at_idle_detection() {
     let local = tokio::task::LocalSet::new();

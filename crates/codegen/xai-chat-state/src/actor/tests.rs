@@ -4644,7 +4644,7 @@ async fn context_window_downgrade_triggers_auto_compact() {
 
     // Initial config: 500k context, Responses backend (matches grok-4.5)
     let config = SamplingConfig {
-        base_url: "https://api.x.ai/v1".to_string(),
+        base_url: "https://api.deepseek.com/v1".to_string(),
         model: "grok-4.5".to_string(),
         temperature: Some(0.7),
         top_p: Some(0.95),
@@ -4669,7 +4669,7 @@ async fn context_window_downgrade_triggers_auto_compact() {
     );
 
     // Simulate a context_window downgrade (e.g. model switch, response
-    // header from cli-chat-proxy, or stale prefetched model list).
+    // header from api.deepseek.com, or stale prefetched model list).
     let mut downgraded = pre.clone();
     downgraded.context_window = NonZeroU64::new(128_000).unwrap();
     h.handle.update_sampling_config(downgraded);

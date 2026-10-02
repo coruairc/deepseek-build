@@ -117,7 +117,7 @@ impl acp::Client for QuietClient {
 /// Written under the legacy scope key, which `lookup_auth` falls back to for any configured scope.
 fn seed_credential(grok_home: &Path, expires_at: chrono::DateTime<chrono::Utc>) {
     let auth = json!({
-        "https://accounts.x.ai/sign-in": {
+        "https://api.deepseek.com/sign-in": {
             "key": STALE_TOKEN,
             "auth_mode": "external",
             "create_time": (chrono::Utc::now() - chrono::Duration::hours(9)).to_rfc3339(),
@@ -309,7 +309,7 @@ fn expired_external_credential_routes_to_the_provider_login_flow() {
         let methods = advertised(&init);
         assert_eq!(
             methods.first().map(|(id, _)| id.as_str()),
-            Some("grok.com"),
+            Some("api.deepseek.com"),
             "an expired credential the provider cannot renew must advertise the \
              login method first, not `cached_token`; got {methods:?}"
         );

@@ -408,7 +408,7 @@
             reason: "API error (status 429 Too Many Requests): \
                      Some resource has been exhausted: You are sending requests too quickly. \
                      Please slow down, or upgrade to a Grok subscription for higher limits: \
-                     https://grok.com/supergrok"
+                     https://api.deepseek.com/supergrok"
                 .into(),
             is_rate_limited: true,
         };
@@ -419,7 +419,7 @@
         match last_session_event(&scrollback) {
             Some(SessionEvent::RetryFailed { error, .. }) => {
                 assert_eq!(error, RATE_LIMITED_USER_MESSAGE_API_KEY);
-                assert!(!error.contains("grok.com/supergrok"));
+                assert!(!error.contains("api.deepseek.com/supergrok"));
             }
             other => panic!("expected API-key rate-limit RetryFailed, got {other:?}"),
         }
@@ -658,7 +658,7 @@
         apply_retry_state(
             &RetryState::Failed {
                 error_type: "auth".into(),
-                message: "Unauthorized (401) from https://cli-chat-proxy.grok.com/v1/messages: \
+                message: "Unauthorized (401) from https://api.deepseek.com/v1/messages: \
                           no auth context"
                     .into(),
             },

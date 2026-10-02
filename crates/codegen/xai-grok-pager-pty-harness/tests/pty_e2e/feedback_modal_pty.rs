@@ -4,7 +4,7 @@
 // slash/palette/trace/displacement workflows, driven end-to-end with no hidden input owner.
 // The minimal-mode flows live in `minimal/minimal_feedback_*.rs` and the draft send in
 // `feedback_draft_send_pty.rs`. Shell-gate request inspection stays in 1c-shell's `mvp_agent`
-// tests; here the wire evidence is the mock server's recorded `/v1/feedback` posts, `/v1/storage`
+// tests; here the wire evidence is the mock server's recorded `/v1/feedback` posts, `/v1/local`
 // uploads, and `/v1/events` telemetry.
 #[allow(unused_imports)]
 use super::common::*;

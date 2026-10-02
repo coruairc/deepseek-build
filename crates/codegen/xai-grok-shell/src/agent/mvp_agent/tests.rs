@@ -446,7 +446,7 @@ async fn upload_harness_trace_turns_numbers_siblings_and_persists_counter() {
         let mut cfg = agent.cfg.borrow_mut();
         cfg.features.telemetry = Some(crate::agent::config::TelemetryMode::Enabled);
         cfg.telemetry.trace_upload = Some(true);
-        cfg.endpoints.trace_upload_bucket = Some("gs://harness-trace-test".to_string());
+        cfg.endpoints.trace_upload_bucket = Some("file:///tmp/harness-trace-test".to_string());
     }
     let sid = acp::SessionId::new("harness-upload-sess");
     let info = crate::session::info::Info {
@@ -457,7 +457,7 @@ async fn upload_harness_trace_turns_numbers_siblings_and_persists_counter() {
     handle.info = info.clone();
     let queue_home = tempfile::tempdir().unwrap();
     let queue_cfg = crate::session::repo_changes::TraceExportConfig {
-        bucket_url: Some("gs://harness-trace-test".to_string()),
+        bucket_url: Some("file:///tmp/harness-trace-test".to_string()),
         service_account_key: None,
         prefix_dir: None,
         gcs_prefix: None,
@@ -562,7 +562,7 @@ async fn upload_harness_trace_turns_build_per_turn_manifest() {
         let mut cfg = agent.cfg.borrow_mut();
         cfg.features.telemetry = Some(crate::agent::config::TelemetryMode::Enabled);
         cfg.telemetry.trace_upload = Some(true);
-        cfg.endpoints.trace_upload_bucket = Some("gs://harness-trace-test".to_string());
+        cfg.endpoints.trace_upload_bucket = Some("file:///tmp/harness-trace-test".to_string());
     }
     let sid = acp::SessionId::new("harness-manifest-sess");
     let info = crate::session::info::Info {
@@ -573,7 +573,7 @@ async fn upload_harness_trace_turns_build_per_turn_manifest() {
     handle.info = info.clone();
     let queue_home = tempfile::tempdir().unwrap();
     let queue_cfg = crate::session::repo_changes::TraceExportConfig {
-        bucket_url: Some("gs://harness-trace-test".to_string()),
+        bucket_url: Some("file:///tmp/harness-trace-test".to_string()),
         service_account_key: None,
         prefix_dir: None,
         gcs_prefix: None,
@@ -2939,7 +2939,7 @@ async fn one_shot_rejects_every_custom_trace_destination() {
             e.trace_upload_url = Some("https://exfil.example/upload".into());
         }),
         ("custom trace_upload_bucket", |e| {
-            e.trace_upload_bucket = Some("gs://exfil-bucket".into());
+            e.trace_upload_bucket = Some("file:///tmp/exfil-bucket".into());
         }),
         ("custom trace_upload_endpoint_url", |e| {
             e.trace_upload_endpoint_url = Some("https://exfil.example".into());
@@ -2982,7 +2982,7 @@ async fn one_shot_rejects_non_proxy_upload_methods() {
     make_trace_card_eligible(&agent);
     {
         let mut cfg = agent.cfg.borrow_mut();
-        cfg.endpoints.trace_upload_bucket = Some("gs://test-bucket".to_string());
+        cfg.endpoints.trace_upload_bucket = Some("file:///tmp/test-bucket".to_string());
         cfg.endpoints.trace_upload_credentials = Some("{}".to_string());
     }
     assert!(matches!(
@@ -3867,7 +3867,7 @@ async fn auth_type_session_based_no_current_returns_session_token() {
 }
 /// BYOK guard. Users with `xai.api_key` must continue to report `ApiKey` regardless of live-token state.
 /// BYOK sessions have nothing to refresh.
-/// Reporting `SessionToken` would route through cli-chat-proxy paths (image_gen / video_gen base_url) that don't apply to BYOK keys.
+/// Reporting `SessionToken` would route through api.deepseek.com paths (image_gen / video_gen base_url) that don't apply to BYOK keys.
 #[tokio::test(flavor = "current_thread")]
 async fn auth_type_xai_api_key_no_current_returns_api_key() {
     let agent = build_minimal_agent_for_tests();
@@ -3896,7 +3896,7 @@ async fn auth_type_session_based_with_current_returns_session_token() {
     assert_eq!(agent.auth_type(), xai_chat_state::AuthType::SessionToken,);
 }
 /// Defensive case: no `auth_method_id` selected yet (pre-`authenticate` state) and no live credential. We default to `ApiKey`. Callers key off this value (e.g. `resolve_chat_state_auth_type` for chat routing).
-/// Any other default would route session-token-shaped traffic through cli-chat-proxy before a method has been chosen.
+/// Any other default would route session-token-shaped traffic through api.deepseek.com before a method has been chosen.
 #[tokio::test(flavor = "current_thread")]
 async fn auth_type_no_method_id_no_current_returns_api_key() {
     let agent = build_minimal_agent_for_tests();
@@ -3949,7 +3949,7 @@ async fn cached_token_fallthrough_prefers_api_key_for_deployment_key() {
          through to xai.api_key on a dead cached_token -- not interactive login",
     );
 }
-/// Forced-IdP deployment: even with `XAI_API_KEY` present, the admin kill switch keeps the fallthrough on interactive `grok.com`.
+/// Forced-IdP deployment: even with `XAI_API_KEY` present, the admin kill switch keeps the fallthrough on interactive `api.deepseek.com`.
 /// Api-key auth is neither advertised nor an eligible fallthrough.
 #[tokio::test(flavor = "current_thread")]
 #[serial_test::serial]
@@ -3966,11 +3966,11 @@ async fn cached_token_fallthrough_respects_kill_switch() {
             .map(|id| id.0.as_ref()),
         Some(GROK_COM_METHOD_ID),
         "disable_api_key_auth must keep the cached_token fallthrough on \
-         interactive grok.com so XAI_API_KEY can't bypass forced IdP login",
+         interactive api.deepseek.com so XAI_API_KEY can't bypass forced IdP login",
     );
 }
 /// No advertiseable credentials at all (no env key, no kill switch): the user genuinely needs to log in.
-/// The fallthrough is interactive `grok.com`.
+/// The fallthrough is interactive `api.deepseek.com`.
 #[tokio::test(flavor = "current_thread")]
 #[serial_test::serial]
 async fn cached_token_fallthrough_falls_to_grok_com_without_credentials() {
@@ -3988,7 +3988,7 @@ async fn cached_token_fallthrough_falls_to_grok_com_without_credentials() {
             .as_ref()
             .map(|id| id.0.as_ref()),
         Some(GROK_COM_METHOD_ID),
-        "no API-key creds and no kill switch -> interactive grok.com login",
+        "no API-key creds and no kill switch -> interactive api.deepseek.com login",
     );
 }
 /// Verifies the 4-state matrix of `(disable_zdr_incompatible_tools, zdr_video_output_s3)`: | ZDR flag | S3 config | Result | |----------|-----------|---------------------------------------------| | false | None | Enabled, no S3 (normal non-ZDR mode) | | true | None | Disabled (ZDR with no escape hatch) | | false | Some | Enabled, S3 **not** threaded (non-ZDR) | | true | Some | Enabled, S3 threaded (ZDR with upload path) |
@@ -4083,7 +4083,7 @@ async fn prepare_image_gen_config_fails_open_without_auth() {
         "no resolved auth ⇒ fail open (tools not tier-restricted)"
     );
 }
-/// The imagine tools bypass cli-chat-proxy (direct API calls).
+/// The imagine tools bypass api.deepseek.com (direct API calls).
 /// The server can only scope the coding data-retention opt-out (`/privacy opt-out`) to Build traffic via the `x-grok-client-identifier` header.
 /// If this header is dropped, opted-out users' imagine prompts are logged/retained server-side.
 #[tokio::test(flavor = "current_thread")]
@@ -4351,7 +4351,7 @@ async fn opted_out_user_uploads_traces_only_to_own_bucket() {
         agent.trace_upload_config_snapshot().is_none(),
         "precondition: no own bucket, so the opt-out blocks uploads"
     );
-    agent.cfg.borrow_mut().endpoints.trace_upload_bucket = Some("s3://acme-traces".into());
+    agent.cfg.borrow_mut().endpoints.trace_upload_bucket = Some("file:///tmp/acme-traces".into());
     let is_own_bucket = |method: Option<crate::session::repo_changes::UploadMethod>| {
         matches!(
             method,
@@ -4372,7 +4372,7 @@ async fn zdr_team_uploads_no_traces_to_own_bucket() {
         ..xai_grok_login::GrokAuth::test_default()
     });
     enable_trace_upload_config(&agent);
-    agent.cfg.borrow_mut().endpoints.trace_upload_bucket = Some("s3://acme-traces".into());
+    agent.cfg.borrow_mut().endpoints.trace_upload_bucket = Some("file:///tmp/acme-traces".into());
     assert!(agent.trace_upload_config_snapshot().is_none());
 }
 /// Auth diagnostics always go to the proxy, so a deployment's own bucket must not open them for an opted-out user.
@@ -4387,7 +4387,7 @@ async fn diagnostic_upload_skipped_for_opted_out_user_with_own_bucket() {
     {
         let mut cfg = agent.cfg.borrow_mut();
         cfg.endpoints.trace_upload_url = Some(stub_url);
-        cfg.endpoints.trace_upload_bucket = Some("s3://acme-traces".into());
+        cfg.endpoints.trace_upload_bucket = Some("file:///tmp/acme-traces".into());
     }
     let uploader = agent
         .diagnostic_upload_config()
@@ -7080,7 +7080,7 @@ async fn storage_mode_self_corrects_to_writeback_when_settings_arrive() {
     let _env = crate::env::EnvVarGuard::remove("GROK_STORAGE_MODE");
     let auth = xai_grok_login::GrokAuth {
         auth_mode: xai_grok_login::AuthMode::Oidc,
-        oidc_issuer: Some("https://auth.x.ai".to_string()),
+        oidc_issuer: Some("https://api.deepseek.com".to_string()),
         key: "test-token".to_string(),
         ..Default::default()
     };
@@ -8783,7 +8783,7 @@ async fn polled_settings_apply_refreshes_accept_request_encodings() {
         "the stored copy must match so a later re-apply cannot re-arm it"
     );
 }
-/// `--cli-chat-proxy-base-url` points `cfg.endpoints` away from the disk config and the
+/// The proxy-base-url override points `cfg.endpoints` away from the disk config and the
 /// post-auth fetch reads `/v1/settings` from `cfg.endpoints`: the advertisement must be
 /// keyed under that origin, the one the poll and the model routes also use.
 #[tokio::test]
