@@ -71,7 +71,7 @@ Last updated: 2026-10-02.
 |----|------|--------|
 | O1 | Legal sign-off on re-licensing the aggregate as `deepseek-build` while preserving upstream Apache-2.0 attribution. | Open; not blocking engineering. Required before any public release. |
 | O2 | Toolchain install feasibility (rustup + Rust 1.94.0) in this environment; `dotslash` absent though `/usr/bin/protoc` exists. | Being resolved in Phase 1 setup. |
-| O3 | DeepSeek exact model IDs and parameters (`deepseek-v4-pro` / `deepseek-v4-flash` supplied but unverified). | Verify against official DeepSeek docs at the start of Phase 2. Do not rely on memory. |
+| O3 | ~~DeepSeek exact model IDs and parameters.~~ **Resolved** against official docs (2026-10-02): base URL `https://api.deepseek.com`; models `deepseek-v4-pro` and `deepseek-flash` (legacy `deepseek-v4-flash` accepted but retired/billed as Flash); context 1M, max output 384K; `thinking: {type: enabled|disabled}`; `reasoning_effort: none|low|high|max` (`minimal`→low, `medium`/`xhigh`→high); usage `prompt_tokens_details.cached_tokens` == `prompt_cache_hit_tokens`, plus `prompt_cache_miss_tokens` and `completion_tokens_details.reasoning_tokens`; streaming deltas carry `reasoning_content`; `tool_choice` `required`/named is rejected in thinking mode. | Done. |
 | O4 | Whether to rename all internal `xai-grok-*` crates later. | Deferred by D2. |
 
 ## F. Phase log
@@ -79,8 +79,8 @@ Last updated: 2026-10-02.
 | Phase | Status | Notes |
 |-------|--------|-------|
 | 0 — Audit & plan | Complete | `PLAN.md` written; audit done. |
-| 1 — Cleanup & rebrand | Not started | |
-| 2 — DeepSeek adapter | Not started | |
+| 1 — Cleanup & rebrand | Partial | Egress-policy guard + `NOTICE` added. Full removal of telemetry/upload/login/cloud-config/update/voice/imagine/marketplace and the user-facing rebrand are **not done** (large mechanical refactor). |
+| 2 — DeepSeek adapter | Partial | Core committed (`cdbf5aa3`): thinking control, reasoning_content round-trip + sanitizer, quote repair, cache helpers, DeepSeek default models. Not yet done: end-to-end API-key credential path validation, mock-server test suite, auto-router, stray-thinking normalization, non-stream reasoning capture. |
 | 3 — DeepSeek-native TUI | Not started | |
 | 4 — Adapt existing competitive features | Not started | |
 | 5 — Quality bar | Skipped (D9) | |

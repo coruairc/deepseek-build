@@ -1,0 +1,21 @@
+deepseek-build
+Copyright 2026 the deepseek-build authors
+
+This product is a derivative work of xAI Grok Build.
+
+  Grok Build (grok)
+  Copyright 2023-2026 SpaceXAI
+  Licensed under the Apache License, Version 2.0
+  Upstream: https://github.com/xai-org/grok-build
+
+The upstream Apache-2.0 `LICENSE` is preserved in this repository. Portions of
+this repository were modified for the `deepseek-build` project (removal of
+provider-specific and data-upload features, addition of a DeepSeek provider
+adapter, and rebranding). Those modifications are licensed under the
+Apache License, Version 2.0.
+
+Third-party and vendored components remain under their original licenses. See:
+
+  - THIRD-PARTY-NOTICES
+  - third_party/NOTICE
+  - crates/codegen/xai-grok-tools/THIRD_PARTY_NOTICES.md
