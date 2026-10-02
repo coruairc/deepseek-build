@@ -3,7 +3,6 @@ use super::auth::{
     dispatch_cancel_login, dispatch_login, dispatch_logout, dispatch_submit_auth_code,
     dispatch_switch_account,
 };
-use super::billing::dispatch_open_supergrok_url;
 use super::ctx::{
     active_agent_session_id, get_active_agent_mut, navigate_clearing_selection, open_url_or_show,
     sync_sleep_inhibitor, with_active_agent, with_scrollback,
@@ -1030,53 +1029,9 @@ fn dispatch_inner(action: Action, app: &mut AppView) -> Vec<Effect> {
                 prev_model_id: None,
             }]
         }
-        Action::AnnouncementsHide => {
-            let shown_key = crate::views::announcements::first_session_announcement(
-                &app.active_announcements,
-                &app.hidden_announcement_ids,
-            )
-            .filter(|a| crate::views::announcements::is_dismissible(a))
-            .map(xai_grok_shell::util::config::announcement_hide_key);
-            if let Some(key) = shown_key
-                && app.hidden_announcement_ids.insert(key)
-            {
-                vec![Effect::PersistAnnouncementsHidden {
-                    hidden_ids: app.hidden_announcement_ids.clone(),
-                }]
-            } else {
-                vec![]
-            }
-        }
-        Action::AnnouncementsShow => {
-            let mut changed = false;
-            for key in crate::views::announcements::session_announcement_hide_keys(
-                &app.active_announcements,
-            ) {
-                changed |= app.hidden_announcement_ids.remove(&key);
-            }
-            if changed {
-                vec![Effect::PersistAnnouncementsHidden {
-                    hidden_ids: app.hidden_announcement_ids.clone(),
-                }]
-            } else {
-                vec![]
-            }
-        }
-        Action::AnnouncementsOpenCta(surface) => {
-            if let Some((promo, url)) = crate::views::announcements::promo_cta_target(
-                &app.active_announcements,
-                &app.hidden_announcement_ids,
-            ) {
-                let url = url.to_owned();
-                let promo_id = promo.id.clone();
-                log_event(xai_grok_telemetry::events::AnnouncementCtaClicked {
-                    id: promo_id,
-                    source: surface,
-                });
-                open_url_or_show(app, &url);
-            }
-            vec![]
-        }
+        Action::AnnouncementsHide => vec![],
+        Action::AnnouncementsShow => vec![],
+        Action::AnnouncementsOpenCta(_surface) => vec![],
         Action::CancelTurn => dispatch_cancel_turn(app),
         Action::CancelTurnChoice(choice) => dispatch_cancel_turn_choice(app, choice),
         Action::KillBgTask(task_id) => dispatch_kill_bg_task(app, task_id),
@@ -1215,7 +1170,7 @@ fn dispatch_inner(action: Action, app: &mut AppView) -> Vec<Effect> {
         Action::Logout => dispatch_logout(app),
         Action::SwitchAccount => dispatch_switch_account(app),
         Action::CheckSubscription => vec![Effect::CheckSubscription { verify: None }],
-        Action::OpenSupergrokUrl => dispatch_open_supergrok_url(app),
+        Action::OpenSupergrokUrl => vec![],
         Action::RetryCreditLimitPrompt => super::billing::dispatch_retry_credit_limit_prompt(app),
         Action::OpenUrl(url) => {
             if url.starts_with("file://") {

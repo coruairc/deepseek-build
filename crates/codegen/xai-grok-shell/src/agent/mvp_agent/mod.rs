@@ -539,7 +539,6 @@ struct SettingsUpdateNotification {
     session_picker_grouped: Option<bool>,
     tips: Option<Vec<String>>,
     slash_command_tags: Option<std::collections::BTreeMap<String, String>>,
-    announcements: Option<Vec<crate::util::config::RemoteAnnouncement>>,
     /// Remote campaigns snapshot for the client's process-global campaign cache. `Some` whenever settings exist (empty means campaigns were withdrawn).
     /// `None` when the agent has no settings yet, which clients treat as "leave the cache alone". In leader mode this push is the only path that seeds the TUI process.
     /// So a `/model` pick can record a remote campaign's dismissal even when the TUI's own startup prefetch missed.
@@ -563,50 +562,6 @@ struct SettingsUpdateNotification {
     /// Omitted while the agent has no settings (the pager keeps the tier it seeded itself); `null` once fetched settings lack the key.
     #[serde(skip_serializing_if = "Option::is_none")]
     subagent_model_inheritance_enabled: Option<Option<bool>>,
-}
-/// When the announcements push gate emits despite an unchanged visible list.
-#[derive(Clone, Copy, Debug)]
-pub(crate) enum AnnouncementsPushMode {
-    /// Push only when the visible list differs from the last emitted one (pollers and background settings refreshers).
-    IfChanged,
-    /// Also re-push an unchanged non-empty list: a freshly attached client (watermark 0) has no other way to learn it (per-client initialize).
-    SeedNewClient,
-    /// Always push, even unchanged or empty.
-    /// The pager re-merges its local config-layer (requirements/user/managed TOML) announcements only on an accepted push.
-    /// So `/new` uses this to show mid-session local edits.
-    Force,
-}
-/// Pure decision half of the announcements push gate. Compares the visible (expiry-filtered at `now`) stored list with the last list actually emitted to clients.
-/// `Some(list)` means push `list` and make it the new baseline (the baseline advances only once the push is accepted).
-/// Diffing against the last-EMITTED list (not against storage at the same instant) lets every baseline writer share one gate. An item that was live at the last emit and has since passed `expires_at` shrinks `current` vs the baseline, so clients get one clearing push. An addition that is already expired on arrival never enters `current` and stays silent.
-fn announcements_push_payload(
-    stored: Option<&[crate::util::config::RemoteAnnouncement]>,
-    last_emitted: &[crate::util::config::RemoteAnnouncement],
-    now: chrono::DateTime<chrono::Utc>,
-    mode: AnnouncementsPushMode,
-) -> Option<Vec<crate::util::config::RemoteAnnouncement>> {
-    let current = crate::util::config::filter_expired_at(
-        stored.map(|s| s.to_vec()).unwrap_or_default(),
-        now,
-    );
-    let push = match mode {
-        AnnouncementsPushMode::IfChanged => current.as_slice() != last_emitted,
-        AnnouncementsPushMode::SeedNewClient => {
-            current.as_slice() != last_emitted || !current.is_empty()
-        }
-        AnnouncementsPushMode::Force => true,
-    };
-    push.then_some(current)
-}
-/// Override with `GROK_ANNOUNCEMENTS_REFRESH_INTERVAL_SECS`.
-/// Clamped to at least 1s: `tokio::time::interval` panics on a zero period.
-fn announcements_refresh_interval() -> std::time::Duration {
-    if let Ok(s) = std::env::var("GROK_ANNOUNCEMENTS_REFRESH_INTERVAL_SECS")
-        && let Ok(secs) = s.parse::<u64>()
-    {
-        return std::time::Duration::from_secs(secs.max(1));
-    }
-    std::time::Duration::from_secs(5 * 60)
 }
 /// Interval between join-handle supervisor sweeps.
 /// A panicked/exited actor is reaped within one tick.
@@ -837,15 +792,6 @@ pub struct MvpAgent {
     /// An in-flight reapply then can't coalesce away a freshly authenticated identity's gate and settings resolution.
     post_auth_settings_in_flight: std::rc::Rc<std::cell::Cell<bool>>,
     settings_refresh: crate::agent::remote_config::SettingsRefresh,
-    /// Last value handed out by `next_announcements_gen` (single-threaded LocalSet, so a plain `Cell` suffices).
-    /// LEADER-SAFE(shared): one agent-wide push stream.
-    announcements_gen: std::cell::Cell<u64>,
-    /// Announcements list last actually emitted via `x.ai/announcements/update` (expiry-filtered), the diff baseline for `emit_announcements`.
-    /// Owned by the emit gate: full-settings refreshes move `remote_settings` without touching this. So their changes still get pushed on the next gate call. LEADER-SAFE(shared): one agent-wide push stream.
-    last_emitted_announcements: RefCell<Vec<crate::util::config::RemoteAnnouncement>>,
-    /// Idempotency guard: the periodic announcements refresh task is spawned at most once (on the first `initialize`).
-    /// See `spawn_announcements_refresh`.
-    announcements_refresh_started: std::cell::Cell<bool>,
     /// Test-only spy recording every session id whose cloud replica was finalized via `finalize_session_replica`.
     /// Lets the no-evict tests assert that `finalize()` does NOT fire on a mere client disconnect (only on a terminal/explicit close).
     #[cfg(test)]
@@ -1862,7 +1808,6 @@ impl MvpAgent {
                 session_picker_grouped: rs.and_then(|s| s.session_picker_grouped),
                 tips: rs.and_then(|s| s.tips.clone()),
                 slash_command_tags: rs.and_then(|s| s.slash_command_tags.clone()),
-                announcements: rs.and_then(|s| s.announcements.clone()),
                 campaigns: rs.map(|s| s.campaigns.clone()),
                 gate_message: rs.and_then(|s| s.gate_message.clone()),
                 gate_url: rs.and_then(|s| s.gate_url.clone()),

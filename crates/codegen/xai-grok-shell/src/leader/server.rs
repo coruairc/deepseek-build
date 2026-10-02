@@ -467,12 +467,7 @@ fn event_seq_of(json: &serde_json::Value) -> Option<u64> {
 fn is_machine_wide_broadcast_notification(json: &serde_json::Value) -> bool {
     matches!(
         method_of(json),
-        Some(
-            "x.ai/sessions/changed"
-                | "x.ai/models/update"
-                | "x.ai/mcp/servers_updated"
-                | "x.ai/announcements/update"
-        )
+        Some("x.ai/sessions/changed" | "x.ai/models/update" | "x.ai/mcp/servers_updated")
     )
 }
 /// The namespaced method a leader payload carries, normalizing the two ext wire forms the gateway produces: direct: `{"method":"x.ai/foo", ...}` -> `x.ai/foo` wrapped: `{"method":"_x.ai/foo","params":{"method":"x.ai/foo",...}}` -> `x.ai/foo`

@@ -138,7 +138,7 @@ pub(super) fn handle_settings_update(notif: &acp::ExtNotification, app: &mut App
         );
     }
     // Tier before voice: the same payload may set "API Key" and voice_mode_enabled=false
-    // Always recompute is_api_key_auth from the tier so a later Free/SuperGrok stamp does not leave the API-key bypass or a hidden billing surface stuck
+    // Always recompute is_api_key_auth from the tier so a later free/paid stamp does not leave the API-key bypass or a hidden billing surface stuck
     if let Some(v) = update.subscription_tier_display {
         let was_api_key = app.is_api_key_auth;
         let is_key = super::super::app_view::is_api_key_label(&v);
@@ -436,86 +436,6 @@ pub(super) fn handle_sessions_changed(notif: &acp::ExtNotification, app: &mut Ap
     affected
 }
 
-pub(super) fn handle_announcements_update(notif: &acp::ExtNotification, app: &mut AppView) -> bool {
-    let Ok(parsed) = serde_json::from_str::<xai_grok_shell::util::config::AnnouncementsRefreshed>(
-        notif.params.get(),
-    ) else {
-        return false;
-    };
-
-    if parsed.r#gen <= app.announcements_last_gen {
-        return false;
-    }
-
-    // Re-merge config layers like startup does: the push carries the remote list only
-    // A wholesale replace would drop requirements/user/managed announcements and let the prune erase their persisted hide keys
-    // The settings handler performs the same disk reads; pushes are rare
-    let requirements = xai_grok_shell::config::load_merged_requirements();
-    let user_config = xai_grok_shell::config::load_from_disk().ok();
-    let managed_config = xai_grok_shell::config::load_managed_config().ok();
-    apply_announcements_update(
-        app,
-        parsed.r#gen,
-        &parsed.announcements,
-        requirements.as_ref(),
-        user_config.as_ref(),
-        managed_config.as_ref(),
-    );
-    true
-}
-
-/// Apply half of [`handle_announcements_update`], with config layers injected so the merge/prune behavior is unit-testable without disk state.
-/// `resolve_announcements` honors `GROK_ANNOUNCEMENTS_OVERRIDE` first, so a backend push can't reintroduce announcements when the override is set.
-pub(super) fn apply_announcements_update(
-    app: &mut AppView,
-    next_gen: u64,
-    remote: &[xai_grok_shell::util::config::RemoteAnnouncement],
-    requirements: Option<&toml::Value>,
-    user_config: Option<&toml::Value>,
-    managed_config: Option<&toml::Value>,
-) {
-    let merged = xai_grok_shell::util::config::resolve_announcements(
-        requirements,
-        user_config,
-        managed_config,
-        Some(remote),
-    );
-    let announcements = xai_grok_shell::util::config::filter_expired(merged);
-
-    app.announcement = match app.announcement.as_ref() {
-        Some(current) => announcements
-            .iter()
-            .find(|a| *a == current)
-            .cloned()
-            .or_else(|| pick_random_announcement(&announcements)),
-        None => pick_random_announcement(&announcements),
-    };
-    app.active_announcements = announcements;
-    app.announcements_last_gen = next_gen;
-    // Opportunistic per-ID prune on a real update (never per frame) so the hidden set cannot grow unboundedly.
-    if xai_grok_shell::util::config::prune_hidden_announcement_ids(
-        &mut app.hidden_announcement_ids,
-        &app.active_announcements,
-    ) {
-        app.pending_effects
-            .push(Effect::PersistAnnouncementsHidden {
-                hidden_ids: app.hidden_announcement_ids.clone(),
-            });
-    }
-    app.sync_session_announcement_slash_gate();
-}
-
-pub(super) fn pick_random_announcement(
-    announcements: &[xai_grok_shell::util::config::RemoteAnnouncement],
-) -> Option<xai_grok_shell::util::config::RemoteAnnouncement> {
-    if announcements.is_empty() {
-        return None;
-    }
-    use rand::Rng;
-    let idx = rand::rng().random_range(0..announcements.len());
-    announcements.get(idx).cloned()
-}
-
 /// Deserialization type for the `x.ai/settings/update` notification payload.
 /// This side derives `Deserialize` and consumes only the fields the TUI uses.
 /// Separate structs keep the pager decoupled from shell internals (a shell-only field needs no pager change).
@@ -548,8 +468,7 @@ pub(super) struct PagerSettingsUpdate {
     /// Malformed input warns and is treated as absent so a bad value never fails the whole `PagerSettingsUpdate` parse.
     #[serde(default, deserialize_with = "deserialize_settings_update_tags")]
     slash_command_tags: Option<Option<std::collections::BTreeMap<String, String>>>,
-    // `announcements` is deliberately NOT consumed here
-    // Every shell writer of remote_settings also emits gen-ordered `x.ai/announcements/update` (emit_announcements_if_changed)
+    // `announcements` is deliberately NOT consumed here (the remote-announcement surface was removed).
     // `None`/omitted (settings-less push, older shell) must leave this process's campaign cache untouched.
     #[serde(default)]
     campaigns: Option<Vec<xai_grok_shell::util::config::CampaignOverride>>,

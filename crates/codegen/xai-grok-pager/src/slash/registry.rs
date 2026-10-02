@@ -227,7 +227,7 @@ impl CommandRegistry {
                 .any(|a| self.restricted.contains(&a.to_lowercase()))
     }
 
-    /// Replace the restricted-command deny list. Invoking one shows the SuperGrok upsell instead of executing.
+    /// Replace the restricted-command deny list. Invoking one is refused instead of executing.
     pub fn set_restricted_commands(&mut self, names: &[String]) {
         self.restricted = names
             .iter()
@@ -535,7 +535,7 @@ impl CommandRegistry {
 
             // Restricted commands (per-user deny list, e.g. tier restrictions) deliberately stay listed.
             // They keep their triggers/key entries so the dropdown, ghost completion, and palette show them like any other command (discoverability)
-            // Execution is blocked by `get()`'s `restricted_match` filter; invoking one shows the SuperGrok upsell instead
+            // Execution is blocked by `get()`'s `restricted_match` filter; invoking one is refused instead
 
             // Insert canonical key.
             self.key_to_index.insert(canonical.to_string(), idx);

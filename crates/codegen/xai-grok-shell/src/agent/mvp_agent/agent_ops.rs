@@ -43,14 +43,6 @@ fn should_warn_missing_session(ctx: MissingSessionCtx) -> bool {
         None => ctx.is_session_based_auth,
     }
 }
-/// The stored fields a settings poll may replace. Snapshotted before the fetch so a full reapply landing mid-fetch makes the poll skip.
-type PolledFields = (
-    Option<Vec<crate::util::config::RemoteAnnouncement>>,
-    Vec<xai_grok_config_types::RemoteRequestEncoding>,
-);
-fn polled_fields(settings: &crate::util::config::RemoteSettings) -> PolledFields {
-    (settings.announcements.clone(), settings.accept_request_encodings.clone())
-}
 impl MvpAgent {
     pub fn reload_skills_all_sessions(&self) -> usize {
         let session_ids = self.resident_ids();
@@ -1535,7 +1527,6 @@ impl MvpAgent {
         }
         self.sync_collection_config_gate();
         self.emit_settings_update_notification();
-        self.emit_announcements(AnnouncementsPushMode::IfChanged);
     }
     /// Re-evaluates the official-marketplace auto-register gate now that remote settings exist.
     /// `init_process` ran the same gate at boot without them, so a settings-targeted (not env-set) team would otherwise never register.
@@ -1769,7 +1760,6 @@ impl MvpAgent {
         self.re_resolve_runtime_fields_and_sync_memory(&raw_config);
         self.sync_collection_config_gate();
         self.emit_settings_update_notification();
-        self.emit_announcements(AnnouncementsPushMode::Force);
     }
     /// Spawns a background task coalesced on `in_flight`: a request while one is in flight is dropped.
     /// The task is bounded by `SETTINGS_REAPPLY_TIMEOUT`.
@@ -1847,126 +1837,6 @@ impl MvpAgent {
             self.post_auth_settings_spawn_count
                 .set(self.post_auth_settings_spawn_count.get() + 1);
         }
-    }
-    /// Spawn the periodic remote-settings poll that pushes mid-session announcement changes to connected clients. Idempotent.
-    /// Plain loop (no cancellation) like `ensure_session_supervisor`; the LocalSet drop at process exit ends it. Skipped under `cfg!(test)` like the managed-config sync (PTY e2e runs the real binary and is unaffected).
-    pub(super) fn spawn_announcements_refresh(&self) {
-        if cfg!(test) || self.announcements_refresh_started.replace(true) {
-            return;
-        }
-        let agent_ref = LocalRef::new(self);
-        tokio::task::spawn_local(async move {
-            let mut interval = tokio::time::interval(announcements_refresh_interval());
-            interval.tick().await;
-            loop {
-                interval.tick().await;
-                let result = futures::FutureExt::catch_unwind(
-                        std::panic::AssertUnwindSafe(
-                            agent_ref.get().poll_announcements_refresh_once(),
-                        ),
-                    )
-                    .await;
-                if result.is_err() {
-                    tracing::error!("announcements refresh tick panicked; continuing");
-                }
-            }
-        });
-    }
-    /// One poll cycle. With no settings baseline, first population is delegated to the fill-if-missing path (which emits on success). Otherwise refresh the stored announcements best-effort, then run the emit gate.
-    /// The gate runs even when the fetch was skipped or failed, so a pure expiry crossing still clears client banners on time.
-    async fn poll_announcements_refresh_once(&self) {
-        if self.cfg.borrow().remote_settings.is_none() {
-            self.maybe_fetch_post_auth_settings().await;
-            return;
-        }
-        self.fetch_and_store_polled_settings().await;
-        self.emit_announcements(AnnouncementsPushMode::IfChanged);
-    }
-    /// Fetch half of a poll cycle: fresh settings from the proxy, then the poll-only apply.
-    /// Every failure path is a silent skip; the next tick retries.
-    async fn fetch_and_store_polled_settings(&self) {
-        let Ok(auth) = self.auth_manager.auth().await else {
-            tracing::debug!("announcements refresh skipped: not authenticated");
-            return;
-        };
-        let pre_fetch = self.cfg.borrow().remote_settings.as_ref().map(polled_fields);
-        let Some(settings) = self.fetch_remote_settings(auth).await else {
-            tracing::debug!("announcements refresh skipped: settings fetch failed");
-            return;
-        };
-        self.apply_polled_settings(settings, pre_fetch);
-    }
-    pub(super) fn apply_polled_settings(
-        &self,
-        fresh: crate::util::config::RemoteSettings,
-        pre_fetch: Option<PolledFields>,
-    ) {
-        let mut cfg = self.cfg.borrow_mut();
-        let origin = cfg.endpoints.proxy_url();
-        let Some(stored) = cfg.remote_settings.as_mut() else {
-            return;
-        };
-        if pre_fetch.as_ref() != Some(&polled_fields(stored)) {
-            tracing::debug!("settings poll apply skipped: settings changed mid-fetch");
-            return;
-        }
-        stored.announcements = fresh.announcements;
-        stored.accept_request_encodings = fresh.accept_request_encodings;
-        crate::util::config::cache_remote_accept_request_encodings(
-            &origin,
-            &stored.accept_request_encodings,
-        );
-    }
-    /// The single announcements push gate: every `remote_settings` writer funnels through here. Emits `x.ai/announcements/update` and advances the last-emitted baseline per [`announcements_push_payload`].
-    /// `mode` decides when an unchanged list still pushes. The baseline advances only once the gateway accepts the send. A failed enqueue leaves it untouched so the next gate call re-diffs and re-pushes.
-    /// Synchronous by design: the decide, send, advance sequence cannot interleave with another gate call on the LocalSet.
-    pub(super) fn emit_announcements(&self, mode: AnnouncementsPushMode) {
-        let payload_list = {
-            let cfg = self.cfg.borrow();
-            let last = self.last_emitted_announcements.borrow();
-            announcements_push_payload(
-                cfg.remote_settings.as_ref().and_then(|s| s.announcements.as_deref()),
-                &last,
-                chrono::Utc::now(),
-                mode,
-            )
-        };
-        let Some(announcements) = payload_list else {
-            return;
-        };
-        let payload = serde_json::json!({
-            "gen": self.next_announcements_gen(),
-            "announcements": announcements,
-        });
-        let Ok(params) = serde_json::value::to_raw_value(&payload) else {
-            return;
-        };
-        let accepted = self
-            .gateway
-            .forward_fire_and_forget(
-                acp::ExtNotification::new("x.ai/announcements/update", params.into()),
-            );
-        if !accepted {
-            return;
-        }
-        *self.last_emitted_announcements.borrow_mut() = announcements.clone();
-        tracing::info!(
-            count = announcements.len(),
-            mode = ?mode,
-            "pushing announcements update to clients"
-        );
-    }
-    /// Next generation for an `x.ai/announcements/update` push.
-    /// Strictly increasing within the process, and seeded from unix-epoch seconds.
-    /// So a restarted leader's pushes still clear pager watermarks that survived re-election (`AppView.announcements_last_gen` outlives the agent).
-    pub(super) fn next_announcements_gen(&self) -> u64 {
-        let now_secs = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
-        let next = now_secs.max(self.announcements_gen.get() + 1);
-        self.announcements_gen.set(next);
-        next
     }
     /// Shared fetch half of every settings refresh. Endpoint fields come from a scoped `cfg` borrow; failures normalize to `None`. `fetch_settings_blocking` runs off-executor (it already retries transient errors internally).
     /// Callers own their miss logging; the apply halves deliberately stay separate (full reapply vs announcements-only).
@@ -2391,9 +2261,6 @@ impl MvpAgent {
             settings_reapply_in_flight: std::rc::Rc::new(std::cell::Cell::new(false)),
             post_auth_settings_in_flight: std::rc::Rc::new(std::cell::Cell::new(false)),
             settings_refresh: crate::agent::remote_config::SettingsRefresh::default(),
-            announcements_gen: std::cell::Cell::new(0),
-            last_emitted_announcements: RefCell::new(Vec::new()),
-            announcements_refresh_started: std::cell::Cell::new(false),
             #[cfg(test)]
             finalize_spy: RefCell::new(Vec::new()),
             #[cfg(test)]

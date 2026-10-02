@@ -817,17 +817,9 @@ pub(super) fn dispatch_send_prompt_submission(
             .registry()
             .is_restricted(invocation.token)
     {
-        // Only consume the composer when the upsell can actually open
-        // With another question modal already up, `open_supergrok_upsell` would no-op and wiping the composer here would silently drop the typed text
-        // Keep it instead so the user can resubmit after closing the modal, and never fall through to passthrough for restricted commands
-        if agent.question_view.is_none() {
-            if consume_input {
-                agent.prompt.set_text("");
-            }
-            let opened =
-                super::billing::open_restricted_command_upsell(agent, login_method_id_from_app);
-            debug_assert!(opened, "no modal was open, so the upsell must open");
-        }
+        // Restricted commands are no longer upsold (the upsell modal was removed).
+        // Leave the composer text untouched and never fall through to passthrough.
+        let _ = (consume_input, login_method_id_from_app);
         return effects;
     }
 
@@ -1869,7 +1861,7 @@ pub(super) fn handle_prompt_response(
             return vec![Effect::CreditLimitRecheck { agent_id }];
         }
 
-        // Free-usage paywall (a 429 with subscription:free-usage-exhausted)
+        // Free-usage limit (a 429 with subscription:free-usage-exhausted)
         // Driver-only by construction: viewers never receive a PromptResponse
         // No queue drain: queued prompts would fail on the same exhausted quota
         if free_usage_blocked {
