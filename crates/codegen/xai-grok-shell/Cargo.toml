@@ -35,7 +35,6 @@ default-bazel = [
 dunce = { workspace = true }
 agent-client-protocol = { workspace = true }
 anyhow = { workspace = true }
-xai-grok-announcements = { workspace = true }
 xai-prompt-queue = { workspace = true }
 xai-grok-version = { workspace = true }
 
@@ -156,7 +155,6 @@ xai-grok-workspace = { workspace = true }
 xai-grok-foreign-sessions = { workspace = true }
 xai-grok-subagent-resolution = { path = "../xai-grok-subagent-resolution" }
 xai-grok-agent = { path = "../xai-grok-agent" }
-xai-grok-bundle = { workspace = true }
 xai-grok-cloud-config = { workspace = true }
 xai-grok-config = { workspace = true }
 xai-grok-external-agent-migration = { workspace = true }
@@ -213,9 +211,6 @@ filetime = { workspace = true }
 pretty_assertions = { workspace = true }
 rstest = { workspace = true }
 tempfile = { workspace = true }
-# `extensions::bundle` tests build archives with `bundle::test_helpers`, which
-# is `#[cfg(test)]`-only inside xai-grok-bundle without this feature.
-xai-grok-bundle = { workspace = true, features = ["test-support"] }
 xai-grok-memory = { workspace = true, features = ["test-support"] }
 # sandbox-enforce: keep tests running against the enforcing sandbox build.
 xai-grok-workspace = { workspace = true, features = ["test-support", "sandbox-enforce"] }

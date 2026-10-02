@@ -277,25 +277,10 @@ fn is_compiled_in_builtin(name: &str) -> bool {
 }
 
 /// True only while the file is byte-identical to what the GCS bundle update wrote; an edited copy loses builtin privilege.
-pub(crate) fn bundled_file_is_managed(path: &Path) -> bool {
-    let Some(workflows_dir) = path.parent() else {
-        return false;
-    };
-    if workflows_dir.file_name().and_then(|name| name.to_str()) != Some("workflows") {
-        return false;
-    }
-    let Some(root) = workflows_dir.parent() else {
-        return false;
-    };
-    let Ok(relative) = path.strip_prefix(root) else {
-        return false;
-    };
-    let relative = relative
-        .components()
-        .map(|component| component.as_os_str().to_string_lossy())
-        .collect::<Vec<_>>()
-        .join("/");
-    crate::bundle::is_managed_bundle_file(root, &relative)
+pub(crate) fn bundled_file_is_managed(_path: &Path) -> bool {
+    // The downloaded subagent bundle cache was removed; there is no managed
+    // bundled source left to protect, so no file is considered bundle-managed.
+    false
 }
 
 pub(crate) fn resolve_by_name(
@@ -788,32 +773,6 @@ mod tests {
             .expect("deep-research");
         assert_eq!(hit.source_label, "bundled");
         assert!(matches!(hit.source, WorkflowSource::File(_)));
-        assert_eq!(hit.meta.description, "from-bundle");
-    }
-
-    #[test]
-    fn managed_bundled_override_keeps_builtin_privileges() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = dir.path().join("bundled");
-        let workflows = root.join("workflows");
-        std::fs::create_dir_all(&workflows).unwrap();
-        let path = workflows.join("deep-research.rhai");
-        let script = "let meta = #{ name: \"deep-research\", description: \"from-bundle\" };\ncomplete(\"ok\");";
-        std::fs::write(&path, script).unwrap();
-        let checksum = crate::bundle::checksum_file(&path).unwrap();
-        let manifest = serde_json::json!({
-            "version": "test",
-            "checksums": { "workflows/deep-research.rhai": checksum },
-        });
-        std::fs::write(root.join("manifest.json"), manifest.to_string()).unwrap();
-
-        let entries = scan_directory(&workflows, "bundled");
-        let hit = entries
-            .iter()
-            .find(|entry| entry.meta.name == "deep-research")
-            .expect("deep-research");
-        assert_eq!(hit.source_label, "builtin");
-        assert_eq!(hit.source, WorkflowSource::Builtin);
         assert_eq!(hit.meta.description, "from-bundle");
     }
 

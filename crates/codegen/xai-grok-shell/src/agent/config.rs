@@ -831,7 +831,7 @@ pub struct Config {
     pub desktop: Option<toml::Value>,
     /// Top-level `announcements` array: consumed by `resolve_announcements`.
     #[serde(default, skip_serializing)]
-    pub announcements: Vec<xai_grok_announcements::RemoteAnnouncement>,
+    pub announcements: Vec<crate::util::config::RemoteAnnouncement>,
     /// `[tips]` section: consumed by `merge_tips`.
     #[serde(default, skip_serializing)]
     pub tips: Option<crate::util::config::TipsOverride>,

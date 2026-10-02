@@ -437,9 +437,9 @@ pub(super) fn handle_sessions_changed(notif: &acp::ExtNotification, app: &mut Ap
 }
 
 pub(super) fn handle_announcements_update(notif: &acp::ExtNotification, app: &mut AppView) -> bool {
-    let Ok(parsed) =
-        serde_json::from_str::<xai_grok_announcements::AnnouncementsRefreshed>(notif.params.get())
-    else {
+    let Ok(parsed) = serde_json::from_str::<xai_grok_shell::util::config::AnnouncementsRefreshed>(
+        notif.params.get(),
+    ) else {
         return false;
     };
 
@@ -469,7 +469,7 @@ pub(super) fn handle_announcements_update(notif: &acp::ExtNotification, app: &mu
 pub(super) fn apply_announcements_update(
     app: &mut AppView,
     next_gen: u64,
-    remote: &[xai_grok_announcements::RemoteAnnouncement],
+    remote: &[xai_grok_shell::util::config::RemoteAnnouncement],
     requirements: Option<&toml::Value>,
     user_config: Option<&toml::Value>,
     managed_config: Option<&toml::Value>,
@@ -480,7 +480,7 @@ pub(super) fn apply_announcements_update(
         managed_config,
         Some(remote),
     );
-    let announcements = xai_grok_announcements::filter_expired(merged);
+    let announcements = xai_grok_shell::util::config::filter_expired(merged);
 
     app.announcement = match app.announcement.as_ref() {
         Some(current) => announcements
@@ -493,7 +493,7 @@ pub(super) fn apply_announcements_update(
     app.active_announcements = announcements;
     app.announcements_last_gen = next_gen;
     // Opportunistic per-ID prune on a real update (never per frame) so the hidden set cannot grow unboundedly.
-    if xai_grok_announcements::prune_hidden_announcement_ids(
+    if xai_grok_shell::util::config::prune_hidden_announcement_ids(
         &mut app.hidden_announcement_ids,
         &app.active_announcements,
     ) {
@@ -506,8 +506,8 @@ pub(super) fn apply_announcements_update(
 }
 
 pub(super) fn pick_random_announcement(
-    announcements: &[xai_grok_announcements::RemoteAnnouncement],
-) -> Option<xai_grok_announcements::RemoteAnnouncement> {
+    announcements: &[xai_grok_shell::util::config::RemoteAnnouncement],
+) -> Option<xai_grok_shell::util::config::RemoteAnnouncement> {
     if announcements.is_empty() {
         return None;
     }

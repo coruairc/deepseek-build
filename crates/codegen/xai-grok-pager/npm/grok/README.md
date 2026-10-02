@@ -2,15 +2,11 @@
 
 Bring Grok into your terminal. Fast, flicker-free CLI built for plans, subagents, and parallel work.
 
-**[Homepage](https://x.ai/cli)** | **[Documentation](https://docs.x.ai/build/overview)**
+**[Documentation](https://docs.x.ai/build/overview)**
 
 ## Install
 
-```bash
-curl -fsSL https://x.ai/cli/install.sh | bash
-```
-
-Or install with npm:
+Install with npm:
 
 ```bash
 npm i -g @xai-official/grok

@@ -1042,9 +1042,6 @@ pub(crate) async fn run(
     remote_settings: Option<xai_grok_shell::util::config::RemoteSettings>,
     mut term_state: TerminalState,
     materialized: crate::app::session_startup::MaterializedStartup,
-    bg_update_rx: Option<
-        tokio::sync::oneshot::Receiver<Option<xai_grok_update::auto_update::UpdateAvailable>>,
-    >,
     mut writer_event_rx: tokio::sync::mpsc::UnboundedReceiver<WriterEvent>,
     reader_thread: &mut ReaderThread,
 ) -> anyhow::Result<RunResult> {
@@ -1331,7 +1328,8 @@ pub(crate) async fn run(
     if let Some(gate) = app.gate.take() {
         post_render_effects.extend(app.impose_gate(gate));
     }
-    app.hidden_announcement_ids = xai_grok_announcements::read_hidden_announcement_ids().await;
+    app.hidden_announcement_ids =
+        xai_grok_shell::util::config::read_hidden_announcement_ids().await;
     let requirements = xai_grok_shell::config::load_merged_requirements();
     let user_config = xai_grok_shell::config::load_from_disk().ok();
     let managed_config = xai_grok_shell::config::load_managed_config().ok();
@@ -1429,7 +1427,7 @@ pub(crate) async fn run(
             managed_config.as_ref(),
             remote_announcements,
         );
-        app.active_announcements = xai_grok_announcements::filter_expired(announcements);
+        app.active_announcements = xai_grok_shell::util::config::filter_expired(announcements);
         if !app.active_announcements.is_empty() {
             use rand::Rng;
             let idx = rand::rng().random_range(0..app.active_announcements.len());
@@ -1856,7 +1854,6 @@ pub(crate) async fn run(
     let mut csi_filter = super::csi_filter::CsiFragmentFilter::new();
     let mut x10_filter = super::x10_filter::X10ReassemblyFilter::new();
     let mut xt_filter = super::xt_filter::XtversionFilter::new();
-    let mut bg_update_rx = bg_update_rx;
     debug_assert_eq!(term_state.initial_theme, theme_cache::current_kind());
     let mut appearance_watcher =
         SystemAppearanceWatcher::start_if_auto(theme_cache::is_auto_mode());
@@ -2376,32 +2373,6 @@ pub(crate) async fn run(
                     break;
                 }
                 presenter.request(false);
-            }
-
-            // Background update check completed.
-            result = async {
-                match bg_update_rx.as_mut() {
-                    Some(rx) => rx.await.ok().flatten(),
-                    None => std::future::pending().await,
-                }
-            } => {
-                // Consume the receiver so this arm becomes inert.
-                bg_update_rx = None;
-                if let Some(update) = result {
-                    tracing::info!(
-                        latest_version = %update.latest_version,
-                        "Background update check: newer version available"
-                    );
-                    let latest = update.latest_version;
-                    app.pending_update_version = Some(latest.clone());
-                    // The full TUI shows this on the welcome screen, which minimal has none of Commit a one-line update notice into native scrollback instead `app`, not `term_state`: the mode can switch at runtime
-                    // Commit a one-line update notice into native scrollback instead
-                    // `app`, not `term_state`: the mode can switch at runtime
-                    if app.screen_mode.is_minimal() {
-                        dispatch::commit_minimal_update_notice(&mut app, &latest);
-                    }
-                    presenter.request(false);
-                }
             }
 
             maybe_ev = input_rx.recv() => {

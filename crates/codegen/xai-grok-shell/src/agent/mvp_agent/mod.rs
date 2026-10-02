@@ -540,7 +540,7 @@ struct SettingsUpdateNotification {
     session_picker_grouped: Option<bool>,
     tips: Option<Vec<String>>,
     slash_command_tags: Option<std::collections::BTreeMap<String, String>>,
-    announcements: Option<Vec<xai_grok_announcements::RemoteAnnouncement>>,
+    announcements: Option<Vec<crate::util::config::RemoteAnnouncement>>,
     /// Remote campaigns snapshot for the client's process-global campaign cache. `Some` whenever settings exist (empty means campaigns were withdrawn).
     /// `None` when the agent has no settings yet, which clients treat as "leave the cache alone". In leader mode this push is the only path that seeds the TUI process.
     /// So a `/model` pick can record a remote campaign's dismissal even when the TUI's own startup prefetch missed.
@@ -581,12 +581,12 @@ pub(crate) enum AnnouncementsPushMode {
 /// `Some(list)` means push `list` and make it the new baseline (the baseline advances only once the push is accepted).
 /// Diffing against the last-EMITTED list (not against storage at the same instant) lets every baseline writer share one gate. An item that was live at the last emit and has since passed `expires_at` shrinks `current` vs the baseline, so clients get one clearing push. An addition that is already expired on arrival never enters `current` and stays silent.
 fn announcements_push_payload(
-    stored: Option<&[xai_grok_announcements::RemoteAnnouncement]>,
-    last_emitted: &[xai_grok_announcements::RemoteAnnouncement],
+    stored: Option<&[crate::util::config::RemoteAnnouncement]>,
+    last_emitted: &[crate::util::config::RemoteAnnouncement],
     now: chrono::DateTime<chrono::Utc>,
     mode: AnnouncementsPushMode,
-) -> Option<Vec<xai_grok_announcements::RemoteAnnouncement>> {
-    let current = xai_grok_announcements::filter_expired_at(
+) -> Option<Vec<crate::util::config::RemoteAnnouncement>> {
+    let current = crate::util::config::filter_expired_at(
         stored.map(|s| s.to_vec()).unwrap_or_default(),
         now,
     );
@@ -795,10 +795,6 @@ pub struct MvpAgent {
     /// The walk (cwd to git root, plus user and marketplace dirs) stalled grok-desktop's first `initialize`.
     /// It is built once on the first session-creating call via [`Self::ensure_plugin_registry`]; this flag keeps that to a single discovery walk.
     plugin_registry_initialized: std::cell::Cell<bool>,
-    /// Single-flight guard for the proactive bundle sync background task. `maybe_sync_bundle_in_background` is invoked from each post-auth path (initialize, cached-token reauth, oidc).
-    /// A rapid reconnect can fire all three within the TTL window. The non-atomic per-file writes and prunes in `bundle::extract_bundle_archive` make that race observable as a partially-written cache.
-    /// We use an `Arc<AtomicBool>` so the spawned task can clear the flag on completion without re-borrowing `&self`. `Send` is required because the inner `sync_bundle_to_root` now uses `spawn_blocking`.
-    bundle_sync_in_flight: Arc<std::sync::atomic::AtomicBool>,
     /// Single-flight guard for [`spawn_post_unblock_jwt_and_catalog_retry`]. After a free-to-paid unblock the JWT may still lack a `tier` claim for several seconds.
     /// Overlapping `CheckSubscription` RPCs come from the watch debounce, paywall ticks, and concurrent in-flight checks.
     /// Each would otherwise spawn another five-attempt `refresh_chain` backoff loop, multiplying IdP traffic and redundant catalog work. Cleared by [`PostUnblockJwtRetryInFlightGuard`] on task exit (including panic/abort), not only on the normal post-backoff path.
@@ -847,7 +843,7 @@ pub struct MvpAgent {
     announcements_gen: std::cell::Cell<u64>,
     /// Announcements list last actually emitted via `x.ai/announcements/update` (expiry-filtered), the diff baseline for `emit_announcements`.
     /// Owned by the emit gate: full-settings refreshes move `remote_settings` without touching this. So their changes still get pushed on the next gate call. LEADER-SAFE(shared): one agent-wide push stream.
-    last_emitted_announcements: RefCell<Vec<xai_grok_announcements::RemoteAnnouncement>>,
+    last_emitted_announcements: RefCell<Vec<crate::util::config::RemoteAnnouncement>>,
     /// Idempotency guard: the periodic announcements refresh task is spawned at most once (on the first `initialize`).
     /// See `spawn_announcements_refresh`.
     announcements_refresh_started: std::cell::Cell<bool>,
@@ -2006,67 +2002,6 @@ impl MvpAgent {
                 return;
             };
             agent_ref.get().enforce_grok_code_access(&auth).await;
-        });
-    }
-    /// Spawn a best-effort bundle sync. Re-fires on every call site (init, cached_token, grok.com/oidc); the cheap pre-checks below absorb repeats so reconnects are cheap.
-    /// Pre-spawn gating order (cheapest first, all synchronous): Auth gate: avoid spawning a no-op task on every init.
-    /// Single-flight guard: if a previous sync is still in flight (e.g., initialize, cached_token, and oidc fired in quick succession before the first sync's tar extract finished), drop this call to avoid racing concurrent extracts that would interleave per-file writes against `~/.grok/bundled/` and the manifest.
-    pub(crate) fn maybe_sync_bundle_in_background(&self, force: bool) {
-        use crate::extensions::bundle::{
-            BUNDLE_SYNC_TTL, bundle_cache_is_fresh, has_bundle_credentials,
-            maybe_sync_bundle_to_root,
-        };
-        use std::sync::atomic::Ordering;
-        let am = self.auth_manager.clone();
-        let deployment_key = self.deployment_key();
-        if !has_bundle_credentials(Some(&am), deployment_key.as_deref()) {
-            return;
-        }
-        let root = crate::bundle::bundled_root();
-        if !force && bundle_cache_is_fresh(&root, BUNDLE_SYNC_TTL) {
-            tracing::debug!("proactive bundle sync skipped pre-spawn: cache is fresh");
-            return;
-        }
-        let in_flight = self.bundle_sync_in_flight.clone();
-        if in_flight
-            .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
-            .is_err()
-        {
-            tracing::debug!("proactive bundle sync skipped: another sync is already in flight");
-            return;
-        }
-        let proxy_base_url = self.cli_chat_proxy_base_url();
-        let alpha_test_key = self.alpha_test_key();
-        let senders = self.resident_cmd_txs();
-        tokio::task::spawn_local(async move {
-            let result = maybe_sync_bundle_to_root(
-                    &root,
-                    &proxy_base_url,
-                    Some(&am),
-                    deployment_key.as_deref(),
-                    alpha_test_key.as_deref(),
-                    force,
-                    BUNDLE_SYNC_TTL,
-                )
-                .await;
-            in_flight.store(false, Ordering::Release);
-            match result {
-                Ok(Some(res)) => {
-                    tracing::info!(
-                        version = %res.version,
-                        personas = res.personas_count,
-                        roles = res.roles_count,
-                        agents = res.agents_count,
-                        skills = res.skills_count,
-                        "proactive bundle sync complete"
-                    );
-                    Self::broadcast_refresh_skill_baseline(senders);
-                }
-                Ok(None) => {}
-                Err(err) => {
-                    tracing::warn!(error = %err, "proactive bundle sync failed");
-                }
-            }
         });
     }
 }

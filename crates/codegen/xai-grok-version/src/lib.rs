@@ -43,8 +43,23 @@ pub fn installed_semver() -> Result<Version, semver::Error> {
     Version::parse(&installed())
 }
 
+/// Release-channel label appended to user-facing version strings.
+///
+/// The auto-updater that resolved this from a cached channel pointer was removed;
+/// without a channel pointer there is no channel to report, so the label is empty.
+pub fn channel_label() -> &'static str {
+    ""
+}
+
+/// Cached release-channel name (e.g. `"stable"`).
+///
+/// Always `None` now that the auto-updater and its channel pointer are gone.
+pub fn channel_name() -> Option<&'static str> {
+    None
+}
+
 /// Formats the compiled version with a channel label for user-facing display, e.g. `"0.2.5 [stable]"`.
-/// `channel_label` is pre-formatted by `xai_grok_update::channel_label()`: `" [alpha]"`, `" [stable]"`, or `""` when no pointer is cached.
+/// `channel_label` is pre-formatted by [`channel_label`]: `" [alpha]"`, `" [stable]"`, or `""` when no pointer is cached.
 pub fn display_version(channel_label: &str) -> String {
     format!("{}{}", VERSION, channel_label)
 }

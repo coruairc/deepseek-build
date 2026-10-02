@@ -631,8 +631,8 @@ pub(super) fn make_app_two_agents() -> AppView {
 }
 pub(super) fn critical_announcement(
     id: &str,
-) -> xai_grok_announcements::RemoteAnnouncement {
-    xai_grok_announcements::RemoteAnnouncement {
+) -> xai_grok_shell::util::config::RemoteAnnouncement {
+    xai_grok_shell::util::config::RemoteAnnouncement {
         id: Some(id.into()),
         title: Some(format!("{id} title")),
         message: Some(format!("{id} message")),
@@ -642,7 +642,7 @@ pub(super) fn critical_announcement(
 }
 pub(super) fn announcements_update_notif(
     r#gen: u64,
-    announcements: &[xai_grok_announcements::RemoteAnnouncement],
+    announcements: &[xai_grok_shell::util::config::RemoteAnnouncement],
 ) -> acp::ExtNotification {
     acp_fixtures::ext_notification(
         "x.ai/announcements/update",

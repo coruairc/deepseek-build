@@ -1,6 +1,5 @@
 pub mod reloader;
 pub mod watcher;
-use crate::bundle;
 use serde::Deserialize;
 use std::sync::atomic::{AtomicU8, Ordering};
 pub use xai_grok_config_types::{
@@ -379,7 +378,7 @@ impl SubagentsConfig {
             cli_flag,
             config,
             user_grok_root.as_deref(),
-            &bundle::bundled_root(),
+            std::path::Path::new(""),
         )
     }
     pub(crate) fn resolve_base_with_sources(
@@ -409,8 +408,7 @@ impl SubagentsConfig {
             result.discover_roles_in_dir(&root.join("roles"));
             result.discover_personas_in_dir(&root.join("personas"));
         }
-        result.discover_roles_in_dir(&bundled_root.join("roles"));
-        result.discover_personas_in_dir(&bundled_root.join("personas"));
+        let _ = bundled_root;
         result
     }
     pub(crate) fn effective_definition_maps(

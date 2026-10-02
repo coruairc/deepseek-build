@@ -288,7 +288,7 @@ pub(super) fn render_hero_box(
     menu_items: &[(&str, &str)],
     selected: Option<usize>,
     mouse_pos: Option<(u16, u16)>,
-    announcement: Option<&xai_grok_announcements::RemoteAnnouncement>,
+    announcement: Option<&xai_grok_shell::util::config::RemoteAnnouncement>,
     announcement_expanded: bool,
     changelog_bullets: &[String],
     changelog_has_full_notes: bool,
@@ -420,7 +420,7 @@ pub(super) fn render_announcement_with_upgrade_cta(
     buf: &mut Buffer,
     theme: &Theme,
     area: Rect,
-    ann: &xai_grok_announcements::RemoteAnnouncement,
+    ann: &xai_grok_shell::util::config::RemoteAnnouncement,
     expanded: bool,
     mouse_pos: Option<(u16, u16)>,
     upgrade_cta: Option<&str>,
@@ -468,7 +468,7 @@ pub(super) fn render_announcement_block(
     buf: &mut Buffer,
     theme: &Theme,
     area: Rect,
-    ann: &xai_grok_announcements::RemoteAnnouncement,
+    ann: &xai_grok_shell::util::config::RemoteAnnouncement,
     expanded: bool,
     mouse_pos: Option<(u16, u16)>,
 ) -> bool {
@@ -599,7 +599,7 @@ pub(super) fn wrapped_line_count(text: &str, width: u16) -> u16 {
 /// Rows the announcement TEXT wants at `width`: title and message, the message capped at 2 wrapped lines unless `expanded`.
 /// Shared with the renderer so the upgrade CTA is placed right after the drawn text (the reserved rows match the drawn rows).
 pub(super) fn announcement_text_rows(
-    ann: &xai_grok_announcements::RemoteAnnouncement,
+    ann: &xai_grok_shell::util::config::RemoteAnnouncement,
     width: u16,
     expanded: bool,
 ) -> u16 {
@@ -615,7 +615,7 @@ pub(super) fn announcement_text_rows(
 /// That is the text rows plus, when a promo upgrade CTA is shown, the spacer row and the `[label]` button row (`UPGRADE_CTA_ROWS`).
 /// Shared with the renderer (the reserved rows match the drawn rows).
 pub(super) fn announcement_desired_rows(
-    ann: &xai_grok_announcements::RemoteAnnouncement,
+    ann: &xai_grok_shell::util::config::RemoteAnnouncement,
     width: u16,
     expanded: bool,
     has_upgrade_cta: bool,
@@ -701,8 +701,8 @@ managed devices and accounts. Report security incidents";
     fn ann(
         title: Option<&str>,
         message: Option<&str>,
-    ) -> xai_grok_announcements::RemoteAnnouncement {
-        xai_grok_announcements::RemoteAnnouncement {
+    ) -> xai_grok_shell::util::config::RemoteAnnouncement {
+        xai_grok_shell::util::config::RemoteAnnouncement {
             title: title.map(str::to_string),
             message: message.map(str::to_string),
             ..Default::default()
@@ -913,7 +913,7 @@ managed devices and accounts. Report security incidents";
         // Pinned promo with a configured caption: the button with the dim caption below
         let mut pinned = ann(None, Some("Grok 4.5 is here. Upgrade now."));
         pinned.dismissible = Some(false);
-        pinned.cta = Some(xai_grok_announcements::AnnouncementCta {
+        pinned.cta = Some(xai_grok_shell::util::config::AnnouncementCta {
             label: Some("Upgrade Account".into()),
             url: Some("https://x.ai/grok".into()),
             caption: Some("or use Ctrl+O".into()),
@@ -963,7 +963,7 @@ managed devices and accounts. Report security incidents";
 
         // Dismissible promo: bare button even with a configured caption.
         let mut dismissible = ann(None, Some("Grok 4.5 is here. Upgrade now."));
-        dismissible.cta = Some(xai_grok_announcements::AnnouncementCta {
+        dismissible.cta = Some(xai_grok_shell::util::config::AnnouncementCta {
             label: Some("Upgrade Account".into()),
             url: Some("https://x.ai/grok".into()),
             caption: Some("or use Ctrl+O".into()),

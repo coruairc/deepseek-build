@@ -942,7 +942,7 @@ fn slash_gate_resyncs_when_critical_expires_between_pushes() {
         .get_mut(&id)
         .unwrap()
         .set_has_session_announcements(true);
-    app.active_announcements = vec![xai_grok_announcements::RemoteAnnouncement {
+    app.active_announcements = vec![xai_grok_shell::util::config::RemoteAnnouncement {
         id: Some("expired".into()),
         message: Some("gone".into()),
         severity: Some("critical".into()),
@@ -959,7 +959,7 @@ fn slash_gate_resyncs_when_critical_expires_between_pushes() {
             .has_session_announcements(),
         "expired-only list must close the gate on the next frame"
     );
-    app.active_announcements = vec![xai_grok_announcements::RemoteAnnouncement {
+    app.active_announcements = vec![xai_grok_shell::util::config::RemoteAnnouncement {
         id: Some("live".into()),
         message: Some("new outage".into()),
         severity: Some("critical".into()),

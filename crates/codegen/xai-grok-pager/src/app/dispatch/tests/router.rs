@@ -576,8 +576,8 @@ fn mark_turn_finished_clears_start_and_stamps_active() {
         "last_active_at must be stamped"
     );
 }
-fn critical_announcement(id: &str) -> xai_grok_announcements::RemoteAnnouncement {
-    xai_grok_announcements::RemoteAnnouncement {
+fn critical_announcement(id: &str) -> xai_grok_shell::util::config::RemoteAnnouncement {
+    xai_grok_shell::util::config::RemoteAnnouncement {
         id: Some(id.into()),
         title: Some(format!("{id} title")),
         message: Some(format!("{id} message")),
@@ -585,12 +585,12 @@ fn critical_announcement(id: &str) -> xai_grok_announcements::RemoteAnnouncement
         ..Default::default()
     }
 }
-fn promo_announcement(id: &str) -> xai_grok_announcements::RemoteAnnouncement {
-    xai_grok_announcements::RemoteAnnouncement {
+fn promo_announcement(id: &str) -> xai_grok_shell::util::config::RemoteAnnouncement {
+    xai_grok_shell::util::config::RemoteAnnouncement {
         id: Some(id.into()),
         message: Some(format!("{id} message")),
         severity: Some("promo".into()),
-        cta: Some(xai_grok_announcements::AnnouncementCta {
+        cta: Some(xai_grok_shell::util::config::AnnouncementCta {
             label: Some("Go".into()),
             url: Some(format!("https://x.ai/{id}")),
             caption: None,

@@ -303,7 +303,7 @@ struct WelcomeLayoutInput<'a> {
     compact: bool,
     /// Horizontal-inset compaction (appearance setting) for the stacked slot.
     prompt_compact: bool,
-    announcement: Option<&'a xai_grok_announcements::RemoteAnnouncement>,
+    announcement: Option<&'a xai_grok_shell::util::config::RemoteAnnouncement>,
     /// Whether a long announcement is expanded inline (vs. collapsed to 2 lines).
     expanded: bool,
     /// Whether the info slot reserves a promo upgrade CTA (spacer and button).
@@ -552,7 +552,7 @@ pub(super) fn render_version_badge(
         spans.push(sep);
     }
 
-    let channel = xai_grok_update::channel_label();
+    let channel = xai_grok_version::channel_label();
     match &mode {
         VersionBadgeMode::Full { .. } => {
             spans.push(Span::styled(
@@ -691,7 +691,7 @@ pub struct WelcomeRenderParams<'a> {
     pub auth_code_cursor_byte: usize,
     pub clipboard_delivery: Option<crate::clipboard::ClipboardDelivery>,
     pub show_raw_url: bool,
-    pub announcement: Option<&'a xai_grok_announcements::RemoteAnnouncement>,
+    pub announcement: Option<&'a xai_grok_shell::util::config::RemoteAnnouncement>,
     pub tip: Option<&'a str>,
     pub model_name: &'a str,
     /// The current model's notice, painted directly above the prompt.
@@ -1671,7 +1671,7 @@ fn render_announcement_section(
     area: Rect,
     buf: &mut Buffer,
     theme: &Theme,
-    announcement: &xai_grok_announcements::RemoteAnnouncement,
+    announcement: &xai_grok_shell::util::config::RemoteAnnouncement,
     min_width_hint: u16,
     content_height: u16,
     expanded: bool,
@@ -4402,8 +4402,8 @@ mod tests {
         );
     }
 
-    fn long_ann() -> xai_grok_announcements::RemoteAnnouncement {
-        xai_grok_announcements::RemoteAnnouncement {
+    fn long_ann() -> xai_grok_shell::util::config::RemoteAnnouncement {
+        xai_grok_shell::util::config::RemoteAnnouncement {
             title: Some("Security policy".into()),
             message: Some(
                 "Report security incidents to the security team promptly through \
@@ -4418,7 +4418,7 @@ the usual channels. "
     #[test]
     fn draft_never_shrinks_the_hero_announcement() {
         let area = Rect::new(0, 0, 100, 32);
-        let ann = xai_grok_announcements::RemoteAnnouncement {
+        let ann = xai_grok_shell::util::config::RemoteAnnouncement {
             title: Some("Upgrade".into()),
             message: Some("SuperGrok Heavy is available for your team today.".into()),
             ..Default::default()
@@ -4497,7 +4497,7 @@ the usual channels. "
     /// Production hides the logo on a short terminal and keeps the announcement; a one-line draft must still do that.
     #[test]
     fn short_stacked_terminal_keeps_the_announcement_and_drops_the_logo() {
-        let ann = xai_grok_announcements::RemoteAnnouncement {
+        let ann = xai_grok_shell::util::config::RemoteAnnouncement {
             title: Some("Grok 4.6 is here!".into()),
             message: Some("Select 'Grok 4.6' under /model.".into()),
             ..Default::default()
@@ -4549,7 +4549,7 @@ the usual channels. "
     #[test]
     fn announcement_equal_for_short_message() {
         let area = Rect::new(0, 0, 120, 60);
-        let a = xai_grok_announcements::RemoteAnnouncement {
+        let a = xai_grok_shell::util::config::RemoteAnnouncement {
             title: Some("FYI".into()),
             message: Some("All good.".into()),
             ..Default::default()
