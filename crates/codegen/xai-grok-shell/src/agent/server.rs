@@ -548,7 +548,7 @@ fn setup_acp_connection(
     });
     tokio::task::spawn_local(
         GatewayReceiver::new(conn_gw_rx, conn)
-            .with_on_meta(xai_grok_otel::span_from_meta_traceparent)
+            .with_on_meta(xai_grok_telemetry::span_from_meta_traceparent)
             .run(),
     );
 

@@ -86,13 +86,6 @@ pub use yolo::*;
 
 pub trait TelemetryEvent: Serialize + Send + 'static {
     const NAME: &'static str;
-
-    /// Curated external-OTEL representation (see [`crate::external`]). Default: not exported externally. Override via the
-    /// macro's `external = …` arm. The mapping functions live together in `external/schema.rs` so the whole wire schema is
-    /// one reviewable file.
-    fn external_record(&self) -> Option<crate::external::schema::ExternalRecord> {
-        None
-    }
 }
 
 macro_rules! telemetry_event {
@@ -104,10 +97,6 @@ macro_rules! telemetry_event {
     ($struct:path, $name:literal, external = $mapper:path) => {
         impl $crate::events::TelemetryEvent for $struct {
             const NAME: &'static str = $name;
-
-            fn external_record(&self) -> Option<$crate::external::schema::ExternalRecord> {
-                $mapper(self)
-            }
         }
     };
 }

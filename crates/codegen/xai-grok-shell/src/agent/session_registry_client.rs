@@ -214,7 +214,7 @@ impl SessionRegistryClient {
         reqwest::Response,
         Option<xai_grok_auth::StampedBearerSuffix>,
     )> {
-        let builder = xai_grok_otel::inject_trace_context_into_request(builder);
+        let builder = xai_grok_telemetry::inject_trace_context_into_request(builder);
         let request = builder.build().context(op)?;
         xai_grok_auth::execute_with_stamp(&self.client, request)
             .await

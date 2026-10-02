@@ -1072,15 +1072,6 @@ pub async fn run(
     } else {
         crate::acp::AgentKind::Embedded
     };
-    xai_grok_telemetry::external::init(
-        xai_grok_shell::agent::config::resolve_external_otel_config(
-            xai_grok_telemetry::external::config::ExternalClientInfo {
-                service_version: xai_grok_version::full_version().to_owned(),
-                client_version: xai_grok_version::VERSION.to_owned(),
-                app_entrypoint: "tui".to_owned(),
-            },
-        ),
-    );
     let tracing_handle = crate::tracing::init_tracing();
     let pending_startup = xai_grok_telemetry::startup::PendingStartup::new();
     let timer = xai_grok_telemetry::startup::begin(crate::acp::Owner::Client);

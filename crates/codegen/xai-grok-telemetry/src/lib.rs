@@ -6,7 +6,7 @@
     dead_code
 )]
 //! Telemetry engine for Grok Build sessions.
-//! Covers product events, Mixpanel emission, Sentry error reporting, OpenTelemetry tracing, and the structured unified log.
+//! Covers local structured logging and the typed event surface.
 //!
 //! Extracted from `xai-file-utils` so telemetry has its own ownership boundary (see CODEOWNERS).
 //! Consumers that only want event tracking and inference metrics no longer pull in Mixpanel/HTTP/identity dependencies.
@@ -22,9 +22,9 @@ pub mod id;
 mod logs;
 pub mod otel_layer;
 mod process;
-pub mod sentry;
 mod session;
 mod spans;
+pub mod trace_context;
 pub use client::{
     Metadata, TelemetryClient, UserContext, init, init_if_needed, is_enabled,
     is_session_metrics_enabled,
@@ -39,6 +39,6 @@ pub use session::session_ctx::{
 };
 pub use session::{activity, session_ctx, session_end, session_metrics, subagent_spawn};
 pub use spans::{instrumentation, prompt_timing, region, span_profile, startup, turn_phases};
-pub(crate) use xai_grok_otel::otlp;
-pub(crate) use xai_grok_otel::redact_common;
-pub use xai_grok_otel::redact_common::redact_error_detail;
+pub use trace_context::*;
+pub mod redact_common;
+pub use redact_common::redact_error_detail;

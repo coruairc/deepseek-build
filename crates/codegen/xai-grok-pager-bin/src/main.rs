@@ -252,15 +252,6 @@ fn init_tracing_simple(app_entrypoint: &'static str) {
             xai_grok_shell::agent::init::build_default_otel_layer_config(),
         ));
     xai_grok_telemetry::debug_log::install_firehose(registry, app_entrypoint);
-    xai_grok_telemetry::external::init(
-        xai_grok_shell::agent::config::resolve_external_otel_config(
-            xai_grok_telemetry::external::config::ExternalClientInfo {
-                service_version: env!("VERSION_WITH_COMMIT").to_owned(),
-                client_version: xai_grok_version::VERSION.to_owned(),
-                app_entrypoint: app_entrypoint.to_owned(),
-            },
-        ),
-    );
 }
 /// `json` prints the managed configuration without installing it.
 #[tracing::instrument(level = "debug", skip_all)]
@@ -1176,7 +1167,6 @@ async fn replay_acp_state_after_reconnect(
 fn shutdown_and_flush_telemetry(exit_code: i32) -> ! {
     {
         let _exit_span = tracing::info_span!("teardown.process_exit").entered();
-        xai_grok_telemetry::sentry::flush_on_shutdown();
     }
     xai_grok_telemetry::otel_layer::shutdown_otel();
     xai_grok_telemetry::debug_log::flush();
@@ -2061,9 +2051,6 @@ fn main() {
     }
     #[cfg(all(feature = "jemalloc", unix))]
     install_heap_profile_hooks();
-    unsafe {
-        xai_grok_shell::agent::external_otel_pin::strip_conflicting_process_env();
-    }
     let args = configure_process_env(args).unwrap_or_else(|err| {
         eprintln!("grok: {err:#}");
         std::process::exit(1);
@@ -2079,12 +2066,6 @@ fn main() {
         );
         std::process::exit(2);
     }
-    let _sentry_guard = xai_grok_telemetry::sentry::init(xai_grok_telemetry::sentry::Config {
-        client: "grok-pager",
-        client_version: PAGER_CLIENT_VERSION,
-        release: env!("VERSION_WITH_COMMIT"),
-        disabled: xai_grok_shell::agent::config::is_error_reporting_disabled_sync(),
-    });
     xai_grok_pager::docs::extract_user_guide_docs(&xai_grok_shell::util::grok_home::grok_home());
     xai_crash_handler::install_terminal_restore_only();
     if xai_grok_shell::util::config::load_crash_handler_enabled_sync() {
@@ -2124,7 +2105,6 @@ fn main() {
             None => format!("Error: {e:#}"),
         };
         xai_grok_pager::best_effort_stderr::eprint_line(&report);
-        drop(_sentry_guard);
         std::process::exit(1);
     }
     finalize_span_profile();

@@ -3,7 +3,7 @@ license = "Apache-2.0"
 name = "xai-grok-telemetry"
 version = "0.1.0"
 edition.workspace = true
-description = "Telemetry engine: product events + Mixpanel emission + Sentry error reporting for Grok Build sessions"
+description = "Telemetry engine: local structured logging and event types for Grok Build sessions"
 authors = ["xAI"]
 
 [features]
@@ -30,6 +30,7 @@ git2 = { version = "0.20", default-features = false, features = [
     "vendored-libgit2",
 ] }
 reqwest = { workspace = true }
+url = { workspace = true }
 xai-grok-secrets = { workspace = true }
 xai-grok-config = { workspace = true }
 xai-grok-extra-ca = { workspace = true }
@@ -37,16 +38,6 @@ xai-grok-sampler = { workspace = true }
 xai-token-estimation = { workspace = true }
 xai-dirs = { workspace = true }
 xai-grok-env = { workspace = true }
-sentry = { version = "0.42.0", default-features = false, features = [
-    "panic",
-    "anyhow",
-    "tracing",
-    "backtrace",
-    "contexts",
-    "reqwest",
-    "rustls",
-    "debug-images",
-] }
 # Single cross-edge: `events::ToolCallCompleted.outcome` reuses
 # `xai_grok_session_events::types::ToolOutcome` so the local event log and
 # the product telemetry event share the same enum surface.
@@ -64,29 +55,6 @@ mid = "4.0.0"
 tokio = { workspace = true, features = ["macros", "sync", "rt", "time"] }
 parking_lot = { workspace = true }
 xai-grok-auth = { workspace = true }
-# OTEL foundation: OTLP HTTP client + span layer/provider + trace-context + shared redaction.
-xai-grok-otel = { workspace = true }
-opentelemetry = { workspace = true }
-opentelemetry_sdk = { workspace = true, features = [
-    "experimental_logs_batch_log_processor_with_async_runtime",
-    "experimental_metrics_periodicreader_with_async_runtime",
-    "rt-tokio-current-thread",
-] }
-# `tls-aws-lc` compiles opentelemetry-otlp's TLS support for the gRPC
-# transport. The workspace default is only `tls-roots`, which since otlp 0.32
-# no longer implies a TLS provider feature — without one, every `https://`
-# gRPC collector endpoint is rejected at exporter build time (GB-4580).
-# aws-lc matches the TLS backend the workspace `tonic` already uses.
-opentelemetry-otlp = { workspace = true, features = ["tls-aws-lc"] }
-# Embedded Mozilla trust anchors for the gRPC TLS fallback: keeps `https://`
-# collectors working on hosts with no readable system CA store (parity with
-# the HTTP transport's embedded-roots reqwest client in `otlp_http.rs`).
-webpki-roots = { workspace = true }
-# Re-encodes the validated GROK_EXTRA_CA_BUNDLE DERs as PEM for tonic's
-# `Certificate::from_pem` (the gRPC transport's extra-CA parity with HTTP).
-base64 = { workspace = true }
-http = { workspace = true }
-tokio-stream = { workspace = true }
 
 [dev-dependencies]
 # `#[async_trait]` on the in-process OTLP collector test fixture.

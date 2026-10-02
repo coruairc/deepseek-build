@@ -637,7 +637,7 @@ impl SessionActor {
         struct TraceContextInjector;
         impl xai_grok_sampler::HeaderInjector for TraceContextInjector {
             fn inject(&self, headers: &mut reqwest::header::HeaderMap) {
-                if let Some(tp) = xai_grok_otel::current_traceparent()
+                if let Some(tp) = xai_grok_telemetry::current_traceparent()
                     && let Ok(v) = reqwest::header::HeaderValue::from_str(&tp)
                 {
                     headers.insert("traceparent", v);
@@ -645,7 +645,7 @@ impl SessionActor {
             }
 
             fn set_span_parent(&self, span: &tracing::Span, traceparent: &str) {
-                if !xai_grok_otel::set_parent_from_traceparent(span, traceparent) {
+                if !xai_grok_telemetry::set_parent_from_traceparent(span, traceparent) {
                     tracing::debug!(
                         traceparent = %traceparent,
                         "HTTP span did not adopt its trace parent"
@@ -1805,7 +1805,7 @@ impl SessionActor {
             let sampling_span = region!("turn.sampling", Parent::Inherit);
             // The sampler task has no tracing ancestor; this parents its HTTP span under the region
             // without holding it open.
-            request.traceparent = xai_grok_otel::span_traceparent(sampling_span.span());
+            request.traceparent = xai_grok_telemetry::span_traceparent(sampling_span.span());
             self.sampler_handle
                 .submit_and_collect_with_metadata(request_id.clone(), request)
                 .await

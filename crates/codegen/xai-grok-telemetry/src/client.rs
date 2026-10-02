@@ -294,38 +294,9 @@ pub async fn track(event_name: &str, request_id: &str, ctx: &UserContext, mut me
             metadata.entry(key).or_insert(value);
         }
     }
-    if let (Some(url), Some(api_key)) = (&client.events_url, &client.events_api_key) {
-        let body = json!({
-            "viewer_context": {
-                "request_id": request_id,
-                "user_attributes": {
-                    "user_id": user_id,
-                    "user_type": "LoggedIn",
-                    "country": ctx.country,
-                    "language": ctx.language,
-                    "locale": "English",
-                },
-                "device_attributes": {
-                    "app_name": "Grok Code",
-                },
-            },
-            "api_key": api_key,
-            "events": [{
-                "event_name": event_name,
-                "event_value": event_value(event_name),
-                "event_metadata": metadata.clone(),
-                "timestamp": ctx.timestamp,
-            }]
-        });
-        let _ = client
-            .http_client
-            .post(url)
-            .header("x-api-key", api_key.as_str())
-            .timeout(std::time::Duration::from_secs(10))
-            .json(&body)
-            .send()
-            .await;
-    }
+    // Network emission removed: product analytics no longer POSTs anywhere.
+    // Local enrichment/logging behavior above is retained.
+    let _ = (event_name, request_id, ctx, &metadata);
 }
 /// Resolved mode of the initialized client, `None` when off.
 /// Lets a parent pass its mode to a spawned child that cannot re-resolve remote settings.

@@ -496,7 +496,7 @@ impl SessionActor {
             command_source = tracing::field::Empty,
         );
         if let Some(ref tp) = request.traceparent {
-            xai_grok_otel::link_span_to_meta(&span, &serde_json::json!({ "traceparent": tp }));
+            xai_grok_telemetry::link_span_to_meta(&span, &serde_json::json!({ "traceparent": tp }));
         }
         self.handle_turn_input_inner(request).instrument(span).await
     }

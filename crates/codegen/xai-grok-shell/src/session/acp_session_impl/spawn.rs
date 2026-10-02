@@ -2738,7 +2738,7 @@ pub(crate) async fn spawn_session_on_thread(
                             .as_object()
                             .cloned()
                             .unwrap_or_default();
-                        let span = xai_grok_otel::span_from_meta_traceparent(&meta);
+                        let span = xai_grok_telemetry::span_from_meta_traceparent(&meta);
                         span.entered()
                     });
                 let session_spawn_span = match spawn_trace {

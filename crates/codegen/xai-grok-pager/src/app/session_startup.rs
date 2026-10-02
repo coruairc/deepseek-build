@@ -15,7 +15,7 @@ pub(crate) fn stamp_span_traceparent(
     meta: &mut Option<agent_client_protocol::Meta>,
     span: &tracing::Span,
 ) {
-    if let Some(tp) = xai_grok_otel::traceparent_of_span(span) {
+    if let Some(tp) = xai_grok_telemetry::traceparent_of_span(span) {
         meta.get_or_insert_with(agent_client_protocol::Meta::new)
             .insert("traceparent".into(), serde_json::Value::String(tp));
     }
@@ -1347,7 +1347,7 @@ mod tests {
     }
     #[test]
     fn traceparent_of_span_captures_own_span_id_not_parent() {
-        let _guard = xai_grok_otel::set_local_trace_subscriber();
+        let _guard = xai_grok_telemetry::set_local_trace_subscriber();
         let parent = tracing::info_span!("startup");
         let _entered = parent.enter();
         let child = tracing::info_span!("startup.session_create.backend_rpc");
@@ -1359,8 +1359,9 @@ mod tests {
             .and_then(serde_json::Value::as_str)
             .expect("stamp_span_traceparent writes a traceparent");
         let span_id = |tp: &str| tp.split('-').nth(2).unwrap().to_owned();
-        let child_own = xai_grok_otel::traceparent_of_span(&child).expect("child traceparent");
-        let parent_own = xai_grok_otel::traceparent_of_span(&parent).expect("parent traceparent");
+        let child_own = xai_grok_telemetry::traceparent_of_span(&child).expect("child traceparent");
+        let parent_own =
+            xai_grok_telemetry::traceparent_of_span(&parent).expect("parent traceparent");
         assert_eq!(span_id(stamped), span_id(&child_own));
         assert_ne!(span_id(stamped), span_id(&parent_own));
     }

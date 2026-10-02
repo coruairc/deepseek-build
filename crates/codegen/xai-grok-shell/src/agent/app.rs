@@ -149,7 +149,7 @@ fn spawn_agent_local(
     });
     tokio::task::spawn_local(
         GatewayReceiver::new(gw_rx, conn)
-            .with_on_meta(xai_grok_otel::span_from_meta_traceparent)
+            .with_on_meta(xai_grok_telemetry::span_from_meta_traceparent)
             .run(),
     );
     handle_io
@@ -482,7 +482,7 @@ pub async fn run_headless(
                 );
                 tokio::task::spawn_local(
                     GatewayReceiver::new(gw_rx, conn)
-                        .with_on_meta(xai_grok_otel::span_from_meta_traceparent)
+                        .with_on_meta(xai_grok_telemetry::span_from_meta_traceparent)
                         .run(),
                 );
                 if let Err(e) = handle_io.await {
@@ -971,7 +971,7 @@ pub async fn run_leader(
                 );
                 tokio::task::spawn_local(
                     GatewayReceiver::new(gw_rx, conn)
-                        .with_on_meta(xai_grok_otel::span_from_meta_traceparent)
+                        .with_on_meta(xai_grok_telemetry::span_from_meta_traceparent)
                         .run(),
                 );
                 if let Err(e) = handle_io.await {

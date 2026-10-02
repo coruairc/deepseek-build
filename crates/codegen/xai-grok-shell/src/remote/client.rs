@@ -67,7 +67,7 @@ async fn add_bundle_fetch_headers(
             crate::http::process_client_mode(),
         );
 
-    xai_grok_otel::inject_trace_context_into_request(builder)
+    xai_grok_telemetry::inject_trace_context_into_request(builder)
 }
 
 /// Fetch the bundled subagent cache payload from cli-chat-proxy `GET /v1/subagents/bundle`.
@@ -449,7 +449,7 @@ impl BackendClient {
         builder: reqwest::RequestBuilder,
     ) -> Result<reqwest::Response, BackendError> {
         let headers = self.auth_header_map().await?;
-        let builder = xai_grok_otel::inject_trace_context_into_request(
+        let builder = xai_grok_telemetry::inject_trace_context_into_request(
             // Per-request timeout so the bound holds on any stored client (the shared_client fallback has no client-level timeout)
             builder.timeout(DEFAULT_TIMEOUT).headers(headers),
         );

@@ -412,7 +412,7 @@ impl SkillsClient {
         if let Some(email) = email {
             builder = builder.header("x-email", email);
         }
-        xai_grok_otel::inject_trace_context_into_request(builder)
+        xai_grok_telemetry::inject_trace_context_into_request(builder)
     }
 
     /// Grok.com product Skills require first-party session auth (the same gate as managed MCP and sibling grok.com clients), not plain BYOK API keys.

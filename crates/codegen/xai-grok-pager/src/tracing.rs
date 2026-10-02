@@ -354,15 +354,6 @@ pub fn init_tracing() -> TracingHandle {
         .with(hooks_log_layer)
         .with(otel_layer);
     xai_grok_telemetry::debug_log::install_firehose(registry, "tui");
-    xai_grok_telemetry::external::init(
-        xai_grok_shell::agent::config::resolve_external_otel_config(
-            xai_grok_telemetry::external::config::ExternalClientInfo {
-                service_version: xai_grok_version::full_version().to_owned(),
-                client_version: xai_grok_version::VERSION.to_owned(),
-                app_entrypoint: "tui".to_owned(),
-            },
-        ),
-    );
     TracingHandle { rx }
 }
 /// Curated per-crate directives for the TUI subscriber.

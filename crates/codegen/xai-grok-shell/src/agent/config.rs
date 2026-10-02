@@ -2651,115 +2651,6 @@ pub(crate) fn read_requirements_toml() -> Option<toml::Value> {
     let content = std::fs::read_to_string(&path).ok()?;
     toml::from_str(&content).ok()
 }
-fn telemetry_otel_str(t: &toml::Value, key: &str) -> Option<String> {
-    t.get(key).and_then(toml::Value::as_str).map(str::to_owned)
-}
-fn telemetry_otel_ms(t: &toml::Value, key: &str) -> Option<String> {
-    t.get(key).and_then(|v| {
-        v.as_integer()
-            .map(|i| i.to_string())
-            .or_else(|| v.as_str().map(str::to_owned))
-    })
-}
-fn telemetry_otel_file_config(
-    t: &toml::Value,
-) -> xai_grok_telemetry::external::ExternalOtelFileConfig {
-    xai_grok_telemetry::external::ExternalOtelFileConfig {
-        enabled: t.get("otel_enabled").and_then(toml::Value::as_bool),
-        metrics_exporter: telemetry_otel_str(t, "otel_metrics_exporter"),
-        logs_exporter: telemetry_otel_str(t, "otel_logs_exporter"),
-        endpoint: telemetry_otel_str(t, "otel_endpoint"),
-        protocol: telemetry_otel_str(t, "otel_protocol")
-            .or_else(|| telemetry_otel_str(t, "otel_transport")),
-        certificate: telemetry_otel_str(t, "otel_certificate"),
-        client_certificate: telemetry_otel_str(t, "otel_client_certificate"),
-        client_key: telemetry_otel_str(t, "otel_client_key"),
-        log_user_prompts: t
-            .get("otel_log_user_prompts")
-            .and_then(toml::Value::as_bool),
-        log_tool_details: t
-            .get("otel_log_tool_details")
-            .and_then(toml::Value::as_bool),
-        log_assistant_responses: t
-            .get("otel_log_assistant_responses")
-            .and_then(toml::Value::as_bool),
-        log_tool_content: t
-            .get("otel_log_tool_content")
-            .and_then(toml::Value::as_bool),
-        timeout: telemetry_otel_ms(t, "otel_timeout"),
-        metric_export_interval: telemetry_otel_ms(t, "otel_metric_export_interval"),
-        logs_endpoint: telemetry_otel_str(t, "otel_logs_endpoint"),
-        metrics_endpoint: telemetry_otel_str(t, "otel_metrics_endpoint"),
-        logs_protocol: telemetry_otel_str(t, "otel_logs_protocol"),
-        metrics_protocol: telemetry_otel_str(t, "otel_metrics_protocol"),
-        logs_certificate: telemetry_otel_str(t, "otel_logs_certificate"),
-        metrics_certificate: telemetry_otel_str(t, "otel_metrics_certificate"),
-        logs_client_certificate: telemetry_otel_str(t, "otel_logs_client_certificate"),
-        logs_client_key: telemetry_otel_str(t, "otel_logs_client_key"),
-        metrics_client_certificate: telemetry_otel_str(t, "otel_metrics_client_certificate"),
-        metrics_client_key: telemetry_otel_str(t, "otel_metrics_client_key"),
-        include_session_id: t
-            .get("otel_metrics_include_session_id")
-            .and_then(toml::Value::as_bool),
-    }
-}
-/// Resolve the external OTEL stream configuration at process startup. Env and local config only: remote settings are not yet available when tracing init runs.
-/// Layering follows `resolve_telemetry_mode`: **requirement > env > config > remote > default**. The `[telemetry]` `otel_*` keys from the effective config sit under the env vars.
-/// That config already includes managed-config layers distributed by `grok setup`. Requirements pins are applied on top, and the remote layer is restrictive-only and asynchronous ([`apply_external_otel_remote_policy`]).
-pub fn resolve_external_otel_config(
-    client: xai_grok_telemetry::external::config::ExternalClientInfo,
-) -> Option<xai_grok_telemetry::external::ExternalOtelConfig> {
-    let requirements = xai_grok_config::load_merged_requirements();
-    resolve_external_otel_config_with(
-        crate::config::load_effective_config().ok().as_ref(),
-        requirements.as_ref(),
-        |name| std::env::var(name).ok(),
-        client,
-        EndpointsConfig::default().internal_otlp_consumed_standard_vars(),
-    )
-}
-/// Testable core of [`resolve_external_otel_config`]: all inputs injected so tests don't race on process env / disk.
-pub(crate) fn resolve_external_otel_config_with(
-    effective_config: Option<&toml::Value>,
-    requirements: Option<&toml::Value>,
-    getenv: impl Fn(&str) -> Option<String>,
-    client: xai_grok_telemetry::external::config::ExternalClientInfo,
-    internal_pipeline_consumed_otel_vars: bool,
-) -> Option<xai_grok_telemetry::external::ExternalOtelConfig> {
-    let pins =
-        crate::agent::external_otel_pin::RequirementOtelPins::from_requirements(requirements);
-    let file_cfg: Option<xai_grok_telemetry::external::ExternalOtelFileConfig> = effective_config
-        .and_then(|cfg| cfg.get("telemetry"))
-        .cloned()
-        .map(|mut telemetry| {
-            if let Some(table) = telemetry.as_table_mut() {
-                pins.hide_unlisted_file_siblings(table);
-            }
-            telemetry_otel_file_config(&telemetry)
-        });
-    let getenv_pinned = crate::agent::external_otel_pin::getenv_with_pins(&pins, getenv);
-    let mut resolved = xai_grok_telemetry::external::ExternalOtelConfig::resolve_with(
-        getenv_pinned,
-        file_cfg.as_ref(),
-    )?;
-    resolved.client = client;
-    resolved.internal_pipeline_consumed_otel_vars = internal_pipeline_consumed_otel_vars;
-    Some(resolved)
-}
-/// Apply the restrictive-only remote-settings policy for the external OTEL stream (fleet kill switch and content-gate lock).
-/// Tighten-only by construction (there is no remote enable direction), so it is safe to call on every settings refresh.
-pub(crate) fn apply_external_otel_remote_policy(
-    settings: Option<&crate::util::config::RemoteSettings>,
-) {
-    let Some(settings) = settings else { return };
-    let policy = xai_grok_telemetry::external::ExternalOtelRemotePolicy {
-        force_disable: settings.external_otel_disabled.unwrap_or(false),
-        lock_content_gates: settings.external_otel_content_gates_locked.unwrap_or(false),
-    };
-    if policy.force_disable || policy.lock_content_gates {
-        xai_grok_telemetry::external::apply_remote_policy(policy);
-    }
-}
 /// Seed free-function remote caches after writing `Config.remote_settings`. Called from `init.rs` at boot and from the agent when backgrounded settings arrive later.
 /// So every side effect here must be idempotent and safe to re-apply. The emission-gate flip is owned by [`crate::agent::otel_gate::OtelGate`], not here.
 /// The `force_disable` write here is `Relaxed`; the synchronizing publish is `OtelGate::apply_and_open`. That publish applies the same tighten-only policy and then opens the gate with a `Release` swap. Removing that second application to deduplicate would leave only the `Relaxed` store and reopen an ARM visibility hole.
@@ -2785,7 +2676,6 @@ pub fn apply_remote_settings_side_effects(
     crate::util::config::cache_remote_remember_tool_approvals(s.remember_tool_approvals);
     crate::util::config::cache_remote_crash_handler_enabled(s.crash_handler_enabled);
     crate::util::config::cache_remote_accept_request_encodings(origin, &s.accept_request_encodings);
-    apply_external_otel_remote_policy(settings);
     crate::session::normalize_cache::NormalizeCache::global()
         .set_enabled(s.image_normalize_cache_enabled.unwrap_or(false));
 }

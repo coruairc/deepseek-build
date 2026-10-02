@@ -146,7 +146,7 @@ fn spawn_agent_local(remote: Option<xai_grok_shell::util::config::RemoteSettings
         });
     tokio::task::spawn_local(
         GatewayReceiver::new(gw_rx, agent_conn)
-            .with_on_meta(xai_grok_otel::span_from_meta_traceparent)
+            .with_on_meta(xai_grok_telemetry::span_from_meta_traceparent)
             .run(),
     );
     tokio::task::spawn_local(agent_io);

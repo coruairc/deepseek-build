@@ -115,8 +115,7 @@ impl OtelGate {
         }
     }
     /// Applies the tighten-only fleet policy from `settings` (`None` on a `401`), then opens the gate and records `identity`.
-    fn apply_and_open(&self, identity: &str, settings: Option<&RemoteSettings>) {
-        crate::agent::config::apply_external_otel_remote_policy(settings);
+    fn apply_and_open(&self, identity: &str, _settings: Option<&RemoteSettings>) {
         xai_grok_telemetry::external::mark_external_otel_settings_resolved();
         *self.resolved_for.borrow_mut() = Some(identity.to_owned());
     }

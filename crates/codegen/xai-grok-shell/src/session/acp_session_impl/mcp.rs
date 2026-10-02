@@ -1204,7 +1204,7 @@ impl SessionActor {
     fn mcp_startup_reroot_span(&self) -> Option<tracing::Span> {
         let tp = self.startup_hints.take_mcp_reroot_traceparent()?;
         let span = tracing::info_span!("session.mcp_startup", session_id = %self.session_info.id.0);
-        xai_grok_otel::link_span_to_meta(&span, &serde_json::json!({ "traceparent": tp }))
+        xai_grok_telemetry::link_span_to_meta(&span, &serde_json::json!({ "traceparent": tp }))
             .then_some(span)
     }
     async fn claim_init(&self) -> Option<InitClaim> {

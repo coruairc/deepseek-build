@@ -126,7 +126,7 @@ impl Clone for SpawnRootSpan {
 
 impl SpawnRootSpan {
     pub fn new(span: tracing::Span) -> Self {
-        let traceparent = xai_grok_otel::span_traceparent(&span);
+        let traceparent = None;
         Self {
             span: Some(span),
             traceparent,
