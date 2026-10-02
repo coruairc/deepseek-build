@@ -6,10 +6,12 @@ use xai_grok_login::backend::{ActiveAuthBackend, AuthBackend};
 use xai_grok_login::{GrokAuth, GrokComConfig};
 use xai_grok_sampling_types::{MODEL_NOTICE_META_KEY, ModelNotice};
 
-const GROK_CODE_BACKEND_URL: &str = "https://code.grok.com";
+/// Backend base URL. No first-party default: caller must supply `GROK_CODE_BACKEND_URL`.
+const GROK_CODE_BACKEND_URL: &str = "";
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
-const GROK_CODE_WEB_URL: &str = "https://grok.com";
+/// Web base URL. No first-party default: caller must supply `GROK_CODE_WEB_URL`.
+const GROK_CODE_WEB_URL: &str = "";
 
 pub fn share_url(permission_id: &str) -> String {
     let web_url =

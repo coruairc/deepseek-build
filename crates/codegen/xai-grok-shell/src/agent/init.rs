@@ -6,12 +6,12 @@
 use crate::agent::config::{self, Config as AgentConfig, ModelEntry};
 use crate::agent::remote_config::settings_get::SettingsWait;
 use crate::agent::remote_config::{ModelsManager, ResolvedModels, settings_get};
+use crate::cloud_config::managed_config::LaunchProfile;
 use crate::config::StorageMode;
 use indexmap::IndexMap;
 use std::sync::{Arc, Mutex, TryLockError};
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
-use crate::cloud_config::managed_config::LaunchProfile;
 use xai_grok_login::{AuthManager, GrokAuth};
 /// The policy refusal stays typed; stringify only at the process boundary.
 #[derive(Debug, thiserror::Error)]
@@ -441,7 +441,7 @@ fn resolve_config(
             StorageMode::from_remote_gated(cfg.remote_settings.as_ref(), has_xai_auth);
     }
     if cfg.storage_mode == StorageMode::Writeback && !has_xai_auth {
-        tracing::info!("Writeback is disabled: requires auth with grok.com");
+        tracing::info!("Writeback is disabled: requires a signed-in session");
         cfg.storage_mode = StorageMode::Local;
     }
     if let Some(rs) = cfg.remote_settings.as_ref()

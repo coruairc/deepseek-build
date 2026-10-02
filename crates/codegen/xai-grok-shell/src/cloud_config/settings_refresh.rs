@@ -15,7 +15,11 @@ impl SettingsRefresh {
 
     /// A caller that joins a running fetch for `auth` never calls its own `leader`.
     /// Returns `None` when leaders keep dropping before they publish a result.
-    pub async fn refresh<F, Fut>(&self, auth: &GrokAuth, leader: F) -> Option<crate::cloud_config::SettingsFetch>
+    pub async fn refresh<F, Fut>(
+        &self,
+        auth: &GrokAuth,
+        leader: F,
+    ) -> Option<crate::cloud_config::SettingsFetch>
     where
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = crate::cloud_config::SettingsFetch>,

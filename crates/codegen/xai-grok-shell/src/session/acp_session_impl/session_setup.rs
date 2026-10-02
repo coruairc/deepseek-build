@@ -397,7 +397,7 @@ impl SessionActor {
         tracing::info!(
             idle_secs,
             threshold_secs = Self::IDLE_REFRESH_THRESHOLD_SECS,
-            "Session resumed after idle — refreshing model metadata from cli-chat-proxy"
+            "Session resumed after idle — refreshing model metadata"
         );
         let Some(ref am) = self.auth_manager else {
             tracing::debug!("No auth manager available for model metadata refresh");

@@ -2059,8 +2059,7 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
                     agent_cfg.grok_com_config.auth_provider_command.clone(),
                     None,
                 );
-                xai_grok_shell::managed_config::ensure_managed_policy_present(&auth_manager)
-                    .await;
+                xai_grok_shell::managed_config::ensure_managed_policy_present(&auth_manager).await;
             }
             Err(e) => {
                 tracing::warn!(

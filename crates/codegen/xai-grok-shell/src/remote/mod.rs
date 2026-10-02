@@ -10,6 +10,7 @@ mod pull_smoke_test;
 pub(crate) mod skills_client;
 pub mod sync;
 pub mod workspaces_client;
+pub use crate::cloud_config::{SettingsFetch, fetch_settings_blocking};
 pub use agent::{
     SandboxClient, SandboxCreateEnvironmentRequest, SandboxEnvironment, SandboxEnvironmentResponse,
     SandboxEnvironmentVariable, SandboxEnvironmentWithMetadata, SandboxForkRequest,
@@ -37,4 +38,3 @@ pub use skills_client::{
 };
 pub use sync::RemoteSync;
 pub use workspaces_client::{ListWorkspacesPage, Workspace, WorkspacesClient, WsError, WsQuery};
-pub use crate::cloud_config::{SettingsFetch, fetch_settings_blocking};

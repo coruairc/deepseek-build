@@ -519,13 +519,7 @@ fn build_proxy_headers(base_url: &str) -> indexmap::IndexMap<String, String> {
         "x-grok-client-identifier".to_string(),
         std::env::var("GROK_CLIENT_NAME").unwrap_or_else(|_| "grok-shell".to_string()),
     );
-    if base_url.contains("cli-chat-proxy") || base_url.contains("chat-proxy") {
-        headers.insert("X-XAI-Token-Auth".to_string(), "xai-grok-cli".to_string());
-        headers.insert(
-            "x-authenticateresponse".to_string(),
-            "authenticate-response".to_string(),
-        );
-    }
+    let _ = base_url;
     headers
 }
 /// Enabled with default params unless `GROK_DISABLE_WEB_FETCH=1` is set.

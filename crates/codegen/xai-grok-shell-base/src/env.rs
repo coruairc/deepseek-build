@@ -8,12 +8,12 @@
 //! - `GROK_GATEWAY_URL` — when set to a valid URL, `MvpAgent` spawns a
 //!   per-session gateway bridge actor and routes prompts through it.
 //!   When unset, sessions created in gateway mode fall back to [`GrokBuildEnvironment::gateway_ws_url`] and everything else stays in local mode.
+#[cfg(any(test, feature = "test-support"))]
+pub use xai_grok_env::EnvVarGuard;
 pub use xai_grok_env::{
     GrokBuildEnvironment, PROD_ASSET_SERVER_URL, PROD_CLI_CHAT_PROXY_BASE_URL, PROD_GATEWAY_WS_URL,
     PROD_RELAY_WS_URL, PROD_WS_ORIGIN,
 };
-#[cfg(any(test, feature = "test-support"))]
-pub use xai_grok_env::EnvVarGuard;
 /// Env var that opts a process into gateway-bridge mode.
 /// When set to a parseable URL, `session/new` / `session/load` spawns a per-session `gateway_bridge` actor in the shell.
 /// When unset the process stays in local mode.

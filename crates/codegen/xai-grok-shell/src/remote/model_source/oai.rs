@@ -40,7 +40,7 @@ impl ModelSource for OaiModelSource {
                 let auth = auth
                     .filter(|_| ActiveAuthBackend::default().is_xai_authority())
                     .ok_or_else(|| {
-                        BackendError::Auth("No auth credentials for cli-chat-proxy".into())
+                        BackendError::Auth("No session credentials for the models endpoint".into())
                     })?;
                 request = request
                     .header("Authorization", format!("Bearer {}", &auth.key))

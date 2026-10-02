@@ -279,8 +279,7 @@ pub async fn run_stdio_agent(
             let auth_manager = Arc::new(agent_config.create_auth_manager());
             auth_manager.start_proactive_refresh(cancel_for_agent.clone());
             auth_manager.start_system_power_listener();
-            crate::cloud_config::managed_config::ensure_managed_policy_present(&auth_manager)
-                .await;
+            crate::cloud_config::managed_config::ensure_managed_policy_present(&auth_manager).await;
             let boot = crate::agent::init::resolve_boot_startup_settings(
                 &mut agent_config,
                 &cancel_for_agent,
@@ -321,7 +320,7 @@ pub async fn run_headless(
     crate::http::set_process_client_mode_headless();
     use crate::agent::relay::spawn_relay_connection_with_callback;
     use tokio_util::sync::CancellationToken;
-    const HEADLESS_NO_SESSION: &str = "Headless mode requires a grok.com session. \
+    const HEADLESS_NO_SESSION: &str = "Headless mode requires a signed-in session. \
         Run `grok login` to sign in, or use `grok agent stdio` for API-key access.";
     crate::file_utils_compat::queue::cleanup_orphaned_uploads(
         &grok_home::grok_home(),

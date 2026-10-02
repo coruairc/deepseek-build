@@ -5,8 +5,8 @@ use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 use xai_grok_login::{GrokAuth, GrokComConfig};
 
-use crate::util::config::RemoteSettings;
 use crate::cloud_config::managed_config::policy_repair_pending;
+use crate::util::config::RemoteSettings;
 
 #[cfg(any(test, feature = "test-support"))]
 pub use crate::cloud_config::settings_get::reset_startup_settings_for_tests;

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use xai_grok_login::{AuthManager, GrokAuth};
 
-const GROK_WEB_URL: &str = "https://grok.com";
+const GROK_WEB_URL: &str = "";
 
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]

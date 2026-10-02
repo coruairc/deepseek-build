@@ -6,8 +6,8 @@ use super::{
     AgentConfig, BootstrapError, PREFETCH_RUNS, StartupPrefetch, apply_post_gate_settings,
     bootstrap_with_cancel, hold_bootstrap_gate_for_tests, startup_settings_deadline,
 };
-use tokio_util::sync::CancellationToken;
 use crate::cloud_config::managed_config::LaunchProfile;
+use tokio_util::sync::CancellationToken;
 use xai_grok_login::{AuthManager, GrokComConfig};
 
 #[test]

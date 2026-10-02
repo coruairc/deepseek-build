@@ -4,8 +4,8 @@ use indexmap::IndexMap;
 
 use crate::agent::auth_method::read_xai_api_key_env;
 use crate::agent::config::{self, ModelEntry};
-use crate::remote::{ModelSource, active_model_source};
 use crate::cloud_config::remote_settings::{CacheAuthMethod, ModelsCacheScope, scope_hash};
+use crate::remote::{ModelSource, active_model_source};
 use xai_grok_login::{AuthMode, GrokAuth, GrokComConfig};
 
 /// Returns a login minted by an `auth_provider_command`, which issues it for the operator's own endpoints.
