@@ -175,7 +175,8 @@ impl GrokAuth {
         }
     }
 
-    /// `true` when this auth can access grok.com managed MCP connectors.
+    /// `true` when this auth can access managed MCP connectors. Session auth
+    /// only; the remote-managed path is disabled in this build.
     pub fn is_managed_mcp_eligible(&self) -> bool {
         self.is_xai_auth() || self.auth_mode == AuthMode::WebLogin
     }
@@ -276,7 +277,7 @@ impl GrokAuth {
 
 pub type AuthStore = BTreeMap<String, GrokAuth>;
 
-/// User information from the cli-chat-proxy `GET /v1/user` endpoint.
+/// User information from the backend profile endpoint.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserInfo {
