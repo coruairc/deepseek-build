@@ -12,11 +12,11 @@ fn auth_copy_dispatch_preserves_all_delivery_states() {
         app.auth_state = AuthState::Authenticating {
             request_seq: 1,
             handle: None,
-            auth_url: Some("https://grok.com/auth".to_owned()),
+            auth_url: Some("https://api.deepseek.com/auth".to_owned()),
             mode: AuthMode::Command,
         };
         let effects = crate::app::dispatch::router::dispatch_copy_auth_url(&mut app, |url| {
-            assert_eq!(url, "https://grok.com/auth");
+            assert_eq!(url, "https://api.deepseek.com/auth");
             delivery
         });
         assert_eq!(app.auth_clipboard_delivery, Some(delivery));

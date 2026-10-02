@@ -1347,7 +1347,7 @@ fn subagents_config_env_var_disables_default() {
         },
     );
 }
-/// A `subagents_enabled` key served by an old cli-chat-proxy must parse as an unknown key and have no effect on resolution.
+/// A `subagents_enabled` key served by an old api.deepseek.com must parse as an unknown key and have no effect on resolution.
 #[test]
 #[serial_test::serial]
 fn subagents_config_remote_settings_key_is_ignored() {
@@ -3192,7 +3192,7 @@ fn model_provider_honored_only_from_trusted_disk_layers() {
             "its inline auth registers as a synthetic auth provider"
         );
 }
-/// REGRESSION: the real enterprise two-file merge must resolve the deployment-config fetch to cli-chat-proxy, never the model host. It must also preserve the customer's S3 trace-upload endpoint.
+/// REGRESSION: the real enterprise two-file merge must resolve the deployment-config fetch to api.deepseek.com, never the model host. It must also preserve the customer's S3 trace-upload endpoint.
 /// The merge layers `managed_config.toml` (proxy and BYO model host) with `requirements.toml` (deployment key and S3 trace upload). It runs via the actual `ConfigLayers::effective_config()` path.
 #[test]
 #[serial_test::serial]
@@ -3208,7 +3208,7 @@ fn enterprise_two_file_merge_routes_deployment_key_to_proxy() {
             r#"
 [endpoints]
 xai_api_base_url = "https://inference.acme-corp.example/xai/v1"
-cli_chat_proxy_base_url = "https://cli-chat-proxy.grok.com/v1"
+cli_chat_proxy_base_url = "https://api.deepseek.com/v1"
 
 [model.grok-build]
 base_url = "https://inference.acme-corp.example/xai/v1"
@@ -3229,7 +3229,7 @@ telemetry = false
 [endpoints]
 deployment_key = "xai-token-ENTERPRISE"
 xai_api_base_url = "https://inference.acme-corp.example/xai/v1"
-trace_upload_bucket = "s3://acme-trace"
+trace_upload_bucket = "file:///tmp/acme-trace"
 trace_upload_endpoint_url = "https://s3.acme-corp.example"
 "#,
         )
@@ -3249,7 +3249,7 @@ trace_upload_endpoint_url = "https://s3.acme-corp.example"
         .unwrap();
     assert_eq!(
             cfg.endpoints.resolve_managed_config_url(),
-            "https://cli-chat-proxy.grok.com/v1/deployment/config"
+            "https://api.deepseek.com/v1/deployment/config"
         );
     assert!(
             !cfg.endpoints
@@ -3268,7 +3268,7 @@ fn managed_config_feedback_user_reaches_resolved_config() {
     let managed = toml::from_str(
             r#"
 [endpoints]
-cli_chat_proxy_base_url = "https://cli-chat-proxy.grok.com/v1"
+cli_chat_proxy_base_url = "https://api.deepseek.com/v1"
 
 [feedback.user]
 name = ["os_user"]
@@ -3670,11 +3670,11 @@ fn apply_requirements_allowed_models_clamps_catalog_and_names_source() {
             allowed_models = ["*"]
             [model.grok-3]
             model = "grok-3"
-            base_url = "https://api.x.ai/v1"
+            base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             [model.grok-4]
             model = "grok-4"
-            base_url = "https://api.x.ai/v1"
+            base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
         )
@@ -3718,7 +3718,7 @@ fn apply_requirements_allowed_models_ignores_user_catalog_key() {
             allowed_models = ["*"]
             [model.grok-4]
             model = "grok-4"
-            base_url = "https://api.x.ai/v1"
+            base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             [model.grok-4-anything]
             model = "other-model"
@@ -3726,7 +3726,7 @@ fn apply_requirements_allowed_models_ignores_user_catalog_key() {
             context_window = 256000
             [model.my-alias]
             model = "grok-4"
-            base_url = "https://api.x.ai/v1"
+            base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
         )
@@ -3763,7 +3763,7 @@ fn apply_requirements_malformed_allowed_models_fail_closes() {
             allowed_models = ["*"]
             [model.grok-4]
             model = "grok-4"
-            base_url = "https://api.x.ai/v1"
+            base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
         )
@@ -3804,11 +3804,11 @@ fn apply_requirements_allowed_models_empty_array_is_unrestricted() {
             allowed_models = ["grok-4"]
             [model.grok-3]
             model = "grok-3"
-            base_url = "https://api.x.ai/v1"
+            base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             [model.grok-4]
             model = "grok-4"
-            base_url = "https://api.x.ai/v1"
+            base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
         )
@@ -3848,11 +3848,11 @@ fn apply_requirements_allowed_models_replaces_user_list() {
             allowed_models = ["*"]
             [model.grok-3]
             model = "grok-3"
-            base_url = "https://api.x.ai/v1"
+            base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             [model.grok-4]
             model = "grok-4"
-            base_url = "https://api.x.ai/v1"
+            base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
         )
@@ -3881,11 +3881,11 @@ fn validate_selectable_rejects_dash_m_outside_fleet_pin() {
             default = "grok-4"
             [model.grok-3]
             model = "grok-3"
-            base_url = "https://api.x.ai/v1"
+            base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             [model.grok-4]
             model = "grok-4"
-            base_url = "https://api.x.ai/v1"
+            base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
         )
@@ -4245,7 +4245,7 @@ fn kill_switched_cold_cwd_stays_allowed_through_plugins_config_read() {
             "gate must still allow the kill-switched folder after the config read"
         );
 }
-/// Writeback requires grok.com auth: remote may advertise it, but a non-xai credential is downgraded to `Local`.
+/// Writeback requires api.deepseek.com auth: remote may advertise it, but a non-xai credential is downgraded to `Local`.
 #[test]
 #[serial_test::serial]
 fn from_remote_gated_requires_xai_auth_for_writeback() {

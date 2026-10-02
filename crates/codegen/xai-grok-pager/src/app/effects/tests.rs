@@ -112,10 +112,10 @@ fn format_acp_error_rate_limit_surfaces_detail_or_fallback() {
         ));
     assert_eq!(format_acp_error(&capacity, false), cap_body);
     assert_eq!(format_acp_error(&capacity, true), cap_body);
-    let rpm_body = "You are sending requests too quickly. Please slow down, or upgrade to a Grok subscription for higher limits: https://grok.com/supergrok";
+    let rpm_body = "You are sending requests too quickly. Please slow down, or upgrade to a Grok subscription for higher limits: https://api.deepseek.com/supergrok";
     let rpm = acp::Error::new(RATE_LIMITED_ERROR_CODE, "Rate limited")
         .data(format!("API error (status 429 Too Many Requests): {rpm_body}"));
-    assert!(format_acp_error(&rpm, false).contains("grok.com/supergrok"));
+    assert!(format_acp_error(&rpm, false).contains("api.deepseek.com/supergrok"));
     assert_eq!(format_acp_error(&rpm, true), RATE_LIMITED_USER_MESSAGE_API_KEY);
     let empty = acp::Error::new(RATE_LIMITED_ERROR_CODE, "Rate limited");
     assert_eq!(format_acp_error(&empty, false), RATE_LIMITED_USER_MESSAGE_OAUTH);
@@ -2821,7 +2821,7 @@ fn format_session_info_api_key_without_env() {
             text.contains("Run `grok login` to use your SuperGrok subscription instead."),
             "{text}"
         );
-    assert!(!text.contains("grok.com"), "{text}");
+    assert!(!text.contains("api.deepseek.com"), "{text}");
 }
 #[test]
 fn format_session_info_api_key_auth_suggests_grok_login() {
@@ -2835,7 +2835,7 @@ fn format_session_info_api_key_auth_suggests_grok_login() {
         );
     assert!(!text.contains("Also present: XAI_API_KEY"), "{text}");
     assert!(!text.contains("console.x.ai"), "{text}");
-    assert!(!text.contains("grok.com"), "{text}");
+    assert!(!text.contains("api.deepseek.com"), "{text}");
 }
 #[test]
 fn format_session_info_session_only_shows_oauth() {

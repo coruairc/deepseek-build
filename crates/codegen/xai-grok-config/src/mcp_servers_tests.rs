@@ -202,7 +202,7 @@ fn plugin_inline_direct_map_loads_http_server() {
         scope: McpServerScope::User,
         mcp_config_path: None,
         inline_mcp_servers: Some(serde_json::json!({
-            "sentry": { "type": "http", "url": "https://mcp.sentry.dev/mcp" }
+            "sentry": { "type": "http", "url": "https://mcp.example.invalid/mcp" }
         })),
     };
 
@@ -215,5 +215,5 @@ fn plugin_inline_direct_map_loads_http_server() {
     let Some(http) = http else {
         panic!("expected an http server");
     };
-    assert_eq!("https://mcp.sentry.dev/mcp", http.url);
+    assert_eq!("https://mcp.example.invalid/mcp", http.url);
 }

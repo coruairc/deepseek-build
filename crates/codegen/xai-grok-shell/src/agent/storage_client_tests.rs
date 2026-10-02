@@ -161,7 +161,7 @@ where
     T: 'static,
 {
     let app = Router::new()
-        .route("/v1/storage", post(handler))
+        .route("/v1/local", post(handler))
         .with_state(state);
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
