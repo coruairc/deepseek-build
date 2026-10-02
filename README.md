@@ -1,140 +1,107 @@
-<div align="center">
+# deepseek-build
 
-<h1>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://media.x.ai/v1/website/spacexai-symbol-white-transparent-0c31957f.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://media.x.ai/v1/website/spacexai-symbol-black-transparent-6435cf42.png">
-    <img alt="SpaceXAI logo" src="https://media.x.ai/v1/website/spacexai-symbol-black-transparent-6435cf42.png" width="96">
-  </picture>
-  <br>
-  Grok Build (<code>grok</code>)
-</h1>
+A personal, DeepSeek-first terminal coding agent, forked from
+[xai-org/grok-build](https://github.com/xai-org/grok-build) (Apache-2.0).
 
-**Grok Build** is SpaceXAI's terminal-based AI coding agent. It runs as a
-full-screen TUI that understands your codebase, edits files, executes shell
-commands, searches the web, and manages long-running tasks — interactively,
-headlessly for scripting/CI, or embedded in editors via the Agent Client
-Protocol (ACP).
+`deepseek-build` is a full-screen TUI that reads and edits your codebase, runs
+shell commands, and manages long-running tasks, driven by DeepSeek's
+OpenAI-compatible Chat Completions API. It is a work in progress (see
+[Status](#status) and [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)).
 
-[Installing the released binary](#installing-the-released-binary) ·
-[Building from source](#building-from-source) ·
-[Documentation](#documentation) ·
-[Repository layout](#repository-layout) ·
-[Development](#development) ·
-[Contributing](#contributing) ·
-[License](#license)
+> This is a personal-use tool. There is no release pipeline, packaging, or
+> support. It currently builds from source on Linux/macOS.
 
-![Grok Build TUI](https://media.x.ai/v1/website/universe-tui-screenshot-6f7a0837.png)
+## Status
 
-**Learn more about Grok Build at [x.ai/cli](https://x.ai/cli)**
+| Area | State |
+|------|-------|
+| Phase 0 — audit & plan | Done (`PLAN.md`, `DECISIONS.md`) |
+| Phase 1 — cleanup | Partial: upload/exfil, telemetry/Sentry/OTLP, xAI voice/Imagine/web_search, auto-update, announcements, cloud-config/remote control, and xAI model/endpoint strings are removed or neutralized. **HARD egress gate is green.** Rebrand (name/config/env/ACP namespace) is **not** done. |
+| Phase 2 — DeepSeek adapter | Core done: `thinking` control, `reasoning_content` round-trip + sanitizer, `tool_choice` downgrade in thinking mode, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-v4-pro`). Wiremock suite + live smoke test **not** done. |
+| Phase 3 — TUI | Not started |
+| Phase 4 — harden existing features | Not started |
+| Phase 5 — testable product | Not started (release build was aborted; see handoff) |
 
-This repository contains the Rust source for the `grok` CLI/TUI and its agent
-runtime. It is synced periodically from the SpaceXAI monorepo.
+See [`AGENTS.md`](AGENTS.md) for a precise resume-from-here handoff.
 
-A small `SOURCE_REV` file at the root records the full monorepo commit SHA
-for the version of the code present in this tree.
+## Security & network
 
-</div>
+The only network destinations are:
 
----
+1. the configured model provider (default `https://api.deepseek.com`), and
+2. user-configured MCP servers.
 
-## Installing the released binary
-
-Prebuilt binaries are published for macOS, Linux, and Windows:
+Run the guard at any time:
 
 ```sh
-curl -fsSL https://x.ai/cli/install.sh | bash   # macOS / Linux / Git Bash
-irm https://x.ai/cli/install.ps1 | iex          # Windows PowerShell
-grok --version
+scripts/check-egress.sh          # HARD gate must be OK; prints a SOFT branding report
+scripts/check-egress.sh --strict # also fails on remaining branding/ACP-namespace strings (post-rebrand)
 ```
 
-See the [changelog](https://x.ai/build/changelog) for the latest fixes,
-features, and improvements in each release.
+## Requirements
 
-## Building from source
+- [`rustup`](https://rustup.rs) with the pinned toolchain (Rust 1.94.0, from
+  `rust-toolchain.toml`). Do not bump it.
+- `protoc` on `PATH` (e.g. `/usr/bin/protoc`). `dotslash` is not needed.
 
-Requirements:
-
-- **Rust** — the toolchain is pinned by [`rust-toolchain.toml`](rust-toolchain.toml);
-  `rustup` installs it automatically on first build.
-- **[DotSlash](https://dotslash-cli.com)** — required so hermetic tools under
-  [`bin/`](bin/) (notably [`bin/protoc`](bin/protoc)) can download and run.
-  Install it and ensure `dotslash` is on your `PATH` **before** building:
-
-  ```sh
-  cargo install dotslash
-  # or: prebuilt packages — https://dotslash-cli.com/docs/installation/
-  /usr/bin/env dotslash --help   # sanity check
-  ```
-
-- **protoc** — proto codegen resolves [`bin/protoc`](bin/protoc) via DotSlash,
-  or falls back to a `protoc` on `PATH` / `$PROTOC`.
-- macOS and Linux are supported build hosts; Windows builds are best-effort
-  and not currently tested from this tree.
+## Build & run
 
 ```sh
-cargo run -p xai-grok-pager-bin              # build + launch the TUI
-cargo build -p xai-grok-pager-bin --release  # release binary: target/release/xai-grok-pager
-cargo check -p xai-grok-pager-bin            # fast validation
+# One-time: install the pinned toolchain
+rustup toolchain install 1.94.0 --component rustfmt clippy
+
+# Validate a crate quickly
+cargo check -p xai-grok-pager-bin
+
+# Build the binary (artifact: target/release/xai-grok-pager)
+cargo build --release -p xai-grok-pager-bin
+
+# Run
+target/release/xai-grok-pager
 ```
 
-The binary artifact is named `xai-grok-pager`; official installs ship it as
-`grok`. On first launch it opens your browser to authenticate — see the
-[authentication guide](crates/codegen/xai-grok-pager/docs/user-guide/02-authentication.md).
+> Internal crate/package names still carry the upstream `xai-grok-*` prefix
+> (a deliberate scope decision, see `DECISIONS.md` D2). The user-facing binary
+> and strings will be renamed to `deepseek-build` in the rebrand slice.
 
-## Documentation
+## Configuration
 
-Full online documentation is available at
-[docs.x.ai/build/overview](https://docs.x.ai/build/overview).
+Set your DeepSeek API key in the environment:
 
-The user guide ships with the pager crate:
-[`crates/codegen/xai-grok-pager/docs/user-guide/`](crates/codegen/xai-grok-pager/docs/user-guide/)
-— getting started, keyboard shortcuts, slash commands, configuration, theming,
-MCP servers, skills, plugins, hooks, headless mode, sandboxing, and more.
+```sh
+export DEEPSEEK_API_KEY=sk-...          # preferred
+# or: export DEEPSEEK_BUILD_API_KEY=sk-...
+```
+
+Models: `deepseek-v4-pro` (default) and `deepseek-flash` (a hidden
+`deepseek-v4-flash` legacy alias is also present). A custom OpenAI-compatible
+`base_url` is supported via model config.
+
+## Testing the binary safely
+
+`scripts/sandbox-run.sh` (see the handoff notes) is intended to run the binary
+with only `api.deepseek.com` reachable. Manual test steps live in
+`TESTING.md` (to be written in the Phase 5 slice).
 
 ## Repository layout
 
-| Path | Contents |
-|------|----------|
-| `crates/codegen/xai-grok-pager-bin` | Composition-root package; builds the `xai-grok-pager` binary |
-| `crates/codegen/xai-grok-pager` | The TUI: scrollback, prompt, modals, rendering |
-| `crates/codegen/xai-grok-shell` | Agent runtime + leader/stdio/headless entry points |
-| `crates/codegen/xai-grok-tools` | Tool implementations (terminal, file edit, search, ...) |
-| `crates/codegen/xai-grok-workspace` | Host filesystem, VCS, execution, checkpoints |
-| `crates/codegen/...` | The rest of the CLI crate closure (config, MCP, markdown, sandbox, ...) |
-| `crates/common/`, `crates/build/`, `prod/mc/` | Small shared leaf crates pulled in by the closure |
-| `third_party/` | Vendored upstream source (Mermaid diagram stack) — see below |
+Same as upstream (`crates/codegen/...`, `crates/common/...`, `prod/mc/...`).
+Key crates:
 
-> [!IMPORTANT]
-> The root `Cargo.toml` (workspace members, dependency versions, lints,
-> profiles) is **generated** — treat it as read-only. Prefer editing per-crate
-> `Cargo.toml` files.
+| Crate | Purpose |
+|-------|---------|
+| `xai-grok-pager-bin` | binary `xai-grok-pager` |
+| `xai-grok-pager` | TUI |
+| `xai-grok-shell` | agent runtime, sessions, turns |
+| `xai-grok-sampler` | HTTP/streaming client (`reqwest`) |
+| `xai-grok-sampling-types` | wire + conversation types (DeepSeek adapter lives here) |
+| `xai-grok-tools` | tool implementations |
+| `xai-grok-mcp` | MCP client |
 
-## Development
+## License & attribution
 
-```sh
-cargo check -p <crate>        # always target specific crates; full-workspace builds are slow
-cargo test -p xai-grok-config # per-crate tests
-cargo clippy -p <crate>       # lint config: clippy.toml at the repo root
-cargo fmt --all               # rustfmt.toml at the repo root
-```
-
-## Contributing
-
-> [!NOTE]
-> External contributions are not accepted. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
-
-## License
-
-First-party code in this repository is licensed under the **Apache License,
-Version 2.0** — see [`LICENSE`](LICENSE).
-
-Third-party and vendored code remains under its original licenses. See:
-
-- [`THIRD-PARTY-NOTICES`](THIRD-PARTY-NOTICES) — crates.io / git dependencies,
-  bundled UI themes, and **in-tree source ports** (including openai/codex and
-  sst/opencode tool implementations)
-- [`crates/codegen/xai-grok-tools/THIRD_PARTY_NOTICES.md`](crates/codegen/xai-grok-tools/THIRD_PARTY_NOTICES.md)
-  — crate-local notice for the codex and opencode ports (license texts +
-  Apache §4(b) change notice)
-- [`third_party/NOTICE`](third_party/NOTICE) — vendored Mermaid-stack index
+First-party code is Apache-2.0. See [`LICENSE`](LICENSE),
+[`NOTICE`](NOTICE), [`THIRD-PARTY-NOTICES`](THIRD-PARTY-NOTICES), and
+[`third_party/NOTICE`](third_party/NOTICE). Upstream is
+[xai-org/grok-build](https://github.com/xai-org/grok-build); upstream files are
+not relicensed.

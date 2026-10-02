@@ -79,8 +79,8 @@ Last updated: 2026-10-02.
 | Phase | Status | Notes |
 |-------|--------|-------|
 | 0 — Audit & plan | Complete | `PLAN.md` written; audit done. |
-| 1 — Cleanup & rebrand | Partial | Egress-policy guard + `NOTICE` added. Full removal of telemetry/upload/login/cloud-config/update/voice/imagine/marketplace and the user-facing rebrand are **not done** (large mechanical refactor). |
-| 2 — DeepSeek adapter | Partial | Core committed (`cdbf5aa3`): thinking control, reasoning_content round-trip + sanitizer, quote repair, cache helpers, DeepSeek default models. Not yet done: end-to-end API-key credential path validation, mock-server test suite, auto-router, stray-thinking normalization, non-stream reasoning capture. |
+| 1 — Cleanup & rebrand | Partial | **HARD egress gate green.** Deleted/neutralized: mixpanel, telemetry OTLP + Sentry, `xai-grok-otel`, `xai-file-utils` upload stack, heap_profile, workspace upload, `xai-grok-update`, `xai-grok-announcements`, `xai-grok-bundle`, xAI voice/Imagine/web_search, xAI OAuth/OIDC network stack, `xai-grok-cloud-config` (vendored inert into shell), SuperGrok upsell, xAI model entries/endpoints. `prod/mc/cli-chat-proxy-types` → `prod/mc/model-api-types`. **Rebrand not done** (SOFT report 3452); some stubs and `xai-computer-hub`/shell `remote/**` remain. See `AGENTS.md` §5. |
+| 2 — DeepSeek adapter | Partial | Core committed (`cdbf5aa3`, `28296f7e`): thinking control, reasoning_content round-trip + sanitizer, quote repair, cache helpers, DeepSeek default models, endpoints foundation (`633d80df`). Not done: backend removal (Responses/Messages), wiremock suite, non-stream reasoning capture, cache-prefix test, live smoke (blocked on key). |
 | 3 — DeepSeek-native TUI | Not started | |
 | 4 — Adapt existing competitive features | Not started | |
-| 5 — Quality bar | Skipped (D9) | |
+| 5 — Quality bar | Not started | Release build aborted; no binary yet. |
