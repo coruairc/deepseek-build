@@ -64,79 +64,10 @@ async fn log_offloaded(lvl: LogLevel, msg: String, ctx: serde_json::Value) {
         tracing::warn!(error = %e, "unified_log write task failed");
     }
 }
-async fn fetch_user_info(manager: &AuthManager, key: &str, log_label: &str) -> Option<UserInfo> {
-    let user_url = format!("{}/user", manager.proxy_base_url);
-    let token_header = &manager.grok_com_config.token_header;
-    let started = std::time::Instant::now();
-    let http_client = xai_grok_http::shared_client();
-    let response = http_client
-        .get(&user_url)
-        .timeout(USER_FETCH_TIMEOUT)
-        .header("Authorization", format!("Bearer {}", key))
-        .header("X-XAI-Token-Auth", token_header.as_str())
-        .header("x-grok-client-version", xai_grok_version::VERSION)
-        .header(
-            xai_grok_http::CLIENT_MODE_HEADER,
-            xai_grok_http::process_client_mode(),
-        )
-        .send()
-        .await;
-    match response {
-        Ok(resp) if resp.status().is_success() => match resp.json::<UserInfo>().await {
-            Ok(ui) if !ui.user_id.is_empty() => Some(ui),
-            Ok(_) => {
-                log_offloaded(
-                    LogLevel::Warn,
-                    format!("{log_label} skipped"),
-                    serde_json::json!({
-                        "reason": "empty_user_id",
-                        "elapsed_ms": started.elapsed().as_millis() as u64,
-                    }),
-                )
-                .await;
-                None
-            }
-            Err(e) => {
-                log_offloaded(
-                    LogLevel::Warn,
-                    format!("{log_label} failed"),
-                    serde_json::json!({
-                        "reason": "parse",
-                        "error": e.to_string(),
-                        "elapsed_ms": started.elapsed().as_millis() as u64,
-                    }),
-                )
-                .await;
-                None
-            }
-        },
-        Ok(resp) => {
-            log_offloaded(
-                LogLevel::Warn,
-                format!("{log_label} failed"),
-                serde_json::json!({
-                    "reason": "http_status",
-                    "http_status": resp.status().as_u16(),
-                    "elapsed_ms": started.elapsed().as_millis() as u64,
-                }),
-            )
-            .await;
-            None
-        }
-        Err(e) => {
-            log_offloaded(
-                LogLevel::Warn,
-                format!("{log_label} failed"),
-                serde_json::json!({
-                    "reason": if e.is_timeout() { "timeout" } else { "transport" },
-                    "error": e.to_string(),
-                    "elapsed_ms": started.elapsed().as_millis() as u64,
-                }),
-            )
-            .await;
-            None
-        }
-    }
+async fn fetch_user_info(_manager: &AuthManager, _key: &str, _log_label: &str) -> Option<UserInfo> {
+    // Remote /user enrichment removed: API-key auth has no server-side profile
+    // round-trip. The caller keeps the locally stored profile.
+    None
 }
 /// Blocking enrichment at login: merges `/user` fields into `auth` before the first save.
 pub(super) async fn enrich_inline(manager: &AuthManager, auth: &mut GrokAuth) {

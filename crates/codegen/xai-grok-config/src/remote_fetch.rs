@@ -6,15 +6,9 @@ use crate::{Capability, Distribution};
 /// The startup prefetch calls this for its deployment-config sync, before any `AgentConfig` exists.
 /// `[features] managed_config` controls the background managed-config sync.
 pub fn resolve_remote_fetch_enabled() -> bool {
-    match crate::ConfigLayers::load() {
-        Ok(layers) => remote_fetch_enabled_from_layers(&layers),
-        // A corrupt user `config.toml` must not discard the requirements and managed settings
-        Err(_) => remote_fetch_enabled_from_policy_layers(
-            crate::load_merged_requirements().as_ref(),
-            crate::load_managed_config().ok().as_ref(),
-            crate::load_system_managed_config().ok().as_ref(),
-        ),
-    }
+    // Remote settings/feature-flag and model-catalog fetching from xAI backends
+    // has been removed. Local/bundled configuration is authoritative.
+    false
 }
 
 /// `effective_config_base` puts the user layer over managed config.

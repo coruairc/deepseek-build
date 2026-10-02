@@ -9,7 +9,7 @@ pub const TOKEN_TTL: Duration = Duration::days(30);
 const DEFAULT_EARLY_INVALIDATION_SECS: u64 = 300; // 5 minutes
 
 /// Legacy auth.json scope key. Fallback for old devbox auth files.
-pub(super) const LEGACY_SCOPE: &str = "https://accounts.x.ai/sign-in";
+pub(super) const LEGACY_SCOPE: &str = "legacy::sign-in";
 
 /// auth.json scope key for plain API key auth (desktop login, `grok login --api-key`).
 pub(super) const API_KEY_SCOPE: &str = "xai::api_key";
@@ -133,6 +133,18 @@ pub(crate) struct CredentialGeneration {
 }
 
 impl GrokAuth {
+    /// Build a credential from a plain API key supplied by the environment or
+    /// the OS keychain. This is the only login path in this build.
+    pub fn from_api_key(key: impl Into<String>) -> Self {
+        Self {
+            key: key.into(),
+            auth_mode: AuthMode::ApiKey,
+            create_time: Utc::now(),
+            user_id: String::new(),
+            ..Default::default()
+        }
+    }
+
     pub(crate) fn generation(&self) -> CredentialGeneration {
         CredentialGeneration {
             key: self.key.clone(),
@@ -150,8 +162,9 @@ impl GrokAuth {
             .num_seconds()
     }
 
-    /// `true` when the token comes from a first-party xAI account. That is either an OIDC login against https://auth.x.ai (or the local-dev equivalent), or an external auth provider declaring an xAI issuer.
-    /// The issuer is a client-side hint, not a trust assertion. Everything it unlocks still authenticates the actual token server-side, and it never influences endpoints.
+    /// `true` when the token comes from a first-party xAI account. The
+    /// interactive issuer stack is removed, so this is always `false`.
+    /// It is a client-side hint, not a trust assertion, and never influences endpoints.
     pub fn is_xai_auth(&self) -> bool {
         match self.auth_mode {
             AuthMode::Oidc | AuthMode::External => self

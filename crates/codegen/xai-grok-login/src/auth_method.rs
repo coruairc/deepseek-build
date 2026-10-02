@@ -7,14 +7,14 @@
 
 use std::sync::RwLock;
 
-/// Env var that, when set, advertises `xai.api_key` as a viable auth method.
+/// Primary env var that supplies the API key.
 ///
 /// Kept as a constant so test code and the production check stay in sync.
-pub const XAI_API_KEY_ENV_VAR: &str = "XAI_API_KEY";
+pub const XAI_API_KEY_ENV_VAR: &str = "DEEPSEEK_API_KEY";
 
-/// Legacy env var name.
-/// Checked as a fallback when `XAI_API_KEY` is not set, so existing deployments that use the old name keep working.
-pub const LEGACY_XAI_API_KEY_ENV_VAR: &str = "GROK_CODE_XAI_API_KEY";
+/// Secondary env var name.
+/// Checked as a fallback when `DEEPSEEK_API_KEY` is not set.
+pub const LEGACY_XAI_API_KEY_ENV_VAR: &str = "DEEPSEEK_BUILD_API_KEY";
 
 /// Runtime-loaded keys live here instead of the process env: `set_var` races C `getenv` on other threads (DNS, libgit2).
 static RUNTIME_API_KEY: RwLock<Option<String>> = RwLock::new(None);

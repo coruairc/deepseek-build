@@ -50,23 +50,17 @@ fn retry_backoff(attempt: u32) -> std::time::Duration {
     std::time::Duration::from_millis(base << attempt.saturating_sub(1))
 }
 
-/// Retries transient failures with backoff; auth errors fail immediately.
+/// Remote managed-config fetch removed: never touches the network.
 async fn fetch_managed_config(
-    url: &str,
-    token: &str,
-    source: ManagedConfigSource,
-    max_attempts: u32,
-    echo_principal: Option<&str>,
+    _url: &str,
+    _token: &str,
+    _source: ManagedConfigSource,
+    _max_attempts: u32,
+    _echo_principal: Option<&str>,
 ) -> Result<ManagedConfigResponse, ManagedConfigError> {
-    xai_grok_http::send_with_retry_escaping_pool(
-        move |client: reqwest::Client| async move {
-            fetch_managed_config_once(&client, url, token, source, echo_principal).await
-        },
-        max_attempts,
-        |e: &ManagedConfigError| e.is_retryable(),
-        |attempt| tokio::time::sleep(retry_backoff(attempt)),
-    )
-    .await
+    Err(ManagedConfigError::Network(
+        "remote managed config is disabled in this build".to_owned(),
+    ))
 }
 
 pub(super) fn map_transport_failure(
