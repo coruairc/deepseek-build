@@ -233,7 +233,7 @@ fn handle_info(agent: &MvpAgent) -> ExtResult {
     let raw_asset_id = auth.as_ref().and_then(|a| a.profile_image_asset_id.clone());
 
     // Return a grok-asset:// URL that the Electron renderer resolves at display time via a custom protocol handler
-    // The handler proxies through cli-chat-proxy's /asset endpoint; Electron's HTTP cache handles reuse
+    // The handler proxies through model-proxy's /asset endpoint; Electron's HTTP cache handles reuse
     // Nothing here touches a disk cache or the network
     let profile_image_url = match raw_asset_id.as_deref().filter(|k| !k.is_empty()) {
         Some(key) if key.starts_with("http://") || key.starts_with("https://") => {

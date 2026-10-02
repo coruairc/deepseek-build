@@ -1,4 +1,4 @@
-//! REST client for the session replicas registry (cli-chat-proxy).
+//! REST client for the session replicas registry (model-proxy).
 //!
 //! Registers, updates, finalizes, searches, and downloads session replicas for cross-host session replication.
 //! The write methods (`register`, `update`, `finalize`) are safe to call without checking the result.
@@ -9,7 +9,7 @@ use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 
 // ============================================================================
-// Request and response types. They live here rather than in cli-chat-proxy because only the agent uses them.
+// Request and response types. They live here rather than in model-proxy because only the agent uses them.
 // ============================================================================
 
 #[derive(Debug, Serialize)]

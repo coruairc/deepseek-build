@@ -196,20 +196,20 @@ fn plugin_inline_stdio_expands_plugin_root() {
 fn plugin_inline_direct_map_loads_http_server() {
     let workspace = Workspace::new();
     let plugin = PluginMcpServers {
-        plugin_name: "sentry".to_owned(),
-        root: workspace.path().join("sentry"),
+        plugin_name: "example-plugin".to_owned(),
+        root: workspace.path().join("example-plugin"),
         data_dir: workspace.path().join("sentry-data"),
         scope: McpServerScope::User,
         mcp_config_path: None,
         inline_mcp_servers: Some(serde_json::json!({
-            "sentry": { "type": "http", "url": "https://mcp.example.invalid/mcp" }
+            "example-plugin": { "type": "http", "url": "https://mcp.example.invalid/mcp" }
         })),
     };
 
     let servers = load_mcp_servers_with_origin(&workspace.sources(vec![], vec![]), &[plugin]);
 
     let http = servers.iter().find_map(|(server, _)| match server {
-        acp::McpServer::Http(http) if http.name == "sentry" => Some(http),
+        acp::McpServer::Http(http) if http.name == "example-plugin" => Some(http),
         _ => None,
     });
     let Some(http) = http else {

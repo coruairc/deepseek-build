@@ -741,7 +741,7 @@ mod tests {
     }
 
     /// During the 5-minute pre-refresh buffer window, `auth_manager.current()` returns `None`, but the token is still valid at the proxy. The manager treats such a token as expiring soon for refresh scheduling.
-    /// The provider must fall back to `expired_auth()` so the in-memory token gets sent instead of nothing. Sending nothing here caused the bulk of the `POST /v1/storage` 401s observed in production.
+    /// The provider must fall back to `expired_auth()` so the in-memory token gets sent instead of nothing. Sending nothing here caused the bulk of the `POST /v1/files` 401s observed in production.
     #[test]
     fn falls_back_to_expired_auth_during_buffer_window() {
         let _guard = EarlyInvalidationGuard::pin_to_default();
@@ -854,7 +854,7 @@ mod tests {
         for denied in [
             "https://byok.attacker.example/v1",
             // First-party host, but cleartext: bearer requires https.
-            "http://api.x.ai/v1",
+            "http://api.deepseek.com/v1",
         ] {
             let resolved =
                 embedding_session_credentials(denied, Some(&mgr), Some(api_key_provider.clone()));
@@ -865,7 +865,7 @@ mod tests {
         }
 
         let resolved = embedding_session_credentials(
-            "https://api.x.ai/v1",
+            "https://api.deepseek.com/v1",
             Some(&mgr),
             Some(api_key_provider),
         );

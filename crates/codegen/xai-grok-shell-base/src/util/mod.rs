@@ -90,12 +90,12 @@ pub fn matches_trusted_base_url(candidate: &str, trusted_base: &str) -> bool {
         && candidate.port_or_known_default() == trusted.port_or_known_default()
         && path_matches
 }
-/// Production cli-chat-proxy base only (compiled-in constant). Unlike [`is_cli_chat_proxy_url`], this rejects loopback and staging/dev hosts. Used for security-sensitive remote kill-switches.
+/// Production model-proxy base only (compiled-in constant). Unlike [`is_cli_chat_proxy_url`], this rejects loopback and staging/dev hosts. Used for security-sensitive remote kill-switches.
 /// Those must not become env toggles via `GROK_CLI_CHAT_PROXY_BASE_URL` (or similar) pointing at an attacker-controlled origin.
 pub fn is_prod_cli_chat_proxy_url(url: &str) -> bool {
     matches_trusted_base_url(url, crate::env::PROD_CLI_CHAT_PROXY_BASE_URL)
 }
-/// True for configured first-party cli-chat-proxy routes, excluding arbitrary loopback URLs.
+/// True for configured first-party model-proxy routes, excluding arbitrary loopback URLs.
 /// Unlike [`is_cli_chat_proxy_url`], this only trusts the exact compiled or environment-selected route.
 /// It is suitable for xAI-only request extensions.
 pub fn is_trusted_cli_chat_proxy_url(url: &str) -> bool {
@@ -104,7 +104,7 @@ pub fn is_trusted_cli_chat_proxy_url(url: &str) -> bool {
     }
     false
 }
-/// True for cli-chat-proxy URLs (production, plus local-dev hosts when the optional non-production feature is enabled).
+/// True for model-proxy URLs (production, plus local-dev hosts when the optional non-production feature is enabled).
 /// When that feature is on, runtime env overrides can extend this trust set.
 /// Loopback is always accepted (unit tests and local mock servers on arbitrary ports).
 pub fn is_cli_chat_proxy_url(url: &str) -> bool {
@@ -119,7 +119,7 @@ pub fn is_cli_chat_proxy_url(url: &str) -> bool {
     }
     false
 }
-/// True for xAI-operated endpoints (`*.x.ai`, cli-chat-proxy, and optional non-production xAI hosts when that feature is enabled). `disable_api_key_auth` refuses keys only for these; other hosts are BYOK and exempt.
+/// True for xAI-operated endpoints (`*.x.ai`, model-proxy, and optional non-production xAI hosts when that feature is enabled). `disable_api_key_auth` refuses keys only for these; other hosts are BYOK and exempt.
 /// Safe against invalid URLs and suffix attacks (`evil-x.ai.example`). Scheme-agnostic so credential *refusal* fails closed. To decide where to *attach* a credential, use [`is_xai_api_bearer_url`].
 pub fn is_xai_api_url(url: &str) -> bool {
     is_xai_api_url_impl(url, false)
@@ -384,57 +384,59 @@ mod tests {
     #[test]
     fn test_is_cli_chat_proxy_url_accepts_proxy_subpath() {
         assert!(is_cli_chat_proxy_url(
-            "https://cli-chat-proxy.grok.com/v1/chat/completions"
+            "https://api.deepseek.com/v1/chat/completions"
         ));
     }
     #[test]
     fn test_is_cli_chat_proxy_url_rejects_public_api() {
-        assert!(!is_cli_chat_proxy_url("https://api.x.ai/v1"));
+        assert!(!is_cli_chat_proxy_url("https://api.deepseek.com/v1"));
     }
     #[test]
     fn test_is_cli_chat_proxy_url_rejects_spoofed_hostname() {
         assert!(!is_cli_chat_proxy_url(
-            "https://cli-chat-proxy.grok.com.evil.example/v1"
+            "https://api.deepseek.com.evil.example/v1"
         ));
     }
     #[test]
     fn test_is_cli_chat_proxy_url_rejects_v11_prefix_confusion() {
         assert!(!is_cli_chat_proxy_url(
-            "https://cli-chat-proxy.grok.com/v11/chat/completions"
+            "https://api.deepseek.com/v11/chat/completions"
         ));
     }
     #[test]
     fn test_is_xai_api_url() {
-        assert!(is_xai_api_url("https://api.x.ai/v1"));
-        assert!(is_xai_api_url("https://api.x.ai/v1/chat/completions"));
+        assert!(is_xai_api_url("https://api.deepseek.com/v1"));
+        assert!(is_xai_api_url(
+            "https://api.deepseek.com/v1/chat/completions"
+        ));
         assert!(is_xai_api_url("https://x.ai"));
         assert!(is_xai_api_url(
-            "https://cli-chat-proxy.grok.com/v1/chat/completions"
+            "https://api.deepseek.com/v1/chat/completions"
         ));
         assert!(!is_xai_api_url("https://api.openai.com/v1"));
         assert!(!is_xai_api_url("https://api.anthropic.com/v1"));
         assert!(!is_xai_api_url("https://generativelanguage.googleapis.com"));
-        assert!(!is_xai_api_url("https://api.x.ai.evil.example/v1"));
+        assert!(!is_xai_api_url("https://api.deepseek.com.evil.example/v1"));
         assert!(!is_xai_api_url("https://evil-x.ai.attacker.com/v1"));
         assert!(!is_xai_api_url("https://prefixx.ai/v1"));
         assert!(!is_xai_api_url("not-a-url"));
         assert!(!is_xai_api_url(""));
-        assert!(is_xai_api_url("http://api.x.ai/v1"));
+        assert!(is_xai_api_url("http://api.deepseek.com/v1"));
         assert!(is_xai_api_url("http://localhost:11434/v1"));
     }
     #[test]
     fn test_is_xai_api_bearer_url() {
-        assert!(is_xai_api_bearer_url("https://api.x.ai/v1"));
-        assert!(!is_xai_api_bearer_url("http://api.x.ai/v1"));
+        assert!(is_xai_api_bearer_url("https://api.deepseek.com/v1"));
+        assert!(!is_xai_api_bearer_url("http://api.deepseek.com/v1"));
         assert!(!is_xai_api_bearer_url("http://localhost:11434/v1"));
         {
             assert!(!is_xai_api_bearer_url("https://localhost:11434/v1"));
             assert!(!is_xai_api_bearer_url("https://127.0.0.2:11434/v1"));
             assert!(!is_xai_api_bearer_url("https://[::1]:11434/v1"));
         }
-        assert!(is_xai_api_bearer_url("https://API.X.AI/v1"));
+        assert!(is_xai_api_bearer_url("https://api.deepseek.com/v1"));
         assert!(!is_xai_api_bearer_url(
-            "https://api.x.ai@attacker.example/v1"
+            "https://api.deepseek.com@attacker.example/v1"
         ));
         assert!(!is_xai_api_bearer_url("https://х.ai/v1"));
     }

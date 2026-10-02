@@ -1,7 +1,7 @@
-//! Lightweight request/response types for the cli-chat-proxy sandbox API.
+//! Lightweight request/response types for the model-proxy sandbox API.
 //!
 //! This crate contains only the API types with minimal dependencies (just serde),
-//! suitable for use by clients that don't need the full cli-chat-proxy crate.
+//! suitable for use by clients that don't need the full model-proxy crate.
 
 pub mod client_metrics_types;
 pub mod deployment_config_types;

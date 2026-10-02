@@ -144,7 +144,7 @@ impl ManagedConfigResponse {
             return false;
         };
 
-        use prod_mc_cli_chat_proxy_types::{FailClosedFlag, fail_closed_flag_status};
+        use prod_mc_model_api_types::{FailClosedFlag, fail_closed_flag_status};
         let status = fail_closed_flag_status(req);
         if matches!(status, FailClosedFlag::Invalid) {
             static WARN_ONCE: std::sync::Once = std::sync::Once::new();

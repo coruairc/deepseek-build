@@ -149,7 +149,7 @@ pub(crate) fn context_window_choices(
 /// They are a trait because they need the upload types in this crate.
 pub trait TraceUploadEndpoints {
     /// Builds an upload method that writes straight to `trace_upload_bucket`.
-    /// Returns `None` when no bucket is set or its scheme is not `gs://` or `s3://`.
+    /// Returns `None` when no bucket is set or its scheme is not `file://`.
     fn resolve_direct_upload_method(&self) -> Option<crate::session::repo_changes::UploadMethod>;
     fn has_noninteractive_upload_auth(&self) -> bool;
     /// Tries `trace_upload_bucket`, then the proxy, then `gcs_service_account_key` from config.
@@ -172,7 +172,7 @@ impl TraceUploadEndpoints for EndpointsConfig {
             return None;
         }
         if let Some(bucket_name) = bucket_url
-            .strip_prefix("s3://")
+            .strip_prefix("file://")
             .map(|s| s.trim_end_matches('/'))
         {
             let region = self
@@ -187,14 +187,14 @@ impl TraceUploadEndpoints for EndpointsConfig {
                 endpoint_url: self.trace_upload_endpoint_url.clone(),
             });
         }
-        if bucket_url.starts_with("gs://") {
+        if bucket_url.starts_with("file://") {
             return Some(crate::session::repo_changes::UploadMethod::Direct {
                 service_account_key: self.resolve_trace_credentials(),
             });
         }
         tracing::warn!(
             bucket = %bucket_url,
-            "trace_upload_bucket has unrecognized scheme (expected gs:// or s3://), ignoring"
+            "trace_upload_bucket has unrecognized scheme (expected file://), ignoring"
         );
         None
     }
@@ -233,7 +233,7 @@ impl TraceUploadEndpoints for EndpointsConfig {
         )
         .or_else(|| {
             crate::upload::gcs::SESSION_TRACES_BUCKET
-                .map(|b| Resolved::new(format!("gs://{b}"), ConfigSource::Default))
+                .map(|b| Resolved::new(format!("file://{b}"), ConfigSource::Default))
         })
     }
     fn is_trace_upload_blocked_for(&self, auth: &xai_grok_login::GrokAuth) -> bool {
@@ -889,8 +889,8 @@ pub struct Config {
     pub client_version: Option<String>,
     #[serde(skip)]
     pub mode: AgentMode,
-    /// Remote settings fetched from cli-chat-proxy at startup.
-    /// Used for upload limits (replaces on-demand /v1/storage/limits fetch).
+    /// Remote settings fetched from model-proxy at startup.
+    /// Used for upload limits (replaces on-demand /v1/files/limits fetch).
     #[serde(skip)]
     pub remote_settings: Option<crate::util::config::RemoteSettings>,
     #[serde(skip)]
@@ -2012,7 +2012,7 @@ impl Config {
             .resolve()
     }
     /// Goal mode (`/goal`) master switch. Default ON.
-    /// Deployments that can't reach cli-chat-proxy `/v1/settings` never receive the remote settings `goal_enabled` flag.
+    /// Deployments that can't reach model-proxy `/v1/settings` never receive the remote settings `goal_enabled` flag.
     /// The default must not carve those deployments out (custom `models_base_url`, external `auth_provider_command`, air-gapped proxies).
     pub(crate) fn resolve_goal(&self) -> Resolved<bool> {
         let ff = self.remote_settings.as_ref().and_then(|s| s.goal_enabled);
@@ -2271,7 +2271,7 @@ impl Config {
                 .and_then(|r| r.compaction_detail.as_deref()),
         )
     }
-    /// Resolve whether to use grok's default OAuth2 (xAI auth.x.ai).
+    /// Resolve whether to use grok's default OAuth2 (xAI api.deepseek.com).
     /// Enterprise OIDC (`oidc` in config.toml) always wins; this only gates the default xAI OAuth2 fallback when no enterprise OIDC is configured.
     /// Priority: `--oauth` > GROK_OAUTH_ENABLED env > default (true, meaning OAuth).
     pub(crate) fn resolve_grok_oauth(&self, cli_oidc: Option<bool>) -> Resolved<bool> {
@@ -2511,7 +2511,7 @@ pub(crate) fn read_requirements_toml() -> Option<toml::Value> {
 /// Seed free-function remote caches after writing `Config.remote_settings`. Called from `init.rs` at boot and from the agent when backgrounded settings arrive later.
 /// So every side effect here must be idempotent and safe to re-apply. The emission-gate flip is owned by [`crate::agent::otel_gate::OtelGate`], not here.
 /// The `force_disable` write here is `Relaxed`; the synchronizing publish is `OtelGate::apply_and_open`. That publish applies the same tighten-only policy and then opens the gate with a `Release` swap. Removing that second application to deduplicate would leave only the `Relaxed` store and reopen an ARM visibility hole.
-/// `origin` is the cli-chat-proxy base URL `settings` were fetched from; per-origin caches key on it.
+/// `origin` is the model-proxy base URL `settings` were fetched from; per-origin caches key on it.
 pub fn apply_remote_settings_side_effects(
     settings: Option<&crate::util::config::RemoteSettings>,
     origin: &str,
@@ -3032,7 +3032,7 @@ pub struct ModelEntryConfig {
     /// See [`ModelInfo::model_family`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model_family: Option<String>,
-    /// The base URL of the model. e.g. "https://api.x.ai/v1"
+    /// The base URL of the model. e.g. "https://api.deepseek.com/v1"
     pub base_url: String,
     /// Human-readable display name of the model.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -3431,7 +3431,7 @@ pub struct ModelInfo {
     /// Provider family that mints this model's conversation items (e.g. "xai"); `None` means unknown.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model_family: Option<String>,
-    /// The base URL of the model (session endpoint). e.g. "https://cli-chat-proxy.grok.com/v1"
+    /// The base URL of the model (session endpoint). e.g. "https://api.deepseek.com/v1"
     pub base_url: String,
     /// Human-readable name of the model.
     /// Honored by both the picker (`/model`) and `/session-info`: when set, that's the label shown to users in either consumer.
@@ -4486,7 +4486,7 @@ pub(crate) fn sampling_config_for_model(
     }
 }
 /// Fold URL-derived headers into `extra_headers`. The sampler crate is intentionally URL-agnostic: it does not inspect `base_url` to decide which auth or staging headers to add.
-/// Replicate the URL-derived header logic at the shell boundary so callers downstream see a single homogenous header bag. cli-chat-proxy bases get `X-XAI-Token-Auth` and `x-authenticateresponse` headers.
+/// Replicate the URL-derived header logic at the shell boundary so callers downstream see a single homogenous header bag. model-proxy bases get `X-XAI-Token-Auth` and `x-authenticateresponse` headers.
 /// This mirrors the inline match in the legacy `sampling::Client::new` on `is_cli_chat_proxy_url`. Existing entries are never overwritten so callers can pre-set a value.
 pub(crate) fn inject_url_derived_headers(
     headers: &mut IndexMap<String, String>,

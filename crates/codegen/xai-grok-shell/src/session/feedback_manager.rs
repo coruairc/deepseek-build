@@ -8,7 +8,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use prod_mc_cli_chat_proxy_types::feedback_types::{
+use prod_mc_model_api_types::feedback_types::{
     ClientType, FeedbackContent, FeedbackMode, FeedbackSubmission,
 };
 
@@ -169,7 +169,7 @@ impl FeedbackManager {
         _snapshot: Option<&crate::session::signals::TurnDeltaSnapshot>,
         _request_id: Option<String>,
         _duration_ms: Option<i64>,
-        _outcome: prod_mc_cli_chat_proxy_types::feedback_types::TurnOutcome,
+        _outcome: prod_mc_model_api_types::feedback_types::TurnOutcome,
     ) {
     }
 

@@ -1,6 +1,6 @@
 //! `x.ai/privacy/setCodingDataRetention` extension handler.
 //!
-//! PUTs the new opt-out flag to cli-chat-proxy and updates local auth state to match.
+//! PUTs the new opt-out flag to model-proxy and updates local auth state to match.
 //! The local update only refreshes the cached copy, so its errors are ignored.
 
 use agent_client_protocol as acp;

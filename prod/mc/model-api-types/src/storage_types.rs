@@ -1,4 +1,4 @@
-//! Signed upload URL types shared between cli-chat-proxy (server) and grok-shell (client).
+//! Signed upload URL types shared between model-proxy (server) and grok-shell (client).
 
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +14,7 @@ pub struct BatchExistsResponse {
 }
 
 /// Response from the signed upload URL endpoint.
-/// `POST /v1/storage/signed-upload-url`
+/// `POST /v1/files/signed-upload-url`
 ///
 /// The client uses the returned `signed_url` to PUT the object directly to GCS,
 /// completely bypassing the proxy for the data transfer.  This avoids nginx /
@@ -63,7 +63,7 @@ pub struct BatchUploadResponse {
     pub results: Vec<BatchUploadResult>,
 }
 
-/// JSON request body for `POST /v1/storage/batch_upload_json`.
+/// JSON request body for `POST /v1/files/batch_upload_json`.
 ///
 /// Each file's content is base64-encoded. The request is typically sent with
 /// `Content-Encoding: zstd` so the JSON body is compressed on the wire.

@@ -752,7 +752,7 @@ impl MvpAgent {
     pub(crate) fn is_writeback_storage(&self) -> bool {
         matches!(self.storage_mode.get(), StorageMode::Writeback)
     }
-    /// Resolved cli-chat-proxy base for session features (via `proxy_url`).
+    /// Resolved model-proxy base for session features (via `proxy_url`).
     /// Not for the deployment-config fetch.
     pub(crate) fn cli_chat_proxy_base_url(&self) -> String {
         self.cfg.borrow().endpoints.proxy_url()
@@ -1428,7 +1428,7 @@ impl MvpAgent {
             xai_chat_state::AuthType::ApiKey
         }
     }
-    /// Fall through to `xai.api_key` if the startup probe still allows it, else `grok.com`.
+    /// Fall through to `xai.api_key` if the startup probe still allows it, else `api.deepseek.com`.
     /// `None` when `preferred_method` is pinned.
     pub(super) fn cached_token_fallthrough_method_id(
         &self,
@@ -1444,7 +1444,7 @@ impl MvpAgent {
         )?;
         Some(acp::AuthMethodId::new(id))
     }
-    /// Shared exit for missing/expired/legacy `cached_token`: fall through with `use_oauth` only when the target is interactive `grok.com`.
+    /// Shared exit for missing/expired/legacy `cached_token`: fall through with `use_oauth` only when the target is interactive `api.deepseek.com`.
     /// When `preferred_method` is pinned, fail instead of falling through.
     pub(super) async fn authenticate_after_cached_token_unavailable(
         &self,
@@ -2013,7 +2013,7 @@ impl MvpAgent {
         config
     }
     /// Resolve sampling config for a model by ID, falling back to the global default on resolution failure.
-    /// API-key auth then routes to the public API (via resolve_credentials) instead of the global config's cli-chat-proxy base_url.
+    /// API-key auth then routes to the public API (via resolve_credentials) instead of the global config's model-proxy base_url.
     pub(super) fn resolve_sampling_config_for_model(
         &self,
         model_id: &acp::ModelId,
@@ -3310,7 +3310,7 @@ impl MvpAgent {
                     }
                 }
                 crate::session::repo_changes::UploadMethod::S3 { bucket, .. } => {
-                    Some(format!("s3://{bucket}"))
+                    Some(format!("file://{bucket}"))
                 }
                 crate::session::repo_changes::UploadMethod::Proxy { .. } => None,
             }
@@ -3630,7 +3630,7 @@ impl MvpAgent {
                     }
                 }
                 crate::session::repo_changes::UploadMethod::S3 { bucket, .. } => {
-                    Some(format!("s3://{bucket}"))
+                    Some(format!("file://{bucket}"))
                 }
                 crate::session::repo_changes::UploadMethod::Proxy { .. } => None,
             }

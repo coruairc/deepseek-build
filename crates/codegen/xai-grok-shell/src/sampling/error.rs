@@ -561,11 +561,11 @@ mod tests {
     fn format_rate_limited_api_key_rewrites_consumer_subscription_upsell() {
         let body = "Some resource has been exhausted: You are sending requests too quickly. \
              Please slow down, or upgrade to a Grok subscription for higher limits: \
-             https://grok.com/supergrok";
+             https://api.deepseek.com/supergrok";
         let wire = format!("API error (status 429 Too Many Requests): {body}");
         // OAuth keeps the IC body (personal plan upgrade is correct).
         assert_eq!(format_rate_limited_user_message(Some(&wire), false), body);
-        // API key must not push grok.com SuperGrok; it gets the team credits / rate-limit tiers copy
+        // API key must not push api.deepseek.com SuperGrok; it gets the team credits / rate-limit tiers copy
         assert_eq!(
             format_rate_limited_user_message(Some(&wire), true),
             RATE_LIMITED_USER_MESSAGE_API_KEY
@@ -729,7 +729,7 @@ mod tests {
         assert_eq!(acp_err.code, acp::Error::auth_required().code);
     }
 
-    /// Regression test: 403 Forbidden must not map to auth_required. The cli-chat-proxy returns 403 for policy denials unrelated to the caller's credentials.
+    /// Regression test: 403 Forbidden must not map to auth_required. The model-proxy returns 403 for policy denials unrelated to the caller's credentials.
     /// Examples: content-safety blocks like SAFETY_CHECK_TYPE_DATA_LEAKAGE, ZDR-gated operations, remote settings blocks.
     /// Mapping these to auth_required makes the desktop app tear down the session and start silent re-auth on -32000. That can race with invalid_grant_threshold to wipe auth.json.
     #[test]

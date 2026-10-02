@@ -1,5 +1,5 @@
 use super::*;
-use prod_mc_cli_chat_proxy_types::feedback_types::{
+use prod_mc_model_api_types::feedback_types::{
     ClientType, FeedbackSubmission, FeedbackType, RatingType,
 };
 

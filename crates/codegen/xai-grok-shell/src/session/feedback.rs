@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::signals::SessionSignals;
 use crate::util::probabilistic_sample;
 
-pub use prod_mc_cli_chat_proxy_types::feedback_types::{
+pub use prod_mc_model_api_types::feedback_types::{
     FeedbackHeuristicsConfig, FeedbackMode, TierConfig,
 };
 
@@ -250,7 +250,7 @@ impl FeedbackHeuristics {
 
     /// Preserves the triggered_tiers state and request tracking.
     pub fn update_config(&mut self, config: &FeedbackHeuristicsConfig) {
-        use prod_mc_cli_chat_proxy_types::feedback_types::parse_feedback_mode_str;
+        use prod_mc_model_api_types::feedback_types::parse_feedback_mode_str;
 
         self.enabled = config.enabled;
 

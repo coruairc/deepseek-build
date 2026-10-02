@@ -1971,7 +1971,7 @@ pub(super) async fn run_session(
                         SessionCommand::GetFeedbackContext { turn_number, responds_to } => {
                             let s = session.clone();
                             tokio::task::spawn_local(async move {
-                                use prod_mc_cli_chat_proxy_types::feedback_types::FeedbackToolOutcome;
+                                use prod_mc_model_api_types::feedback_types::FeedbackToolOutcome;
 
                                 let conv = s.chat_state_handle.get_conversation().await;
                                 let turn_idx = turn_number

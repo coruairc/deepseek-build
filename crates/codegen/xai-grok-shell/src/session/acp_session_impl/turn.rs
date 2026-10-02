@@ -2512,7 +2512,7 @@ impl SessionActor {
         req_id: &str,
         snapshot: Option<&TurnDeltaSnapshot>,
         turn_duration_ms: Option<u64>,
-        turn_outcome: prod_mc_cli_chat_proxy_types::feedback_types::TurnOutcome,
+        turn_outcome: prod_mc_model_api_types::feedback_types::TurnOutcome,
     ) {
         if let Some(snap) = snapshot {
             for pr in &snap.delta.prs_created_this_turn {

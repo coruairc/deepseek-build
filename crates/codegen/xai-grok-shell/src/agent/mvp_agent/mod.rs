@@ -637,7 +637,7 @@ pub struct MvpAgent {
     pub(crate) sampling_config: RefCell<SamplingConfig>,
     pub(crate) auth_manager: Arc<AuthManager>,
     pub(crate) models_manager: crate::agent::remote_config::ModelsManager,
-    /// grok.com chat-product catalog (`/rest/modes`) for chat sessions; distinct from `models_manager` (the build `/v1/models` catalog).
+    /// api.deepseek.com chat-product catalog (`/rest/modes`) for chat sessions; distinct from `models_manager` (the build `/v1/models` catalog).
     pub(crate) chat_modes: crate::agent::chat_modes::ChatModesManager,
     /// Single-flight guard for interactive login (device poll / loopback wait).
     /// Owns the active attempt's cancel token and its code/url channels; a new `authenticate` or `x.ai/auth/cancel` cancels the prior attempt.

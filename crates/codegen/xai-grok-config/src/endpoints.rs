@@ -1,6 +1,6 @@
 //! The `[endpoints]` config table, its environment variable overrides, and the URLs resolved from it.
 //!
-//! The auxiliary services (feedback, trace upload, managed config, telemetry) resolve to the cli-chat-proxy.
+//! The auxiliary services (feedback, trace upload, managed config, telemetry) resolve to the model-proxy.
 //! Only API-key inference uses `xai_api_base_url`.
 use serde::{Deserialize, Serialize};
 use xai_grok_env::{PROD_CLI_CHAT_PROXY_BASE_URL, env_bool, env_string};
@@ -30,7 +30,7 @@ pub struct EndpointsConfig {
     /// Env: `GROK_TRACE_UPLOAD_URL`. Where trace uploads go.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trace_upload_url: Option<String>,
-    /// Env: `GROK_TRACE_UPLOAD_BUCKET`. A `gs://` or `s3://` bucket that receives uploads directly, without the proxy.
+    /// Env: `GROK_TRACE_UPLOAD_BUCKET`. A `file://` bucket that receives uploads directly, without the proxy.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trace_upload_bucket: Option<String>,
     /// Env: `GROK_TRACE_UPLOAD_REGION`. AWS region (S3 only).
@@ -130,7 +130,7 @@ impl EndpointsConfig {
         resolved.external_otel_master_switch = external_otel_master_switch;
         resolved
     }
-    /// The cli-chat-proxy base URL for the auxiliary services and for inference with OAuth or session auth.
+    /// The model-proxy base URL for the auxiliary services and for inference with OAuth or session auth.
     pub fn proxy_url(&self) -> String {
         blank_as_unset(&self.cli_chat_proxy_base_url)
             .unwrap_or_else(|| CLI_CHAT_PROXY_BASE_URL_DEFAULT.to_owned())

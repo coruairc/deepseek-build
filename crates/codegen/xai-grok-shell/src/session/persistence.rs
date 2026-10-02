@@ -214,7 +214,7 @@ pub struct UserFeedbackEntry {
     pub dismissed: bool,
     /// The full submission payload (omitted when dismissed)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub submission: Option<prod_mc_cli_chat_proxy_types::feedback_types::FeedbackSubmission>,
+    pub submission: Option<prod_mc_model_api_types::feedback_types::FeedbackSubmission>,
 }
 
 /// Helper for `#[serde(skip_serializing_if)]` on bool fields.

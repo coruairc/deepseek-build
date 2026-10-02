@@ -90,7 +90,7 @@ pub enum Action {
     RetryCreditLimitPrompt,
     /// Open a semantic scrollback link.
     OpenLink(crate::render::osc8::LinkTarget),
-    /// Open grok.com managed connectors, appending session teamId when set.
+    /// Open api.deepseek.com managed connectors, appending session teamId when set.
     OpenManagedConnectors,
     /// Cycle to the next visible link (or highlight the first if none selected).
     OpenNextLink,

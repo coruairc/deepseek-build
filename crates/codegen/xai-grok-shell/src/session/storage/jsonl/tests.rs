@@ -1148,7 +1148,7 @@ async fn test_load_prompts_only_large_session() {
 #[tokio::test]
 async fn test_append_feedback_creates_file_and_persists() {
     use crate::session::persistence::{LocalFeedbackEntry, UserFeedbackEntry};
-    use prod_mc_cli_chat_proxy_types::feedback_types::{
+    use prod_mc_model_api_types::feedback_types::{
         ClientType, FeedbackSubmission, FeedbackType, RatingType,
     };
     let temp_dir = TempDir::new().unwrap();

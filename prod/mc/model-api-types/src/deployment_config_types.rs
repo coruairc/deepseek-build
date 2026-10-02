@@ -1,5 +1,5 @@
 //! Signed deployment-config envelope: the wire contract between the
-//! cli-chat-proxy signer and the client verifier. Shared so a field rename
+//! model-proxy signer and the client verifier. Shared so a field rename
 //! breaks at compile time on both sides instead of silently failing verification.
 
 use serde::{Deserialize, Serialize};

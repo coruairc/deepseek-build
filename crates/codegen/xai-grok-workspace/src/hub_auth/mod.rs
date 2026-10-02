@@ -522,8 +522,8 @@ mod tests {
         let path = write_auth_json(
             dir.path(),
             r#"{
-                "grok-shell": { "key": "eyJ.older", "user_id": "u-old", "refresh_token": "rt1", "oidc_issuer": "https://auth.x.ai", "oidc_client_id": "grok-cli", "expires_at": "2026-01-01T00:00:00Z" },
-                "other": { "key": "eyJ.newer", "user_id": "u-new", "refresh_token": "rt2", "oidc_issuer": "https://auth.x.ai", "expires_at": "2026-06-01T00:00:00Z" },
+                "grok-shell": { "key": "eyJ.older", "user_id": "u-old", "refresh_token": "rt1", "oidc_issuer": "https://api.deepseek.com", "oidc_client_id": "grok-cli", "expires_at": "2026-01-01T00:00:00Z" },
+                "other": { "key": "eyJ.newer", "user_id": "u-new", "refresh_token": "rt2", "oidc_issuer": "https://api.deepseek.com", "expires_at": "2026-06-01T00:00:00Z" },
                 "grok-desktop": { "key": "eyJ.bearer-only", "user_id": "u-app" }
             }"#,
         );
@@ -590,7 +590,7 @@ mod tests {
         let path = write_auth_json(
             dir.path(),
             r#"{
-                "grok-shell": { "key": "eyJ.a", "user_id": "u-a", "refresh_token": "rt", "oidc_issuer": "https://auth.x.ai", "oidc_client_id": "grok-cli" },
+                "grok-shell": { "key": "eyJ.a", "user_id": "u-a", "refresh_token": "rt", "oidc_issuer": "https://api.deepseek.com", "oidc_client_id": "grok-cli" },
                 "grok-desktop": { "key": "eyJ.bearer-only", "user_id": "u-app" }
             }"#,
         );
@@ -646,7 +646,7 @@ mod tests {
                 "email": "test@example.com",
                 "first_name": "Test",
                 "refresh_token": "rt1",
-                "oidc_issuer": "https://auth.x.ai",
+                "oidc_issuer": "https://api.deepseek.com",
                 "oidc_client_id": "c1",
                 "some_future_field": true
             }
@@ -663,7 +663,7 @@ mod tests {
             key: "eyJ.tok".into(),
             user_id: "u1".into(),
             refresh_token: None,
-            oidc_issuer: Some("https://auth.x.ai".into()),
+            oidc_issuer: Some("https://api.deepseek.com".into()),
             oidc_client_id: Some("c1".into()),
             principal_type: None,
             principal_id: None,
@@ -709,7 +709,7 @@ mod tests {
             key: "eyJ.tok".into(),
             user_id: "u1".into(),
             refresh_token: Some("rt".into()),
-            oidc_issuer: Some("https://auth.x.ai".into()),
+            oidc_issuer: Some("https://api.deepseek.com".into()),
             oidc_client_id: None,
             principal_type: None,
             principal_id: None,
@@ -732,7 +732,7 @@ mod tests {
             key: "eyJ.tok".into(),
             user_id: "u1".into(),
             refresh_token: Some("rt".into()),
-            oidc_issuer: Some("https://auth.x.ai".into()),
+            oidc_issuer: Some("https://api.deepseek.com".into()),
             oidc_client_id: Some("c1".into()),
             principal_type: Some("Team".into()),
             principal_id: Some("t1".into()),
@@ -770,7 +770,7 @@ mod tests {
             dir.path(),
             r#"{
             "legacy": { "key": "xai-old", "user_id": "u1" },
-            "oidc": { "key": "eyJ.old", "user_id": "u2", "refresh_token": "rt-old", "oidc_issuer": "https://auth.x.ai" }
+            "oidc": { "key": "eyJ.old", "user_id": "u2", "refresh_token": "rt-old", "oidc_issuer": "https://api.deepseek.com" }
         }"#,
         );
 
@@ -813,7 +813,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = write_auth_json(
             dir.path(),
-            r#"{ "oidc": { "key": "eyJ.theirs", "user_id": "u-new", "refresh_token": "rt-theirs", "oidc_issuer": "https://auth.x.ai" } }"#,
+            r#"{ "oidc": { "key": "eyJ.theirs", "user_id": "u-new", "refresh_token": "rt-theirs", "oidc_issuer": "https://api.deepseek.com" } }"#,
         );
         let event = RefreshEvent {
             access_token: "eyJ.ours".into(),
@@ -874,8 +874,8 @@ mod tests {
         let path = write_auth_json(
             dir.path(),
             r#"{
-            "aaa-stale": { "key": "eyJ.a", "refresh_token": "rt-a", "oidc_issuer": "https://auth.x.ai", "expires_at": "2026-01-01T00:00:00Z" },
-            "zzz-active": { "key": "eyJ.z", "refresh_token": "rt-z", "oidc_issuer": "https://auth.x.ai", "expires_at": "2026-06-01T00:00:00Z" }
+            "aaa-stale": { "key": "eyJ.a", "refresh_token": "rt-a", "oidc_issuer": "https://api.deepseek.com", "expires_at": "2026-01-01T00:00:00Z" },
+            "zzz-active": { "key": "eyJ.z", "refresh_token": "rt-z", "oidc_issuer": "https://api.deepseek.com", "expires_at": "2026-06-01T00:00:00Z" }
         }"#,
         );
 
@@ -887,8 +887,8 @@ mod tests {
         let path = write_auth_json(
             dir.path(),
             r#"{
-            "aaa-with-expiry": { "key": "eyJ.a", "refresh_token": "rt-a", "oidc_issuer": "https://auth.x.ai", "expires_at": "2026-01-01T00:00:00Z" },
-            "zzz-no-expiry": { "key": "eyJ.z", "refresh_token": "rt-z", "oidc_issuer": "https://auth.x.ai" }
+            "aaa-with-expiry": { "key": "eyJ.a", "refresh_token": "rt-a", "oidc_issuer": "https://api.deepseek.com", "expires_at": "2026-01-01T00:00:00Z" },
+            "zzz-no-expiry": { "key": "eyJ.z", "refresh_token": "rt-z", "oidc_issuer": "https://api.deepseek.com" }
         }"#,
         );
         let (key, _) = read_auth_entry(&path).unwrap();
@@ -902,8 +902,8 @@ mod tests {
         let path = write_auth_json(
             dir.path(),
             r#"{
-            "zzz": { "key": "eyJ.z", "refresh_token": "rt-z", "oidc_issuer": "https://auth.x.ai" },
-            "aaa": { "key": "eyJ.a", "refresh_token": "rt-a", "oidc_issuer": "https://auth.x.ai" }
+            "zzz": { "key": "eyJ.z", "refresh_token": "rt-z", "oidc_issuer": "https://api.deepseek.com" },
+            "aaa": { "key": "eyJ.a", "refresh_token": "rt-a", "oidc_issuer": "https://api.deepseek.com" }
         }"#,
         );
 
@@ -957,7 +957,7 @@ mod tests {
         let path = write_auth_json(
             dir.path(),
             r#"{
-            "oidc": { "key": "eyJ.newer", "refresh_token": "rt-newer", "oidc_issuer": "https://auth.x.ai", "expires_at": "2026-06-01T00:00:00Z" }
+            "oidc": { "key": "eyJ.newer", "refresh_token": "rt-newer", "oidc_issuer": "https://api.deepseek.com", "expires_at": "2026-06-01T00:00:00Z" }
         }"#,
         );
 
@@ -992,7 +992,7 @@ mod tests {
         let path = write_auth_json(
             dir.path(),
             r#"{
-            "oidc": { "key": "eyJ.old", "user_id": "u1", "refresh_token": "rt-keep", "oidc_issuer": "https://auth.x.ai" }
+            "oidc": { "key": "eyJ.old", "user_id": "u1", "refresh_token": "rt-keep", "oidc_issuer": "https://api.deepseek.com" }
         }"#,
         );
 
@@ -1026,7 +1026,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = write_auth_json(
             dir.path(),
-            r#"{ "oidc": { "key": "eyJ.tok", "user_id": "u1", "refresh_token": "rt", "oidc_issuer": "https://auth.x.ai", "oidc_client_id": "c1" } }"#,
+            r#"{ "oidc": { "key": "eyJ.tok", "user_id": "u1", "refresh_token": "rt", "oidc_issuer": "https://api.deepseek.com", "oidc_client_id": "c1" } }"#,
         );
         let url = Url::parse("ws://localhost:9988/v1/tools").unwrap();
         let auth = provider(&url, Some(&path), &ProactiveRefreshConfig::default()).unwrap();
@@ -1044,7 +1044,7 @@ mod tests {
             key: "eyJ.tok".into(),
             user_id: "u1".into(),
             refresh_token: Some("rt".into()),
-            oidc_issuer: Some("https://auth.x.ai".into()),
+            oidc_issuer: Some("https://api.deepseek.com".into()),
             oidc_client_id: Some("c1".into()),
             principal_type: Some("Team".into()),
             principal_id: Some("t1".into()),
@@ -1096,7 +1096,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = write_auth_json(
             dir.path(),
-            r#"{ "oidc": { "key": "eyJ.tok", "user_id": "u1", "refresh_token": "rt", "oidc_issuer": "https://auth.x.ai", "oidc_client_id": "c1" } }"#,
+            r#"{ "oidc": { "key": "eyJ.tok", "user_id": "u1", "refresh_token": "rt", "oidc_issuer": "https://api.deepseek.com", "oidc_client_id": "c1" } }"#,
         );
         let refresh = ProactiveRefreshConfig {
             enabled: true,

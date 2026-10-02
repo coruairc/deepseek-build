@@ -202,7 +202,7 @@ pub struct MemoryBackendImpl {
     storage: MemoryStorage,
     /// Embedding config; `None` disables vector search (FTS-only fallback).
     embed_config: Option<xai_grok_config_types::MemoryEmbeddingConfig>,
-    /// API base URL for embedding requests (cli-chat-proxy).
+    /// API base URL for embedding requests (model-proxy).
     embed_base_url: String,
     /// API key for embedding requests.
     embed_api_key: Option<String>,
@@ -1240,7 +1240,7 @@ mod tests {
         let session: xai_grok_tools::types::SharedApiKeyProvider = Arc::new(PanicKey);
 
         let scoped = EndpointScopedCredentials::for_endpoint(
-            "https://api.x.ai/v1",
+            "https://api.deepseek.com/v1",
             |_| true,
             None,
             Some(session),
@@ -1291,7 +1291,7 @@ mod tests {
         let auth: Arc<dyn xai_grok_auth::AuthCredentialProvider> = Arc::new(StubAuth);
         let api_key: xai_grok_tools::types::SharedApiKeyProvider = Arc::new(PanicKey);
         let scoped = EndpointScopedCredentials::for_endpoint(
-            "https://api.x.ai/v1",
+            "https://api.deepseek.com/v1",
             |_| true,
             Some(auth),
             Some(api_key),
@@ -1303,7 +1303,8 @@ mod tests {
             ..Default::default()
         };
         let provider =
-            build_embedding_provider(Some(&config), &scoped, None, "https://api.x.ai/v1").await;
+            build_embedding_provider(Some(&config), &scoped, None, "https://api.deepseek.com/v1")
+                .await;
         assert!(
             provider.is_some(),
             "trusted endpoint must build a provider from the session credential"
@@ -1329,18 +1330,18 @@ mod tests {
         assert!(denied.is_empty(), "untrusted endpoint drops the credential");
 
         let scoped = EndpointScopedCredentials::for_endpoint(
-            "https://api.x.ai/v1",
+            "https://api.deepseek.com/v1",
             |_| true,
             None,
             Some(key()),
         );
         assert!(!scoped.is_empty(), "trusted endpoint keeps the credential");
         assert!(
-            scoped.approved_for("https://API.x.ai/v1"),
+            scoped.approved_for("https://api.deepseek.com/v1"),
             "host casing normalizes"
         );
         assert!(
-            !scoped.approved_for("https://api.x.ai/v2"),
+            !scoped.approved_for("https://api.deepseek.com/v2"),
             "different path rejected"
         );
         assert!(

@@ -806,7 +806,7 @@ impl StorageMode {
         }
         Self::Local
     }
-    /// Resolve from remote settings, enforcing the rule that `Writeback` requires grok.com auth (it syncs session history to the user's account).
+    /// Resolve from remote settings, enforcing the rule that `Writeback` requires api.deepseek.com auth (it syncs session history to the user's account).
     /// This is the single home for that gate.
     /// It is used at boot ([`crate::agent::init`]) and by the post-readiness self-heal (`MvpAgent::reapply_storage_mode`).
     pub(crate) fn from_remote_gated(

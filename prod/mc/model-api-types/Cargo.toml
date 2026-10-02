@@ -1,9 +1,9 @@
 [package]
 license = "Apache-2.0"
-name = "prod-mc-cli-chat-proxy-types"
+name = "prod-mc-model-api-types"
 version = "0.1.0"
 edition.workspace = true
-description = "Lightweight request/response types for cli-chat-proxy API"
+description = "Lightweight request/response types for model-proxy API"
 
 [features]
 default-bazel = []
@@ -13,7 +13,7 @@ chrono = { workspace = true, features = ["serde"] }
 serde = { workspace = true }
 serde_json.workspace = true
 # The canonical requirements-TOML fail_closed parse, shared by the signer
-# (cli-chat-proxy) and the client (xai-grok-config) so they can't drift.
+# (model-proxy) and the client (xai-grok-config) so they can't drift.
 toml.workspace = true
 
 [lints]

@@ -287,17 +287,17 @@ impl ContentController {
 
     // ── Mock storage controls (park-on-401 e2e) ────────────────────────────
 
-    /// Flip the mock `/v1/storage` 401 gate (the auth-outage window).
+    /// Flip the mock `/v1/files` 401 gate (the auth-outage window).
     pub fn set_storage_unauthorized(&self, unauthorized: bool) {
         self.server.set_storage_unauthorized(unauthorized);
     }
 
-    /// Total `/v1/storage` upload attempts, including 401-rejected ones.
+    /// Total `/v1/files` upload attempts, including 401-rejected ones.
     pub fn storage_request_count(&self) -> u32 {
         self.server.storage_request_count()
     }
 
-    /// Snapshot of accepted (HTTP 200) `/v1/storage` uploads.
+    /// Snapshot of accepted (HTTP 200) `/v1/files` uploads.
     pub fn storage_uploads(&self) -> Vec<StorageUpload> {
         self.server.storage_uploads()
     }

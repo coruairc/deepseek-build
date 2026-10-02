@@ -1977,7 +1977,7 @@ mod tests {
             body: String,
             seen: Arc<Mutex<Vec<LoginConfigHeaders>>>,
         }
-        /// Mock cli-chat-proxy serving `GET /v1/login-config` with a fixed status and raw body, recording the request headers it saw.
+        /// Mock model-proxy serving `GET /v1/login-config` with a fixed status and raw body, recording the request headers it saw.
         async fn start_login_config_server(
             status_code: StatusCode,
             body: String,

@@ -1,4 +1,4 @@
-//! Mock `POST /v1/storage`: counts every upload attempt, rejects them all while the 401 gate is
+//! Mock `POST /v1/files`: counts every upload attempt, rejects them all while the 401 gate is
 //! closed, and records the accepted ones.
 
 use std::sync::Mutex;

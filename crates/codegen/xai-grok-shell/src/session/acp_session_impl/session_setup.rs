@@ -360,7 +360,7 @@ impl SessionActor {
         self.persist_announcement_state().await;
     }
     /// Idle threshold for proactive model metadata refresh on session resume.
-    /// A session idle longer than this fetches fresh model config from cli-chat-proxy before the next API request to catch context_window changes.
+    /// A session idle longer than this fetches fresh model config from model-proxy before the next API request to catch context_window changes.
     pub(super) const IDLE_REFRESH_THRESHOLD_SECS: i64 = 600;
     pub(super) fn record_api_request_time(&self) {
         let now_ms = chrono::Utc::now().timestamp_millis();
@@ -368,7 +368,7 @@ impl SessionActor {
             .store(now_ms, std::sync::atomic::Ordering::Relaxed);
     }
     /// Check if the session has been idle and proactively refresh model metadata.
-    /// When idle exceeds `IDLE_REFRESH_THRESHOLD_SECS`, fetches `/models-v2` from cli-chat-proxy.
+    /// When idle exceeds `IDLE_REFRESH_THRESHOLD_SECS`, fetches `/models-v2` from model-proxy.
     /// Skipped for BYOK users (no remote settings, no `/models-v2`).
     #[tracing::instrument(level = "debug", skip_all)]
     pub(super) async fn maybe_refresh_model_metadata_on_resume(&self) {

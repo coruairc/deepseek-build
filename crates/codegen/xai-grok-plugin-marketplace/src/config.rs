@@ -121,7 +121,7 @@ enum SettingsSource {
 
 /// A single entry under `extraKnownMarketplaces` or `known_marketplaces.json`.
 #[derive(Debug, serde::Deserialize)]
-struct SettingsEntry {
+struct MarketplaceEntry {
     source: SettingsSource,
 }
 
@@ -132,7 +132,7 @@ fn extract_marketplace_entries(
     sources: &mut Vec<MarketplaceSource>,
 ) {
     for (name, config) in marketplaces {
-        let entry: SettingsEntry = match SettingsEntry::deserialize(config) {
+        let entry: MarketplaceEntry = match MarketplaceEntry::deserialize(config) {
             Ok(e) => e,
             Err(_) => continue,
         };

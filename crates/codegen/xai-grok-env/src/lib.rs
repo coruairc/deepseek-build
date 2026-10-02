@@ -78,7 +78,7 @@ impl GrokBuildEnvironment {
     pub fn asset_server_url(&self) -> String {
         self.resolve("_ASSET_SERVER_URL", self.endpoints().asset_server_url)
     }
-    /// The relay WebSocket URL (Web Frontend at `grok.com/code` driving a local agent).
+    /// The relay WebSocket URL (Web Frontend at `api.deepseek.com/code` driving a local agent).
     /// Not the cloud-sandbox gateway ([`Self::gateway_ws_url`]); the two speak different protocols.
     pub fn relay_ws_url(&self) -> String {
         self.resolve("_WS_URL", self.endpoints().relay_ws_url)
@@ -235,7 +235,7 @@ mod tests {
         let _first = EnvVarGuard::set(KEY, "first");
         let _second = EnvVarGuard::set(KEY, "second");
     }
-    /// Guards against conflating the relay and gateway endpoints (a relay loop mistakenly connecting to `wss://grok.com/ws/gw/`).
+    /// Guards against conflating the relay and gateway endpoints (a relay loop mistakenly connecting to `wss://api.deepseek.com/ws/gw/`).
     #[test]
     fn relay_and_gateway_urls_are_distinct() {
         assert_ne!(

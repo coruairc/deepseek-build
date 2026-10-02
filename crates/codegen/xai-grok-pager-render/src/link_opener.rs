@@ -447,39 +447,53 @@ mod tests {
 
     #[test]
     fn ensure_query_param_appends_when_missing() {
-        let out = ensure_query_param("https://grok.com/supergrok", "referrer", "grok-build");
-        assert_eq!(out, "https://grok.com/supergrok?referrer=grok-build");
-    }
-
-    #[test]
-    fn ensure_query_param_preserves_existing_value() {
         let out = ensure_query_param(
-            "https://grok.com/supergrok?referrer=other",
-            "referrer",
-            "grok-build",
-        );
-        assert_eq!(out, "https://grok.com/supergrok?referrer=other");
-    }
-
-    #[test]
-    fn ensure_query_param_keeps_other_query_pairs() {
-        let out = ensure_query_param(
-            "https://grok.com/supergrok?heavy=1",
+            "https://api.deepseek.com/supergrok",
             "referrer",
             "grok-build",
         );
         assert_eq!(
             out,
-            "https://grok.com/supergrok?heavy=1&referrer=grok-build"
+            "https://api.deepseek.com/supergrok?referrer=grok-build"
+        );
+    }
+
+    #[test]
+    fn ensure_query_param_preserves_existing_value() {
+        let out = ensure_query_param(
+            "https://api.deepseek.com/supergrok?referrer=other",
+            "referrer",
+            "grok-build",
+        );
+        assert_eq!(out, "https://api.deepseek.com/supergrok?referrer=other");
+    }
+
+    #[test]
+    fn ensure_query_param_keeps_other_query_pairs() {
+        let out = ensure_query_param(
+            "https://api.deepseek.com/supergrok?heavy=1",
+            "referrer",
+            "grok-build",
+        );
+        assert_eq!(
+            out,
+            "https://api.deepseek.com/supergrok?heavy=1&referrer=grok-build"
         );
     }
 
     #[test]
     fn ensure_query_param_preserves_fragment() {
-        // The current remote settings value uses a hash fragment for client-side routing (`grok.com/#supergrok`)
+        // The current remote settings value uses a hash fragment for client-side routing (`api.deepseek.com/#supergrok`)
         // We still want the referrer attached
-        let out = ensure_query_param("https://grok.com/#supergrok", "referrer", "grok-build");
-        assert_eq!(out, "https://grok.com/?referrer=grok-build#supergrok");
+        let out = ensure_query_param(
+            "https://api.deepseek.com/#supergrok",
+            "referrer",
+            "grok-build",
+        );
+        assert_eq!(
+            out,
+            "https://api.deepseek.com/?referrer=grok-build#supergrok"
+        );
     }
 
     #[test]
@@ -490,8 +504,15 @@ mod tests {
 
     #[test]
     fn ensure_query_param_url_encodes_value() {
-        let out = ensure_query_param("https://grok.com/supergrok", "referrer", "grok build");
-        assert_eq!(out, "https://grok.com/supergrok?referrer=grok+build");
+        let out = ensure_query_param(
+            "https://api.deepseek.com/supergrok",
+            "referrer",
+            "grok build",
+        );
+        assert_eq!(
+            out,
+            "https://api.deepseek.com/supergrok?referrer=grok+build"
+        );
     }
 
     #[test]
@@ -555,7 +576,7 @@ mod tests {
 
     #[test]
     fn browser_unavailable_message_includes_full_url() {
-        let url = "https://grok.com/supergrok?referrer=grok-build";
+        let url = "https://api.deepseek.com/supergrok?referrer=grok-build";
         assert_eq!(
             browser_unavailable_message(url),
             format!("{BROWSER_UNAVAILABLE_NOTICE}:\n{url}")
@@ -564,7 +585,7 @@ mod tests {
 
     #[test]
     fn browser_unavailable_line_is_url_first_single_line() {
-        let url = "https://grok.com/supergrok?referrer=grok-build";
+        let url = "https://api.deepseek.com/supergrok?referrer=grok-build";
         let plain = browser_unavailable_line(url, false);
         assert!(plain.starts_with(url), "{plain}");
         assert!(!plain.contains('\n'), "{plain}");

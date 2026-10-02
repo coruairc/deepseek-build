@@ -218,7 +218,7 @@ impl MvpAgent {
                         .resolve_trace_bucket_url()
                         .map(|r| r.value),
                     UploadMethod::Proxy { .. } => Some("proxy-managed".to_string()),
-                    UploadMethod::S3 { bucket, .. } => Some(format!("s3://{bucket}")),
+                    UploadMethod::S3 { bucket, .. } => Some(format!("file://{bucket}")),
                 };
                 match bucket {
                     Some(url) => (Some(method), Some(url)),

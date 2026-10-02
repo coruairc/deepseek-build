@@ -18,7 +18,7 @@ Examples:
   grok mcp add postgres -e DATABASE_URL=postgres://localhost/mydb -- npx -y @modelcontextprotocol/server-postgres
 
   # Add a remote HTTP server
-  grok mcp add --transport http sentry https://mcp.sentry.dev/mcp
+  grok mcp add --transport http sentry https://mcp.example.com/mcp
 
   # Add a remote server with an authentication header
   grok mcp add --transport http api https://mcp.example.com/mcp --header \"Authorization: Bearer YOUR_TOKEN\"

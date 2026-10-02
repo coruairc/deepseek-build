@@ -1,4 +1,4 @@
-//! Mock `POST /v1/feedback`: records every submission and answers in cli-chat-proxy's `FeedbackResponse` shape.
+//! Mock `POST /v1/feedback`: records every submission and answers in model-proxy's `FeedbackResponse` shape.
 //!
 //! Every POST is recorded before the verdict is chosen, so a scripted failure still leaves the body a test can inspect.
 //! Bodies are kept as loose JSON: tests assert parsed values, never the shell's wire struct.

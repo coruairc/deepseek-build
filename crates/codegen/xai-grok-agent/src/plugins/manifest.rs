@@ -748,7 +748,7 @@ mod tests {
 
     fn manifest_with_inline_mcp(servers: serde_json::Value) -> PluginManifest {
         PluginManifest {
-            name: "sentry".into(),
+            name: "example-plugin".into(),
             version: None,
             description: None,
             author: None,
@@ -768,7 +768,7 @@ mod tests {
     #[test]
     fn normalize_inline_mcp_servers_wraps_direct_map() {
         let direct = serde_json::json!({
-            "sentry": { "type": "http", "url": "https://mcp.sentry.dev/mcp" }
+            "example-plugin": { "type": "http", "url": "https://mcp.example.com/mcp" }
         });
         let normalized = normalize_inline_mcp_servers(&direct);
         let servers = normalized
@@ -776,13 +776,13 @@ mod tests {
             .and_then(|v| v.as_object())
             .unwrap();
         assert_eq!(servers.len(), 1);
-        assert!(servers.contains_key("sentry"));
+        assert!(servers.contains_key("example-plugin"));
     }
 
     #[test]
     fn normalize_inline_mcp_servers_idempotent_for_wrapped() {
         let wrapped = serde_json::json!({
-            "mcpServers": { "sentry": { "type": "http", "url": "https://mcp.sentry.dev/mcp" } }
+            "mcpServers": { "example-plugin": { "type": "http", "url": "https://mcp.example.com/mcp" } }
         });
         assert_eq!(normalize_inline_mcp_servers(&wrapped), wrapped);
     }
@@ -790,16 +790,16 @@ mod tests {
     #[test]
     fn mcp_config_path_inline_does_not_suppress_sibling_file() {
         let tmp = tempfile::tempdir().unwrap();
-        let root = tmp.path().join("sentry");
+        let root = tmp.path().join("example-plugin");
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(
             root.join(".mcp.json"),
-            r#"{"mcpServers":{"sentry":{"type":"http","url":"https://mcp.sentry.dev/mcp"}}}"#,
+            r#"{"mcpServers":{"example-plugin":{"type":"http","url":"https://mcp.example.com/mcp"}}}"#,
         )
         .unwrap();
 
         let manifest = manifest_with_inline_mcp(serde_json::json!({
-            "sentry": { "type": "http", "url": "https://mcp.sentry.dev/mcp" }
+            "example-plugin": { "type": "http", "url": "https://mcp.example.com/mcp" }
         }));
 
         let resolved = manifest.mcp_config_path(&root);

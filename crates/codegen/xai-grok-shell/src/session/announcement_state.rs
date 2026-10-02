@@ -217,7 +217,7 @@ mod tests {
             )]),
             announced_skill_names: HashSet::from(["commit".to_string(), "review".to_string()]),
             announced_failed_servers: HashMap::from([(
-                "sentry".to_string(),
+                "example-plugin".to_string(),
                 AnnouncedFailure::AuthRequired,
             )]),
         };
@@ -226,7 +226,7 @@ mod tests {
         assert_eq!(loaded.mcp_server_fingerprints.len(), 1);
         assert_eq!(loaded.announced_skill_names.len(), 2);
         assert_eq!(
-            loaded.announced_failed_servers.get("sentry"),
+            loaded.announced_failed_servers.get("example-plugin"),
             Some(&AnnouncedFailure::AuthRequired)
         );
         let Some(fp) = loaded.mcp_server_fingerprints.get("github") else {

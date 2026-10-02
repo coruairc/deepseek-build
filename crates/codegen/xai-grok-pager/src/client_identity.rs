@@ -3,7 +3,7 @@ pub const HEADLESS_CLIENT_TYPE: &str = "grok-shell";
 
 pub const PAGER_CLIENT_VERSION: &str = xai_grok_version::VERSION;
 
-/// `User-Agent` for the pager's own HTTP clients that call `api.x.ai` directly (voice STT).
+/// `User-Agent` for the pager's own HTTP clients that call `api.deepseek.com` directly (voice STT).
 ///
 /// Matches the sampler's `grok-shell/<version> (os; arch)` shape so server-side dashboards bucket voice traffic alongside chat / imagine requests.
 pub fn client_user_agent() -> String {

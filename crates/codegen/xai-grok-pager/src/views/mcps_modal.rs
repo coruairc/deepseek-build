@@ -44,7 +44,7 @@ pub fn section_key(section: &McpSectionId) -> String {
     }
 }
 
-/// Display label for a section header, e.g. `"Managed by grok.com (3)"`.
+/// Display label for a section header, e.g. `"Managed by api.deepseek.com (3)"`.
 pub fn section_label(section: &McpSectionId, count: usize) -> String {
     match section {
         McpSectionId::Managed => format!("Managed ({count})"),
@@ -57,8 +57,8 @@ pub fn section_label(section: &McpSectionId, count: usize) -> String {
 /// it so the list footer, the overlay footer, and telemetry cannot drift apart.
 pub const MCP_SERVERS_REFRESH_KEY: char = 'r';
 
-/// Base grok.com connectors URL (no team). Prefer [`managed_connectors_url`] when opening.
-pub const MANAGED_SECTION_CONNECTORS_URL: &str = "https://grok.com/connectors";
+/// Base api.deepseek.com connectors URL (no team). Prefer [`managed_connectors_url`] when opening.
+pub const MANAGED_SECTION_CONNECTORS_URL: &str = "https://api.deepseek.com/connectors";
 
 /// Connectors deep link, appending percent-encoded `teamId` when the session is a team principal.
 pub fn managed_connectors_url(team_id: Option<&str>) -> String {
@@ -523,7 +523,7 @@ mod tests {
             "should mention Ctrl+O shortcut: {first}"
         );
         // URL sits alone on the second line, scheme-stripped and bracket-highlighted.
-        assert_eq!(second, "[grok.com/connectors]");
+        assert_eq!(second, "[api.deepseek.com/connectors]");
         assert!(
             !second.contains("https://"),
             "displayed URL should drop the scheme: {second}"
@@ -531,16 +531,19 @@ mod tests {
         let with_team = section_description_lines(&McpSectionId::Managed, Some("team-1"));
         assert_eq!(
             with_team.get(1).map(String::as_str),
-            Some("[grok.com/connectors?teamId=team-1]")
+            Some("[api.deepseek.com/connectors?teamId=team-1]")
         );
     }
 
     #[test]
     fn managed_connectors_url_display_strips_scheme() {
-        assert_eq!(managed_connectors_url_display(None), "grok.com/connectors");
+        assert_eq!(
+            managed_connectors_url_display(None),
+            "api.deepseek.com/connectors"
+        );
         assert_eq!(
             managed_connectors_url_display(Some("team-uuid-1")),
-            "grok.com/connectors?teamId=team-uuid-1"
+            "api.deepseek.com/connectors?teamId=team-uuid-1"
         );
     }
 

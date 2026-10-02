@@ -1437,15 +1437,13 @@ pub(crate) async fn spawn_session_actor(
         "Creating feedback manager"
     );
     let feedback_client_type = match client_type {
-        ClientType::GrokTUI => prod_mc_cli_chat_proxy_types::feedback_types::ClientType::Tui,
-        ClientType::GrokWeb => prod_mc_cli_chat_proxy_types::feedback_types::ClientType::Web,
-        ClientType::Nebula => prod_mc_cli_chat_proxy_types::feedback_types::ClientType::Nebula,
-        ClientType::Extension => {
-            prod_mc_cli_chat_proxy_types::feedback_types::ClientType::Extension
-        }
-        ClientType::Generic => prod_mc_cli_chat_proxy_types::feedback_types::ClientType::Agent,
-        ClientType::Desktop => prod_mc_cli_chat_proxy_types::feedback_types::ClientType::Desktop,
-        ClientType::GrokPager => prod_mc_cli_chat_proxy_types::feedback_types::ClientType::Tui,
+        ClientType::GrokTUI => prod_mc_model_api_types::feedback_types::ClientType::Tui,
+        ClientType::GrokWeb => prod_mc_model_api_types::feedback_types::ClientType::Web,
+        ClientType::Nebula => prod_mc_model_api_types::feedback_types::ClientType::Nebula,
+        ClientType::Extension => prod_mc_model_api_types::feedback_types::ClientType::Extension,
+        ClientType::Generic => prod_mc_model_api_types::feedback_types::ClientType::Agent,
+        ClientType::Desktop => prod_mc_model_api_types::feedback_types::ClientType::Desktop,
+        ClientType::GrokPager => prod_mc_model_api_types::feedback_types::ClientType::Tui,
     };
     let user_cfg = feedback_flags.user;
     let feedback_config = FeedbackManagerConfig {

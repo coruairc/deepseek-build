@@ -58,13 +58,13 @@ pub struct AuthMethodsBuildInputs<'a> {
     /// True if a cached session token is available (either present at startup or recovered via silent refresh).
     pub has_cached_token: bool,
     /// True if enterprise OIDC is configured.
-    /// Mutually exclusive with the default `grok.com` method.
+    /// Mutually exclusive with the default `api.deepseek.com` method.
     pub has_enterprise_oidc: bool,
     /// Required when `has_enterprise_oidc` is true; ignored otherwise.
     pub enterprise_oidc_issuer: Option<&'a str>,
-    /// Optional display label for the login method (`grok.com` or `oidc`).
+    /// Optional display label for the login method (`api.deepseek.com` or `oidc`).
     pub login_label: Option<&'a str>,
-    /// True if `grok_com_config.auth_provider_command` is configured (sets `meta.external_provider = true` on the `grok.com` method).
+    /// True if `grok_com_config.auth_provider_command` is configured (sets `meta.external_provider = true` on the `api.deepseek.com` method).
     pub has_auth_provider_command: bool,
     /// Config pin (`[auth] preferred_method`).
     /// `None` keeps multi-method fallthrough; `Some` is fail-closed (only that method family).
@@ -83,7 +83,7 @@ pub struct BuiltAuthMethods {
 }
 
 /// REGRESSION GUARD: when unpinned and `has_external_api_key` is true, the **first** entry MUST be `xai.api_key`.
-/// Unpinned ordering (when each method is enabled): `xai.api_key` (if `has_external_api_key`) `cached_token` (if `has_cached_token`) exactly one of: `oidc` (if `has_enterprise_oidc`) `grok.com` (otherwise)
+/// Unpinned ordering (when each method is enabled): `xai.api_key` (if `has_external_api_key`) `cached_token` (if `has_cached_token`) exactly one of: `oidc` (if `has_enterprise_oidc`) `api.deepseek.com` (otherwise)
 /// Unpinned `default_auth_method_id`: `cached_token` if `has_cached_token` `xai.api_key` else if `has_external_api_key` `None` otherwise Pinned (`preferred_method`): `ApiKey`: only `xai.api_key` if available; else an empty list and `None` (fail). `Oidc`: `cached_token` (if any) then interactive login; never `xai.api_key`.
 pub fn build_auth_methods(inputs: AuthMethodsBuildInputs<'_>) -> BuiltAuthMethods {
     let AuthMethodsBuildInputs {
@@ -255,7 +255,7 @@ impl AuthMethodKind {
         matches!(self, Self::XaiApiKey)
     }
 
-    /// `true` for session-based methods (cached_token, grok.com, oidc).
+    /// `true` for session-based methods (cached_token, api.deepseek.com, oidc).
     pub(crate) fn is_session_based(self) -> bool {
         matches!(self, Self::CachedToken | Self::GrokCom | Self::Oidc)
     }
@@ -266,7 +266,7 @@ impl AuthMethodKind {
     }
 }
 
-/// `true` for session-based ACP methods (cached_token, grok.com, oidc).
+/// `true` for session-based ACP methods (cached_token, api.deepseek.com, oidc).
 pub(crate) fn is_session_based_method(method_id: &acp::AuthMethodId) -> bool {
     AuthMethodKind::from_id(method_id).is_session_based()
 }
@@ -284,7 +284,7 @@ pub(crate) enum ModelByok {
 }
 /// Whether this session and model combination uses a refreshable session token. Gates on stable inputs, not `Credentials.auth_type`. `model_byok` still excludes genuine per-model BYOK, whose keys are not refreshable.
 /// It must **not** demote a live session to non-refreshable api-key mode. Instead, `Unknown` refreshes only when `endpoint_is_first_party`.
-/// On a first-party host (cli-chat-proxy / first-party API) the session token cannot leak to a third-party BYOK endpoint. A definite `NotByok` always refreshes (it only ever routes to the session endpoint); a definite `Byok` never does.
+/// On a first-party host (model-proxy / first-party API) the session token cannot leak to a third-party BYOK endpoint. A definite `NotByok` always refreshes (it only ever routes to the session endpoint); a definite `Byok` never does.
 pub(crate) fn session_token_auth_gate(
     is_session_based_method: bool,
     model_byok: ModelByok,
@@ -304,7 +304,7 @@ pub const AUTH_ERROR_SESSION_EXPIRED: &str =
 pub const AUTH_ERROR_API_KEY: &str = "Authentication failed. Run `grok login`, set XAI_API_KEY, or add api_key to ~/.grok/config.toml.";
 
 /// Next ACP method id when `cached_token` cannot proceed (missing / expired / legacy WebLogin), or `None` when fallthrough is forbidden.
-/// Unpinned: prefer non-interactive `xai.api_key` when advertiseable, else interactive `grok.com`. Pinned `oidc`: **no** fallthrough to api_key; return `None` so the caller fails auth.
+/// Unpinned: prefer non-interactive `xai.api_key` when advertiseable, else interactive `api.deepseek.com`. Pinned `oidc`: **no** fallthrough to api_key; return `None` so the caller fails auth.
 /// Pinned `api_key` should not reach this path (cached_token is not advertised).
 pub(crate) fn method_id_after_cached_token_unavailable(
     has_external_api_key: bool,
@@ -402,7 +402,7 @@ mod tests {
         );
     }
 
-    /// With no advertiseable API-key credentials, fall to interactive `grok.com`.
+    /// With no advertiseable API-key credentials, fall to interactive `api.deepseek.com`.
     #[test]
     fn after_cached_token_unavailable_falls_to_grok_com_without_api_key() {
         assert_eq!(
@@ -558,7 +558,7 @@ mod tests {
         );
     }
 
-    /// Session-only user (no API key anywhere): cached_token first, then `grok.com`.
+    /// Session-only user (no API key anywhere): cached_token first, then `api.deepseek.com`.
     /// `auth_methods.first()` does NOT need interactive login, so this user also skips the login screen at startup.
     #[test]
     fn session_only_user_first_method_is_cached_token() {
@@ -582,7 +582,7 @@ mod tests {
         );
     }
 
-    /// Brand-new user (no API key, no cached token): only `grok.com` is advertised, and the pager will (correctly) show the login screen.
+    /// Brand-new user (no API key, no cached token): only `api.deepseek.com` is advertised, and the pager will (correctly) show the login screen.
     /// `default_auth_method_id` is None so the pager falls back to the advertised login method.
     #[test]
     fn fresh_user_only_advertises_grok_com_and_requires_login() {
@@ -593,7 +593,7 @@ mod tests {
         assert_eq!(built.methods.len(), 1);
     }
 
-    /// Enterprise OIDC replaces `grok.com` (mutually exclusive).
+    /// Enterprise OIDC replaces `api.deepseek.com` (mutually exclusive).
     /// xai.api_key, when present, still leads.
     #[test]
     fn enterprise_oidc_replaces_grok_com_but_xai_api_key_still_first() {
@@ -619,11 +619,11 @@ mod tests {
                 .methods
                 .iter()
                 .any(|m| AuthMethodKind::from_id(m.id()) == AuthMethodKind::GrokCom),
-            "grok.com and oidc are mutually exclusive",
+            "api.deepseek.com and oidc are mutually exclusive",
         );
     }
 
-    /// `has_auth_provider_command` reaches the `grok.com` method as `meta.external_provider = true`.
+    /// `has_auth_provider_command` reaches the `api.deepseek.com` method as `meta.external_provider = true`.
     /// Pinned here so the pager's `AuthStartMode::Command` path keeps working.
     #[test]
     fn auth_provider_command_sets_external_provider_meta() {
@@ -638,7 +638,7 @@ mod tests {
             .methods
             .iter()
             .find(|m| AuthMethodKind::from_id(m.id()) == AuthMethodKind::GrokCom)
-            .expect("grok.com must be advertised");
+            .expect("api.deepseek.com must be advertised");
         assert_eq!(grok.name(), "Acme Corp");
         let meta = grok.meta().expect("meta should be set");
         assert_eq!(
@@ -705,7 +705,7 @@ mod tests {
             assert!(has_external_api_key);
             let built = build_auth_methods(AuthMethodsBuildInputs {
                 has_external_api_key,
-                // Realistic enterprise user: no cached session token, default grok.com login (no enterprise OIDC)
+                // Realistic enterprise user: no cached session token, default api.deepseek.com login (no enterprise OIDC)
                 has_cached_token: false,
                 ..default_inputs()
             });
@@ -977,7 +977,7 @@ mod tests {
         assert_eq!(
             first_kind(&built.methods),
             Some(AuthMethodKind::GrokCom),
-            "no cached token AND no api key: pager must show login (grok.com first)",
+            "no cached token AND no api key: pager must show login (api.deepseek.com first)",
         );
     }
 

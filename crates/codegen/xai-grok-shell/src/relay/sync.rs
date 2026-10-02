@@ -784,7 +784,7 @@ mod tests {
     #[test]
     fn test_build_share_url_default() {
         let url = build_share_url("test-session-123");
-        assert_eq!(url, "https://grok.com/build/test-session-123");
+        assert_eq!(url, "https://api.deepseek.com/build/test-session-123");
     }
 
     #[test]
@@ -792,7 +792,7 @@ mod tests {
         let url = build_share_url("01937d8a-1234-7abc-9def-0123456789ab");
         assert_eq!(
             url,
-            "https://grok.com/build/01937d8a-1234-7abc-9def-0123456789ab"
+            "https://api.deepseek.com/build/01937d8a-1234-7abc-9def-0123456789ab"
         );
     }
 

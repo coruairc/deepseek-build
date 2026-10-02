@@ -109,7 +109,7 @@ pub(in crate::agent::remote_config) fn resolve_models_cache_scope(
 /// Re-resolve the scope for the commit gate under the fetch-time mode (so the
 /// origin reflects what was actually fetched), while reading live disk auth
 /// for the identity. Re-deriving the mode from live auth would flip the origin
-/// (e.g. proxy to api.x.ai) in the just-logged-in / sign-out window and wrongly
+/// (e.g. proxy to api.deepseek.com) in the just-logged-in / sign-out window and wrongly
 /// abandon a good catalog; the identity still owns real credential changes.
 pub(in crate::agent::remote_config) fn resolve_live_models_cache_scope(
     fetch_auth: ModelFetchAuth,

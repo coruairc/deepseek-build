@@ -1021,38 +1021,44 @@ pub(crate) mod tests {
         let mcp_json = tmp.path().join(".mcp.json");
         std::fs::write(
             &mcp_json,
-            r#"{"mcpServers":{"sentry":{"type":"http","url":"https://mcp.sentry.dev/mcp"}}}"#,
+            r#"{"mcpServers":{"example-plugin":{"type":"http","url":"https://mcp.example.com/mcp"}}}"#,
         )
         .unwrap();
 
-        let mut dp = make_discovered("sentry", PluginScope::User, true);
+        let mut dp = make_discovered("example-plugin", PluginScope::User, true);
         dp.mcp_config_path = Some(mcp_json);
         dp.manifest.mcp_servers = Some(PathOrInline::Inline(serde_json::json!({
-            "sentry": { "type": "http", "url": "https://mcp.sentry.dev/mcp" }
+            "example-plugin": { "type": "http", "url": "https://mcp.example.com/mcp" }
         })));
 
-        let reg = PluginRegistry::from_discovered(vec![dp], &[], &["sentry".to_string()]);
-        let plugin = reg.get("sentry").unwrap();
+        let reg = PluginRegistry::from_discovered(vec![dp], &[], &["example-plugin".to_string()]);
+        let plugin = reg.get("example-plugin").unwrap();
         assert_eq!(
             plugin.mcp_server_count, 1,
             "same server in both .mcp.json and inline must dedupe to 1"
         );
-        assert_eq!(reg.mcp_server_owner("sentry"), Some("sentry"));
+        assert_eq!(
+            reg.mcp_server_owner("example-plugin"),
+            Some("example-plugin")
+        );
     }
 
     #[test]
     fn mcp_count_from_inline_direct_map() {
         use super::super::manifest::PathOrInline;
 
-        let mut dp = make_discovered("sentry", PluginScope::User, true);
+        let mut dp = make_discovered("example-plugin", PluginScope::User, true);
         dp.manifest.mcp_servers = Some(PathOrInline::Inline(serde_json::json!({
-            "sentry": { "type": "http", "url": "https://mcp.sentry.dev/mcp" }
+            "example-plugin": { "type": "http", "url": "https://mcp.example.com/mcp" }
         })));
 
-        let reg = PluginRegistry::from_discovered(vec![dp], &[], &["sentry".to_string()]);
-        let plugin = reg.get("sentry").unwrap();
+        let reg = PluginRegistry::from_discovered(vec![dp], &[], &["example-plugin".to_string()]);
+        let plugin = reg.get("example-plugin").unwrap();
         assert_eq!(plugin.mcp_server_count, 1);
-        assert_eq!(reg.mcp_server_owner("sentry"), Some("sentry"));
+        assert_eq!(
+            reg.mcp_server_owner("example-plugin"),
+            Some("example-plugin")
+        );
     }
 
     #[test]

@@ -1,6 +1,6 @@
 //! Local, network-free replacement for the deleted `xai-grok-voice` crate.
 //!
-//! The upstream voice crate spoke to `wss://api.x.ai/v1/stt` and has been
+//! The upstream voice crate spoke to `wss://api.deepseek.com/v1/stt` and has been
 //! removed. This module keeps the same public surface the pager already used so
 //! the build stays green, but it opens no sockets: [`run_voice_pipeline`] only
 //! drains commands, [`input_device_info`] always reports that capture is

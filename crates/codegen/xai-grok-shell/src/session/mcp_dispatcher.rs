@@ -845,14 +845,14 @@ mod tests {
         let ev = McpClientEvent::HandshakeFailed {
             server: "linear".to_string(),
             // Internal service names and full length must pass through untouched: the UI shows the raw error
-            reason: "cli-chat-proxy returned 502".to_string(),
+            reason: "model-proxy returned 502".to_string(),
         };
         let payload = build_payload("sess1", &key, &ev);
         assert_eq!(payload.status, McpServerStatus::Unavailable);
         assert_eq!(payload.reason, McpServerStatusReason::HandshakeFailed);
         let detail = payload.detail.expect("detail set on handshake failure");
         assert_eq!(
-            detail, "cli-chat-proxy returned 502",
+            detail, "model-proxy returned 502",
             "reason must be passed through verbatim, got: {detail}",
         );
     }

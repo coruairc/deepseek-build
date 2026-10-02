@@ -13,8 +13,8 @@ chrono = { workspace = true, features = ["serde"] }
 dunce = { workspace = true }
 fs2 = { workspace = true }
 indexmap = { workspace = true }
-# Shared signed deployment-config envelope contract with the cli-chat-proxy signer.
-prod-mc-cli-chat-proxy-types = { path = "../../../prod/mc/cli-chat-proxy-types" }
+# Shared signed deployment-config envelope contract with the model-proxy signer.
+prod-mc-model-api-types = { path = "../../../prod/mc/model-api-types" }
 ring = { workspace = true }
 semver = { workspace = true }
 serde = { workspace = true }

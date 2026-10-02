@@ -1814,12 +1814,12 @@ mod tests {
                     "xAI Official",
                     "https://github.com/xai-org/plugin-marketplace.git"
                 ),
-                "sentry"
+                "example-plugin"
             ),
             "xAI Official (pin: sentry@xai-org/plugin-marketplace)"
         );
         assert_eq!(
-            candidate_label(&local_source("Local Dev", "/tmp/p"), "sentry"),
+            candidate_label(&local_source("Local Dev", "/tmp/p"), "example-plugin"),
             "Local Dev (pin: sentry@local/local-dev)"
         );
     }
@@ -1861,7 +1861,7 @@ mod tests {
     #[test]
     fn name_not_found_error_hints_local_dir_and_add_source() {
         let err = MarketplaceInstallError::NameNotFound {
-            name: "sentry".into(),
+            name: "example-plugin".into(),
             skipped_sources: vec![],
         };
         let msg = err.to_string();
@@ -1873,7 +1873,7 @@ mod tests {
     #[test]
     fn name_not_found_error_reports_skipped_sources() {
         let err = MarketplaceInstallError::NameNotFound {
-            name: "sentry".into(),
+            name: "example-plugin".into(),
             skipped_sources: vec!["Flaky Remote".into()],
         };
         let msg = err.to_string();
@@ -1886,7 +1886,7 @@ mod tests {
     #[test]
     fn name_ambiguous_error_lists_candidates_and_pin_hint() {
         let err = MarketplaceInstallError::NameAmbiguous {
-            name: "sentry".into(),
+            name: "example-plugin".into(),
             candidates: vec!["xAI Official (pin: sentry@xai-org/plugin-marketplace)".into()],
         };
         let msg = err.to_string();
@@ -2001,8 +2001,10 @@ mod tests {
             git_source("xAI Official", OFFICIAL_URL),
             local_source("Local Dev", "/tmp/p"),
         ];
-        let err = plan_install(&sources, "sentry", Some("acme/repo"), |_| Ok(Vec::new()))
-            .expect_err("acme/repo is not a registered source");
+        let err = plan_install(&sources, "example-plugin", Some("acme/repo"), |_| {
+            Ok(Vec::new())
+        })
+        .expect_err("acme/repo is not a registered source");
         match err {
             MarketplaceInstallError::UnknownQualifier {
                 qualifier,
@@ -2060,7 +2062,7 @@ mod tests {
         ];
         let err = plan_install(
             &sources,
-            "sentry",
+            "example-plugin",
             Some("xai-org/plugin-marketplace"),
             |_| Ok(Vec::new()),
         )
@@ -2082,7 +2084,7 @@ mod tests {
         let sources = [git_source("xAI Official", OFFICIAL_URL)];
         let err = plan_install(
             &sources,
-            "sentry",
+            "example-plugin",
             Some("xai-org/plugin-marketplace"),
             |_| Ok(vec![mp_entry("other")]),
         )
@@ -2092,7 +2094,7 @@ mod tests {
                 name,
                 source_display,
             } => {
-                assert_eq!(name, "sentry");
+                assert_eq!(name, "example-plugin");
                 assert_eq!(source_display, "xAI Official");
             }
             other => panic!("expected QualifiedNameNotFound, got: {other}"),
@@ -2104,7 +2106,7 @@ mod tests {
         let sources = [git_source("xAI Official", OFFICIAL_URL)];
         let err = plan_install(
             &sources,
-            "sentry",
+            "example-plugin",
             Some("xai-org/plugin-marketplace"),
             |_| Err("network down".to_string()),
         )
@@ -2131,11 +2133,11 @@ mod tests {
             &sources,
             "SeNtRy",
             Some("xai-org/plugin-marketplace"),
-            |_| Ok(vec![mp_entry("sentry")]),
+            |_| Ok(vec![mp_entry("example-plugin")]),
         )
         .expect("resolves the official source");
         assert_eq!(plan.source_index, 1);
-        assert_eq!(plan.entry.name, "sentry");
+        assert_eq!(plan.entry.name, "example-plugin");
         assert_eq!(plan.entry.relative_path, "plugins/sentry");
         assert!(plan.other_copies_note.is_none());
         assert!(plan.skipped_sources.is_empty());
@@ -2147,11 +2149,13 @@ mod tests {
             git_source("Third A", "https://github.com/acme/a.git"),
             git_source("Third B", "https://github.com/acme/b.git"),
         ];
-        let err = plan_install(&sources, "sentry", None, |_| Ok(vec![mp_entry("sentry")]))
-            .expect_err("two non-official sources provide sentry");
+        let err = plan_install(&sources, "example-plugin", None, |_| {
+            Ok(vec![mp_entry("example-plugin")])
+        })
+        .expect_err("two non-official sources provide sentry");
         match err {
             MarketplaceInstallError::NameAmbiguous { name, candidates } => {
-                assert_eq!(name, "sentry");
+                assert_eq!(name, "example-plugin");
                 assert_eq!(
                     candidates,
                     vec![
@@ -2170,10 +2174,12 @@ mod tests {
             git_source("Third Party", "https://github.com/acme/x.git"),
             git_source("xAI Official", OFFICIAL_URL),
         ];
-        let plan = plan_install(&sources, "sentry", None, |_| Ok(vec![mp_entry("sentry")]))
-            .expect("official source wins the tie");
+        let plan = plan_install(&sources, "example-plugin", None, |_| {
+            Ok(vec![mp_entry("example-plugin")])
+        })
+        .expect("official source wins the tie");
         assert_eq!(plan.source_index, 1);
-        assert_eq!(plan.entry.name, "sentry");
+        assert_eq!(plan.entry.name, "example-plugin");
         let note = plan
             .other_copies_note
             .expect("note set when other copies exist");
@@ -2184,14 +2190,19 @@ mod tests {
     #[test]
     fn plan_install_bare_name_partial_scan_when_only_source_skipped() {
         let sources = [git_source("Flaky Remote", "https://github.com/acme/x.git")];
-        let err = plan_install(&sources, "sentry", None, |_| Err("boom".to_string()))
-            .expect_err("only source failed to sync");
+        let err = plan_install(
+            &sources,
+            "example-plugin",
+            None,
+            |_| Err("boom".to_string()),
+        )
+        .expect_err("only source failed to sync");
         match err {
             MarketplaceInstallError::PartialScan {
                 name,
                 skipped_sources,
             } => {
-                assert_eq!(name, "sentry");
+                assert_eq!(name, "example-plugin");
                 assert_eq!(skipped_sources, vec!["Flaky Remote".to_string()]);
             }
             other => panic!("expected PartialScan, got: {other}"),
@@ -2204,11 +2215,11 @@ mod tests {
             git_source("Flaky Remote", "https://github.com/acme/a.git"),
             git_source("Good Remote", "https://github.com/acme/b.git"),
         ];
-        let err = plan_install(&sources, "sentry", None, |source| {
+        let err = plan_install(&sources, "example-plugin", None, |source| {
             if source.name == "Flaky Remote" {
                 Err("sync failed".to_string())
             } else {
-                Ok(vec![mp_entry("sentry")])
+                Ok(vec![mp_entry("example-plugin")])
             }
         })
         .expect_err("a skipped source must block selecting a non-official match");
@@ -2217,7 +2228,7 @@ mod tests {
                 name,
                 skipped_sources,
             } => {
-                assert_eq!(name, "sentry");
+                assert_eq!(name, "example-plugin");
                 assert_eq!(skipped_sources, vec!["Flaky Remote".to_string()]);
             }
             other => panic!("expected PartialScan, got: {other}"),
@@ -2230,16 +2241,16 @@ mod tests {
             git_source("xAI Official", OFFICIAL_URL),
             git_source("Flaky Remote", "https://github.com/acme/a.git"),
         ];
-        let plan = plan_install(&sources, "sentry", None, |source| {
+        let plan = plan_install(&sources, "example-plugin", None, |source| {
             if source.name == "xAI Official" {
-                Ok(vec![mp_entry("sentry")])
+                Ok(vec![mp_entry("example-plugin")])
             } else {
                 Err("sync failed".to_string())
             }
         })
         .expect("official match is decisive even when another source is skipped");
         assert_eq!(plan.source_index, 0);
-        assert_eq!(plan.entry.name, "sentry");
+        assert_eq!(plan.entry.name, "example-plugin");
         assert_eq!(plan.skipped_sources, vec!["Flaky Remote".to_string()]);
     }
 
@@ -2249,9 +2260,9 @@ mod tests {
             local_source("Local Dev", "/tmp/p"),
             git_source("Flaky Remote", "https://github.com/acme/a.git"),
         ];
-        let err = plan_install(&sources, "sentry", None, |source| {
+        let err = plan_install(&sources, "example-plugin", None, |source| {
             if matches!(&source.kind, SourceKind::Local { .. }) {
-                Ok(vec![mp_entry("sentry")])
+                Ok(vec![mp_entry("example-plugin")])
             } else {
                 Err("sync failed".to_string())
             }
@@ -2262,7 +2273,7 @@ mod tests {
                 name,
                 skipped_sources,
             } => {
-                assert_eq!(name, "sentry");
+                assert_eq!(name, "example-plugin");
                 assert_eq!(skipped_sources, vec!["Flaky Remote".to_string()]);
             }
             other => panic!("expected PartialScan, got: {other}"),
@@ -2276,11 +2287,11 @@ mod tests {
             git_source("Third B", "https://github.com/acme/b.git"),
             git_source("Flaky Remote", "https://github.com/acme/c.git"),
         ];
-        let err = plan_install(&sources, "sentry", None, |source| {
+        let err = plan_install(&sources, "example-plugin", None, |source| {
             if source.name == "Flaky Remote" {
                 Err("sync failed".to_string())
             } else {
-                Ok(vec![mp_entry("sentry")])
+                Ok(vec![mp_entry("example-plugin")])
             }
         })
         .expect_err("ambiguous matches under a partial scan must fail closed");
@@ -2289,7 +2300,7 @@ mod tests {
                 name,
                 skipped_sources,
             } => {
-                assert_eq!(name, "sentry");
+                assert_eq!(name, "example-plugin");
                 assert_eq!(skipped_sources, vec!["Flaky Remote".to_string()]);
             }
             other => panic!("expected PartialScan, got: {other}"),

@@ -228,9 +228,9 @@ mod tests {
     #[test]
     fn parse_bare_name() {
         assert_eq!(
-            parse_marketplace_ref("sentry"),
+            parse_marketplace_ref("example-plugin"),
             Some(MarketplaceRef {
-                name: "sentry".into(),
+                name: "example-plugin".into(),
                 qualifier: None,
             })
         );
@@ -241,7 +241,7 @@ mod tests {
         assert_eq!(
             parse_marketplace_ref("sentry@xai-org/plugin-marketplace"),
             Some(MarketplaceRef {
-                name: "sentry".into(),
+                name: "example-plugin".into(),
                 qualifier: Some("xai-org/plugin-marketplace".into()),
             })
         );
@@ -252,7 +252,7 @@ mod tests {
         assert_eq!(
             parse_marketplace_ref("sentry@local/local-dev"),
             Some(MarketplaceRef {
-                name: "sentry".into(),
+                name: "example-plugin".into(),
                 qualifier: Some("local/local-dev".into()),
             })
         );
@@ -536,11 +536,11 @@ mod tests {
     fn bare_name_single_match_selected() {
         let pairs = [(
             git_source("src", "https://github.com/o/r.git"),
-            entry("sentry"),
+            entry("example-plugin"),
         )];
         let scanned = scanned_entries(&pairs);
         assert_eq!(
-            select_bare_name("sentry", &scanned),
+            select_bare_name("example-plugin", &scanned),
             Ok(BareNameSelection {
                 chosen: 0,
                 other_count: 0,
@@ -556,7 +556,7 @@ mod tests {
         )];
         let scanned = scanned_entries(&pairs);
         assert_eq!(
-            select_bare_name("sentry", &scanned),
+            select_bare_name("example-plugin", &scanned),
             Ok(BareNameSelection {
                 chosen: 0,
                 other_count: 0,
@@ -569,19 +569,19 @@ mod tests {
         let pairs = [
             (
                 git_source("Third Party", "https://github.com/acme/marketplace.git"),
-                entry("sentry"),
+                entry("example-plugin"),
             ),
             (
                 git_source(
                     "xAI Official",
                     "https://github.com/xai-org/plugin-marketplace.git",
                 ),
-                entry("sentry"),
+                entry("example-plugin"),
             ),
         ];
         let scanned = scanned_entries(&pairs);
         assert_eq!(
-            select_bare_name("sentry", &scanned),
+            select_bare_name("example-plugin", &scanned),
             Ok(BareNameSelection {
                 chosen: 1,
                 other_count: 1,
@@ -594,16 +594,16 @@ mod tests {
         let pairs = [
             (
                 git_source("Third Party A", "https://github.com/acme/a.git"),
-                entry("sentry"),
+                entry("example-plugin"),
             ),
             (
                 git_source("Third Party B", "https://github.com/acme/b.git"),
-                entry("sentry"),
+                entry("example-plugin"),
             ),
         ];
         let scanned = scanned_entries(&pairs);
         assert_eq!(
-            select_bare_name("sentry", &scanned),
+            select_bare_name("example-plugin", &scanned),
             Err(BareNameError::Ambiguous {
                 matched: vec![0, 1]
             })
@@ -618,19 +618,19 @@ mod tests {
                     "Official Mirror A",
                     "https://github.com/xai-org/plugin-marketplace.git",
                 ),
-                entry("sentry"),
+                entry("example-plugin"),
             ),
             (
                 git_source(
                     "Official Mirror B",
                     "git@github.com:xai-org/plugin-marketplace.git",
                 ),
-                entry("sentry"),
+                entry("example-plugin"),
             ),
         ];
         let scanned = scanned_entries(&pairs);
         assert_eq!(
-            select_bare_name("sentry", &scanned),
+            select_bare_name("example-plugin", &scanned),
             Err(BareNameError::Ambiguous {
                 matched: vec![0, 1]
             })
@@ -645,7 +645,7 @@ mod tests {
         )];
         let scanned = scanned_entries(&pairs);
         assert_eq!(
-            select_bare_name("sentry", &scanned),
+            select_bare_name("example-plugin", &scanned),
             Err(BareNameError::NotFound)
         );
     }

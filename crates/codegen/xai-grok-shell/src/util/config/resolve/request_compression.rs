@@ -5,7 +5,7 @@ use std::sync::RwLock;
 use xai_grok_config_types::RemoteRequestEncoding;
 use xai_grok_sampler::RequestCompression;
 
-/// Base URL of the cli-chat-proxy whose `/v1/settings` listed `zstd` in
+/// Base URL of the model-proxy whose `/v1/settings` listed `zstd` in
 /// `accept_request_encodings`. `None` until one does. One slot on purpose: a
 /// process fetches settings from a single proxy, and if a second one ever
 /// advertised, the first would fall back to plain JSON (exact-origin match),
@@ -66,7 +66,7 @@ mod tests {
             ("http://localhost:11434/v1", Some(prod), plain),
             ("http://127.0.0.1:8080/v1", Some(prod), plain),
             ("https://api.openai.com/v1", Some(prod), plain),
-            ("https://api.x.ai/v1", Some(prod), plain),
+            ("https://api.deepseek.com/v1", Some(prod), plain),
         ] {
             assert_eq!(
                 request_compression_for(base_url, zstd_origin),

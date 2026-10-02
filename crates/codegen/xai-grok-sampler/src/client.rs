@@ -2620,7 +2620,7 @@ mod tests {
                     header(&headers, CONTENT_TYPE),
                     "{route}: the encoding wraps a JSON body"
                 );
-                // cli-chat-proxy rejects a zstd body it cannot attribute from headers.
+                // model-proxy rejects a zstd body it cannot attribute from headers.
                 assert!(
                     header(&headers, HeaderName::from_static("x-grok-model-override"))
                         .is_some_and(|model| !model.is_empty()),
@@ -3164,7 +3164,7 @@ mod tests {
 
     /// Regression: `api_key` seeds `default_headers` with `Authorization: Bearer ...`.
     /// With a `bearer_resolver` also set, `post()` must produce exactly one `Authorization` header on the wire.
-    /// `RequestBuilder::header(AUTHORIZATION, ...)` appends rather than replaces, causing two identical headers and a 400 from cli-chat-proxy.
+    /// `RequestBuilder::header(AUTHORIZATION, ...)` appends rather than replaces, causing two identical headers and a 400 from model-proxy.
     #[test]
     fn post_emits_single_authorization_with_api_key_and_bearer_resolver() {
         let cfg = SamplerConfig {

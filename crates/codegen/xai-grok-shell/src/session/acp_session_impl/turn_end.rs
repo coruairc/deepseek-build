@@ -2,7 +2,7 @@
 
 use super::turn_end_hooks::{cancel_details, cancel_reason_for_completion};
 use super::*;
-use prod_mc_cli_chat_proxy_types::feedback_types;
+use prod_mc_model_api_types::feedback_types;
 
 impl SessionActor {
     /// Emit a cosmetic `Plan` update at turn end to clear stale spinners.

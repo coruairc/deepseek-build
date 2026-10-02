@@ -23,7 +23,7 @@ pub enum AuthScheme {
     XApiKey,
 }
 
-/// Set by the shell: `Zstd` only toward the cli-chat-proxy that advertised it.
+/// Set by the shell: `Zstd` only toward the model-proxy that advertised it.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum RequestCompression {

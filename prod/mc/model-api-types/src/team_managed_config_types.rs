@@ -1,4 +1,4 @@
-//! JSON types for cli-chat-proxy's `/v1/team/{team_id}/managed-config` routes;
+//! JSON types for model-proxy's `/v1/team/{team_id}/managed-config` routes;
 //! the documents written here are served to CLIs by `/v1/deployment/config`.
 
 use chrono::{DateTime, Utc};

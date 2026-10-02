@@ -100,7 +100,7 @@ pub(super) fn should_strip_side_call_reasoning(
 
 impl SessionActor {
     /// Request skeleton for an auxiliary call that replays the parent conversation under the parent's `prompt_cache_key`.
-    /// Temperature stays unset: cli-chat-proxy may inject a `thinking` config, and the Messages API then requires temperature == 1.
+    /// Temperature stays unset: model-proxy may inject a `thinking` config, and the Messages API then requires temperature == 1.
     pub(crate) fn parent_cached_request(&self, call: AuxCall) -> ConversationRequest {
         let session_id = self.session_info.id.to_string();
         // Only the Responses mapping sends the cache key

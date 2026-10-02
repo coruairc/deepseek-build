@@ -29,7 +29,7 @@ pub use self::persistence::{
 pub use self::result::{Empty, ExtMethodResult};
 pub use self::share::{ShareSessionRequest, ShareSessionResponse};
 pub use self::user_echo::{CLIENT_USER_MESSAGE_ECHO_META, USER_MESSAGE_ECHO_CAPABILITY};
-pub use prod_mc_cli_chat_proxy_types::feedback_types::{
+pub use prod_mc_model_api_types::feedback_types::{
     ClientType, FeedbackImage, FeedbackTerminalInfo, MAX_FEEDBACK_IMAGE_BYTES,
     MAX_FEEDBACK_IMAGE_TOTAL_BYTES, MAX_FEEDBACK_IMAGES, RatingType, feedback_image_extension,
     validate_feedback_images,

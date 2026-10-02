@@ -181,7 +181,7 @@ struct SessionTokenAuthGate {
     is_session_based: bool,
     model_byok: crate::agent::auth_method::ModelByok,
     /// Whether the request targets a first-party host.
-    /// Lets an `Unknown` BYOK status still refresh against cli-chat-proxy / `*.x.ai` without risking a session-token leak to a third-party BYOK endpoint.
+    /// Lets an `Unknown` BYOK status still refresh against model-proxy / `*.x.ai` without risking a session-token leak to a third-party BYOK endpoint.
     endpoint_is_first_party: bool,
 }
 
@@ -630,7 +630,7 @@ impl SessionActor {
     }
 
     /// Reconstruct a full `SamplerConfig` (with credentials) by combining the actor's `SamplingConfig` and `Credentials`.
-    /// Folds in the URL-derived headers (cli-chat-proxy auth, the staging auth header) so the sampler crate stays URL-agnostic.
+    /// Folds in the URL-derived headers (model-proxy auth, the staging auth header) so the sampler crate stays URL-agnostic.
     pub(super) async fn reconstruct_full_config(&self) -> SamplingConfig {
         #[allow(clippy::items_after_statements)]
         #[derive(Debug)]

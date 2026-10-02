@@ -207,7 +207,7 @@ pub(super) fn record_upload_failure(ctx: &PromptTraceContext, f: UploadFailure<'
     }
 }
 /// Increment when making breaking changes to PromptMetadata structure.
-pub(crate) use prod_mc_cli_chat_proxy_types::{
+pub(crate) use prod_mc_model_api_types::{
     GCS_SCHEMA_VERSION, LocalSandboxTelemetry, PromptMetadata, PromptMetadataParams,
 };
 pub(crate) fn local_sandbox_telemetry() -> Option<LocalSandboxTelemetry> {
@@ -1547,7 +1547,7 @@ fn build_session_state_archive(
 pub(crate) mod tests {
     use super::*;
     use crate::session::persistence::CopiedSessionFile;
-    use prod_mc_cli_chat_proxy_types::PromptMetadata;
+    use prod_mc_model_api_types::PromptMetadata;
     fn bare_prompt_metadata() -> PromptMetadata {
         PromptMetadata::new(PromptMetadataParams {
             schema_version: GCS_SCHEMA_VERSION.to_string(),
@@ -2095,7 +2095,7 @@ pub(crate) mod tests {
             grok_com_config,
         ));
         let base_config = TraceExportConfig {
-            bucket_url: Some("gs://bucket".into()),
+            bucket_url: Some("file://bucket".into()),
             service_account_key: Some("sa-key".into()),
             prefix_dir: None,
             gcs_prefix: None,
@@ -2736,7 +2736,7 @@ pub(crate) mod tests {
         let start = tokio::time::Instant::now();
         upload_subagent_metadata(
             &metadata,
-            "gs://unused",
+            "file://unused",
             UploadMethod::Proxy {
                 proxy_base_url: format!("http://{addr}"),
                 user_token: "test-token".into(),

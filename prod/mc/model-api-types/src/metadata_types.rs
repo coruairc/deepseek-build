@@ -1,7 +1,7 @@
-//! Prompt metadata types shared between the CLI client and the cli-chat-proxy server.
+//! Prompt metadata types shared between the CLI client and the model-proxy server.
 //!
 //! The CLI client serializes `PromptMetadata` and uploads it as `metadata.json` to GCS
-//! via the `/v1/storage` endpoint. The server deserializes it to inject authenticated
+//! via the `/v1/files` endpoint. The server deserializes it to inject authenticated
 //! user identity fields (`user_id`, `user_email`) before forwarding to GCS.
 use serde::{Deserialize, Serialize};
 /// Schema version for the GCS metadata format.

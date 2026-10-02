@@ -25,7 +25,7 @@ pub enum Command {
         /// Ignored (kept for backwards compatibility). OAuth2 is now the only auth method.
         #[arg(long, hide = true)]
         legacy: bool,
-        /// Use Grok OAuth via auth.x.ai.
+        /// Use Grok OAuth via api.deepseek.com.
         #[arg(long = "oauth", alias = "oidc", conflicts_with_all = ["device_auth"])]
         oauth: bool,
         /// Use device-code authentication for headless/remote environments.
@@ -263,7 +263,7 @@ pub struct AgentArgs {
     #[command(flatten)]
     pub headless: HeadlessArgs,
     /// Override the CLI chat proxy base URL.
-    #[arg(long = "cli-chat-proxy-base-url")]
+    #[arg(long = "model-proxy-base-url")]
     pub cli_chat_proxy_base_url: Option<String>,
     /// Override the public xAI API base URL.
     #[arg(long = "xai-api-base-url")]
@@ -350,7 +350,7 @@ pub struct LeaderArgs {
     /// Keep the leader running after the last client disconnects.
     #[arg(long)]
     pub no_exit_on_disconnect: bool,
-    /// Defer the grok.com relay WebSocket until the first headless IPC client registers.
+    /// Defer the api.deepseek.com relay WebSocket until the first headless IPC client registers.
     /// Without this flag the leader connects the relay eagerly at startup.
     /// Passed by leaders auto-spawned from interactive clients (TUI/IDE), which only need the relay if a headless client appears.
     #[arg(long)]

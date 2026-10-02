@@ -40,7 +40,7 @@ struct TraceResult {
     error: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     turns: Option<TraceTurnsReport>,
-    /// `gs://{bucket}/{sid}/`, where the per-turn folders live.
+    /// `file://{bucket}/{sid}/`, where the per-turn folders live.
     #[serde(skip_serializing_if = "Option::is_none")]
     turn_prefix: Option<String>,
     /// Why an upload run ended as a local export; absent for `--local`.

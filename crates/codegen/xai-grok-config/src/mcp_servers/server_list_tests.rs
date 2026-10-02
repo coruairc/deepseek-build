@@ -462,8 +462,8 @@ fn a_skipped_plugin_file_name_does_not_stay_skipped_when_inline_defines_it() {
     std::fs::create_dir_all(&root).expect("plugin root");
     let file = root.join(".mcp.json");
     let cases = [
-        r#"{"mcpServers":{"sentry":{"type":"http","url":"https://file.example/mcp","enabled":false}}}"#,
-        r#"{"mcpServers":{"sentry":{"type":"http"}}}"#,
+        r#"{"mcpServers":{"example-plugin":{"type":"http","url":"https://file.example/mcp","enabled":false}}}"#,
+        r#"{"mcpServers":{"example-plugin":{"type":"http"}}}"#,
     ];
     for file_json in cases {
         std::fs::write(&file, file_json).expect("plugin mcp.json");
@@ -474,7 +474,7 @@ fn a_skipped_plugin_file_name_does_not_stay_skipped_when_inline_defines_it() {
             scope: McpServerScope::Project,
             mcp_config_path: Some(file.clone()),
             inline_mcp_servers: Some(serde_json::json!({
-                "sentry": { "type": "http", "url": "https://inline.example/mcp" }
+                "example-plugin": { "type": "http", "url": "https://inline.example/mcp" }
             })),
         };
 
@@ -487,17 +487,17 @@ fn a_skipped_plugin_file_name_does_not_stay_skipped_when_inline_defines_it() {
         let servers = list
             .servers
             .into_iter()
-            .filter(|server| server.name == "sentry")
+            .filter(|server| server.name == "example-plugin")
             .collect::<Vec<_>>();
         let skipped = list
             .skipped
             .into_iter()
-            .filter(|skipped| skipped.name == "sentry")
+            .filter(|skipped| skipped.name == "example-plugin")
             .collect::<Vec<_>>();
         assert_eq!(
             (
                 vec![McpServerDetails {
-                    name: "sentry".to_owned(),
+                    name: "example-plugin".to_owned(),
                     transport: McpServerTransport::Http {
                         url: "https://inline.example/mcp".to_owned(),
                         headers: Vec::new(),

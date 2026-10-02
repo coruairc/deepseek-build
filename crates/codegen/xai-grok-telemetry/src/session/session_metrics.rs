@@ -174,11 +174,11 @@ pub enum TraceUploadReason {
     ZdrTeam,
     /// `[telemetry] trace_upload = false` in config.
     FeatureOff,
-    /// No grok.com auth or deployment key.
+    /// No api.deepseek.com auth or deployment key.
     NoCredentials,
     /// Direct-to-bucket S3 upload.
     DirectS3,
-    /// Proxy mode via grok.com auth.
+    /// Proxy mode via api.deepseek.com auth.
     Proxy,
     /// Direct GCS with service account key.
     DirectGcs,

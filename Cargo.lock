@@ -7366,7 +7366,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "prod-mc-cli-chat-proxy-types"
+name = "prod-mc-model-api-types"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -12631,7 +12631,7 @@ dependencies = [
  "dunce",
  "fs2",
  "indexmap",
- "prod-mc-cli-chat-proxy-types",
+ "prod-mc-model-api-types",
  "ring",
  "semver",
  "serde",
@@ -13535,7 +13535,7 @@ dependencies = [
  "libc",
  "objc2 0.6.3",
  "parking_lot",
- "prod-mc-cli-chat-proxy-types",
+ "prod-mc-model-api-types",
  "regex",
  "serde",
  "serde_json",
@@ -13600,7 +13600,7 @@ dependencies = [
  "obfstr",
  "parking_lot",
  "pretty_assertions",
- "prod-mc-cli-chat-proxy-types",
+ "prod-mc-model-api-types",
  "regex",
  "reqwest 0.12.24",
  "reqwest-middleware 0.4.2",

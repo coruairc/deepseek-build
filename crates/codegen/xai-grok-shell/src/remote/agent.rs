@@ -8,7 +8,7 @@ use xai_grok_login::{AuthManager, GrokComConfig};
 
 // Re-export sandbox API types from proxy types crate for convenience.
 // Sorted alphabetically; see sandbox_types.rs for logical grouping.
-pub use prod_mc_cli_chat_proxy_types::{
+pub use prod_mc_model_api_types::{
     SandboxCreateEnvironmentRequest, SandboxEnvironment, SandboxEnvironmentResponse,
     SandboxEnvironmentVariable, SandboxEnvironmentWithMetadata, SandboxForkRequest,
     SandboxForkResponse, SandboxForkedSession, SandboxHibernateResponse,

@@ -51,7 +51,7 @@ use crate::session::mcp_servers::{MCP_TOOL_NAME_DELIMITER, McpClient, McpState, 
 pub struct McpListRequest {
     #[serde(default)]
     pub session_id: Option<String>,
-    /// When false, bypass cache and refetch from cli-chat-proxy, then sync into live sessions so `search_tool` sees new tools.
+    /// When false, bypass cache and refetch from model-proxy, then sync into live sessions so `search_tool` sees new tools.
     /// Use after OAuth enrollment or disconnect.
     #[serde(default = "default_true")]
     pub cache: bool,

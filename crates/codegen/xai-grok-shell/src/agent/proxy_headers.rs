@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
-/// Every authenticated request to cli-chat-proxy (web search, image gen, and any future tools that go through the proxy) must carry these headers.
-/// Headers injected: `x-grok-client-version`: required by the proxy's version-gate check. Uses `client_version` when provided, otherwise falls back to cli-chat-proxy compile-time `CARGO_PKG_VERSION`.
-/// `X-XAI-Token-Auth` / `x-authenticateresponse`: required by the cli-chat-proxy auth middleware when the `base_url` is a known proxy URL. Existing entries are never overwritten so callers can pre-set a value.
+/// Every authenticated request to model-proxy (web search, image gen, and any future tools that go through the proxy) must carry these headers.
+/// Headers injected: `x-grok-client-version`: required by the proxy's version-gate check. Uses `client_version` when provided, otherwise falls back to model-proxy compile-time `CARGO_PKG_VERSION`.
+/// `X-XAI-Token-Auth` / `x-authenticateresponse`: required by the model-proxy auth middleware when the `base_url` is a known proxy URL. Existing entries are never overwritten so callers can pre-set a value.
 pub(crate) fn inject_proxy_headers(
     headers: &mut IndexMap<String, String>,
     client_version: Option<&str>,

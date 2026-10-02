@@ -4,7 +4,7 @@ use axum::routing::get;
 
 use super::*;
 
-/// A mock cli-chat-proxy that serves `GET /settings` with a fixed status and body.
+/// A mock model-proxy that serves `GET /settings` with a fixed status and body.
 async fn start_settings_server(
     status: StatusCode,
     body: String,

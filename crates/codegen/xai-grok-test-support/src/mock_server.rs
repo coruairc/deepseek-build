@@ -812,12 +812,12 @@ impl MockInferenceServer {
         self.state.log.last_system_prompt()
     }
 
-    /// While closed, every `/v1/storage` upload is rejected with 401.
+    /// While closed, every `/v1/files` upload is rejected with 401.
     pub fn set_storage_unauthorized(&self, unauthorized: bool) {
         self.state.storage.set_unauthorized(unauthorized);
     }
 
-    /// Total `/v1/storage` upload attempts seen, including 401-rejected ones.
+    /// Total `/v1/files` upload attempts seen, including 401-rejected ones.
     pub fn storage_request_count(&self) -> u32 {
         self.state.storage.request_count()
     }
@@ -1076,7 +1076,7 @@ impl MockInferenceServer {
                 }),
             )
             .route(
-                "/v1/storage",
+                "/v1/files",
                 post({
                     let storage = state.storage.clone();
                     move |headers: HeaderMap, body: axum::body::Bytes| {
@@ -1133,27 +1133,21 @@ impl MockInferenceServer {
                     }
                 }),
             )
-            // 404 reads as an old proxy, so the shell falls back to a plain `POST /v1/storage`
+            // 404 reads as an old proxy, so the shell falls back to a plain `POST /v1/files`
+            .route("/v1/files/exists", get(|| async { StatusCode::NOT_FOUND }))
             .route(
-                "/v1/storage/exists",
-                get(|| async { StatusCode::NOT_FOUND }),
-            )
-            .route(
-                "/v1/storage/batch_exists",
+                "/v1/files/batch_exists",
                 post(|| async { StatusCode::NOT_FOUND }),
             )
             .route(
-                "/v1/storage/batch_upload_json",
+                "/v1/files/batch_upload_json",
                 post(|| async { StatusCode::NOT_FOUND }),
             )
             .route(
-                "/v1/storage/batch_upload",
+                "/v1/files/batch_upload",
                 post(|| async { StatusCode::NOT_FOUND }),
             )
-            .route(
-                "/v1/storage/limits",
-                get(|| async { StatusCode::NOT_FOUND }),
-            )
+            .route("/v1/files/limits", get(|| async { StatusCode::NOT_FOUND }))
             .layer(axum::extract::DefaultBodyLimit::max(256 * 1024 * 1024))
     }
 }

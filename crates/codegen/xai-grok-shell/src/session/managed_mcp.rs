@@ -1675,17 +1675,17 @@ Authorization = "Bearer org2-token"
         use xai_grok_agent::plugins::manifest::{PathOrInline, PluginManifest};
 
         let tmp = tempfile::tempdir().unwrap();
-        let plugin_root = tmp.path().join("sentry");
+        let plugin_root = tmp.path().join("example-plugin");
         std::fs::create_dir_all(&plugin_root).unwrap();
         let mcp_json = plugin_root.join(".mcp.json");
         std::fs::write(
             &mcp_json,
-            r#"{"mcpServers":{"sentry":{"type":"http","url":"https://mcp.sentry.dev/mcp"}}}"#,
+            r#"{"mcpServers":{"example-plugin":{"type":"http","url":"https://mcp.example.com/mcp"}}}"#,
         )
         .unwrap();
 
         let manifest = PluginManifest {
-            name: "sentry".into(),
+            name: "example-plugin".into(),
             version: None,
             description: None,
             author: None,
@@ -1698,11 +1698,11 @@ Authorization = "Bearer org2-token"
             agents: None,
             hooks: None,
             mcp_servers: Some(PathOrInline::Inline(serde_json::json!({
-                "sentry": { "type": "http", "url": "https://mcp.sentry.dev/mcp" }
+                "example-plugin": { "type": "http", "url": "https://mcp.example.com/mcp" }
             }))),
             lsp_servers: None,
         };
-        let id = PluginId::new(PluginScope::User, &plugin_root, "sentry");
+        let id = PluginId::new(PluginScope::User, &plugin_root, "example-plugin");
         let dp = DiscoveredPlugin {
             manifest,
             id,
@@ -1719,7 +1719,8 @@ Authorization = "Bearer org2-token"
             lsp_config_path: None,
             conflict: None,
         };
-        let registry = PluginRegistry::from_discovered(vec![dp], &[], &["sentry".to_string()]);
+        let registry =
+            PluginRegistry::from_discovered(vec![dp], &[], &["example-plugin".to_string()]);
 
         let cwd = tempfile::tempdir().unwrap();
         let compat = xai_grok_tools::types::compat::CompatConfig::default();
@@ -1727,7 +1728,7 @@ Authorization = "Bearer org2-token"
 
         let sentry_count = sourced
             .iter()
-            .filter(|(s, _)| mcp_server_name(s) == "sentry")
+            .filter(|(s, _)| mcp_server_name(s) == "example-plugin")
             .count();
         assert_eq!(
             sentry_count, 1,
@@ -1743,17 +1744,17 @@ Authorization = "Bearer org2-token"
         use xai_grok_agent::plugins::manifest::{PathOrInline, PluginManifest};
 
         let tmp = tempfile::tempdir().unwrap();
-        let plugin_root = tmp.path().join("sentry");
+        let plugin_root = tmp.path().join("example-plugin");
         std::fs::create_dir_all(&plugin_root).unwrap();
         let mcp_json = plugin_root.join(".mcp.json");
         std::fs::write(
             &mcp_json,
-            r#"{"mcpServers":{"sentry":{"type":"http","url":"https://file.example/mcp"}}}"#,
+            r#"{"mcpServers":{"example-plugin":{"type":"http","url":"https://file.example/mcp"}}}"#,
         )
         .unwrap();
 
         let manifest = PluginManifest {
-            name: "sentry".into(),
+            name: "example-plugin".into(),
             version: None,
             description: None,
             author: None,
@@ -1766,11 +1767,11 @@ Authorization = "Bearer org2-token"
             agents: None,
             hooks: None,
             mcp_servers: Some(PathOrInline::Inline(serde_json::json!({
-                "sentry": { "type": "http", "url": "https://inline.example/mcp" }
+                "example-plugin": { "type": "http", "url": "https://inline.example/mcp" }
             }))),
             lsp_servers: None,
         };
-        let id = PluginId::new(PluginScope::User, &plugin_root, "sentry");
+        let id = PluginId::new(PluginScope::User, &plugin_root, "example-plugin");
         let dp = DiscoveredPlugin {
             manifest,
             id,
@@ -1787,7 +1788,8 @@ Authorization = "Bearer org2-token"
             lsp_config_path: None,
             conflict: None,
         };
-        let registry = PluginRegistry::from_discovered(vec![dp], &[], &["sentry".to_string()]);
+        let registry =
+            PluginRegistry::from_discovered(vec![dp], &[], &["example-plugin".to_string()]);
 
         let cwd = tempfile::tempdir().unwrap();
         let compat = xai_grok_tools::types::compat::CompatConfig::default();
@@ -1796,7 +1798,7 @@ Authorization = "Bearer org2-token"
         let sentry: Vec<&acp::McpServer> = sourced
             .iter()
             .map(|(s, _)| s)
-            .filter(|s| mcp_server_name(s) == "sentry")
+            .filter(|s| mcp_server_name(s) == "example-plugin")
             .collect();
         assert_eq!(
             sentry.len(),

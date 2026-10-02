@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use base64::Engine;
 
 // Shared wire types with the deployment-config server: a field rename breaks compile on both sides.
-pub use prod_mc_cli_chat_proxy_types::{
+pub use prod_mc_model_api_types::{
     MANAGED_CONFIG_NONCE_ECHO_HEADER, MANAGED_IDENTITY_TYP, MANAGED_POLICY_TYP,
     ManagedIdentityClaim, SignatureEnvelope, SignedPayload, is_server_nonce_shape, now_unix,
 };
