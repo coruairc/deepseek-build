@@ -80,7 +80,7 @@ pub enum Action {
     DeleteCurrentSessionAnswered {
         confirmed: bool,
     },
-    /// Open grok.com in the browser for SuperGrok subscription upsell.
+    /// Open the subscription page in the browser.
     OpenSupergrokUrl,
     /// Re-check subscription status via the shell's `x.ai/auth/check_subscription`.
     CheckSubscription,

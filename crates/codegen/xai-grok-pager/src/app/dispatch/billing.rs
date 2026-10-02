@@ -26,7 +26,7 @@ pub(crate) fn is_credit_limit_error(http_status: Option<u16>, message: &str) -> 
     }
 }
 
-/// The xAI SuperGrok / free-usage upsell modals have been removed.
+/// The former subscription / free-usage upsell modals have been removed.
 /// Kept as a no-op so existing call sites continue to compile.
 pub(super) fn open_free_usage_upsell(_agent: &mut AgentView, _auth_method: Option<String>) {}
 

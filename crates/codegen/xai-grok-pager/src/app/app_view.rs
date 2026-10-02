@@ -1007,7 +1007,7 @@ pub struct AppView {
         std::collections::BTreeSet<(String, xai_grok_telemetry::events::AnnouncementCtaSurface)>,
     /// Access gate from `grok_build_access_gate`. `Some` means blocked.
     pub gate: Option<xai_grok_login::GateInfo>,
-    /// User-friendly subscription tier name (e.g. "SuperGrok", "Free").
+    /// User-friendly subscription tier name (e.g. "Pro", "Free").
     pub subscription_tier: Option<String>,
     /// When the pager started auto-checking subscriptions (for 10-min timeout).
     pub paywall_check_started: Option<std::time::Instant>,

@@ -138,7 +138,7 @@ pub(super) fn handle_settings_update(notif: &acp::ExtNotification, app: &mut App
         );
     }
     // Tier before voice: the same payload may set "API Key" and voice_mode_enabled=false
-    // Always recompute is_api_key_auth from the tier so a later Free/SuperGrok stamp does not leave the API-key bypass or a hidden billing surface stuck
+    // Always recompute is_api_key_auth from the tier so a later free/paid stamp does not leave the API-key bypass or a hidden billing surface stuck
     if let Some(v) = update.subscription_tier_display {
         let was_api_key = app.is_api_key_auth;
         let is_key = super::super::app_view::is_api_key_label(&v);
@@ -468,8 +468,7 @@ pub(super) struct PagerSettingsUpdate {
     /// Malformed input warns and is treated as absent so a bad value never fails the whole `PagerSettingsUpdate` parse.
     #[serde(default, deserialize_with = "deserialize_settings_update_tags")]
     slash_command_tags: Option<Option<std::collections::BTreeMap<String, String>>>,
-    // `announcements` is deliberately NOT consumed here
-    // Every shell writer of remote_settings also emits gen-ordered `x.ai/announcements/update` (emit_announcements_if_changed)
+    // `announcements` is deliberately NOT consumed here (the remote-announcement surface was removed).
     // `None`/omitted (settings-less push, older shell) must leave this process's campaign cache untouched.
     #[serde(default)]
     campaigns: Option<Vec<xai_grok_shell::util::config::CampaignOverride>>,

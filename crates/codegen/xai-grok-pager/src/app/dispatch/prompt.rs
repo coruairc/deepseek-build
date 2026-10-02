@@ -817,7 +817,7 @@ pub(super) fn dispatch_send_prompt_submission(
             .registry()
             .is_restricted(invocation.token)
     {
-        // Restricted commands are no longer upsold (the xAI SuperGrok modal was removed).
+        // Restricted commands are no longer upsold (the upsell modal was removed).
         // Leave the composer text untouched and never fall through to passthrough.
         let _ = (consume_input, login_method_id_from_app);
         return effects;

@@ -695,7 +695,7 @@ impl QuestionViewState {
         }
     }
 
-    /// Activate freeform input for the active question. Such questions (e.g. the SuperGrok upsell) have
+    /// Activate freeform input for the active question. Such questions (e.g. a no-freeform modal) have
     /// no freeform row, so `InputMode` must be unreachable.
     pub fn activate_freeform_input(&mut self) -> String {
         if self.no_freeform {
