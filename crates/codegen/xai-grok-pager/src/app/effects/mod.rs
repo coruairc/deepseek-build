@@ -5372,7 +5372,7 @@ fn format_auth_lines(is_api_key_auth: bool, api_key_env_set: bool) -> String {
             "  Auth method: API key\n"
         };
         return format!(
-            "{method}  Run `grok login` to use your SuperGrok subscription instead.\n"
+            "{method}  Run `grok login` to use your authenticated session instead.\n"
         );
     }
     String::from("  Auth method: OAuth\n")

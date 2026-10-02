@@ -4568,13 +4568,6 @@ impl AppView {
                             }
                             if !has_access && !self.access_gate_shown_logged {
                                 self.access_gate_shown_logged = true;
-                                xai_grok_telemetry::session_ctx::log_event(xai_grok_telemetry::events::SuperGrokUpsellShown {
-                                    source: xai_grok_telemetry::events::SuperGrokUpsell::WelcomeScreen,
-                                    auth_method: self
-                                        .login_method_id
-                                        .as_ref()
-                                        .map(|id| id.0.to_string()),
-                                });
                             }
                             if let Some(tutorial) = self.tutorial.as_mut() {
                                 crate::views::tutorial::render_tutorial(

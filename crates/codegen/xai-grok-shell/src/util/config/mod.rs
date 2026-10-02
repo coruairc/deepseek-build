@@ -14,7 +14,6 @@ mod tips;
 mod worktree;
 
 // Announcement types live in `xai-grok-config`; re-exported so pager type paths keep working.
-pub use xai_grok_config::{AnnouncementCta, RemoteAnnouncement};
 pub use campaigns::{
     CampaignModelsDefault, campaign_driven_models_default, persist_models_default,
     sync_campaign_fields,
@@ -35,6 +34,7 @@ pub use xai_grok_config::effective_config::{
     remote_campaigns_from_settings, set_remote_campaigns_from_settings,
 };
 pub use xai_grok_config::load_effective_config_disk_only;
+pub use xai_grok_config::{AnnouncementCta, RemoteAnnouncement};
 // These types live in `xai-grok-config`; the re-export keeps `crate::util::config::{RemoteSettings, GoalRoleModel}` working
 pub use xai_grok_config_types::{
     CampaignOverride, ConsentGate, ContextualHintsRemote, DisplayRefreshSettings,
