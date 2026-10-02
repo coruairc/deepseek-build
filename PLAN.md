@@ -8,8 +8,22 @@ Scope of this document: findings, keep/rip-out decisions, a phased implementatio
 with diff-size estimates and risks, and the open questions that need a decision before
 Phase 1.
 
-> Naming: the new project name is still the placeholder `<PROJECT_NAME>`. Everything
-> below that renames branding assumes a final name. See [§7 Open questions](#7-open-questions--decisions-needed).
+> Naming: the project name is **`deepseek-build`** (see [`DECISIONS.md`](DECISIONS.md)).
+> Earlier drafts used a `<PROJECT_NAME>` placeholder.
+
+## Implementation progress (updated 2026-10-02)
+
+| Area | Status |
+|------|--------|
+| Phase 0 audit/plan | Complete |
+| Phase 1a egress removal | **Not done** — ~2,923 forbidden host strings remain. |
+| Phase 1b rebrand | **Not done** |
+| Phase 1c egress guard | Done: `scripts/check-egress.sh` (currently red) |
+| Upstream NOTICE | Done |
+| Phase 2 adapter core | Done (`cdbf5aa3`): thinking control, reasoning round-trip + sanitizer, typographic-quote repair, cache helpers, DeepSeek default catalog. |
+| Phase 2 mock-server suite / credential E2E / auto-router | **Not done** |
+| Phase 3 TUI | **Not done** |
+| Phase 4 adapt existing features | **Not done** |
 
 ---
 
