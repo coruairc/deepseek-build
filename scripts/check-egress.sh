@@ -15,14 +15,14 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-PATTERN='gs://|s3://|mixpanel|sentry|x\.ai|grok\.com'
+PATTERN='gs://|s3://|mixpanel|sentry|x\.ai|grok\.com|storage\.googleapis\.com|cli-chat-proxy'
 
 if command -v rg >/dev/null 2>&1; then
-  hits=$(rg --no-heading -n -e "$PATTERN" crates prod third_party \
+  hits=$(rg --no-heading -n -i -e "$PATTERN" crates prod third_party \
     -g '!**/THIRD_PARTY*' -g '!**/NOTICE*' -g '!**/LICENSE*' -g '!**/*.md' \
     2>/dev/null || true)
 else
-  hits=$(grep -rInE "$PATTERN" crates prod third_party 2>/dev/null \
+  hits=$(grep -rIniE "$PATTERN" crates prod third_party 2>/dev/null \
     | grep -vE 'THIRD_PARTY|NOTICE|LICENSE|\.md:' || true)
 fi
 

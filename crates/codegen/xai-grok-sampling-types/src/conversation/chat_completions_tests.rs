@@ -286,9 +286,11 @@ fn tool_choice_presets_map_to_wire_strings() {
         (ConversationToolChoice::None, "none"),
         (ConversationToolChoice::Required, "required"),
     ] {
-        let req = ConversationRequest::from_items(vec![ConversationItem::user("test")])
+        let mut req = ConversationRequest::from_items(vec![ConversationItem::user("test")])
             .with_tools(vec![make_test_tool()])
             .with_tool_choice(choice);
+        // Disable thinking so presets map 1:1; thinking mode downgrades required to auto.
+        req.reasoning_effort = Some(ReasoningEffort::None);
 
         let chat_req: ChatCompletionRequest = req.into();
         let Some(ToolChoice::Preset(preset)) = chat_req.tool_choice else {
@@ -300,15 +302,34 @@ fn tool_choice_presets_map_to_wire_strings() {
 
 #[test]
 fn test_tool_choice_function_to_chat_completion() {
-    let req = ConversationRequest::from_items(vec![ConversationItem::user("test")])
+    let mut req = ConversationRequest::from_items(vec![ConversationItem::user("test")])
         .with_tools(vec![make_test_tool()])
         .with_tool_choice(ConversationToolChoice::Function("read_file".to_string()));
+    // Named tool choices are only accepted outside thinking mode.
+    req.reasoning_effort = Some(ReasoningEffort::None);
 
     let chat_req: ChatCompletionRequest = req.into();
     let ToolChoice::Function { function, .. } = chat_req.tool_choice.unwrap() else {
         panic!("Expected Function tool choice");
     };
     assert_eq!(function.name, "read_file");
+}
+
+/// DeepSeek rejects `required`/named tool choices while thinking is enabled (400), so we
+/// downgrade to `auto` whenever thinking is on — including the unset (server default) case.
+#[test]
+fn required_tool_choice_downgraded_to_auto_in_thinking_mode() {
+    let req = ConversationRequest::from_items(vec![ConversationItem::user("test")])
+        .with_tools(vec![make_test_tool()])
+        .with_tool_choice(ConversationToolChoice::Required);
+
+    let chat_req: ChatCompletionRequest = req.into();
+    let Some(ToolChoice::Preset(preset)) = chat_req.tool_choice else {
+        panic!("expected a preset tool choice");
+    };
+    assert_eq!(preset, "auto");
+    // No effort configured means the field is omitted and the server default (enabled) applies.
+    assert_eq!(chat_req.thinking, None);
 }
 
 #[test]

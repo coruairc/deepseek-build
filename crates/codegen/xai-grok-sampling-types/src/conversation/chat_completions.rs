@@ -215,22 +215,31 @@ pub fn conversation_to_chat_messages(items: Vec<ConversationItem>) -> Vec<ChatRe
     }
 
     // Final-pass sanitizer: guarantee non-empty `reasoning_content` on every assistant
-    // tool-call message before it is replayed to the API.
-    ensure_reasoning_content_for_tool_calls(&mut out);
+    // tool-call message before it is replayed to the API. Callers that also send `tools`
+    // re-run this with `include_plain_assistants = true`.
+    ensure_reasoning_content_for_tool_calls(&mut out, false);
     out
 }
 
 /// Placeholder replayed for an assistant tool-call message whose `reasoning_content` is missing.
 pub const REASONING_PLACEHOLDER: &str = "(reasoning content omitted)";
 
-/// Guarantee non-empty `reasoning_content` on every assistant message that requested tools.
+/// Guarantee non-empty `reasoning_content` on assistant messages before replay.
 ///
 /// In thinking mode DeepSeek requires the reasoning trace to be passed back with a tool-call
-/// chain; omitting it on any intermediate assistant message yields a 400. Messages produced by
-/// older sessions or by non-thinking turns may lack it, so backfill a placeholder.
-pub fn ensure_reasoning_content_for_tool_calls(messages: &mut [ChatRequestMessage]) {
+/// chain; when the request carries `tools`, the docs require it for every prior assistant turn,
+/// including ones where the model did not call a tool. `include_plain_assistants` selects that
+/// stricter mode. Messages produced by older sessions or by non-thinking turns may lack it, so
+/// backfill a placeholder.
+pub fn ensure_reasoning_content_for_tool_calls(
+    messages: &mut [ChatRequestMessage],
+    include_plain_assistants: bool,
+) {
     for msg in messages.iter_mut() {
-        if msg.role != Role::Assistant || msg.tool_calls.is_empty() {
+        if msg.role != Role::Assistant {
+            continue;
+        }
+        if !include_plain_assistants && msg.tool_calls.is_empty() {
             continue;
         }
         let missing = msg
@@ -270,9 +279,14 @@ impl From<ChatResponseMessage> for ConversationItem {
 
 impl From<ConversationRequest> for ChatCompletionRequest {
     fn from(req: ConversationRequest) -> Self {
-        let messages: Vec<ChatRequestMessage> = conversation_to_chat_messages(req.items);
+        let mut messages: Vec<ChatRequestMessage> = conversation_to_chat_messages(req.items);
 
         let tools_is_empty = req.tools.is_empty();
+        if !tools_is_empty {
+            // With `tools` present, DeepSeek requires reasoning_content on every prior assistant
+            // turn, including turns where no tool was called.
+            ensure_reasoning_content_for_tool_calls(&mut messages, true);
+        }
         let tools: Option<Vec<ToolDefinition>> = if tools_is_empty {
             None
         } else {
@@ -290,7 +304,9 @@ impl From<ConversationRequest> for ChatCompletionRequest {
             ReasoningEffort::None => ThinkingConfig::disabled(),
             _ => ThinkingConfig::enabled(),
         });
-        let thinking_enabled = thinking.is_some_and(ThinkingConfig::is_enabled);
+        // When no effort is configured we omit the field, and DeepSeek's server default is
+        // thinking enabled, so treat unset as enabled for the tool_choice downgrade.
+        let thinking_enabled = thinking.is_none_or(ThinkingConfig::is_enabled);
 
         // only set `tool_choice` when there are `tools` to avoid OpenAI client errors.
         // DeepSeek rejects `required`/named tool choices while thinking is enabled (400), so
@@ -395,6 +411,23 @@ mod tests {
                 reasoning_effort: None,
             })]);
         assert_eq!(messages[0].reasoning_content, None);
+    }
+
+    #[test]
+    fn plain_assistant_backfilled_when_request_carries_tools() {
+        let mut messages =
+            conversation_to_chat_messages(vec![ConversationItem::Assistant(AssistantItem {
+                content: Arc::<str>::from("hi"),
+                tool_calls: Vec::new(),
+                model_id: None,
+                model_fingerprint: None,
+                reasoning_effort: None,
+            })]);
+        ensure_reasoning_content_for_tool_calls(&mut messages, true);
+        assert_eq!(
+            messages[0].reasoning_content.as_deref(),
+            Some(REASONING_PLACEHOLDER)
+        );
     }
 
     #[test]

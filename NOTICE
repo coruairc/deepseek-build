@@ -8,11 +8,11 @@ This product is a derivative work of xAI Grok Build.
   Licensed under the Apache License, Version 2.0
   Upstream: https://github.com/xai-org/grok-build
 
-The upstream Apache-2.0 `LICENSE` is preserved in this repository. Portions of
-this repository were modified for the `deepseek-build` project (removal of
-provider-specific and data-upload features, addition of a DeepSeek provider
-adapter, and rebranding). Those modifications are licensed under the
-Apache License, Version 2.0.
+The upstream Apache-2.0 `LICENSE` is preserved in this repository. This project
+derives from the upstream work and is being modified for `deepseek-build`
+(including a DeepSeek provider adapter); such modifications are licensed under
+the Apache License, Version 2.0. At this revision, removal of provider-specific
+and data-upload features is not yet complete.
 
 Third-party and vendored components remain under their original licenses. See:
 

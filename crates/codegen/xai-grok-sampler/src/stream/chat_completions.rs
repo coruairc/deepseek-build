@@ -18,13 +18,13 @@ use crate::events::{SamplingChannel, SamplingErrorInfo, SamplingEvent};
 use crate::metrics::InferenceLatencyStats;
 use crate::types::RequestId;
 
-/// Normalize typographic Unicode punctuation that DeepSeek occasionally emits inside tool-call
-/// JSON string literals, which makes the JSON malformed.
+/// Normalize typographic Unicode double quotes and non-breaking spaces that DeepSeek occasionally
+/// emits inside tool-call JSON. Curly single quotes are deliberately left alone: JSON string
+/// delimiters are `"`, so rewriting `’`/`‘` can only mutate legitimate string content.
 fn normalize_typographic_punctuation(s: &str) -> String {
     s.chars()
         .map(|c| match c {
             '\u{201C}' | '\u{201D}' => '"',
-            '\u{2018}' | '\u{2019}' => '\'',
             '\u{00A0}' => ' ',
             other => other,
         })
