@@ -5,6 +5,7 @@ use crate::app::dispatch::session::lifecycle::{
     handle_session_created, handle_session_failed, handle_worktree_session_failed,
     maybe_create_home_session,
 };
+use crate::xai_grok_voice;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 fn key_event(code: KeyCode, mods: KeyModifiers) -> Event {
     Event::Key(KeyEvent {

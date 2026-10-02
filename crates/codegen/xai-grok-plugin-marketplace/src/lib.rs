@@ -22,18 +22,6 @@ pub use error::MarketplaceError;
 pub use scanner::scan_marketplace;
 pub use types::*;
 
-/// Display name of the official xAI marketplace source.
-pub const OFFICIAL_SOURCE_NAME: &str = "xAI Official";
-
-/// Git URL of the official xAI marketplace source, auto-registered on first run.
-pub const OFFICIAL_SOURCE_GIT_URL: &str = "https://github.com/xai-org/plugin-marketplace.git";
-
-/// Whether `url` is the official xAI marketplace source.
-/// Case, a `www.` prefix, a trailing `/` or `.git`, and HTTPS/SSH forms are normalized before comparing.
-pub fn is_official_source_url(url: &str) -> bool {
-    canonical_github_owner_repo(url).as_deref() == Some("xai-org/plugin-marketplace")
-}
-
 /// Normalized lowercase `owner/repo` from a GitHub URL (HTTPS/http/ssh/scp, `www.`, trailing `.git`/`/`), or `None` if not a GitHub URL.
 pub(crate) fn canonical_github_owner_repo(url: &str) -> Option<String> {
     let s = url.trim();
@@ -54,67 +42,5 @@ pub(crate) fn canonical_github_owner_repo(url: &str) -> Option<String> {
         None
     } else {
         Some(owner_repo.to_string())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn is_official_matches_canonical_https() {
-        assert!(is_official_source_url(OFFICIAL_SOURCE_GIT_URL));
-        assert!(is_official_source_url(
-            "https://github.com/xai-org/plugin-marketplace"
-        ));
-    }
-
-    #[test]
-    fn is_official_matches_ssh_form() {
-        assert!(is_official_source_url(
-            "git@github.com:xai-org/plugin-marketplace.git"
-        ));
-        assert!(is_official_source_url(
-            "git@github.com:xai-org/plugin-marketplace"
-        ));
-        assert!(is_official_source_url(
-            "ssh://git@github.com/xai-org/plugin-marketplace.git"
-        ));
-        assert!(is_official_source_url(
-            "ssh://git@github.com/xai-org/plugin-marketplace"
-        ));
-    }
-
-    #[test]
-    fn is_official_rejects_unrelated_urls() {
-        assert!(!is_official_source_url(
-            "https://github.com/anthropics/claude-plugins-official.git"
-        ));
-        assert!(!is_official_source_url(
-            "https://github.com/xai-org/some-other-repo.git"
-        ));
-        assert!(!is_official_source_url(""));
-    }
-
-    #[test]
-    fn is_official_matches_noncanonical_forms() {
-        assert!(is_official_source_url(
-            "https://GitHub.com/XAI-org/Plugin-Marketplace"
-        ));
-        assert!(is_official_source_url(
-            "https://github.com/xai-org/plugin-marketplace/"
-        ));
-        assert!(is_official_source_url(
-            "https://github.com/xai-org/plugin-marketplace.git/"
-        ));
-        assert!(is_official_source_url(
-            "http://github.com/xai-org/plugin-marketplace"
-        ));
-        assert!(is_official_source_url(
-            "https://www.github.com/xai-org/plugin-marketplace.git"
-        ));
-        assert!(is_official_source_url(
-            "git@github.com:XAI-org/plugin-marketplace.git"
-        ));
     }
 }

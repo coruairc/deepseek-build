@@ -1,5 +1,6 @@
 //! Tests for the action router, model switching, slash commands, and other cross-cutting dispatch behavior.
 use super::*;
+use crate::xai_grok_voice;
 #[test]
 fn auth_copy_dispatch_preserves_all_delivery_states() {
     for delivery in [

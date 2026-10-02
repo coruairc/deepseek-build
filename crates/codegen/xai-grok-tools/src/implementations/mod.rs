@@ -12,13 +12,11 @@ pub mod search_tool;
 pub mod skills;
 pub mod task_output;
 pub mod use_tool;
-pub mod web_search;
 pub use grok_build::bash::{BashError, BashToolInput};
 pub use grok_build::{
     AskUserQuestionTool, BashTool, EnterPlanModeTool, ExitPlanModeTool, GrepTool, KillTaskTool,
     ListDirTool, ReadFileTool, SearchReplaceTool, SendSubagentMessageDisposition,
     SendSubagentMessageTool, TaskOutputTool, TaskTool, TodoWriteTool, WaitTasksTool, WebFetchTool,
-    WebSearchTool,
 };
 pub use memory::{MemoryGetImpl, MemorySearchImpl};
 pub use opencode::{
@@ -33,4 +31,3 @@ pub fn extra_write_qualified_ids() -> Vec<String> {
 }
 pub use search_tool::{SEARCH_TOOL_NAME, SearchTool};
 pub use use_tool::{USE_TOOL_NAME, UseTool, UseToolInput};
-pub use web_search::WebSearchConfig;

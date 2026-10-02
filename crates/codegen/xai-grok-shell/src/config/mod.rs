@@ -643,21 +643,13 @@ pub struct ToolsConfig {
     /// When `true`, all tools (including `read_file`) filter gitignored files.
     /// When `false` (default), each tool picks its own default.
     pub respect_gitignore: bool,
-    /// Restrict tools whose xAI API requires server-side artifact storage (currently just the video tools).
-    /// Without a valid `[tools.zdr_video_output_s3]` bucket they stay advertised but return setup guidance at call time.
-    /// Intended for ZDR-bound teams via `~/.grok/managed_config.toml`. Defaults to `false`.
-    pub disable_zdr_incompatible_tools: bool,
-    /// Optional S3 bucket config for ZDR video output. When present (and valid), video tools presign an upload URL and pass it to the API.
-    /// The generated video then lands in a team-owned bucket instead of being downloaded locally. Only effective when `disable_zdr_incompatible_tools` is `true`. Populated from `[tools.zdr_video_output_s3]` in config.
-    pub zdr_video_output_s3:
-        Option<xai_grok_tools::implementations::grok_build::video_gen::ZdrVideoOutputS3Config>,
     pub media_gen: MediaGenToolsConfig,
 }
 impl ToolsConfig {
     pub const ENV_MAX_PARALLEL_IMAGE_GEN_CALLS: &'static str = "GROK_MAX_PARALLEL_IMAGE_GEN_CALLS";
     pub const ENV_MAX_PARALLEL_VIDEO_GEN_CALLS: &'static str = "GROK_MAX_PARALLEL_VIDEO_GEN_CALLS";
-    /// Resolve the final tools config, in priority order: Env vars `GROK_RESPECT_GITIGNORE` and `GROK_DISABLE_ZDR_INCOMPATIBLE_TOOLS` (`0`/`false` off, `1`/`true` on). `[tools]` block from the merged effective config.
-    /// Defaults (both `false`). Fields are read individually. A malformed `[tools.zdr_video_output_s3]` therefore cannot wipe `disable_zdr_incompatible_tools` or any other tools flag.
+    /// Resolve the final tools config, in priority order: Env var `GROK_RESPECT_GITIGNORE` (`0`/`false` off, `1`/`true` on). `[tools]` block from the merged effective config.
+    /// Defaults to `false`.
     pub fn resolve(config: &toml::Value) -> Self {
         let tools = config.get("tools");
         let mut result = Self {
@@ -665,33 +657,6 @@ impl ToolsConfig {
                 .and_then(|t| t.get("respect_gitignore"))
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false),
-            disable_zdr_incompatible_tools: tools
-                .and_then(|t| t.get("disable_zdr_incompatible_tools"))
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false),
-            zdr_video_output_s3: tools
-                .and_then(|t| t.get("zdr_video_output_s3"))
-                .and_then(|s3_val| match s3_val
-                    .clone()
-                    .try_into::<
-                        xai_grok_tools::implementations::grok_build::video_gen::ZdrVideoOutputS3Config,
-                    >()
-                {
-                    Ok(cfg) if cfg.is_valid() => Some(cfg),
-                    Ok(_) => {
-                        tracing::warn!(
-                                "tools.zdr_video_output_s3 is present but incomplete; ignoring ZDR video output config"
-                            );
-                        None
-                    }
-                    Err(e) => {
-                        tracing::warn!(
-                                error = %e,
-                                "tools.zdr_video_output_s3 failed to parse; ignoring ZDR video output config"
-                            );
-                        None
-                    }
-                }),
             media_gen: MediaGenToolsConfig {
                 max_parallel_image_gen_calls: tools
                     .and_then(|t| t.get("media_gen"))
@@ -709,15 +674,6 @@ impl ToolsConfig {
             }
             Ok("1") | Ok("true") => {
                 result.respect_gitignore = true;
-            }
-            _ => {}
-        }
-        match std::env::var("GROK_DISABLE_ZDR_INCOMPATIBLE_TOOLS").as_deref() {
-            Ok("0") | Ok("false") => {
-                result.disable_zdr_incompatible_tools = false;
-            }
-            Ok("1") | Ok("true") => {
-                result.disable_zdr_incompatible_tools = true;
             }
             _ => {}
         }

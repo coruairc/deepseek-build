@@ -6,6 +6,7 @@ use crate::app::agent_view::{AgentView, McpInitProgress, PromptMode};
 use crate::app::bundle::BundleState;
 use crate::scrollback::state::ScrollbackState;
 use crate::test_util::test_terminal;
+use crate::xai_grok_voice;
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };

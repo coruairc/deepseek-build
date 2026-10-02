@@ -7,12 +7,12 @@
 //!
 //! Resolved per request: the agent's refreshing manager in direct-spawn mode.
 //! In leader mode, a non-refreshing one adopts the agent's rotated `auth.json` token under the file lock (see [`crate::acp`]).
+use crate::xai_grok_voice::{SharedVoiceAuth, SttRoutes, VoiceAuthError, VoiceAuthProvider};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use xai_grok_tools::types::SharedApiKeyProvider;
 use xai_grok_tools::types::api_key_provider::SideCallBearerError;
-use xai_grok_voice::{SharedVoiceAuth, SttRoutes, VoiceAuthError, VoiceAuthProvider};
 /// Adapts the shell's `ApiKeyProvider` onto [`VoiceAuthProvider`].
 ///
 /// Resolves a token per request (never a static snapshot), so a long session follows the `AuthManager` instead of pinning a token that 401s.

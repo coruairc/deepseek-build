@@ -20,6 +20,7 @@
 //! partial yet keeps its target so its one final lands as the next draft.
 mod auth;
 mod handle;
+pub use crate::xai_grok_voice::maybe_run_capture_subprocess;
 pub use auth::build_stt_routes;
 pub use handle::handle_tagged_voice_event;
 #[cfg(test)]
@@ -31,4 +32,3 @@ pub(crate) use handle::{
     VoiceInterimCommit, commit_interim_into_prompt, merge_voice_fragment, prompt_blank_for_voice,
     space_voice_fragment,
 };
-pub use xai_grok_voice::maybe_run_capture_subprocess;

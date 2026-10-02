@@ -2189,91 +2189,12 @@ impl MvpAgent {
         );
         (id.clone(), new_config)
     }
-    /// Whether the current session is a personal grok.com account on a gated tier (free / X Basic). The Imagine tools stay advertised to the model but are flagged tier-restricted.
-    /// They then short-circuit at call time with the SuperGrok upsell prose (see `ImageGenConfig`/`VideoGenConfig`'s `tier_restricted`).
-    /// Fails **open** (returns `false`) whenever we can't positively confirm a restricted personal tier. So this client gate is a UX optimization (a clean in-chat upsell instead of a doomed request), never the security boundary. The only difference is the absent-tier policy (the pager hides on `None`, we fail open on `None`).
-    fn is_tier_restricted_capability(&self) -> bool {
-        let Some(auth) = self.auth_manager.current() else {
-            return false;
-        };
-        if !auth.is_xai_auth() || auth.team_id.is_some() {
-            return false;
-        }
-        let tier = self
-            .cfg
-            .borrow()
-            .remote_settings
-            .as_ref()
-            .and_then(|rs| rs.subscription_tier_display.clone())
-            .or_else(|| jwt_tier_claim(&auth.key));
-        tier.as_deref().is_some_and(crate::tier::is_restricted_tier_name)
-    }
-    /// Direct to `xai_api_base_url` so IC authenticates and meters Imagine per user; the bearer rule lives in
-    /// `media_tool_config`.
-    pub(super) fn prepare_image_gen_config(
-        &self,
-    ) -> xai_grok_tools::implementations::grok_build::image_gen::ImageGenConfig {
-        use xai_grok_tools::implementations::grok_build::image_gen::ImageGenConfig;
-        if self.sampling_config.borrow().api_key.is_none() {
-            return ImageGenConfig::Disabled;
-        }
-        crate::agent::media_tool_config::image_gen_config(
-            &self.cfg.borrow(),
-            &self.media_tool_credentials(),
-        )
-    }
-    /// `tier_restricted` keeps the tools advertised so the model can nudge; the call short-circuits with the SuperGrok
-    /// upsell. Fails open; see `is_tier_restricted_capability`.
-    fn media_tool_credentials(
-        &self,
-    ) -> crate::agent::media_tool_config::MediaToolCredentials {
-        crate::agent::media_tool_config::MediaToolCredentials {
-            static_bearer: self.auth_manager.side_call_bearer().ok(),
-            tier_restricted: self.is_tier_restricted_capability(),
-        }
-    }
     /// The tool talks directly to the deployer service.
     pub(super) fn prepare_app_builder_deployer_config(
         &self,
     ) -> xai_grok_tools::implementations::grok_build::app_builder::AppBuilderDeployerConfig {
         use xai_grok_tools::implementations::grok_build::app_builder::AppBuilderDeployerConfig;
         AppBuilderDeployerConfig::Disabled
-    }
-    /// See [`Self::prepare_image_gen_config`] for the bearer rule.
-    pub(super) fn prepare_video_gen_config(
-        &self,
-    ) -> xai_grok_tools::implementations::grok_build::video_gen::VideoGenConfig {
-        use xai_grok_tools::implementations::grok_build::video_gen::VideoGenConfig;
-        if self.sampling_config.borrow().api_key.is_none() {
-            return VideoGenConfig::Disabled;
-        }
-        crate::agent::media_tool_config::video_gen_config(
-            &self.cfg.borrow(),
-            &self.media_tool_credentials(),
-        )
-    }
-    pub(super) fn prepare_web_search_sampling_config(&self) -> Option<SamplingConfig> {
-        let model_id = self.cfg.borrow().web_search_model.clone();
-        let models = self.models_manager.models();
-        let session = self.current_or_buffered_auth();
-        let alpha_test_key = self.cfg.borrow().endpoints.alpha_test_key.clone();
-        let client_version = self.cfg.borrow().client_version.clone();
-        let mut cfg = config::resolve_web_search_sampling_config(
-            &model_id,
-            &models,
-            session.as_ref().map(|a| a.key.as_str()),
-            self.cfg.borrow().grok_com_config.api_key_auth_disabled(),
-            alpha_test_key.clone(),
-            client_version,
-            &self.cfg.borrow().endpoints,
-        )?;
-        crate::agent::proxy_headers::inject_proxy_headers(
-            &mut cfg.extra_headers,
-            cfg.client_version.as_deref(),
-            alpha_test_key.as_deref(),
-            &cfg.base_url,
-        );
-        Some(cfg)
     }
     /// The caller at the process boundary renders the [`crate::agent::init::BootstrapError`] and exits.
     pub fn new(
@@ -4661,9 +4582,6 @@ impl MvpAgent {
             .find(|entry| entry.info.has_model_id(&sampling_config.model))
             .and_then(|entry| entry.info.max_retries);
         let origin_client = self.origin_client_info_from_meta(init.meta.as_ref());
-        let web_search_sampling_config = self.prepare_web_search_sampling_config();
-        let image_gen_config = self.prepare_image_gen_config();
-        let video_gen_config = self.prepare_video_gen_config();
         let app_builder_deployer_config = self.prepare_app_builder_deployer_config();
         let web_fetch_config = self.prepare_web_fetch_config();
         let write_file_enabled = self
@@ -4930,10 +4848,7 @@ impl MvpAgent {
                     inference_idle_timeout_secs,
                     model_max_retries,
                     subagent_rate_limit_max_attempts,
-                    web_search_sampling_config,
                     web_fetch_config,
-                    image_gen_config,
-                    video_gen_config,
                     app_builder_deployer_config,
                     write_file_enabled,
                     active_agent_messages_enabled,

@@ -234,10 +234,6 @@ pub struct SessionContext {
     /// When `Some`, injected into `Resources` so `memory_search` / `memory_get`
     /// tools can access it. When `None`, the tools return "not enabled".
     pub memory_backend: Option<Arc<dyn crate::types::memory_backend::MemoryBackend>>,
-    /// Optional web search configuration. When `Enabled`, a `WebSearchClient` is created and
-    /// injected into `Resources` so the `web_search` tool can call the Responses API. When
-    /// `Disabled` (default), the tool returns a graceful error if invoked.
-    pub web_search_config: crate::implementations::web_search::WebSearchConfig,
     /// Optional web fetch configuration. When `Enabled`, a `WebFetchClient`
     /// is created and injected into `Resources` so the `web_fetch` tool can
     /// fetch URLs. When `Disabled` (default), the tool is not registered.
@@ -246,14 +242,6 @@ pub struct SessionContext {
     /// passed to every session. Same pattern as `fs` and `backend`.
     /// When `Some`, inserted into `Resources` so `LspTool` can use it.
     pub lsp: Option<std::sync::Arc<dyn crate::implementations::lsp::LspBackend>>,
-    /// Optional image generation configuration. When `Enabled`, an `ImageGenClient` is created and
-    /// injected into `Resources` so the `image_gen` tool can call the xAI Imagine API. When
-    /// `Disabled` (default), the tool is not registered and image generation is unavailable.
-    pub image_gen_config: crate::implementations::grok_build::image_gen::ImageGenConfig,
-    /// Optional video generation configuration. When `Enabled`, a `VideoGenClient` is created and
-    /// injected into `Resources` so the `video_gen` tool can call the xAI Video Generation API.
-    /// When `Disabled` (default), the tool is not registered and video generation is unavailable.
-    pub video_gen_config: crate::implementations::grok_build::video_gen::VideoGenConfig,
     /// Optional deploy service configuration. When enabled, the
     /// `deploy_app` tool connects to the service at call time using the shared
     /// API key provider.
@@ -267,9 +255,8 @@ pub struct SessionContext {
     /// that need to authenticate with services. Not to be confused with the api_key_provider, which
     /// is a legacy provider used by the shell's auth manager.
     pub auth_provider: Option<xai_computer_hub_sdk::SharedAuthProvider>,
-    /// Optional 401-attribution callback for tool HTTP clients. When set, a 401 from `image_gen` / `video_gen` /
-    /// `web_search` emits an `auth_401_attribution` event via this hook. Hosts can wire this to the same attribution sink
-    /// used for inference-side 401s so tool and chat auth failures share one telemetry path.
+    /// Optional 401-attribution callback for tool HTTP clients. Hosts can wire this to the same
+    /// attribution sink used for inference-side 401s so tool and chat auth failures share one path.
     pub attribution_callback: Option<crate::SharedAttributionCallback>,
     /// Tag name for `<system-reminder>` wrappers in tool result text.
     /// Defaults to [`crate::reminders::DEFAULT_REMINDER_TAG`] (hyphen).
@@ -727,13 +714,8 @@ impl ToolRegistryBuilder {
         b.register_with_params::<grok_build::TaskTool, grok_build::task::TaskParams>();
         b.register::<grok_build::SendSubagentMessageTool>();
         b.register::<grok_build::SendFeedbackTool>();
-        b.register::<grok_build::WebSearchTool>();
         b.register_with_params::<grok_build::WebFetchTool, grok_build::web_fetch::WebFetchParams>();
         b.register::<grok_build::LspTool>();
-        b.register::<grok_build::ImageGenTool>();
-        b.register::<grok_build::ImageEditTool>();
-        b.register::<grok_build::ImageToVideoTool>();
-        b.register::<grok_build::ReferenceToVideoTool>();
         b.register::<grok_build::EnterPlanModeTool>();
         b.register::<grok_build::ExitPlanModeTool>();
         b.register_with_params::<
@@ -1115,53 +1097,8 @@ impl ToolRegistryBuilder {
         if let Some(auth_provider) = ctx.auth_provider.clone() {
             resources.insert(auth_provider);
         }
-        if let Ok(client) = crate::implementations::web_search::client::WebSearchClient::new(
-            &ctx.web_search_config,
-            ctx.api_key_provider.clone(),
-        ) {
-            let client = client.with_attribution_callback(ctx.attribution_callback.clone());
-            resources.insert(client);
-        }
         if let Some(lsp) = ctx.lsp {
             resources.insert(lsp);
-        }
-        let image_gen_config = ctx.image_gen_config;
-        let video_gen_config = ctx.video_gen_config;
-        if image_gen_config.has_credentials() {
-            match crate::implementations::grok_build::image_gen::ImageGenClient::new(
-                &image_gen_config,
-                ctx.api_key_provider.clone(),
-            ) {
-                Ok(client) => {
-                    let mut client =
-                        client.with_attribution_callback(ctx.attribution_callback.clone());
-                    if let Some(session_id) = &ctx.owner_session_id {
-                        client = client.with_session_id(session_id);
-                    }
-                    resources.insert(client);
-                }
-                Err(e) => {
-                    tracing::warn!("Failed to create ImageGenClient: {e}");
-                }
-            }
-        }
-        if video_gen_config.is_enabled() {
-            match crate::implementations::grok_build::video_gen::VideoGenClient::new(
-                &video_gen_config,
-                ctx.api_key_provider.clone(),
-            ) {
-                Ok(client) => {
-                    let mut client =
-                        client.with_attribution_callback(ctx.attribution_callback.clone());
-                    if let Some(session_id) = &ctx.owner_session_id {
-                        client = client.with_session_id(session_id);
-                    }
-                    resources.insert(client);
-                }
-                Err(e) => {
-                    tracing::warn!("Failed to create VideoGenClient: {e}");
-                }
-            }
         }
         if let crate::implementations::grok_build::web_fetch::WebFetchConfig::Enabled { params } =
             &ctx.web_fetch_config
@@ -2402,14 +2339,9 @@ mod tests {
             skills: vec![],
             state_path: tmp.path().join("state.json"),
             memory_backend: None,
-            web_search_config: crate::implementations::web_search::WebSearchConfig::default(),
             web_fetch_config:
                 crate::implementations::grok_build::web_fetch::WebFetchConfig::default(),
             lsp: None,
-            image_gen_config:
-                crate::implementations::grok_build::image_gen::ImageGenConfig::default(),
-            video_gen_config:
-                crate::implementations::grok_build::video_gen::VideoGenConfig::default(),
             app_builder_deployer_config:
                 crate::implementations::grok_build::app_builder::AppBuilderDeployerConfig::default(),
             api_key_provider: None,

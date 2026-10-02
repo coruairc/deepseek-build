@@ -59,13 +59,10 @@ pub struct AgentBuilder {
     session_env: Option<Arc<HashMap<String, String>>>,
     state_path: Option<PathBuf>,
     memory_backend: Option<Arc<dyn xai_grok_tools::types::memory_backend::MemoryBackend>>,
-    web_search_config: xai_grok_tools::implementations::web_search::WebSearchConfig,
-    /// When true, web search and X search go to the agentic sampler as native server-side tools instead of registering as local Function tools.
+    /// When true, X search goes to the agentic sampler as a native server-side tool instead of registering as a local Function tool.
     backend_search: bool,
     web_fetch_config: xai_grok_tools::implementations::grok_build::web_fetch::WebFetchConfig,
     lsp: Option<std::sync::Arc<dyn xai_grok_tools::implementations::lsp::LspBackend>>,
-    image_gen_config: xai_grok_tools::implementations::grok_build::image_gen::ImageGenConfig,
-    video_gen_config: xai_grok_tools::implementations::grok_build::video_gen::VideoGenConfig,
     app_builder_deployer_config:
         xai_grok_tools::implementations::grok_build::app_builder::AppBuilderDeployerConfig,
     write_file_enabled: bool,
@@ -317,12 +314,9 @@ impl AgentBuilder {
             session_env: None,
             state_path: None,
             memory_backend: None,
-            web_search_config: Default::default(),
             backend_search: false,
             web_fetch_config: Default::default(),
             lsp: None,
-            image_gen_config: Default::default(),
-            video_gen_config: Default::default(),
             app_builder_deployer_config: Default::default(),
             write_file_enabled: true,
             active_agent_messages_enabled: false,
@@ -513,14 +507,6 @@ impl AgentBuilder {
         self.parent_scheduler_handle = Some(handle);
         self
     }
-    /// `Enabled` injects a `WebSearchClient` resource so `web_search` can call the Responses API; `Disabled` returns a graceful error.
-    pub fn with_web_search_config(
-        mut self,
-        config: xai_grok_tools::implementations::web_search::WebSearchConfig,
-    ) -> Self {
-        self.web_search_config = config;
-        self
-    }
     /// Per-model gating is applied at request time, not here.
     pub fn with_backend_search(mut self, enabled: bool) -> Self {
         self.backend_search = enabled;
@@ -539,20 +525,6 @@ impl AgentBuilder {
         handle: std::sync::Arc<dyn xai_grok_tools::implementations::lsp::LspBackend>,
     ) -> Self {
         self.lsp = Some(handle);
-        self
-    }
-    pub fn with_image_gen_config(
-        mut self,
-        config: xai_grok_tools::implementations::grok_build::image_gen::ImageGenConfig,
-    ) -> Self {
-        self.image_gen_config = config;
-        self
-    }
-    pub fn with_video_gen_config(
-        mut self,
-        config: xai_grok_tools::implementations::grok_build::video_gen::VideoGenConfig,
-    ) -> Self {
-        self.video_gen_config = config;
         self
     }
     pub fn with_app_builder_deployer_config(
@@ -790,10 +762,6 @@ impl AgentBuilder {
                     .tools
                     .push((&memory::get_tool::MemoryGetImpl).into());
             }
-            if self.web_search_config.is_enabled() {
-                use xai_grok_tools::implementations::grok_build;
-                tool_config.tools.push((&grok_build::WebSearchTool).into());
-            }
             if self.web_fetch_config.is_enabled() {
                 use xai_grok_tools::implementations::grok_build;
                 tool_config.tools.push((&grok_build::WebFetchTool).into());
@@ -802,24 +770,6 @@ impl AgentBuilder {
                 tool_config
                     .tools
                     .push((&xai_grok_tools::implementations::grok_build::LspTool).into());
-            }
-            if self.image_gen_config.image_gen_enabled() {
-                tool_config
-                    .tools
-                    .push((&xai_grok_tools::implementations::grok_build::ImageGenTool).into());
-            }
-            if self.image_gen_config.image_edit_enabled() {
-                tool_config
-                    .tools
-                    .push((&xai_grok_tools::implementations::grok_build::ImageEditTool).into());
-            }
-            if self.video_gen_config.is_enabled() {
-                tool_config
-                    .tools
-                    .push((&xai_grok_tools::implementations::grok_build::ImageToVideoTool).into());
-                tool_config.tools.push(
-                    (&xai_grok_tools::implementations::grok_build::ReferenceToVideoTool).into(),
-                );
             }
             let has_write_tool = tool_config
                 .tools
@@ -1146,7 +1096,6 @@ impl AgentBuilder {
             });
         }
         let use_backend_search = self.backend_search;
-        let web_search_enabled = self.web_search_config.is_enabled();
         let (tool_registry_timer, tool_registry_span) = build_await_step!("tool_registry");
         let tool_bridge = ToolBridge::finalize_builder(
             tool_bridge_builder,
@@ -1167,11 +1116,8 @@ impl AgentBuilder {
                 skills: skill_info.clone(),
                 state_path,
                 memory_backend: self.memory_backend,
-                web_search_config: self.web_search_config,
                 web_fetch_config: self.web_fetch_config,
                 lsp: self.lsp,
-                image_gen_config: self.image_gen_config,
-                video_gen_config: self.video_gen_config,
                 app_builder_deployer_config: self.app_builder_deployer_config,
                 api_key_provider: self.api_key_provider,
                 auth_provider: None,
@@ -1336,9 +1282,6 @@ impl AgentBuilder {
         }
         let mut hosted_tools = Vec::new();
         if use_backend_search {
-            if web_search_enabled && definition.hosted_tool_allowed("web_search") {
-                hosted_tools.push(xai_grok_sampling_types::HostedTool::WebSearch { options: None });
-            }
             if definition.hosted_tool_allowed("x_search") {
                 hosted_tools.push(xai_grok_sampling_types::HostedTool::XSearch { options: None });
             }

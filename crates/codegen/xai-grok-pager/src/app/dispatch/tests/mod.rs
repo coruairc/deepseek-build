@@ -79,6 +79,7 @@ use crate::scrollback::block::RenderBlock;
 use crate::scrollback::blocks::{SessionEvent, ToolCallBlock};
 use crate::scrollback::state::ScrollbackState;
 use crate::views::session_picker_surface::SessionPickerHost;
+use crate::xai_grok_voice;
 use agent_client_protocol as acp;
 use indexmap::IndexMap;
 use std::path::PathBuf;

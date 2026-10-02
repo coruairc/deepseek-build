@@ -74,3 +74,7 @@ pub mod unified_log;
 pub mod views;
 pub mod voice;
 pub mod worktree_cmd;
+/// Network-free local replacement for the deleted `xai-grok-voice` crate.
+/// Shadows the former extern crate path so existing `xai_grok_voice::…`
+/// references resolve to the stub.
+pub mod xai_grok_voice;

@@ -4,6 +4,7 @@ use super::ui::{refresh_open_settings_modals, save_success_toast};
 use crate::app::actions::{Effect, ModelChoice};
 use crate::app::app_view::{ActiveView, AppView};
 use crate::settings::PendingWrite;
+use crate::xai_grok_voice;
 use agent_client_protocol as acp;
 
 /// Set multiline input mode: swap Enter and Shift+Enter behavior.

@@ -2117,7 +2117,6 @@ impl SessionActor {
                         | ToolKind::List
                         | ToolKind::MemorySearch
                         | ToolKind::MemoryGet
-                        | ToolKind::WebSearch
                         | ToolKind::WebFetch
                         | ToolKind::EnterPlan
                         | ToolKind::ExitPlan
@@ -2400,39 +2399,6 @@ impl SessionActor {
                 Vec::new(),
             ),
             ToolInput::Grep(gs) => (gs.pattern.clone(), acp::ToolKind::Search, vec![], vec![]),
-            ToolInput::WebSearch(ws) => (
-                format!("Web search: \"{}\"", ws.query),
-                acp::ToolKind::Search,
-                vec![],
-                vec![],
-            ),
-            ToolInput::ImageGen(ig) => (
-                format!("imagine: {}", ig.prompt),
-                acp::ToolKind::Other,
-                vec![],
-                vec![],
-            ),
-            ToolInput::ImageEdit(ie) => (
-                format!("imagine-edit: {}", ie.prompt),
-                acp::ToolKind::Other,
-                vec![],
-                vec![],
-            ),
-            ToolInput::ImageToVideo(i2v) => (
-                format!(
-                    "image-to-video: {}",
-                    i2v.prompt.as_deref().unwrap_or(&i2v.image)
-                ),
-                acp::ToolKind::Other,
-                vec![],
-                vec![],
-            ),
-            ToolInput::ReferenceToVideo(r2v) => (
-                format!("reference-to-video: {}", r2v.prompt),
-                acp::ToolKind::Other,
-                vec![],
-                vec![],
-            ),
             ToolInput::MCPTool(mcp_tool) => (
                 mcp_tool.tool_name.to_owned(),
                 acp::ToolKind::Other,

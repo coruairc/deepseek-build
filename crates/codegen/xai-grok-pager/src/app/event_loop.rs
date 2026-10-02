@@ -16,6 +16,7 @@ use crate::client_identity::{PAGER_CLIENT_TYPE, PAGER_CLIENT_VERSION};
 use crate::render::draw::{EscapeWriter, WriterDrain, WriterEvent};
 use crate::theme::system_appearance::{self, SystemAppearanceWatcher};
 use crate::theme::{Theme, ThemeKind, cache as theme_cache};
+use crate::xai_grok_voice;
 use agent_client_protocol as acp;
 use anyhow::Context as _;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};

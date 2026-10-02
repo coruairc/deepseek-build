@@ -1,6 +1,7 @@
 //! Tests for voice mode enable, toggle, and stop dispatchers.
 
 use super::*;
+use crate::xai_grok_voice;
 
 /// Plan mode must not gate voice.
 /// Typing `/voice` and Enter through the real input path (prompt keys, then the slash registry, then dispatch) starts recording.
@@ -1158,7 +1159,7 @@ fn voice_submit_follow_up_keeps_chip_literal() {
 /// cancelled start is a session that never was.
 #[test]
 fn stale_events_are_dropped_except_a_notice_and_the_stopped_sessions_final() {
-    use xai_grok_voice::{TaggedVoiceEvent, VoiceEvent};
+    use crate::xai_grok_voice::{TaggedVoiceEvent, VoiceEvent};
     let mut app = test_app_with_agent();
     app.apply_voice_mode_enabled(true);
     let (tx, mut rx) = tokio::sync::mpsc::channel(8);

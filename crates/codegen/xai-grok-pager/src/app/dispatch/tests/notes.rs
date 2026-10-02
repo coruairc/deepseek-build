@@ -2,6 +2,7 @@
 use super::*;
 use crate::app::dispatch::ctx::NO_SESSION_NOTICE;
 use crate::app::dispatch::{recap_unavailable_toast, scrollback_has_user_messages};
+use crate::xai_grok_voice;
 fn agent_ref(app: &AppView, id: AgentId) -> &AgentView {
     let Some(agent) = app.agents.get(&id) else {
         panic!("expected agent {id:?}");

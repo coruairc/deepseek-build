@@ -2,7 +2,8 @@
 //! submit, Esc, a new press, and navigation do to an outstanding clip.
 
 use super::*;
-use xai_grok_voice::{VoiceCommand, VoiceEvent, VoiceRoute};
+use crate::xai_grok_voice;
+use crate::xai_grok_voice::{VoiceCommand, VoiceEvent, VoiceRoute};
 
 use super::super::voice::TRANSCRIBING_TOAST;
 use crate::voice::{TRANSCRIPTION_TIMED_OUT_KEPT_TOAST, TRANSCRIPTION_TIMED_OUT_TOAST};
@@ -588,7 +589,7 @@ fn capture_cancelled_ends_only_an_unclassified_stop() {
 
 #[test]
 fn session_ids_gate_events_and_reset_aborts() {
-    use xai_grok_voice::TaggedVoiceEvent;
+    use crate::xai_grok_voice::TaggedVoiceEvent;
     let (mut app, mut rx) = voice_app();
 
     app.voice_begin_recording(agent0(), false);

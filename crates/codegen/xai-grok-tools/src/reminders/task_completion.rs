@@ -665,7 +665,6 @@ pub fn consumed_completion_ids(output: &ToolOutput) -> Vec<&str> {
         | ToolOutput::ListDir(_)
         | ToolOutput::SearchReplace(_)
         | ToolOutput::Todo(_)
-        | ToolOutput::WebSearch(_)
         | ToolOutput::WebFetch(_)
         | ToolOutput::MCP(_)
         | ToolOutput::Skill(_)
@@ -682,10 +681,6 @@ pub fn consumed_completion_ids(output: &ToolOutput) -> Vec<&str> {
         | ToolOutput::SchedulerList(_)
         | ToolOutput::UpdateGoal(_)
         | ToolOutput::Workflow(_)
-        | ToolOutput::ImageGen(_)
-        | ToolOutput::ImageToVideo(_)
-        | ToolOutput::ReferenceToVideo(_)
-        | ToolOutput::ImageEdit(_)
         | ToolOutput::Dynamic(_) => {}
     }
     ids
