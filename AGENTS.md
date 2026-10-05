@@ -92,6 +92,12 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
   `crates/codegen/xai-grok-brand/`, binary `deepseek-build`, config dir `~/.deepseek-build`,
   ACP namespace `deepseek-build/*`, user-visible strings. `scripts/check-egress.sh --strict`
   exits 0 (SOFT zero). Most `GROK_*` env vars still carry the old name (not gated).
+- **DeepSeek prompt guidance:** `crates/codegen/xai-grok-agent/templates/prompt.md` now includes a
+  `<deepseek_model>` section (prefix-cache discipline, thinking budget, parallel-first tool use,
+  verification, large-context guidance) and drops the obfuscated "released by xAI" line. The
+  runtime prompt is XOR-obfuscated: after editing any template run
+  `python3 scripts/encrypt_templates.py` (restored) and verify with
+  `test_encrypted_templates_not_stale` (needs a compiling test suite).
 
 ## 3. What is LEFT (ordered)
 
