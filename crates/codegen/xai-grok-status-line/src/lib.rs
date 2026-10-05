@@ -7,6 +7,7 @@
 
 pub mod config;
 pub mod context;
+pub mod pricing;
 
 /// The client capability that turns the row on, advertised in `initialize`'s `clientCapabilities._meta`.
 /// Absent means off.
@@ -25,3 +26,4 @@ pub use context::{
     StatusLineEffort, StatusLineModel, StatusLineRepo, StatusLineSessionUsage, StatusLineTrigger,
     StatusLineTurn, StatusLineWorkspace, StatusLineWorktree,
 };
+pub use pricing::{DEFAULT_PRICING_MODEL, ModelPricing, PricingTable};

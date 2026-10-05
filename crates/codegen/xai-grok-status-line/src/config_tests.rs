@@ -227,6 +227,7 @@ fn every_field_survives_a_save_and_a_reload() {
         items: Some(vec![StatusLineItem::Cwd, StatusLineItem::TurnTimer]),
         padding: Some(2),
         refresh_interval: Some(300),
+        pricing: None,
         parse_problem: Some("not written".into()),
         unknown_keys: vec!["colour".into()],
     };

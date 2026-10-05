@@ -55,6 +55,7 @@ pub mod settings_cmd;
 pub mod share;
 pub mod tasks;
 pub mod theme;
+pub mod think;
 pub mod timeline;
 pub mod timestamps;
 pub mod toggle_mouse_reporting;
@@ -84,6 +85,7 @@ pub fn builtin_commands() -> Vec<Arc<dyn SlashCommand>> {
         Arc::new(new::NewCommand),
         // Per turn.
         Arc::new(effort::EffortCommand),
+        Arc::new(think::ThinkCommand),
         Arc::new(context_window::ContextWindowCommand),
         Arc::new(model::ModelCommand),
         Arc::new(context::ContextCommand),
@@ -447,7 +449,8 @@ mod tests {
         assert!(
             items
                 .iter()
-                .any(|i| i.display.starts_with("deepseek-build 4.5") && i.insert_text == "deepseek-build 4.5")
+                .any(|i| i.display.starts_with("deepseek-build 4.5")
+                    && i.insert_text == "deepseek-build 4.5")
         );
         assert!(
             items

@@ -95,6 +95,7 @@ fn build_context_window(
                 output_tokens: t.output_tokens,
                 cache_creation_input_tokens: t.cache_creation_tokens,
                 cache_read_input_tokens: t.cached_read_tokens,
+                reasoning_tokens: t.reasoning_tokens,
             }
         }),
         used_percentage,
