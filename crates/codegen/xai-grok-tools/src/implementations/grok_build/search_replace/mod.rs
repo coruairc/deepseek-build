@@ -139,6 +139,7 @@ pub(crate) async fn run_search_replace(
     input: SearchReplaceInput,
     ctx: &xai_tool_runtime::ToolCallContext,
     resources: SharedResources,
+    enforce_read_before_write: bool,
 ) -> Result<SearchReplaceOutput, xai_tool_runtime::ToolError> {
     let cwd_override = ctx
         .extensions
@@ -200,7 +201,7 @@ pub(crate) async fn run_search_replace(
             "Old string and new string are the same".to_owned(),
         ));
     }
-    let (empty_old_string_does_not_override, include_user_edit_hint);
+    let (empty_old_string_does_not_override, include_user_edit_hint, skip_read_before_edit);
     {
         let res = resources.lock().await;
         let sr_params = res.get::<Params<SearchReplaceParams>>();
@@ -210,6 +211,15 @@ pub(crate) async fn run_search_replace(
         include_user_edit_hint = sr_params
             .map(|p| p.0.include_user_edit_hint)
             .unwrap_or(true);
+        skip_read_before_edit = sr_params
+            .map(|p| p.0.skip_read_before_edit)
+            .unwrap_or(false);
+    }
+    if enforce_read_before_write
+        && !skip_read_before_edit
+        && let Some(denial) = enforce_read_guard(&resources, &fs, &path, &input.file_path).await
+    {
+        return Ok(SearchReplaceOutput::InvalidInput(denial));
     }
     let result = if input.old_string.is_empty() {
         handle_new_file_creation(
@@ -258,7 +268,28 @@ pub(crate) async fn run_search_replace(
         )
         .in_scope(|| {});
     }
+    if matches!(result, SearchReplaceOutput::EditsApplied(_)) {
+        crate::implementations::editor_infra::read_before_write::record_read(&resources, &path)
+            .await;
+    }
     Ok(result)
+}
+/// Runtime read-before-write guard for `search_replace`. Newly created files and
+/// the session plan file are exempt.
+async fn enforce_read_guard(
+    resources: &SharedResources,
+    fs: &std::sync::Arc<dyn crate::computer::types::AsyncFileSystem>,
+    path: &std::path::Path,
+    display_path: &str,
+) -> Option<String> {
+    let is_new_file = !fs.file_exists(path).await.unwrap_or(false);
+    crate::implementations::editor_infra::read_before_write::read_before_write_denial(
+        resources,
+        path,
+        display_path,
+        is_new_file,
+    )
+    .await
 }
 /// Maximum length for a single path component (file or directory name).
 /// POSIX `NAME_MAX` is 255 on both macOS and Linux.
@@ -889,7 +920,7 @@ impl xai_tool_runtime::Tool for SearchReplaceTool {
         let bv = crate::types::tool_metadata::behavior_version(&ctx);
         let is_legacy = SearchReplaceVersion::from_contract(bv.as_deref()).is_legacy();
         let file_path = input.file_path.clone();
-        let result = run_search_replace(input, &ctx, resources.clone()).await?;
+        let result = run_search_replace(input, &ctx, resources.clone(), true).await?;
         if is_legacy {
             versions::legacy_0_4_10::downgrade_structured_errors(result, &resources, &file_path)
                 .await
@@ -923,6 +954,10 @@ mod tests {
             ]),
             std::collections::HashMap::from([(ToolKind::Edit, edit_params)]),
         ));
+        resources.insert(Params(SearchReplaceParams {
+            skip_read_before_edit: true,
+            ..Default::default()
+        }));
         resources
     }
     fn make_input(file_path: &str, old_string: &str, new_string: &str) -> SearchReplaceInput {
@@ -1052,14 +1087,37 @@ mod tests {
             "harness skip_read_before_edit config must validate against SearchReplaceParams",
         );
     }
-    /// Consecutive edits to the same file succeed without any prior read.
+    /// A single read unlocks consecutive edits to the same file; the first edit
+    /// without a prior read is denied with an actionable message.
     #[tokio::test]
-    async fn consecutive_edits_succeed_without_prior_read() {
+    async fn consecutive_edits_require_single_read() {
+        use crate::implementations::editor_infra::read_before_write;
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("test.txt"), "hello world\n").unwrap();
         let tool = SearchReplaceTool;
-        let resources = test_resources(tmp.path());
+        let mut resources = test_resources(tmp.path());
+        resources.insert(Params(SearchReplaceParams {
+            skip_read_before_edit: false,
+            ..Default::default()
+        }));
         let shared = resources.into_shared();
+        let denied = xai_tool_runtime::Tool::run(
+            &tool,
+            test_ctx(shared.clone()),
+            make_input("test.txt", "hello", "hi"),
+        )
+        .await
+        .unwrap();
+        match denied {
+            SearchReplaceOutput::InvalidInput(msg) => {
+                assert!(
+                    msg.contains("read tool"),
+                    "actionable denial expected: {msg}"
+                );
+            }
+            other => panic!("edit without a prior read must be denied, got {other:?}"),
+        }
+        read_before_write::record_read(&shared, &tmp.path().join("test.txt")).await;
         let result1 = xai_tool_runtime::Tool::run(
             &tool,
             test_ctx(shared.clone()),
@@ -1069,8 +1127,7 @@ mod tests {
         .unwrap();
         assert!(
             matches!(result1, SearchReplaceOutput::EditsApplied(_)),
-            "first edit unexpectedly returned {:?}",
-            result1
+            "first edit after read unexpectedly returned {result1:?}"
         );
         let result2 = xai_tool_runtime::Tool::run(
             &tool,
@@ -1081,8 +1138,7 @@ mod tests {
         .unwrap();
         assert!(
             matches!(result2, SearchReplaceOutput::EditsApplied(_)),
-            "second edit unexpectedly returned {:?}",
-            result2
+            "second edit unexpectedly returned {result2:?}"
         );
         let content = std::fs::read_to_string(tmp.path().join("test.txt")).unwrap();
         assert_eq!(content, "hi earth\n");
@@ -1386,7 +1442,7 @@ mod tests {
         let tool = SearchReplaceTool;
         let mut resources = test_resources(tmp.path());
         resources.insert(Params(SearchReplaceParams {
-            skip_read_before_edit: false,
+            skip_read_before_edit: true,
             empty_old_string_does_not_override: true,
             ..Default::default()
         }));
@@ -1431,6 +1487,7 @@ mod tests {
         let tool = SearchReplaceTool;
         let mut resources = test_resources(tmp.path());
         resources.insert(Params(SearchReplaceParams {
+            skip_read_before_edit: true,
             empty_old_string_does_not_override: false,
             ..Default::default()
         }));
@@ -1454,7 +1511,7 @@ mod tests {
         let tool = SearchReplaceTool;
         let mut resources = test_resources(tmp.path());
         resources.insert(Params(SearchReplaceParams {
-            skip_read_before_edit: false,
+            skip_read_before_edit: true,
             empty_old_string_does_not_override: true,
             ..Default::default()
         }));
@@ -1505,7 +1562,7 @@ mod tests {
         let tool = SearchReplaceTool;
         let mut resources = test_resources(tmp.path());
         resources.insert(Params(SearchReplaceParams {
-            skip_read_before_edit: false,
+            skip_read_before_edit: true,
             empty_old_string_does_not_override: true,
             ..Default::default()
         }));

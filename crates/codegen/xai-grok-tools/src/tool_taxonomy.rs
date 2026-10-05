@@ -249,10 +249,6 @@ mod tests {
         covered(crate::implementations::grok_build::BashTool);
         covered(crate::implementations::grok_build::TodoWriteTool);
         covered(crate::implementations::grok_build::WorkflowTool);
-        covered(crate::implementations::grok_build::ImageGenTool);
-        covered(crate::implementations::grok_build::ImageEditTool);
-        covered(crate::implementations::grok_build::ImageToVideoTool);
-        covered(crate::implementations::grok_build::ReferenceToVideoTool);
         covered(crate::implementations::grok_build::AskUserQuestionTool);
         covered(crate::implementations::opencode::OpenCodeWriteTool);
         covered(crate::implementations::opencode::OpenCodeEditTool);

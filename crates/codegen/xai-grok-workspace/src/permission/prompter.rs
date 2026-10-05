@@ -739,8 +739,10 @@ impl AcpPrompter {
         tool_call_update: &acp::ToolCallUpdate,
         protected_edit: Option<crate::permission::ProtectedEditReason>,
         hook_ask: Option<&HookAsk>,
+        security_findings: Option<&crate::permission::auto_mode::BashSecurityAssessment>,
     ) -> PromptOutcome {
         let tool_name = tool_name_for_access(access);
+        let tool_call_update = with_security_warning(tool_call_update, security_findings);
         // events.jsonl: `PermissionRequested` at prompt-start
         // The `Instant` captured here makes the paired `PermissionResolved.wait_ms` measure the user-facing prompt, not earlier manager bookkeeping
         self.event_writer.emit(Event::PermissionRequested {
@@ -770,7 +772,7 @@ impl AcpPrompter {
                 let permission_options = self.build_options(access);
                 let req = acp::RequestPermissionRequest::new(
                     self.session_id.clone(),
-                    with_hook_ask_header(tool_call_update, hook_ask, &tool_name),
+                    with_hook_ask_header(&tool_call_update, hook_ask, &tool_name),
                     permission_options.values().cloned().collect(),
                 )
                 .meta(self.permission_request_meta(
@@ -837,6 +839,24 @@ fn protected_edit_meta(reason: crate::permission::ProtectedEditReason) -> Option
         .expect("ProtectedEditPermission serializes infallibly")
         .as_object()
         .cloned()
+}
+
+/// Prepend a fixed-text security warning to the prompt title when the deterministic
+/// Bash assessment flagged high-risk findings. Applied in every permission mode, not
+/// only auto, so the user sees the warning at the ordinary prompt too.
+fn with_security_warning(
+    tool_call_update: &acp::ToolCallUpdate,
+    security_findings: Option<&crate::permission::auto_mode::BashSecurityAssessment>,
+) -> acp::ToolCallUpdate {
+    let Some(warning) = security_findings.and_then(|assessment| assessment.user_warning()) else {
+        return tool_call_update.clone();
+    };
+    let mut update = tool_call_update.clone();
+    update.fields.title = Some(match update.fields.title.as_deref() {
+        Some(title) if !title.trim().is_empty() => format!("{warning}\n{title}"),
+        _ => warning,
+    });
+    update
 }
 
 /// The prompt's tool call with the hook ask prepended to its title.
@@ -1059,7 +1079,43 @@ fn map_selected_outcome(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::permission::auto_mode::{BashSecurityAssessment, ClassifierSecurityFinding};
     use tokio::sync::mpsc;
+
+    #[test]
+    fn security_warning_is_prepended_for_high_signal_findings_only() {
+        let titled = acp::ToolCallUpdate::new(
+            acp::ToolCallId::new(Arc::from("tc-warn")),
+            acp::ToolCallUpdateFields::new().title(Some("Run rm -rf build".to_owned())),
+        );
+
+        let clear = BashSecurityAssessment::default();
+        assert_eq!(
+            with_security_warning(&titled, Some(&clear)).fields.title,
+            Some("Run rm -rf build".to_owned()),
+            "no findings must leave the title untouched"
+        );
+
+        let low_signal: BashSecurityAssessment =
+            [ClassifierSecurityFinding::FileWrite].into_iter().collect();
+        assert_eq!(
+            with_security_warning(&titled, Some(&low_signal))
+                .fields
+                .title,
+            Some("Run rm -rf build".to_owned()),
+            "a structural finding must not warn"
+        );
+
+        let dangerous: BashSecurityAssessment = [ClassifierSecurityFinding::DangerousCommand]
+            .into_iter()
+            .collect();
+        let warned = with_security_warning(&titled, Some(&dangerous));
+        let title = warned.fields.title.unwrap();
+        assert!(
+            title.starts_with("⚠ Security warning:") && title.ends_with("Run rm -rf build"),
+            "warning must precede the original title: {title}"
+        );
+    }
 
     #[test]
     fn hook_ask_reaches_both_the_title_and_the_request_meta() {
@@ -1827,7 +1883,10 @@ mod tests {
     fn mcp_titleize_segment_handles_snake_camel_kebab() {
         // snake_case: split into words, each title-cased
         assert_eq!(mcp_titleize_segment("list_issues"), "List Issues");
-        assert_eq!(mcp_titleize_segment("grok_com_notion"), "deepseek-build Com Notion");
+        assert_eq!(
+            mcp_titleize_segment("grok_com_notion"),
+            "deepseek-build Com Notion"
+        );
         // single word: capitalize first letter
         assert_eq!(mcp_titleize_segment("linear"), "Linear");
         // camelCase preserved (no `_` to split on, only first letter touched)
@@ -2105,6 +2164,7 @@ mod tests {
                 &tool_call_update,
                 /*protected_edit=*/ None,
                 /*hook_ask=*/ None,
+                /*security_findings=*/ None,
             )
             .await;
         assert!(
@@ -2175,6 +2235,7 @@ mod tests {
                 &tool_call_update,
                 /*protected_edit=*/ None,
                 /*hook_ask=*/ None,
+                /*security_findings=*/ None,
             )
             .await;
         assert!(matches!(outcome, PromptOutcome::Error(_)));

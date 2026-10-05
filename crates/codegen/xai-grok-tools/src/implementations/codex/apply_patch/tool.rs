@@ -264,6 +264,41 @@ async fn preflight_memory_v2_changes(
     Ok(())
 }
 
+/// Paths a patch modifies in place (skips purely additive changes, which never
+/// need a prior read). Used by the runtime read-before-write guard and by the
+/// post-write read recording that lets consecutive patches avoid re-reading.
+fn written_existing_paths(changes: &[FileChange]) -> Vec<&std::path::Path> {
+    let mut paths = Vec::new();
+    for change in changes {
+        match change {
+            FileChange::Update { path, .. } => paths.push(path.as_path()),
+            FileChange::Move { source_path, .. } => paths.push(source_path.as_path()),
+            FileChange::Add { .. } | FileChange::Delete { .. } => {}
+        }
+    }
+    paths
+}
+
+async fn enforce_read_before_write(
+    resources: &SharedResources,
+    changes: &[FileChange],
+) -> Result<(), String> {
+    for path in written_existing_paths(changes) {
+        if let Some(denial) =
+            crate::implementations::editor_infra::read_before_write::read_before_write_denial(
+                resources,
+                path,
+                &path.display().to_string(),
+                false,
+            )
+            .await
+        {
+            return Err(denial);
+        }
+    }
+    Ok(())
+}
+
 async fn reject_memory_v2_destructive_path(
     resources: &SharedResources,
     path: &std::path::Path,
@@ -411,6 +446,9 @@ impl xai_tool_runtime::Tool for ApplyPatchTool {
             Err(msg) => return Ok(ApplyPatchOutput::ApplicationError(msg)),
         };
         if let Err(msg) = preflight_memory_v2_changes(&resources, &changes).await {
+            return Ok(ApplyPatchOutput::ApplicationError(msg));
+        }
+        if let Err(msg) = enforce_read_before_write(&resources, &changes).await {
             return Ok(ApplyPatchOutput::ApplicationError(msg));
         }
 
@@ -567,6 +605,11 @@ impl xai_tool_runtime::Tool for ApplyPatchTool {
             }
         }
 
+        for path in written_existing_paths(&changes) {
+            crate::implementations::editor_infra::read_before_write::record_read(&resources, path)
+                .await;
+        }
+
         // ── Phase 4: Build summary ───────────────────────────────
         let tool_output_for_prompt = build_summary(&file_results);
 
@@ -592,6 +635,25 @@ mod tests {
         resources.insert(Cwd(cwd.to_path_buf()));
         resources.insert(FileSystem(Arc::new(LocalFs)));
         resources.insert(NotificationHandle(ToolNotificationHandle::noop()));
+        // Fixture convenience: tests write their target files before calling
+        // this, so pre-mark every existing file as read. Dedicated
+        // read-before-write tests manage the tracker themselves.
+        fn collect_files(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+            let Ok(entries) = std::fs::read_dir(dir) else {
+                return;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    collect_files(&path, out);
+                } else if let Ok(canonical) = std::fs::canonicalize(&path) {
+                    out.push(canonical);
+                }
+            }
+        }
+        let mut tracked = Vec::new();
+        collect_files(cwd, &mut tracked);
+        crate::implementations::editor_infra::read_before_write::seed(&mut resources, tracked);
         resources
     }
 
@@ -696,6 +758,32 @@ mod tests {
                 assert_eq!(content, "foo\nbaz\n");
             }
             other => panic!("Expected Success, got: {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn update_existing_file_requires_prior_read() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(tmp.path().join("update.txt"), "foo\nbar\n").unwrap();
+        let tool = ApplyPatchTool;
+        let mut resources = Resources::new();
+        resources.insert(Cwd(tmp.path().to_path_buf()));
+        resources.insert(FileSystem(Arc::new(LocalFs)));
+        resources.insert(NotificationHandle(ToolNotificationHandle::noop()));
+        let shared = resources.into_shared();
+
+        let patch = wrap_patch("*** Update File: update.txt\n@@\n foo\n-bar\n+baz");
+        let result = xai_tool_runtime::Tool::run(&tool, test_ctx(shared), make_input(&patch))
+            .await
+            .unwrap();
+        match result {
+            ApplyPatchOutput::ApplicationError(msg) => {
+                assert!(
+                    msg.contains("read tool"),
+                    "actionable denial expected: {msg}"
+                );
+            }
+            other => panic!("Expected read-before-write denial, got: {other:?}"),
         }
     }
 

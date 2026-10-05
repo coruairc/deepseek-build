@@ -10,16 +10,7 @@ fn tool_features_name_the_tools_they_remove() {
             ToolFeature::AskUserQuestion,
             vec![grok_build::AskUserQuestionTool.id()],
         ),
-        (ToolFeature::ImageEdit, vec![grok_build::ImageEditTool.id()]),
-        (ToolFeature::ImageGen, vec![grok_build::ImageGenTool.id()]),
         (ToolFeature::LspTools, vec![grok_build::LspTool.id()]),
-        (
-            ToolFeature::VideoGen,
-            vec![
-                grok_build::ImageToVideoTool.id(),
-                grok_build::ReferenceToVideoTool.id(),
-            ],
-        ),
         (ToolFeature::WebFetch, vec![grok_build::WebFetchTool.id()]),
         (
             ToolFeature::WriteFile,

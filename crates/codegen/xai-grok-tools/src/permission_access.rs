@@ -155,29 +155,7 @@ mod tests {
         assert_eq!(subagent_id, "sub-1");
         assert!(!subagent_id.contains(text));
     }
-    #[test]
-    fn send_feedback_maps_to_tool_access() {
-        use crate::types::ToolInput;
-        let input: ToolInput = serde_json::from_value(serde_json::json!({
-            "variant": "SendFeedback",
-            "title": "Draft title",
-            "details": "What happened:\n- The tool failed.",
-            "type": "bug"
-        }))
-        .unwrap();
-        assert!(matches!(
-            AccessKind::from(&input),
-            AccessKind::Tool(name) if name == "send_feedback"
-        ));
-        assert!(matches!(
-            AccessKind::from(&ToolInput::Dynamic(serde_json::json!({
-                "name": "send_feedback",
-                "title": "Draft title",
-                "details": "What happened",
-            }))),
-            AccessKind::Tool(name) if name == "send_feedback"
-        ));
-    }
+
     #[test]
     fn use_tool_maps_to_mcp_tool_access() {
         use crate::implementations::use_tool::UseToolInput;
@@ -242,20 +220,6 @@ mod tests {
         assert!(
             matches!(access, AccessKind::WebFetch(ref u) if u == "https://custom.example.com/api"),
             "WebFetch should produce AccessKind::WebFetch with the URL, got {access:?}"
-        );
-    }
-    #[test]
-    fn web_search_maps_to_web_search_access() {
-        use crate::implementations::grok_build::web_search::WebSearchInput;
-        use crate::types::ToolInput;
-        let input = ToolInput::WebSearch(WebSearchInput {
-            query: "rust lang".into(),
-            allowed_domains: None,
-        });
-        let access = AccessKind::from(&input);
-        assert!(
-            matches!(access, AccessKind::WebSearch(ref q) if q == "rust lang"),
-            "WebSearch should produce AccessKind::WebSearch with the query, got {access:?}"
         );
     }
     /// The patch text names its files; no grant scope can vouch for them, so a patch prompts every time.
