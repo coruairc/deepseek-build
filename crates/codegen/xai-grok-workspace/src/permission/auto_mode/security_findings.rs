@@ -87,6 +87,21 @@ impl ClassifierSecurityFinding {
         }
     }
 
+    /// Whether this finding is high-signal enough to show at a user-facing permission prompt.
+    /// Low-signal structural findings (`FileWrite`, `UnvettedEnv`, `UnresolvedArgument`,
+    /// `FailClosedPolicy`) stay out so ordinary commands are not buried in warnings.
+    const fn is_user_visible(self) -> bool {
+        matches!(
+            self,
+            Self::DangerousCommand
+                | Self::OpaqueShell
+                | Self::EnvInjection
+                | Self::ExecOrAmbientGit
+                | Self::SpecialExecSurface
+                | Self::UnparseableShell
+        )
+    }
+
     /// Whether this finding constrains a broad grant (blanket execute, prefix/glob, sandbox auto-allow).
     /// A broad grant cannot vouch for these effects, so they must reach the classifier rather than auto-allow.
     /// `DangerousCommand`, `UnparseableShell`, and `FailClosedPolicy` are handled by their own arms.
@@ -136,6 +151,23 @@ impl BashSecurityAssessment {
     /// Mixed assessments never qualify.
     pub(crate) fn is_file_write_only(&self) -> bool {
         self.0.len() == 1 && self.0.contains(&ClassifierSecurityFinding::FileWrite)
+    }
+
+    /// One-line, fixed-text warning naming the high-risk findings for this command, or
+    /// `None` when only low-signal findings are present. The text is harness-owned and
+    /// never includes command text, so it cannot inject instructions.
+    pub fn user_warning(&self) -> Option<String> {
+        let findings: Vec<&str> = self
+            .0
+            .iter()
+            .copied()
+            .filter(|finding| finding.is_user_visible())
+            .map(ClassifierSecurityFinding::description)
+            .collect();
+        if findings.is_empty() {
+            return None;
+        }
+        Some(format!("⚠ Security warning: {}", findings.join("; ")))
     }
 
     /// Compact `[token, token]` list in canonical order, for tests to pin the ordered/deduplicated invariant.

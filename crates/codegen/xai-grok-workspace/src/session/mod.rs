@@ -600,6 +600,11 @@ impl WorkspaceSession {
                  session-owned one — its background tasks die with the old toolset"
             );
         }
+        xai_grok_tools::implementations::editor_infra::read_before_write::carry_tracker(
+            &old_toolset.resources,
+            &new_toolset.resources,
+        )
+        .await;
         self.replace(new_effective_tool_config, new_toolset);
     }
 }

@@ -221,17 +221,30 @@ impl xai_tool_runtime::Tool for EditTool {
             ));
         }
 
+        let is_new_file = !fs.file_exists(&path).await.unwrap_or(false);
+        if let Some(denial) =
+            crate::implementations::editor_infra::read_before_write::read_before_write_denial(
+                &resources,
+                &path,
+                &input.file_path,
+                is_new_file,
+            )
+            .await
+        {
+            return Ok(SearchReplaceOutput::InvalidInput(denial));
+        }
+
         // ── Route to creation or replacement ────────────────────────
-        if input.old_string.is_empty() {
+        let result = if input.old_string.is_empty() {
             handle_new_file_creation(
                 &input,
-                resources,
+                resources.clone(),
                 &fs,
                 &notification_handle,
                 &tool_call_id,
                 &path,
             )
-            .await
+            .await?
         } else {
             handle_replacement(
                 &input,
@@ -242,8 +255,13 @@ impl xai_tool_runtime::Tool for EditTool {
                 &path,
                 replace_all,
             )
-            .await
+            .await?
+        };
+        if matches!(result, SearchReplaceOutput::EditsApplied(_)) {
+            crate::implementations::editor_infra::read_before_write::record_read(&resources, &path)
+                .await;
         }
+        Ok(result)
     }
 }
 
@@ -546,6 +564,26 @@ mod tests {
             std::collections::HashMap::from([(ToolKind::Edit, edit_params)]),
         ));
 
+        // Fixture convenience: tests create their target files before calling
+        // this, so pre-mark every existing file (recursively) as read.
+        // Dedicated read-before-write tests manage the tracker themselves.
+        fn collect_files(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+            let Ok(entries) = std::fs::read_dir(dir) else {
+                return;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    collect_files(&path, out);
+                } else if let Ok(canonical) = std::fs::canonicalize(&path) {
+                    out.push(canonical);
+                }
+            }
+        }
+        let mut tracked = Vec::new();
+        collect_files(cwd, &mut tracked);
+        crate::implementations::editor_infra::read_before_write::seed(&mut resources, tracked);
+
         resources
     }
 
@@ -712,6 +750,29 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn edit_existing_file_requires_prior_read() {
+        let tmp = TempDir::new().unwrap();
+        // Build resources while the directory is empty so the fixture does not
+        // pre-mark the file we are about to create.
+        let shared = test_resources(tmp.path()).into_shared();
+        std::fs::write(tmp.path().join("guarded.txt"), "hello\n").unwrap();
+
+        let input = make_input("guarded.txt", "hello", "bye");
+        let result = xai_tool_runtime::Tool::run(&EditTool, test_ctx(shared), input)
+            .await
+            .unwrap();
+        match result {
+            SearchReplaceOutput::InvalidInput(msg) => {
+                assert!(
+                    msg.contains("read tool"),
+                    "actionable denial expected: {msg}"
+                );
+            }
+            other => panic!("Expected read-before-write denial, got {other:?}"),
+        }
+    }
+
     // ── New file creation ───────────────────────────────────────────
 
     #[tokio::test]
@@ -851,6 +912,10 @@ mod tests {
                 )]),
             )]),
         ));
+        crate::implementations::editor_infra::read_before_write::seed(
+            &mut resources,
+            [std::fs::canonicalize(tmp.path().join("test.txt")).unwrap()],
+        );
 
         let input = make_input("test.txt", "aaa", "ccc");
         let result = xai_tool_runtime::Tool::run(&tool, test_ctx(resources.into_shared()), input)

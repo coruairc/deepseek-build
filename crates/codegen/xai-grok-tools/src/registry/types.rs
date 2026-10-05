@@ -2569,9 +2569,7 @@ mod tests {
     #[tokio::test]
     async fn full_toolset_descriptions_render_cleanly() {
         use crate::implementations::grok_build::{
-            IMAGE_GEN_TOOL_NAME, IMAGE_TO_VIDEO_TOOL_NAME, REFERENCE_TO_VIDEO_TOOL_NAME,
-            SCHEDULER_CREATE_TOOL_NAME, SCHEDULER_DELETE_TOOL_NAME,
-            SEND_SUBAGENT_MESSAGE_TOOL_NAME,
+            SCHEDULER_CREATE_TOOL_NAME, SCHEDULER_DELETE_TOOL_NAME, SEND_SUBAGENT_MESSAGE_TOOL_NAME,
         };
         let builder = ToolRegistryBuilder::new();
         let config = ToolServerConfig {
@@ -2589,12 +2587,8 @@ mod tests {
                 "todo_write",
                 "task",
                 SEND_SUBAGENT_MESSAGE_TOOL_NAME,
-                "web_search",
                 "web_fetch",
                 "lsp",
-                IMAGE_GEN_TOOL_NAME,
-                IMAGE_TO_VIDEO_TOOL_NAME,
-                REFERENCE_TO_VIDEO_TOOL_NAME,
                 "monitor",
                 SCHEDULER_CREATE_TOOL_NAME,
                 SCHEDULER_DELETE_TOOL_NAME,
@@ -4732,15 +4726,6 @@ mod tests {
                 },
                 ToolConfig {
                     id: "GrokBuild:grep".to_string(),
-                    params: None,
-                    name_override: None,
-                    params_name_overrides: None,
-                    description_override: None,
-                    behavior_version: None,
-                    kind: None,
-                },
-                ToolConfig {
-                    id: "GrokBuild:web_search".to_string(),
                     params: None,
                     name_override: None,
                     params_name_overrides: None,

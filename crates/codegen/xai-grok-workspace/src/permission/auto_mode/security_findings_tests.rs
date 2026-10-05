@@ -139,3 +139,24 @@ fn grant_floor_subset_is_exactly_the_broad_grant_findings() {
         );
     }
 }
+
+#[test]
+fn user_warning_names_only_high_signal_findings() {
+    let clear: BashSecurityAssessment = BashSecurityAssessment::default();
+    assert!(clear.user_warning().is_none(), "no findings must not warn");
+
+    let low_signal: BashSecurityAssessment = [FileWrite, UnvettedEnv].into_iter().collect();
+    assert!(
+        low_signal.user_warning().is_none(),
+        "structural findings must not warn"
+    );
+
+    let dangerous: BashSecurityAssessment = [DangerousCommand, OpaqueShell].into_iter().collect();
+    let warning = dangerous.user_warning().expect("high-signal findings warn");
+    assert!(warning.starts_with("⚠ Security warning:"), "{warning}");
+    assert!(warning.contains("destructive or high-impact"), "{warning}");
+    assert!(
+        warning.contains("nested or dynamically supplied shell"),
+        "canonical order must be preserved: {warning}"
+    );
+}

@@ -140,6 +140,19 @@ impl xai_tool_runtime::Tool for WriteTool {
             }
         };
 
+        if !is_memory_write
+            && let Some(denial) =
+                crate::implementations::editor_infra::read_before_write::read_before_write_denial(
+                    &resources,
+                    &path,
+                    &input.file_path,
+                    !existed,
+                )
+                .await
+        {
+            return Ok(SearchReplaceOutput::InvalidInput(denial));
+        }
+
         // ── Create parent directories if needed ──────────────────
         if !is_memory_write
             && let Some(parent) = path.parent()
@@ -164,6 +177,11 @@ impl xai_tool_runtime::Tool for WriteTool {
                         e.to_string(),
                     )
                 })?;
+        }
+
+        if !is_memory_write {
+            crate::implementations::editor_infra::read_before_write::record_read(&resources, &path)
+                .await;
         }
 
         // ── Send FileWritten notification ────────────────────────
@@ -278,13 +296,15 @@ mod tests {
         std::fs::write(&file_path, "old content\n").unwrap();
 
         let tool = WriteTool;
-        let resources = test_resources(tmp.path());
+        let shared = test_resources(tmp.path()).into_shared();
+        crate::implementations::editor_infra::read_before_write::record_read(&shared, &file_path)
+            .await;
 
         let input = WriteInput {
             file_path: file_path.to_string_lossy().into_owned(),
             content: "new content\n".to_string(),
         };
-        let result = xai_tool_runtime::Tool::run(&tool, test_ctx(resources.into_shared()), input)
+        let result = xai_tool_runtime::Tool::run(&tool, test_ctx(shared), input)
             .await
             .unwrap();
 
@@ -296,6 +316,31 @@ mod tests {
         }
         let content = std::fs::read_to_string(&file_path).unwrap();
         assert_eq!(content, "new content\n");
+    }
+
+    #[tokio::test]
+    async fn overwrite_existing_file_requires_prior_read() {
+        let tmp = TempDir::new().unwrap();
+        let file_path = tmp.path().join("guarded.txt");
+        std::fs::write(&file_path, "old\n").unwrap();
+
+        let shared = test_resources(tmp.path()).into_shared();
+        let input = WriteInput {
+            file_path: file_path.to_string_lossy().into_owned(),
+            content: "new\n".to_string(),
+        };
+        let result = xai_tool_runtime::Tool::run(&WriteTool, test_ctx(shared), input)
+            .await
+            .unwrap();
+        match result {
+            SearchReplaceOutput::InvalidInput(msg) => {
+                assert!(
+                    msg.contains("read tool"),
+                    "actionable denial expected: {msg}"
+                );
+            }
+            other => panic!("Expected read-before-write denial, got {other:?}"),
+        }
     }
 
     // ── Creates parent directories ──────────────────────────────
@@ -378,13 +423,15 @@ mod tests {
         std::fs::write(&file_path, "old\n").unwrap();
 
         let tool = WriteTool;
-        let resources = test_resources(tmp.path());
+        let shared = test_resources(tmp.path()).into_shared();
+        crate::implementations::editor_infra::read_before_write::record_read(&shared, &file_path)
+            .await;
 
         let input = WriteInput {
             file_path: file_path.to_string_lossy().into_owned(),
             content: "new\n".to_string(),
         };
-        let result = xai_tool_runtime::Tool::run(&tool, test_ctx(resources.into_shared()), input)
+        let result = xai_tool_runtime::Tool::run(&tool, test_ctx(shared), input)
             .await
             .unwrap();
 

@@ -451,6 +451,8 @@ pub(crate) async fn run_read_file(
     let mut file_bytes = match fs.read_file(&path).await {
         Ok(bytes) => {
             observed.note_source_bytes(bytes.len());
+            crate::implementations::editor_infra::read_before_write::record_read(&resources, &path)
+                .await;
             bytes
         }
         Err(e) => {

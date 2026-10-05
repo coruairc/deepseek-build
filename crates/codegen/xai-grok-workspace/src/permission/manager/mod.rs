@@ -1366,7 +1366,7 @@ pub fn spawn_permission_manager_with_pin(
                         }
                     }
                     let prompt_outcome = tokio::select! {
-                        outcome = prompter.request(&access, &tool_call_update, protected_edit, hook_ask.as_ref()) => outcome,
+                        outcome = prompter.request(&access, &tool_call_update, protected_edit, hook_ask.as_ref(), bash_evaluation.as_ref().map(|e| &e.assessment)) => outcome,
                         _ = respond_to.closed() => PromptOutcome::Cancelled,
                     };
                     // A subagent message or a plain tool has no grant store: every "always" answer holds for this call only.

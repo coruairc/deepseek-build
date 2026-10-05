@@ -215,7 +215,13 @@ impl xai_tool_runtime::Tool for ReadTool {
 
         // Read the file bytes for all remaining branches.
         let file_bytes = match fs.read_file(&path).await {
-            Ok(bytes) => bytes,
+            Ok(bytes) => {
+                crate::implementations::editor_infra::read_before_write::record_read(
+                    &resources, &path,
+                )
+                .await;
+                bytes
+            }
             Err(e) => {
                 tracing::debug!(?e, "Failed to read file");
                 return Ok(ReadFileOutput::FileReadError(format!(
