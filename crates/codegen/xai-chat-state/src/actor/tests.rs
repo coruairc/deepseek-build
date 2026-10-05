@@ -4493,7 +4493,7 @@ async fn sampling_config_survives_compaction_replacement() {
         model: "grok-build".to_string(),
         temperature: Some(0.7),
         top_p: Some(0.95),
-        api_backend: ApiBackend::Responses,
+        api_backend: ApiBackend::ChatCompletions,
         conversation_group_id: Some("conversation-group".into()),
         context_window: NonZeroU64::new(500_000).unwrap(),
         ..Default::default()
@@ -4518,7 +4518,7 @@ async fn sampling_config_survives_compaction_replacement() {
     let pre = h.handle.get_sampling_config().await.unwrap();
     assert_eq!(pre.model, "grok-build");
     assert_eq!(pre.context_window.get(), 500_000);
-    assert_eq!(pre.api_backend, ApiBackend::Responses);
+    assert_eq!(pre.api_backend, ApiBackend::ChatCompletions);
 
     let pre_meta = h.handle.get_last_model_metadata().await;
     assert_eq!(pre_meta.resolved_model_id.as_deref(), Some("deepseek-4.5"));
@@ -4544,7 +4544,7 @@ async fn sampling_config_survives_compaction_replacement() {
     );
     assert_eq!(
         post.api_backend,
-        ApiBackend::Responses,
+        ApiBackend::ChatCompletions,
         "BUG: api_backend switched to ChatCompletions after compaction"
     );
     assert_eq!(
@@ -4648,7 +4648,7 @@ async fn context_window_downgrade_triggers_auto_compact() {
         model: "deepseek-4.5".to_string(),
         temperature: Some(0.7),
         top_p: Some(0.95),
-        api_backend: ApiBackend::Responses,
+        api_backend: ApiBackend::ChatCompletions,
         context_window: NonZeroU64::new(500_000).unwrap(),
         ..Default::default()
     };
@@ -4684,7 +4684,7 @@ async fn context_window_downgrade_triggers_auto_compact() {
     assert_eq!(post.model, "deepseek-4.5", "model slug must not change");
     assert_eq!(
         post.api_backend,
-        ApiBackend::Responses,
+        ApiBackend::ChatCompletions,
         "api_backend must not change"
     );
 
@@ -4714,18 +4714,17 @@ async fn context_window_downgrade_triggers_auto_compact() {
 fn serialize_via_public_api(
     req: &xai_grok_sampling_types::ConversationRequest,
 ) -> serde_json::Value {
-    use xai_grok_sampling_types::rs;
-    let create_response: rs::CreateResponse = req.into();
-    let mut body = serde_json::to_value(&create_response).unwrap();
-    xai_grok_sampling_types::patch_reasoning_text_types(&mut body);
+    // The product is Chat Completions-only now; serialize the wire body the
+    // sampler actually sends.
+    let chat: xai_grok_sampling_types::ChatCompletionRequest = req.clone().into();
+    let body = serde_json::to_value(&chat).unwrap();
     // Sanity guard: the placeholder string from the pre-refactor design
     // must never appear in the serialized output. If a future change
     // re-introduces a stringly-typed splice, this catches it.
     let body_str = serde_json::to_string(&body).unwrap();
     assert!(
         !body_str.contains("__RAW_OUTPUT_PLACEHOLDER_"),
-        "placeholder sentinel must never appear in serialized output \
-         post-sibling-Reasoning refactor"
+        "placeholder sentinel must never appear in serialized output"
     );
     body
 }
@@ -4740,8 +4739,8 @@ fn assert_prefix_stable_pair(
     let base_body = serialize_via_public_api(base);
     let ext_body = serialize_via_public_api(extended);
 
-    let base_input = base_body.get("input").and_then(|v| v.as_array()).unwrap();
-    let ext_input = ext_body.get("input").and_then(|v| v.as_array()).unwrap();
+    let base_input = base_body.get("messages").and_then(|v| v.as_array()).unwrap();
+    let ext_input = ext_body.get("messages").and_then(|v| v.as_array()).unwrap();
 
     assert!(
         ext_input.len() >= base_input.len(),
@@ -5100,8 +5099,8 @@ async fn prefix_stable_after_image_pruning() {
     let body1 = serialize_via_public_api(&req1);
     let body2 = serialize_via_public_api(&req2);
 
-    let input1 = body1.get("input").and_then(|v| v.as_array()).unwrap();
-    let input2 = body2.get("input").and_then(|v| v.as_array()).unwrap();
+    let input1 = body1.get("messages").and_then(|v| v.as_array()).unwrap();
+    let input2 = body2.get("messages").and_then(|v| v.as_array()).unwrap();
 
     assert_eq!(
         input1.first(),
@@ -5284,8 +5283,8 @@ async fn prefix_stable_after_tool_result_pruning() {
 
     let body1 = serialize_via_public_api(&req1);
     let body2 = serialize_via_public_api(&req2);
-    let input1 = body1.get("input").and_then(|v| v.as_array()).unwrap();
-    let input2 = body2.get("input").and_then(|v| v.as_array()).unwrap();
+    let input1 = body1.get("messages").and_then(|v| v.as_array()).unwrap();
+    let input2 = body2.get("messages").and_then(|v| v.as_array()).unwrap();
 
     assert_eq!(
         input1.first(),
@@ -5422,8 +5421,8 @@ async fn prefix_stable_after_session_resume() {
 
     let body2 = serialize_via_public_api(&req2);
     let body3 = serialize_via_public_api(&req3);
-    let input2 = body2.get("input").and_then(|v| v.as_array()).unwrap();
-    let input3 = body3.get("input").and_then(|v| v.as_array()).unwrap();
+    let input2 = body2.get("messages").and_then(|v| v.as_array()).unwrap();
+    let input3 = body3.get("messages").and_then(|v| v.as_array()).unwrap();
     assert_eq!(
         input2, input3,
         "restored snapshot must produce identical request items"
