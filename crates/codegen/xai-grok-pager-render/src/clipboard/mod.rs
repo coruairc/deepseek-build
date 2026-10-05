@@ -2423,8 +2423,8 @@ mod tests {
         }
         // Non-home paths pass through untouched, including multi-byte UTF-8 components (must never slice at a non-char boundary)
         assert_eq!(
-            display_copy_path(std::path::Path::new("/tmp/grok-0/last-copy.txt")),
-            "/tmp/grok-0/last-copy.txt"
+            display_copy_path(std::path::Path::new("/tmp/deepseek-0/last-copy.txt")),
+            "/tmp/deepseek-0/last-copy.txt"
         );
         assert_eq!(
             display_copy_path(std::path::Path::new("/tmp/日本語/コピー.txt")),
@@ -2449,7 +2449,7 @@ mod tests {
 
     #[test]
     fn delivery_clipboard_success_carries_backup_file() {
-        let path = std::path::PathBuf::from("/tmp/grok-1/last-copy.txt");
+        let path = std::path::PathBuf::from("/tmp/deepseek-1/last-copy.txt");
         match resolve_delivery(copy_result(true), Ok(path.clone())) {
             CopyDelivery::Clipboard { result, file } => {
                 assert!(result.delivery.reported_success());
@@ -2474,7 +2474,7 @@ mod tests {
     /// Clipboard `Failed` still yields `File` delivery.
     #[test]
     fn delivery_clipboard_failure_yields_file() {
-        let path = std::path::PathBuf::from("/tmp/grok-1/last-copy.txt");
+        let path = std::path::PathBuf::from("/tmp/deepseek-1/last-copy.txt");
         let delivery = resolve_delivery(copy_result(false), Ok(path.clone()));
         assert!(delivery.success());
         match delivery {
@@ -2495,7 +2495,7 @@ mod tests {
 
     #[test]
     fn toast_message_names_backup_only_for_unverified_or_file_fallback() {
-        let path = std::path::PathBuf::from("/tmp/grok-1/last-copy.txt");
+        let path = std::path::PathBuf::from("/tmp/deepseek-1/last-copy.txt");
 
         let confirmed = CopyDelivery::Clipboard {
             result: ClipboardFeedback::Copied.to_result(),
@@ -2516,7 +2516,7 @@ mod tests {
         };
         assert_eq!(
             unverified.toast_message(),
-            "Copy sent, saved to /tmp/grok-1/last-copy.txt"
+            "Copy sent, saved to /tmp/deepseek-1/last-copy.txt"
         );
         assert_eq!(unverified.toast_ticks(), 120);
 
@@ -2532,7 +2532,7 @@ mod tests {
         let file_only = CopyDelivery::File { path };
         assert_eq!(
             file_only.toast_message(),
-            "Clipboard unreachable: wrote /tmp/grok-1/last-copy.txt"
+            "Clipboard unreachable: wrote /tmp/deepseek-1/last-copy.txt"
         );
         assert_eq!(file_only.toast_ticks(), 120);
 
@@ -2547,7 +2547,7 @@ mod tests {
     /// Unverified OSC still composes as clipboard delivery (not file fallback).
     #[test]
     fn unverified_clipboard_delivery_composes_as_clipboard() {
-        let path = std::path::PathBuf::from("/tmp/grok-1/last-copy.txt");
+        let path = std::path::PathBuf::from("/tmp/deepseek-1/last-copy.txt");
         let delivery = resolve_delivery(
             ClipboardFeedback::UnverifiedOscRemote.to_result(),
             Ok(path.clone()),

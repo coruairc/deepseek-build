@@ -502,7 +502,7 @@ save_on_end = false
 [compaction.memory_flush]
 enabled = false
 soft_threshold_tokens = 8000
-flush_model = "grok-4"
+flush_model = "deepseek-4"
 max_flush_write_chars = 16000
 idle_timeout_secs = 300
 semantic_dedup_threshold = 0.85
@@ -539,7 +539,7 @@ hard_clear_age_turns = 20
         assert!(!mem.session.save_on_end);
         assert!(!mem.flush.enabled);
         assert_eq!(mem.flush.soft_threshold_tokens, 8000);
-        assert_eq!(mem.flush.flush_model.as_deref(), Some("grok-4"));
+        assert_eq!(mem.flush.flush_model.as_deref(), Some("deepseek-4"));
         assert_eq!(mem.flush.max_flush_write_chars, 16000);
         assert_eq!(mem.flush.idle_timeout_secs, Some(300));
         assert_eq!(mem.flush.semantic_dedup_threshold, Some(0.85));
@@ -1386,16 +1386,16 @@ fn subagents_config_models_parsed() {
                 enabled = true
 
                 [subagents.models]
-                explore = "grok-3-fast"
-                plan = "grok-4.5"
+                explore = "deepseek-3-fast"
+                plan = "deepseek-4.5"
                 "#,
             )
             .unwrap();
         let sa = SubagentsConfig::resolve(None, &config);
         assert!(sa.enabled);
         assert_eq!(sa.models.len(), 2);
-        assert_eq!(sa.models.get("explore").unwrap(), "grok-3-fast");
-        assert_eq!(sa.models.get("plan").unwrap(), "grok-4.5");
+        assert_eq!(sa.models.get("explore").unwrap(), "deepseek-3-fast");
+        assert_eq!(sa.models.get("plan").unwrap(), "deepseek-4.5");
     });
 }
 #[test]
@@ -1415,7 +1415,7 @@ fn subagents_config_models_without_enabled_keeps_default_enabled() {
         let config: toml::Value = toml::from_str(
                 r#"
                 [subagents.models]
-                explore = "grok-3-fast"
+                explore = "deepseek-3-fast"
                 "#,
             )
             .unwrap();
@@ -1425,7 +1425,7 @@ fn subagents_config_models_without_enabled_keeps_default_enabled() {
                 "[subagents] table without an enabled key must keep the enabled default"
             );
         assert_eq!(sa.models.len(), 1);
-        assert_eq!(sa.models.get("explore").unwrap(), "grok-3-fast");
+        assert_eq!(sa.models.get("explore").unwrap(), "deepseek-3-fast");
     });
 }
 #[test]
@@ -1467,13 +1467,13 @@ fn subagents_config_models_with_env_var_enables() {
             let config: toml::Value = toml::from_str(
                     r#"
                 [subagents.models]
-                explore = "grok-3-fast"
+                explore = "deepseek-3-fast"
                 "#,
                 )
                 .unwrap();
             let sa = SubagentsConfig::resolve(None, &config);
             assert!(sa.enabled, "GROK_SUBAGENTS=1 should enable");
-            assert_eq!(sa.models.get("explore").unwrap(), "grok-3-fast");
+            assert_eq!(sa.models.get("explore").unwrap(), "deepseek-3-fast");
         },
     );
 }
@@ -2405,7 +2405,7 @@ fn roles_parse_from_toml() {
             [roles.researcher]
             description = "Deep research agent"
             default_capability_mode = "read-only"
-            model = "grok-3"
+            model = "deepseek-3"
 
             [roles.implementer]
             description = "Implementation agent"
@@ -2420,7 +2420,7 @@ fn roles_parse_from_toml() {
             researcher.default_capability_mode.as_deref(),
             Some("read-only")
         );
-    assert_eq!(researcher.model.as_deref(), Some("grok-3"));
+    assert_eq!(researcher.model.as_deref(), Some("deepseek-3"));
     assert!(researcher.prompt_file.is_none());
     let implementer = cfg.get_role("implementer").unwrap();
     assert_eq!(implementer.description, "Implementation agent");
@@ -2491,7 +2491,7 @@ fn validate_roles_passes_valid_config() {
             [roles.good]
             description = "Valid role"
             default_capability_mode = "read-write"
-            model = "grok-3"
+            model = "deepseek-3"
         "#;
     let cfg: SubagentsConfig = toml::from_str(toml_str).unwrap();
     assert!(cfg.validate_roles().is_empty());
@@ -3213,10 +3213,10 @@ cli_chat_proxy_base_url = "https://api.deepseek.com/v1"
 [model.grok-build]
 base_url = "https://inference.acme-corp.example/xai/v1"
 env_key = "ANTHROPIC_AUTH_TOKEN"
-model = "grok-4.5"
+model = "deepseek-4.5"
 
 [models]
-default = "grok-4.5"
+default = "deepseek-4.5"
 "#,
         )
         .unwrap();
@@ -3666,21 +3666,21 @@ fn apply_requirements_allowed_models_clamps_catalog_and_names_source() {
     let raw: toml::Value = toml::from_str(
             r#"
             [models]
-            default = "grok-3"
+            default = "deepseek-3"
             allowed_models = ["*"]
-            [model.grok-3]
-            model = "grok-3"
+            [model.deepseek-3]
+            model = "deepseek-3"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
-            [model.grok-4]
-            model = "grok-4"
+            [model.deepseek-4]
+            model = "deepseek-4"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
         )
         .unwrap();
     let mut cfg = crate::agent::config::Config::new_from_toml_cfg(&raw).unwrap();
-    pin_allowed_models(&mut cfg, "[models]\nallowed_models = [\"grok-4\"]\n");
+    pin_allowed_models(&mut cfg, "[models]\nallowed_models = [\"deepseek-4\"]\n");
     let catalog = crate::agent::remote_config::resolve_model_catalog(&cfg, None);
     let selectable = |id| {
         catalog
@@ -3690,11 +3690,11 @@ fn apply_requirements_allowed_models_clamps_catalog_and_names_source() {
             .user_selectable
     };
     assert!(
-            selectable("grok-4"),
+            selectable("deepseek-4"),
             "signed allowlist member must stay selectable"
         );
     assert!(
-            !selectable("grok-3"),
+            !selectable("deepseek-3"),
             "models outside the signed set must not be selectable"
         );
     let err = crate::agent::remote_config::validate_selectable(&cfg, &catalog)
@@ -3707,32 +3707,32 @@ fn apply_requirements_allowed_models_clamps_catalog_and_names_source() {
             !err.contains("requirements.toml"),
             "must not name an administrator file the user cannot edit: {err}"
         );
-    assert!(err.contains("grok-3"), "error must name the excluded default: {err}");
+    assert!(err.contains("deepseek-3"), "error must name the excluded default: {err}");
 }
 #[test]
 fn apply_requirements_allowed_models_ignores_user_catalog_key() {
     let raw: toml::Value = toml::from_str(
             r#"
             [models]
-            default = "grok-4"
+            default = "deepseek-4"
             allowed_models = ["*"]
-            [model.grok-4]
-            model = "grok-4"
+            [model.deepseek-4]
+            model = "deepseek-4"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
-            [model.grok-4-anything]
+            [model.deepseek-4-anything]
             model = "other-model"
             base_url = "https://evil.example/v1"
             context_window = 256000
             [model.my-alias]
-            model = "grok-4"
+            model = "deepseek-4"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
         )
         .unwrap();
     let mut cfg = crate::agent::config::Config::new_from_toml_cfg(&raw).unwrap();
-    pin_allowed_models(&mut cfg, "[models]\nallowed_models = [\"grok-4*\"]\n");
+    pin_allowed_models(&mut cfg, "[models]\nallowed_models = [\"deepseek-4*\"]\n");
     let catalog = crate::agent::remote_config::resolve_model_catalog(&cfg, None);
     let selectable = |id| {
         catalog
@@ -3742,16 +3742,16 @@ fn apply_requirements_allowed_models_ignores_user_catalog_key() {
             .user_selectable
     };
     assert!(
-            selectable("grok-4"),
-            "routing slug grok-4 matches grok-4*"
+            selectable("deepseek-4"),
+            "routing slug deepseek-4 matches deepseek-4*"
         );
     assert!(
             selectable("my-alias"),
-            "user alias whose model id is grok-4 stays selectable"
+            "user alias whose model id is deepseek-4 stays selectable"
         );
     assert!(
-            !selectable("grok-4-anything"),
-            "catalog key grok-4-anything pointing at another model must not satisfy the pin"
+            !selectable("deepseek-4-anything"),
+            "catalog key deepseek-4-anything pointing at another model must not satisfy the pin"
         );
 }
 #[test]
@@ -3759,20 +3759,20 @@ fn apply_requirements_malformed_allowed_models_fail_closes() {
     let raw: toml::Value = toml::from_str(
             r#"
             [models]
-            default = "grok-4"
+            default = "deepseek-4"
             allowed_models = ["*"]
-            [model.grok-4]
-            model = "grok-4"
+            [model.deepseek-4]
+            model = "deepseek-4"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
         )
         .unwrap();
     let mut cfg = crate::agent::config::Config::new_from_toml_cfg(&raw).unwrap();
-    pin_allowed_models(&mut cfg, "[models]\nallowed_models = \"grok-4\"\n");
+    pin_allowed_models(&mut cfg, "[models]\nallowed_models = \"deepseek-4\"\n");
     let catalog = crate::agent::remote_config::resolve_model_catalog(&cfg, None);
-    let Some(grok4) = catalog.get("grok-4") else {
-        panic!("expected grok-4: {catalog:?}");
+    let Some(grok4) = catalog.get("deepseek-4") else {
+        panic!("expected deepseek-4: {catalog:?}");
     };
     assert!(
             !grok4.info.user_selectable,
@@ -3801,13 +3801,13 @@ fn apply_requirements_allowed_models_empty_array_is_unrestricted() {
     let raw: toml::Value = toml::from_str(
             r#"
             [models]
-            allowed_models = ["grok-4"]
-            [model.grok-3]
-            model = "grok-3"
+            allowed_models = ["deepseek-4"]
+            [model.deepseek-3]
+            model = "deepseek-3"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
-            [model.grok-4]
-            model = "grok-4"
+            [model.deepseek-4]
+            model = "deepseek-4"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
@@ -3824,7 +3824,7 @@ fn apply_requirements_allowed_models_empty_array_is_unrestricted() {
             .user_selectable
     };
     assert!(
-            selectable("grok-3") && selectable("grok-4"),
+            selectable("deepseek-3") && selectable("deepseek-4"),
             "empty fleet array must not restrict"
         );
     assert!(
@@ -3836,7 +3836,7 @@ fn apply_requirements_allowed_models_empty_array_is_unrestricted() {
         );
     assert_eq!(
             cfg.models.allowed_models,
-            Some(vec!["grok-4".to_string()]),
+            Some(vec!["deepseek-4".to_string()]),
             "pin must not overwrite the user-field copy; EffectiveAllowlist reads the pin"
         );
 }
@@ -3846,19 +3846,19 @@ fn apply_requirements_allowed_models_replaces_user_list() {
             r#"
             [models]
             allowed_models = ["*"]
-            [model.grok-3]
-            model = "grok-3"
+            [model.deepseek-3]
+            model = "deepseek-3"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
-            [model.grok-4]
-            model = "grok-4"
+            [model.deepseek-4]
+            model = "deepseek-4"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
         )
         .unwrap();
     let mut cfg = crate::agent::config::Config::new_from_toml_cfg(&raw).unwrap();
-    pin_allowed_models(&mut cfg, "[models]\nallowed_models = [\"grok-4\"]\n");
+    pin_allowed_models(&mut cfg, "[models]\nallowed_models = [\"deepseek-4\"]\n");
     let catalog = crate::agent::remote_config::resolve_model_catalog(&cfg, None);
     let selectable = |id| {
         catalog
@@ -3867,9 +3867,9 @@ fn apply_requirements_allowed_models_replaces_user_list() {
             .info
             .user_selectable
     };
-    assert!(selectable("grok-4"));
+    assert!(selectable("deepseek-4"));
     assert!(
-            !selectable("grok-3"),
+            !selectable("deepseek-3"),
             "user * must not union with the fleet pin"
         );
 }
@@ -3878,21 +3878,21 @@ fn validate_selectable_rejects_dash_m_outside_fleet_pin() {
     let raw: toml::Value = toml::from_str(
             r#"
             [models]
-            default = "grok-4"
-            [model.grok-3]
-            model = "grok-3"
+            default = "deepseek-4"
+            [model.deepseek-3]
+            model = "deepseek-3"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
-            [model.grok-4]
-            model = "grok-4"
+            [model.deepseek-4]
+            model = "deepseek-4"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
         )
         .unwrap();
     let mut cfg = crate::agent::config::Config::new_from_toml_cfg(&raw).unwrap();
-    pin_allowed_models(&mut cfg, "[models]\nallowed_models = [\"grok-4\"]\n");
-    cfg.default_model_override = Some("grok-3".into());
+    pin_allowed_models(&mut cfg, "[models]\nallowed_models = [\"deepseek-4\"]\n");
+    cfg.default_model_override = Some("deepseek-3".into());
     let catalog = crate::agent::remote_config::resolve_model_catalog(&cfg, None);
     let err = crate::agent::remote_config::validate_selectable(&cfg, &catalog)
         .unwrap_err();

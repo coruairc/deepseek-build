@@ -501,7 +501,7 @@ pub(crate) struct ModelOverrideConfig {
     pub web_search: String,
     /// `None` = current model.
     pub session_summary: Option<String>,
-    /// Compiled default (`grok-4.6`) when unset locally, remotely, and via env.
+    /// Compiled default (`deepseek-4.6`) when unset locally, remotely, and via env.
     pub image_description: Option<String>,
     /// Next-prompt suggestion model pin.
     /// Unlike the other overrides this does NOT fill a compiled default; see [`PromptSuggestModelPin`].
@@ -543,7 +543,7 @@ fn non_empty_model_override(value: Option<&str>) -> Option<String> {
     })
 }
 impl ModelOverrideConfig {
-    /// CLI flag > env var > config.toml > remote settings > compiled default. `image_description` and `session_summary` always resolve to `Some(_)` (default `grok-4.6`), never the session model.
+    /// CLI flag > env var > config.toml > remote settings > compiled default. `image_description` and `session_summary` always resolve to `Some(_)` (default `deepseek-4.6`), never the session model.
     /// `prompt_suggestion` resolves to a [`PromptSuggestModelPin`] instead of a model string. It has no CLI flag; the default and the catalog guard live at the consumer, `handle_suggest_prompt`.
     pub(crate) fn resolve(
         cli_web_search_model: Option<&str>,

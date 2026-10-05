@@ -1266,7 +1266,7 @@ ignore = ["~/.grok/skills/noisy/SKILL.md"]
     async fn save_mcp_server_config_at_refuses_an_unparseable_file() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.toml");
-        std::fs::write(&path, "[models\ndefault = \"grok-4.6\"\n").unwrap();
+        std::fs::write(&path, "[models\ndefault = \"deepseek-4.6\"\n").unwrap();
         let config = McpServerConfig {
             transport: McpServerTransportConfig::Stdio {
                 command: "/bin/echo".to_string(),
@@ -1290,7 +1290,7 @@ ignore = ["~/.grok/skills/noisy/SKILL.md"]
         assert!(err.to_string().contains("unparseable"), "{err}");
         assert_eq!(
             std::fs::read_to_string(&path).unwrap(),
-            "[models\ndefault = \"grok-4.6\"\n",
+            "[models\ndefault = \"deepseek-4.6\"\n",
             "the file must be untouched"
         );
         let err = delete_mcp_server_config_at(&path, "qa-echo")

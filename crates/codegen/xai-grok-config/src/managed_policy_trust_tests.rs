@@ -67,7 +67,7 @@ fn a_missing_policy_file_compromises_that_home() {
 
 fn layer() -> RequirementsLayer {
     RequirementsLayer {
-        value: toml::from_str("[models]\ndefault = \"grok-4\"\n")
+        value: toml::from_str("[models]\ndefault = \"deepseek-4\"\n")
             .expect("requirements TOML parses"),
         source: RequirementsSource::File(PathBuf::from("/etc/grok/requirements.toml")),
         is_system: true,

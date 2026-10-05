@@ -370,7 +370,7 @@ pub fn complete_projected_call(
         span,
         ToolExecutionInput {
             prepared: PreparedToolFacts {
-                requested_model: Some("grok-4.6"),
+                requested_model: Some("deepseek-4.6"),
                 invocation_id,
                 tool_id: "GrokBuild:grep",
                 tool_version: Some("current"),
@@ -647,7 +647,7 @@ mod tests {
         assert_eq!(other.reason, Some(ToolSourceReason::NotInstrumented));
         let cwd = Path::new("/opt/repo");
         let (failed_projection, failed_success) = projected(
-            Some("grok-4.6"),
+            Some("deepseek-4.6"),
             "GrokBuild:grep",
             Some("current"),
             &serde_json::json!({}),
@@ -679,7 +679,7 @@ mod tests {
             ToolOutcome::Error
         );
         let (empty_projection, empty_success) = projected(
-            Some("grok-4.6"),
+            Some("deepseek-4.6"),
             "GrokBuild:grep",
             Some("current"),
             &serde_json::json!({}),
@@ -790,7 +790,7 @@ mod tests {
         let read_id = read_file.as_str();
         let args = serde_json::json!({"target_file": "src/a.rs"});
         let (projection, _) = projected(
-            Some("grok-4.6"),
+            Some("deepseek-4.6"),
             read_id,
             Some("current"),
             &args,
@@ -819,7 +819,7 @@ mod tests {
         );
         assert_eq!(
             json.get("model_id").and_then(serde_json::Value::as_str),
-            Some("grok-4.6")
+            Some("deepseek-4.6")
         );
         assert_eq!(
             json.get("tool_id").and_then(serde_json::Value::as_str),
@@ -836,7 +836,7 @@ mod tests {
         assert!(!rendered.contains("CANARY_BODY"));
         assert!(!rendered.contains("provider-call"));
         let (renamed, _) = projected(
-            Some("grok-4.6"),
+            Some("deepseek-4.6"),
             read_id,
             Some("current"),
             &serde_json::json!({"target_file": "/tmp/pr.md"}),
@@ -847,7 +847,7 @@ mod tests {
         assert_eq!(renamed.path_scope, Some(PathScope::Tmp));
         assert_eq!(renamed.tool_id.as_str(), "GrokBuild:read_file");
         let (opaque_projection, _) = projected(
-            Some("grok-4.6"),
+            Some("deepseek-4.6"),
             "opaque",
             None,
             &serde_json::json!({"target_file": "/tmp/pr.md"}),

@@ -4,8 +4,8 @@
 //! It also carries recently-touched on-disk (`Dormant`) sessions.
 //! Clients read it two ways:
 //!
-//!   - request/response `x.ai/sessions/list` returns `{ "sessions": [RosterEntry, …] }`
-//!   - broadcast notification `x.ai/sessions/changed` carries `{ "upserted": [RosterEntry, …], "removed": ["sess-abc", …] }`
+//!   - request/response `deepseek-build/sessions/list` returns `{ "sessions": [RosterEntry, …] }`
+//!   - broadcast notification `deepseek-build/sessions/changed` carries `{ "upserted": [RosterEntry, …], "removed": ["sess-abc", …] }`
 //!
 //! The wire shape is intentionally small and current-state only; no event fold or materialized snapshot is required (the snapshot is deferred).
 
@@ -77,13 +77,13 @@ pub struct RosterEntry {
     pub origin: RosterOrigin,
 }
 
-/// Response payload for `x.ai/sessions/list`.
+/// Response payload for `deepseek-build/sessions/list`.
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct RosterListResponse {
     pub sessions: Vec<RosterEntry>,
 }
 
-/// Params payload for the `x.ai/sessions/changed` broadcast notification.
+/// Params payload for the `deepseek-build/sessions/changed` broadcast notification.
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct RosterChanged {
     #[serde(default)]
@@ -93,8 +93,8 @@ pub struct RosterChanged {
 }
 
 /// JSON-RPC method names for the roster API.
-pub const SESSIONS_LIST_METHOD: &str = "x.ai/sessions/list";
-pub const SESSIONS_CHANGED_METHOD: &str = "x.ai/sessions/changed";
+pub const SESSIONS_LIST_METHOD: &str = "deepseek-build/sessions/list";
+pub const SESSIONS_CHANGED_METHOD: &str = "deepseek-build/sessions/changed";
 
 /// Merge live `resident` rows with on-disk `summaries` into the sorted roster. Pure, so it is unit-testable without disk or a live actor.
 /// Resident rows own the live state but carry no title or last-active time, so each adopts those from its summary. A `Working` row keeps its "now" timestamp instead.
@@ -182,7 +182,7 @@ mod merge_roster_tests {
             cwd: format!("/live/{id}"),
             is_worktree: false,
             session_kind: None,
-            model_id: Some("grok-4".into()),
+            model_id: Some("deepseek-4".into()),
             reasoning_effort: None,
             yolo: false,
             activity,

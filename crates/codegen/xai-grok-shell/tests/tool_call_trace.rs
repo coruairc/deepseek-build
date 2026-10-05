@@ -145,7 +145,7 @@ async fn span_and_product_row_agree_and_product_gate_is_independent() {
     let metadata = row.get("event_metadata").expect("metadata");
     assert_eq!(
         metadata.get("model_id").and_then(Value::as_str),
-        Some("grok-4.6")
+        Some("deepseek-4.6")
     );
     assert_eq!(
         metadata.get("invocation_id").and_then(Value::as_str),
@@ -171,7 +171,7 @@ async fn span_and_product_row_agree_and_product_gate_is_independent() {
         metadata.get("outcome").and_then(Value::as_str),
         Some("error")
     );
-    assert_eq!(attr(span, "model_id"), Some("grok-4.6"));
+    assert_eq!(attr(span, "model_id"), Some("deepseek-4.6"));
     assert_eq!(attr(span, "invocation_id"), Some(ENABLED));
     assert_eq!(attr(span, "tool_id"), Some("GrokBuild:grep"));
     assert_eq!(attr(span, "tool_version"), Some("current"));

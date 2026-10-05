@@ -104,13 +104,13 @@ impl TelemetryClient {
     }
 }
 /// Normalize a subscription tier string to a consistent lowercase_underscore format for Mixpanel.
-/// Handles both CCP display names ("SuperGrok Heavy") and JWT-derived keys ("supergrok_heavy").
+/// Handles both CCP display names ("deepseek Heavy") and JWT-derived keys ("deepseek_heavy").
 fn normalize_tier(tier: &str) -> String {
     match tier {
-        "SuperGrok Heavy" | "supergrok_heavy" => "supergrok_heavy",
-        "SuperGrok Plus" | "supergrok_plus" => "supergrok_plus",
-        "SuperGrok" | "supergrok" => "supergrok",
-        "SuperGrok Lite" | "supergrok_lite" => "supergrok_lite",
+        "deepseek Heavy" | "deepseek_heavy" => "deepseek_heavy",
+        "deepseek Plus" | "deepseek_plus" => "deepseek_plus",
+        "deepseek" | "deepseek" => "deepseek",
+        "deepseek Lite" | "deepseek_lite" => "deepseek_lite",
         "X Premium+" | "x_premium_plus" => "x_premium_plus",
         "X Premium" | "x_premium" => "x_premium",
         "X Basic" | "x_basic" => "x_basic",
@@ -461,15 +461,15 @@ mod tests {
     fn normalize_tier_maps_display_and_claim_names() {
         assert_eq!(normalize_tier("Free"), "free");
         assert_eq!(normalize_tier("free"), "free");
-        assert_eq!(normalize_tier("SuperGrok"), "supergrok");
-        assert_eq!(normalize_tier("SuperGrok Heavy"), "supergrok_heavy");
-        assert_eq!(normalize_tier("supergrok_heavy"), "supergrok_heavy");
+        assert_eq!(normalize_tier("deepseek"), "deepseek");
+        assert_eq!(normalize_tier("deepseek Heavy"), "deepseek_heavy");
+        assert_eq!(normalize_tier("deepseek_heavy"), "deepseek_heavy");
         assert_eq!(normalize_tier("X Basic"), "x_basic");
         assert_eq!(normalize_tier("X Premium+"), "x_premium_plus");
         assert_eq!(normalize_tier("X Premium"), "x_premium");
-        assert_eq!(normalize_tier("SuperGrok Lite"), "supergrok_lite");
-        assert_eq!(normalize_tier("SuperGrok Plus"), "supergrok_plus");
-        assert_eq!(normalize_tier("supergrok_plus"), "supergrok_plus");
+        assert_eq!(normalize_tier("deepseek Lite"), "deepseek_lite");
+        assert_eq!(normalize_tier("deepseek Plus"), "deepseek_plus");
+        assert_eq!(normalize_tier("deepseek_plus"), "deepseek_plus");
         assert_eq!(normalize_tier("API Key"), "api_key");
         assert_eq!(normalize_tier("api_key"), "api_key");
     }

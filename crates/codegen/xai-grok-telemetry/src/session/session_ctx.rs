@@ -383,7 +383,7 @@ mod tests {
                     source_bytes: 42,
                     snapshot_bytes: 64,
                     duration_ms: 1,
-                    model_id: "grok-4.6".to_owned(),
+                    model_id: "deepseek-4.6".to_owned(),
                 },
             );
             assert_eq!("grok-shell-mcp_file_input_completed", name);
@@ -594,7 +594,7 @@ mod tests {
                 outcome: crate::events::Outcome::Completed,
                 duration_ms: 10,
                 tool_call_count: 1,
-                model_id: "grok-4".into(),
+                model_id: "deepseek-4".into(),
                 // Left `None` so this exercises the task-local ctx fallback, not the event field.
                 session_id: None,
                 cancellation_category: None,

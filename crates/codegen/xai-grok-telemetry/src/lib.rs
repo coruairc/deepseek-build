@@ -5,7 +5,7 @@
     unreachable_code,
     dead_code
 )]
-//! Telemetry engine for Grok Build sessions.
+//! Telemetry engine for deepseek-build sessions.
 //! Covers local structured logging and the typed event surface.
 //!
 //! Extracted from `xai-file-utils` so telemetry has its own ownership boundary (see CODEOWNERS).

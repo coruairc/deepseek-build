@@ -658,7 +658,7 @@ impl SessionActor {
 
         let model = match model_override {
             Some(m) => m.to_owned(),
-            None => "grok-4.6".to_owned(),
+            None => "deepseek-4.6".to_owned(),
         };
 
         let request = ConversationRequest {

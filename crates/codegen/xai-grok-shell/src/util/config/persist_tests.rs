@@ -724,14 +724,14 @@ auto_dark_theme = "tokyonight"
 auto_light_theme = "grokday"
 
 [models]
-default = "grok-3"
+default = "deepseek-3"
 
 [cli]
 auto_update = true
 "#;
     let root: TomlValue = toml::from_str(original).unwrap();
     let mut cfg = load_config_from_toml(&root);
-    cfg.models.default = Some("grok-4".to_string());
+    cfg.models.default = Some("deepseek-4".to_string());
     let mut table = root.as_table().unwrap().clone();
     merge_section(&mut table, "cli", &cfg.cli);
     merge_section(&mut table, "models", &cfg.models);
@@ -753,7 +753,7 @@ auto_update = true
     let models = table.get("models").unwrap().as_table().unwrap();
     assert_eq!(
         models.get("default").and_then(|v| v.as_str()),
-        Some("grok-4")
+        Some("deepseek-4")
     );
 }
 #[test]
@@ -796,7 +796,7 @@ fn merge_section_replaces_non_table_section() {
 #[test]
 fn models_config_serializes_only_some_fields() {
     let m = crate::agent::config::ModelsConfig {
-        default: Some("grok-3".to_string()),
+        default: Some("deepseek-3".to_string()),
         ..Default::default()
     };
     let v = TomlValue::try_from(&m).expect("serialize ModelsConfig");
@@ -810,7 +810,7 @@ fn models_config_serializes_only_some_fields() {
         assert!(!t.contains_key("disabled_models"));
         assert!(!t.contains_key("allowed_models"));
         assert!(!t.contains_key("agent_type"));
-        assert_eq!(t.get("default").and_then(|x| x.as_str()), Some("grok-3"));
+        assert_eq!(t.get("default").and_then(|x| x.as_str()), Some("deepseek-3"));
     } else {
         panic!("expected table from serialization");
     }
@@ -1058,8 +1058,8 @@ mod resolve_auto_compact {
     };
     use crate::agent::config::{Config, ConfigModelOverride, ModelInfo};
     use std::sync::Mutex;
-    const TEST_MODEL: &str = "grok-4.5";
-    const OTHER_MODEL: &str = "grok-4.3";
+    const TEST_MODEL: &str = "deepseek-4.5";
+    const OTHER_MODEL: &str = "deepseek-4.3";
     /// Serialize tests that mutate `GROK_AUTO_COMPACT_THRESHOLD_PERCENT`.
     static ENV_LOCK: Mutex<()> = Mutex::new(());
     /// Build a `Config` populated with optional per-source values for the `TEST_MODEL`.

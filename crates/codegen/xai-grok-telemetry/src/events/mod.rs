@@ -356,8 +356,8 @@ telemetry_event!(PlanSubmit, "plan_submit");
 telemetry_event!(EventLoopStall, "event_loop_stall");
 telemetry_event!(TermWriterBlocked, "term_writer_blocked");
 telemetry_event!(PromptAckTimeoutFired, "prompt_ack_timeout_fired");
-telemetry_event!(SuperGrokUpsellShown, "supergrok_upsell_shown");
-telemetry_event!(SuperGrokUpsellClicked, "supergrok_upsell_clicked");
+telemetry_event!(deepseekUpsellShown, "deepseek_upsell_shown");
+telemetry_event!(deepseekUpsellClicked, "deepseek_upsell_clicked");
 telemetry_event!(AnnouncementCtaShown, "announcement_cta_shown");
 telemetry_event!(AnnouncementCtaClicked, "announcement_cta_clicked");
 telemetry_event!(CodingDataConsentSelected, "coding_data_consent_selected");
@@ -1268,7 +1268,7 @@ mod tests {
 
     #[test]
     fn read_profile_serializes_a_token_rejection_without_the_path() {
-        let mut event = completed_for_test("read_note", "grok-4.6");
+        let mut event = completed_for_test("read_note", "deepseek-4.6");
         event.file_path = Some("/tmp/secret-project/SKILL.md".into());
         event.error_message =
             Some("File content (30000 tokens) exceeds /tmp/secret-project/SKILL.md".into());
@@ -1829,7 +1829,7 @@ mod tests {
             tokens_used: 100_000,
             context_window: 128_000,
             percentage: 78,
-            model_id: "grok-4".into(),
+            model_id: "deepseek-4".into(),
             compaction_id: "cid-1".into(),
             compaction_mode: CompactionModeLabel::Segments,
             two_pass_enabled: true,
@@ -1843,7 +1843,7 @@ mod tests {
                 "tokens_used": 100_000,
                 "context_window": 128_000,
                 "percentage": 78,
-                "model_id": "grok-4",
+                "model_id": "deepseek-4",
                 "compaction_id": "cid-1",
                 "compaction_mode": "segments",
                 "two_pass_enabled": true,
@@ -1856,7 +1856,7 @@ mod tests {
             tokens_used: 10_000,
             context_window: 128_000,
             percentage: 8,
-            model_id: "grok-4".into(),
+            model_id: "deepseek-4".into(),
             compaction_id: "cid-2".into(),
             compaction_mode: CompactionModeLabel::Summary,
             two_pass_enabled: false,
@@ -1870,7 +1870,7 @@ mod tests {
                 "tokens_used": 10_000,
                 "context_window": 128_000,
                 "percentage": 8,
-                "model_id": "grok-4",
+                "model_id": "deepseek-4",
                 "compaction_id": "cid-2",
                 "compaction_mode": "summary",
                 "two_pass_enabled": false,
@@ -1886,7 +1886,7 @@ mod tests {
             duration_ms: 63_000,
             tokens_before: 399_000,
             tokens_after: 15_000,
-            model_id: Some("grok-4".into()),
+            model_id: Some("deepseek-4".into()),
             compaction_id: "cid-1".into(),
             compaction_mode: CompactionModeLabel::Summary,
             two_pass: TwoPassOutcome::TwoPass,
@@ -1905,7 +1905,7 @@ mod tests {
                 "duration_ms": 63_000,
                 "tokens_before": 399_000,
                 "tokens_after": 15_000,
-                "model_id": "grok-4",
+                "model_id": "deepseek-4",
                 "compaction_id": "cid-1",
                 "compaction_mode": "summary",
                 "two_pass": "two_pass",
@@ -2107,7 +2107,7 @@ mod tests {
                 outcome: Outcome::Completed,
                 duration_ms: 5,
                 tool_call_count: 0,
-                model_id: "grok-4".into(),
+                model_id: "deepseek-4".into(),
                 session_id: None,
                 cancellation_category: None,
                 error_category: None,
@@ -2146,7 +2146,7 @@ mod tests {
                 outcome: Outcome::Completed,
                 duration_ms: 1200,
                 tool_call_count: 3,
-                model_id: "grok-4.6".into(),
+                model_id: "deepseek-4.6".into(),
                 session_id: None,
                 cancellation_category: None,
                 error_category: None,
@@ -2163,7 +2163,7 @@ mod tests {
                 "outcome": "completed",
                 "duration_ms": 1200,
                 "tool_call_count": 3,
-                "model_id": "grok-4.6",
+                "model_id": "deepseek-4.6",
                 "context_tokens": 204_958,
             })
         );
@@ -2177,7 +2177,7 @@ mod tests {
     #[test]
     fn model_response_received_carries_per_call_context_tokens() {
         let v = serde_json::to_value(ModelResponseReceived {
-            model_id: "grok-4.6".into(),
+            model_id: "deepseek-4.6".into(),
             duration_ms: 900,
             stop_reason: None,
             prompt_tokens: Some(26_886),

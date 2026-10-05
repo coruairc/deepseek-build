@@ -180,10 +180,10 @@ fn messages_result_usage_incomplete_aggregate_zeroes_buckets() {
 #[test]
 fn messages_model_usage_maps_and_zero_fills() {
     let rows = json!({
-        "grok-4": {"inputTokens": 90, "outputTokens": 7, "cacheReadInputTokens": 10, "cacheCreationInputTokens": 25, "costUSD": 0.02},
+        "deepseek-4": {"inputTokens": 90, "outputTokens": 7, "cacheReadInputTokens": 10, "cacheCreationInputTokens": 25, "costUSD": 0.02},
     });
-    let out = messages_model_usage(Some(&rows), Some("grok-4"), 0, Some(131_072));
-    let mu = at(&out, "/grok-4");
+    let out = messages_model_usage(Some(&rows), Some("deepseek-4"), 0, Some(131_072));
+    let mu = at(&out, "/deepseek-4");
     assert_eq!(at(mu, "/inputTokens"), 90);
     assert_eq!(at(mu, "/outputTokens"), 7);
     assert_eq!(at(mu, "/cacheReadInputTokens"), 10);
@@ -198,13 +198,13 @@ fn messages_model_usage_maps_and_zero_fills() {
 #[test]
 fn messages_model_usage_attributes_web_search_to_current_model() {
     let rows = json!({
-        "grok-4": {"inputTokens": 90, "outputTokens": 7, "costUSD": 0.02},
+        "deepseek-4": {"inputTokens": 90, "outputTokens": 7, "costUSD": 0.02},
         "grok-mini": {"inputTokens": 5, "outputTokens": 1},
     });
-    let out = messages_model_usage(Some(&rows), Some("grok-4"), 3, Some(131_072));
-    assert_eq!(at(&out, "/grok-4/webSearchRequests"), 3);
+    let out = messages_model_usage(Some(&rows), Some("deepseek-4"), 3, Some(131_072));
+    assert_eq!(at(&out, "/deepseek-4/webSearchRequests"), 3);
     assert_eq!(at(&out, "/grok-mini/webSearchRequests"), 0);
-    assert_eq!(at(&out, "/grok-4/contextWindow"), 131_072);
+    assert_eq!(at(&out, "/deepseek-4/contextWindow"), 131_072);
     assert!(at(&out, "/grok-mini/contextWindow").is_null());
 }
 
@@ -276,7 +276,7 @@ fn messages_partial_error_max_tokens_recovers_real_id_and_usage() {
     let mut out = Vec::new();
     out.extend(r.reduce(StreamEvent::ResponseStarted {
         message_id: Some("msg_real".into()),
-        model: Some("grok-4".into()),
+        model: Some("deepseek-4".into()),
         input_tokens: 42,
         cache_read_input_tokens: 100,
         cache_creation_input_tokens: 20,
@@ -316,7 +316,7 @@ fn messages_partial_error_max_tokens_delta_carries_input_usage() {
     let mut out = Vec::new();
     out.extend(r.reduce(StreamEvent::ResponseStarted {
         message_id: Some("msg_real".into()),
-        model: Some("grok-4".into()),
+        model: Some("deepseek-4".into()),
         input_tokens: 42,
         cache_read_input_tokens: 100,
         cache_creation_input_tokens: 20,

@@ -649,11 +649,11 @@ mod tests {
         let cfg = config_with_items(vec![TitleItem::Model, TitleItem::Grok]);
         let mut mgr = TitleManager::new(&cfg);
         let state = TitleState {
-            model: Some("grok-3"),
+            model: Some("deepseek-3"),
             ..idle_state()
         };
         mgr.update(&state);
-        assert_eq!(mgr.last_title, "grok-3 - grok");
+        assert_eq!(mgr.last_title, "deepseek-3 - grok");
     }
 
     #[test]
@@ -803,7 +803,7 @@ mod tests {
         let activity = TurnActivity::Thinking;
         let state = TitleState {
             session_name: Some("proj"),
-            model: Some("grok-3"),
+            model: Some("deepseek-3"),
             activity: Some(&activity),
             cwd: Some("/home/user/workspace"),
             ..idle_state()
@@ -811,7 +811,7 @@ mod tests {
         mgr.update(&state);
         assert_eq!(
             mgr.last_title,
-            "Thinking - proj - grok-3 - workspace - grok"
+            "Thinking - proj - deepseek-3 - workspace - grok"
         );
     }
 

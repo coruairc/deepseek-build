@@ -63,7 +63,7 @@ fn arg_picker_effort_phase_opens_on_default_row() {
 #[test]
 fn arg_picker_chains_through_the_window_phase_to_effort() {
     let mut agent = make_agent();
-    let id = acp::ModelId::new(Arc::from("grok-4.7"));
+    let id = acp::ModelId::new(Arc::from("deepseek-4.7"));
     agent.session.models.available.insert(
         id.clone(),
         acp::ModelInfo::new(id, "Grok 4.7").meta(

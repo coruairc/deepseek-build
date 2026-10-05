@@ -16,7 +16,7 @@ fn supported_window_switches_the_current_model() {
             effort: None,
             context_window_selection,
         })) => {
-            assert_eq!(acp_fixtures::model_id("grok-4.7"), model_id);
+            assert_eq!(acp_fixtures::model_id("deepseek-4.7"), model_id);
             assert_eq!(std::num::NonZeroU64::new(500_000), context_window_selection);
         }
         other => panic!("expected SwitchModel, got {other:?}"),
@@ -117,9 +117,9 @@ fn format_and_parse_round_trip() {
 }
 
 fn model_with_windows(windows: serde_json::Value) -> ModelState {
-    let id = acp_fixtures::model_id("grok-4.7");
+    let id = acp_fixtures::model_id("deepseek-4.7");
     let info = acp_fixtures::model_info_with_meta(
-        "grok-4.7",
+        "deepseek-4.7",
         "Grok 4.7",
         serde_json::json!({
             "totalContextTokens": 256_000,

@@ -170,18 +170,18 @@ fn remote_settings_vendor_sessions_round_trip_and_default_absent() {
 }
 #[test]
 fn remote_settings_image_description_model_round_trip() {
-    let json = r#"{"image_description_model": "grok-4.6"}"#;
+    let json = r#"{"image_description_model": "deepseek-4.6"}"#;
     let s: RemoteSettings = serde_json::from_str(json).unwrap();
-    assert_eq!(s.image_description_model.as_deref(), Some("grok-4.6"));
+    assert_eq!(s.image_description_model.as_deref(), Some("deepseek-4.6"));
     let out = serde_json::to_string(&s).unwrap();
     let s2: RemoteSettings = serde_json::from_str(&out).unwrap();
     assert_eq!(s2.image_description_model, s.image_description_model);
 }
 #[test]
 fn remote_settings_prompt_suggestion_model_round_trip() {
-    let json = r#"{"prompt_suggestion_model": "grok-4.6"}"#;
+    let json = r#"{"prompt_suggestion_model": "deepseek-4.6"}"#;
     let s: RemoteSettings = serde_json::from_str(json).unwrap();
-    assert_eq!(s.prompt_suggestion_model.as_deref(), Some("grok-4.6"));
+    assert_eq!(s.prompt_suggestion_model.as_deref(), Some("deepseek-4.6"));
     let out = serde_json::to_string(&s).unwrap();
     let s2: RemoteSettings = serde_json::from_str(&out).unwrap();
     assert_eq!(s2.prompt_suggestion_model, s.prompt_suggestion_model);
@@ -244,7 +244,7 @@ fn remote_settings_consent_gate_round_trip() {
             "id": "tos-2026-08",
             "version": 3,
             "title": "Updated terms",
-            "body": "Review our [Terms of Service](https://x.ai/legal/tos) before continuing.",
+            "body": "Review our [Terms of Service](https://deepseek-build/legal/tos) before continuing.",
             "accept_label": "Accept and continue"
         }
     }"#;
@@ -255,7 +255,7 @@ fn remote_settings_consent_gate_round_trip() {
     assert!(
         gate.body
             .as_deref()
-            .is_some_and(|b| b.contains("https://x.ai/legal/tos"))
+            .is_some_and(|b| b.contains("https://deepseek-build/legal/tos"))
     );
 }
 /// A poisoned response would leave `zdr_access_enabled` false and hard-block ZDR users.
@@ -273,12 +273,12 @@ fn remote_settings_malformed_consent_gate_does_not_poison() {
 }
 #[test]
 fn remote_settings_goal_planner_model_round_trip() {
-    let json = r#"{"goal_planner_model": {"model": "grok-4", "agent_type": "general-purpose"}}"#;
+    let json = r#"{"goal_planner_model": {"model": "deepseek-4", "agent_type": "general-purpose"}}"#;
     let s: RemoteSettings = serde_json::from_str(json).unwrap();
     assert_eq!(
         s.goal_planner_model,
         Some(GoalRoleModel {
-            model: "grok-4".to_string(),
+            model: "deepseek-4".to_string(),
             agent_type: "general-purpose".to_string(),
         })
     );
@@ -289,19 +289,19 @@ fn remote_settings_goal_planner_model_round_trip() {
 #[test]
 fn remote_settings_goal_skeptic_models_fully_valid_pool_round_trips() {
     let json = r#"{"goal_skeptic_models": [
-        {"model": "grok-4", "agent_type": "general-purpose"},
-        {"model": "grok-3", "agent_type": "cursor"}
+        {"model": "deepseek-4", "agent_type": "general-purpose"},
+        {"model": "deepseek-3", "agent_type": "cursor"}
     ]}"#;
     let s: RemoteSettings = serde_json::from_str(json).unwrap();
     assert_eq!(
         s.goal_skeptic_models,
         vec![
             GoalRoleModel {
-                model: "grok-4".to_string(),
+                model: "deepseek-4".to_string(),
                 agent_type: "general-purpose".to_string(),
             },
             GoalRoleModel {
-                model: "grok-3".to_string(),
+                model: "deepseek-3".to_string(),
                 agent_type: "cursor".to_string(),
             },
         ]
@@ -313,20 +313,20 @@ fn remote_settings_goal_skeptic_models_fully_valid_pool_round_trips() {
 #[test]
 fn remote_settings_goal_skeptic_models_one_bad_item_does_not_poison_pool() {
     let json = r#"{"goal_skeptic_models": [
-        {"model": "grok-4", "agent_type": "general-purpose"},
+        {"model": "deepseek-4", "agent_type": "general-purpose"},
         {"model": "grok-broken"},
-        {"model": "grok-3", "agent_type": "cursor"}
+        {"model": "deepseek-3", "agent_type": "cursor"}
     ]}"#;
     let s: RemoteSettings = serde_json::from_str(json).unwrap();
     assert_eq!(
         s.goal_skeptic_models,
         vec![
             GoalRoleModel {
-                model: "grok-4".to_string(),
+                model: "deepseek-4".to_string(),
                 agent_type: "general-purpose".to_string(),
             },
             GoalRoleModel {
-                model: "grok-3".to_string(),
+                model: "deepseek-3".to_string(),
                 agent_type: "cursor".to_string(),
             },
         ]
@@ -361,13 +361,13 @@ fn remote_settings_goal_skeptic_models_non_array_yields_empty() {
 fn remote_settings_goal_skeptic_models_missing_model_entry_dropped() {
     let json = r#"{"goal_skeptic_models": [
         {"agent_type": "general-purpose"},
-        {"model": "grok-3", "agent_type": "cursor"}
+        {"model": "deepseek-3", "agent_type": "cursor"}
     ]}"#;
     let s: RemoteSettings = serde_json::from_str(json).unwrap();
     assert_eq!(
         s.goal_skeptic_models,
         vec![GoalRoleModel {
-            model: "grok-3".to_string(),
+            model: "deepseek-3".to_string(),
             agent_type: "cursor".to_string(),
         }]
     );
@@ -376,14 +376,14 @@ fn remote_settings_goal_skeptic_models_missing_model_entry_dropped() {
 fn remote_settings_goal_skeptic_models_wrong_typed_scalar_dropped() {
     let json = r#"{"goal_skeptic_models": [
         {"model": 123, "agent_type": "general-purpose"},
-        {"model": "grok-3", "agent_type": ["cursor"]},
-        {"model": "grok-4", "agent_type": "general-purpose"}
+        {"model": "deepseek-3", "agent_type": ["cursor"]},
+        {"model": "deepseek-4", "agent_type": "general-purpose"}
     ]}"#;
     let s: RemoteSettings = serde_json::from_str(json).unwrap();
     assert_eq!(
         s.goal_skeptic_models,
         vec![GoalRoleModel {
-            model: "grok-4".to_string(),
+            model: "deepseek-4".to_string(),
             agent_type: "general-purpose".to_string(),
         }]
     );
@@ -391,13 +391,13 @@ fn remote_settings_goal_skeptic_models_wrong_typed_scalar_dropped() {
 #[test]
 fn remote_settings_goal_skeptic_models_extra_unknown_fields_kept() {
     let json = r#"{"goal_skeptic_models": [
-        {"model": "grok-4", "agent_type": "general-purpose", "reasoning_effort": "high"}
+        {"model": "deepseek-4", "agent_type": "general-purpose", "reasoning_effort": "high"}
     ]}"#;
     let s: RemoteSettings = serde_json::from_str(json).unwrap();
     assert_eq!(
         s.goal_skeptic_models,
         vec![GoalRoleModel {
-            model: "grok-4".to_string(),
+            model: "deepseek-4".to_string(),
             agent_type: "general-purpose".to_string(),
         }]
     );
@@ -437,28 +437,28 @@ fn remote_settings_goal_planner_model_malformed_yields_none() {
 fn remote_settings_goal_role_models_malformed_pair_does_not_drop_other_fields() {
     let json = r#"{
         "goal_planner_model": {"model": "broken"},
-        "goal_strategist_model": {"model": "grok-4.5", "agent_type": "cursor"},
-        "default_model": "grok-4"
+        "goal_strategist_model": {"model": "deepseek-4.5", "agent_type": "cursor"},
+        "default_model": "deepseek-4"
     }"#;
     let s: RemoteSettings = serde_json::from_str(json).unwrap();
     assert_eq!(s.goal_planner_model, None);
     assert_eq!(
         s.goal_strategist_model,
         Some(GoalRoleModel {
-            model: "grok-4.5".to_string(),
+            model: "deepseek-4.5".to_string(),
             agent_type: "cursor".to_string(),
         })
     );
-    assert_eq!(s.default_model.as_deref(), Some("grok-4"));
+    assert_eq!(s.default_model.as_deref(), Some("deepseek-4"));
 }
 #[test]
 fn remote_settings_goal_role_model_extra_unknown_fields_kept_single_pair() {
-    let json = r#"{"goal_planner_model": {"model": "grok-4", "agent_type": "general-purpose", "future": true}}"#;
+    let json = r#"{"goal_planner_model": {"model": "deepseek-4", "agent_type": "general-purpose", "future": true}}"#;
     let s: RemoteSettings = serde_json::from_str(json).unwrap();
     assert_eq!(
         s.goal_planner_model,
         Some(GoalRoleModel {
-            model: "grok-4".to_string(),
+            model: "deepseek-4".to_string(),
             agent_type: "general-purpose".to_string(),
         })
     );

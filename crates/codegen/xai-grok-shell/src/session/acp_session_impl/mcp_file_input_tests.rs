@@ -857,7 +857,7 @@ async fn approval_preview_preserves_arguments_and_obeys_remaining_budget() {
                 let mut source = McpFileSource::start(
                     PathBuf::from("/tmp/mcp-source.json"),
                     xai_grok_telemetry::events::McpFileInputKind::Invocation,
-                    "grok-4.6".to_owned(),
+                    "deepseek-4.6".to_owned(),
                 );
                 source.operation_remaining = remaining;
                 let preparation = McpFilePreparation::Resolved {
@@ -914,7 +914,7 @@ async fn snapshot_overflow_emits_once_on_the_session_task_with_measured_bytes() 
         let mut source = McpFileSource::start(
             PathBuf::from("source"),
             xai_grok_telemetry::events::McpFileInputKind::Arguments,
-            "grok-4.6".to_owned(),
+            "deepseek-4.6".to_owned(),
         );
         source.bytes = 42;
         let arguments = json!({"tool_name":"fixture__update","tool_input":{"body":"x".repeat(MAX_BATCH_SNAPSHOT_BYTES)}});
@@ -938,7 +938,7 @@ async fn snapshot_overflow_emits_once_on_the_session_task_with_measured_bytes() 
     );
     for event in &events {
         assert_eq!(
-            Some(&json!("grok-4.6")),
+            Some(&json!("deepseek-4.6")),
             event.pointer("/payload/model_id"),
             "{event}"
         );

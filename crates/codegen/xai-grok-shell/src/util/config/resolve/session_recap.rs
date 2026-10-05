@@ -1,7 +1,7 @@
 use toml::Value as TomlValue;
 use xai_grok_sampling_types::ReasoningEffort;
 
-const SESSION_RECAP_MODEL_DEFAULT: &str = "grok-4.5";
+const SESSION_RECAP_MODEL_DEFAULT: &str = "deepseek-4.5";
 const SESSION_RECAP_REASONING_EFFORT_DEFAULT: ReasoningEffort = ReasoningEffort::Low;
 /// Pasted logs or files can make a user message huge; its opening carries the ask.
 const SESSION_RECAP_USER_MESSAGE_MAX_CHARS_DEFAULT: usize = 2_000;
@@ -157,7 +157,7 @@ mod tests {
     #[test]
     fn local_fields_win_over_remote_and_defaults_fill_the_rest() {
         let local: SessionRecapConfig = toml::from_str::<TomlValue>(
-            "[session_recap]\nmodel = \"grok-4.20\"\ntimeout_ms = 999999\ntranscript_max_chars = 10",
+            "[session_recap]\nmodel = \"deepseek-4.20\"\ntimeout_ms = 999999\ntranscript_max_chars = 10",
         )
         .ok()
         .and_then(|v| session_recap_config_from_toml(Some(&v)))
@@ -169,7 +169,7 @@ mod tests {
         }))
         .unwrap();
         let settings = merge_session_recap_config(local, remote).settings();
-        assert_eq!(settings.model, "grok-4.20");
+        assert_eq!(settings.model, "deepseek-4.20");
         assert_eq!(settings.reasoning_effort, ReasoningEffort::Medium);
         assert_eq!(settings.user_message_max_chars, 3_000);
         assert_eq!(

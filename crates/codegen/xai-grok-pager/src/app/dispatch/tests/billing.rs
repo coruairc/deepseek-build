@@ -340,14 +340,14 @@ fn credit_limit_translate_max_tier_retry_is_second_option() {
 
 #[test]
 fn is_max_tier_positive_match() {
-    assert!(is_max_tier(Some("supergrok_heavy")));
-    assert!(is_max_tier(Some("SuperGrok Heavy")));
-    assert!(is_max_tier(Some("SUPERGROK_HEAVY")));
+    assert!(is_max_tier(Some("deepseek_heavy")));
+    assert!(is_max_tier(Some("deepseek Heavy")));
+    assert!(is_max_tier(Some("deepseek_HEAVY")));
 }
 
 #[test]
 fn is_max_tier_non_max_and_unknown() {
-    assert!(!is_max_tier(Some("supergrok")));
+    assert!(!is_max_tier(Some("deepseek")));
     assert!(!is_max_tier(Some("premium")));
     assert!(!is_max_tier(Some("free")));
     // Unknown defaults to non-max, so the Q&A is shown
@@ -356,15 +356,15 @@ fn is_max_tier_non_max_and_unknown() {
 
 #[test]
 fn is_max_tier_handles_mixed_case_and_whitespace() {
-    assert!(is_max_tier(Some("SuperGrok_Heavy")));
-    assert!(is_max_tier(Some("supergrok heavy")));
-    assert!(is_max_tier(Some("SUPERGROK HEAVY")));
+    assert!(is_max_tier(Some("deepseek_Heavy")));
+    assert!(is_max_tier(Some("deepseek heavy")));
+    assert!(is_max_tier(Some("deepseek HEAVY")));
 }
 
 #[test]
 fn is_max_tier_rejects_partial_matches() {
-    assert!(!is_max_tier(Some("supergrok_heav")));
-    assert!(!is_max_tier(Some("supergrok_heavy_plus")));
+    assert!(!is_max_tier(Some("deepseek_heav")));
+    assert!(!is_max_tier(Some("deepseek_heavy_plus")));
     assert!(!is_max_tier(Some("")));
 }
 
@@ -430,7 +430,7 @@ fn upsell_non_max_qa_heading_is_spending_cap_when_payg_on() {
 }
 
 #[test]
-fn upsell_non_max_upgrade_url_is_supergrok() {
+fn upsell_non_max_upgrade_url_is_deepseek() {
     let mut app = test_app_with_agent();
     open_upsell_qa(
         &mut app,
@@ -440,7 +440,7 @@ fn upsell_non_max_upgrade_url_is_supergrok() {
         .id
         .as_deref()
         .unwrap();
-    assert!(url.contains("supergrok"), "got: {url}");
+    assert!(url.contains("deepseek"), "got: {url}");
     assert!(url.contains("referrer=grok-build"), "got: {url}");
 }
 
@@ -497,7 +497,7 @@ fn upsell_non_max_unified_shows_buy_credits() {
     assert_eq!(option_at(q, 1).label, "Buy more credits");
     assert_eq!(
         option_at(q, 1).description,
-        "Purchase credits to keep using Grok Build"
+        "Purchase credits to keep using deepseek-build"
     );
     assert_eq!(option_at(q, 2).label, "Try Again");
 }
@@ -566,7 +566,7 @@ fn is_credit_limit_error_matches_legacy_403_and_pool_402() {
     assert!(is_credit_limit_error(Some(402), "anything"));
     assert!(is_credit_limit_error(
         None,
-        "API error (status 402 Payment Required): Grok Build usage balance exhausted"
+        "API error (status 402 Payment Required): deepseek-build usage balance exhausted"
     ));
     assert!(is_credit_limit_error(
         None,
@@ -937,8 +937,8 @@ fn billing_fetched_updates_app_credit_balance() {
 #[test]
 fn billing_fetched_updates_subscription_tier() {
     let mut app = test_app_with_agent();
-    dispatch_billing(&mut app, None, true, Some("supergrok_heavy".into()));
-    assert_eq!(app.subscription_tier.as_deref(), Some("supergrok_heavy"));
+    dispatch_billing(&mut app, None, true, Some("deepseek_heavy".into()));
+    assert_eq!(app.subscription_tier.as_deref(), Some("deepseek_heavy"));
 }
 
 #[test]
@@ -1281,7 +1281,7 @@ fn free_usage_upsell_shows_three_options_with_exact_labels() {
         qv.local_kind,
         Some(
             crate::views::question_view::LocalQuestionKind::FreeUsageUpsell {
-                source: xai_grok_telemetry::events::SuperGrokUpsell::FreeUsagePaywall,
+                source: xai_grok_telemetry::events::deepseekUpsell::FreeUsagePaywall,
             }
         )
     ));
@@ -1289,18 +1289,18 @@ fn free_usage_upsell_shows_three_options_with_exact_labels() {
     assert_eq!(q.question, "You hit your free usage limit.");
     let expected = [
         (
-            "Upgrade to SuperGrok",
+            "Upgrade to deepseek",
             "For everyday coding and productivity tasks",
             Some(UPSELL_URL_UPGRADE),
         ),
         (
-            "Upgrade to SuperGrok Plus",
+            "Upgrade to deepseek Plus",
             "Significantly higher usage and rate limits",
             Some(UPSELL_URL_UPGRADE),
         ),
         (
-            "Upgrade to SuperGrok Heavy",
-            "Get the most out of Grok Build. Highest usage limits.",
+            "Upgrade to deepseek Heavy",
+            "Get the most out of deepseek-build. Highest usage limits.",
             Some(UPSELL_URL_UPGRADE),
         ),
     ];
@@ -1386,7 +1386,7 @@ fn free_usage_translate_local_submit_maps_options() {
     open_free_usage_upsell(agent, None);
     let mut qv = agent.question_view.take().unwrap();
     let kind = || LocalQuestionKind::FreeUsageUpsell {
-        source: xai_grok_telemetry::events::SuperGrokUpsell::FreeUsagePaywall,
+        source: xai_grok_telemetry::events::deepseekUpsell::FreeUsagePaywall,
     };
 
     for idx in [0, 1, 2] {
@@ -1398,7 +1398,7 @@ fn free_usage_translate_local_submit_maps_options() {
     }
 }
 
-/// Submitting a tier-restricted command opens the three-option SuperGrok upsell and neither runs the command nor leaks the text to the model.
+/// Submitting a tier-restricted command opens the three-option deepseek upsell and neither runs the command nor leaks the text to the model.
 #[test]
 fn restricted_command_submit_opens_three_option_upsell() {
     let mut app = test_app_with_agent();
@@ -1426,18 +1426,18 @@ fn restricted_command_submit_opens_three_option_upsell() {
         qv.local_kind,
         Some(
             crate::views::question_view::LocalQuestionKind::FreeUsageUpsell {
-                source: xai_grok_telemetry::events::SuperGrokUpsell::RestrictedCommand,
+                source: xai_grok_telemetry::events::deepseekUpsell::RestrictedCommand,
             }
         )
     ));
     let q = first_question(qv);
-    assert_eq!(q.question, "Unlock all features with SuperGrok.");
+    assert_eq!(q.question, "Unlock all features with deepseek.");
     assert_eq!(q.options.len(), 3);
-    assert_eq!(option_at(q, 0).label, "Upgrade to SuperGrok");
+    assert_eq!(option_at(q, 0).label, "Upgrade to deepseek");
     assert_eq!(option_at(q, 0).id.as_deref(), Some(UPSELL_URL_UPGRADE));
-    assert_eq!(option_at(q, 1).label, "Upgrade to SuperGrok Plus");
+    assert_eq!(option_at(q, 1).label, "Upgrade to deepseek Plus");
     assert_eq!(option_at(q, 1).id.as_deref(), Some(UPSELL_URL_UPGRADE));
-    assert_eq!(option_at(q, 2).label, "Upgrade to SuperGrok Heavy");
+    assert_eq!(option_at(q, 2).label, "Upgrade to deepseek Heavy");
     assert_eq!(option_at(q, 2).id.as_deref(), Some(UPSELL_URL_UPGRADE));
 }
 
@@ -1713,7 +1713,7 @@ fn billing_fetched_clears_usage_modal_loading() {
         &mut app,
         Some(test_bal(50.0)),
         true,
-        Some("SuperGrok".into()),
+        Some("deepseek".into()),
     );
     let agent = test_agent(&app, AgentId(0));
     let Some(crate::views::modal::ActiveModal::UsageInfo { state }) = agent.active_modal.as_ref()
@@ -1722,7 +1722,7 @@ fn billing_fetched_clears_usage_modal_loading() {
     };
     assert!(!state.billing_loading);
     assert!(state.billing_error.is_none());
-    assert_eq!(state.ctx.subscription_tier.as_deref(), Some("SuperGrok"));
+    assert_eq!(state.ctx.subscription_tier.as_deref(), Some("deepseek"));
     // The modal renders from the agent's cached billing mirrors.
     assert_eq!(agent.credit_balance.as_ref().unwrap().usage_pct, 50.0);
 }

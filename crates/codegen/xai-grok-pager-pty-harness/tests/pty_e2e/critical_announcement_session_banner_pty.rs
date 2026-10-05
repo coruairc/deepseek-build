@@ -19,7 +19,7 @@ const PROMO_MSG: &str = "ZZANNPROMOMSG";
 const PROMO_LABEL: &str = "ZZPROMOCTA";
 /// The promo CTA renders as a bracketed button.
 const PROMO_BUTTON: &str = "[ZZPROMOCTA]";
-const PROMO_URL: &str = "https://x.ai/zz-promo-cta";
+const PROMO_URL: &str = "https://deepseek-build/zz-promo-cta";
 /// Configured `cta.caption` for the pinned multi-surface fixture; the banner paints it after the button, the in-session header never does.
 const PROMO_CAPTION: &str = "or use Ctrl+O";
 /// Second promo message (dismissible), distinct from `PROMO_MSG`.

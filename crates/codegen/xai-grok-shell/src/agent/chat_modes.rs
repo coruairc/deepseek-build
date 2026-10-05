@@ -310,7 +310,7 @@ mod tests {
     }
     #[test]
     fn name_falls_back_to_id_when_title_blank() {
-        let mut m = available("grok-4.5", "");
+        let mut m = available("deepseek-4.5", "");
         m.title = "   ".to_owned();
         let resp = ListModesResponse {
             modes: vec![m],
@@ -319,7 +319,7 @@ mod tests {
         let state = modes_to_model_state(&resp);
         assert_eq!(
             state.available_models.first().map(|m| m.name.as_str()),
-            Some("grok-4.5")
+            Some("deepseek-4.5")
         );
     }
 }

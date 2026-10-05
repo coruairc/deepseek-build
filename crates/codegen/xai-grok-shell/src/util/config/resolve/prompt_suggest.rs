@@ -208,7 +208,7 @@ pub(crate) fn prompt_suggest_sampling_defaults(
 }
 
 /// This alias resolves server-side with `alias_default_effort = none`.
-pub(crate) const NON_REASONING_PROMPT_SUGGEST_MODEL: &str = "grok-4-1-fast-non-reasoning";
+pub(crate) const NON_REASONING_PROMPT_SUGGEST_MODEL: &str = "deepseek-4-1-fast-non-reasoning";
 
 pub(crate) fn prompt_suggest_reasoning_is_off(configured: Option<ReasoningEffort>) -> bool {
     matches!(configured, None | Some(ReasoningEffort::None))
@@ -348,7 +348,7 @@ mod tests {
         assert!(!prompt_suggest_reasoning_is_off(Some(ReasoningEffort::Low)));
         assert_eq!(
             NON_REASONING_PROMPT_SUGGEST_MODEL,
-            "grok-4-1-fast-non-reasoning"
+            "deepseek-4-1-fast-non-reasoning"
         );
     }
 

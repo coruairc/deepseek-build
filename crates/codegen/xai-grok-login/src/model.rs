@@ -498,10 +498,10 @@ mod tests {
     fn user_info_subscription_tier_present() {
         let json = r#"{
             "userId": "u1",
-            "subscriptionTier": "SuperGrokPro"
+            "subscriptionTier": "deepseekPro"
         }"#;
         let info: UserInfo = serde_json::from_str(json).unwrap();
-        assert_eq!(info.subscription_tier.as_deref(), Some("SuperGrokPro"));
+        assert_eq!(info.subscription_tier.as_deref(), Some("deepseekPro"));
     }
 
     /// subscriptionTier absent deserializes to None (backwards compat).

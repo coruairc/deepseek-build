@@ -531,7 +531,7 @@ mod tests {
         assert!(RATE_LIMITED_USER_MESSAGE_API_KEY.contains("credits"));
         assert!(
             RATE_LIMITED_USER_MESSAGE_API_KEY
-                .contains("https://docs.x.ai/developers/rate-limits#rate-limit-tiers")
+                .contains("https://docs.deepseek-build/developers/rate-limits#rate-limit-tiers")
         );
         assert!(!RATE_LIMITED_USER_MESSAGE_API_KEY.contains("Upgrade your account"));
     }
@@ -544,8 +544,8 @@ mod tests {
         assert_eq!(format_rate_limited_user_message(Some(&wire), false), body);
         assert_eq!(format_rate_limited_user_message(Some(&wire), true), body);
 
-        // Team console rate-limit copy has no personal SuperGrok upsell; it passes through as-is
-        let team = "resource-exhausted: Too many requests for team abc. See https://console.x.ai/team/default/rate-limits.";
+        // Team console rate-limit copy has no personal deepseek upsell; it passes through as-is
+        let team = "resource-exhausted: Too many requests for team abc. See https://console.deepseek-build/team/default/rate-limits.";
         let team_wire = format!("API error (status 429 Too Many Requests): {team}");
         assert_eq!(
             format_rate_limited_user_message(Some(&team_wire), true),
@@ -561,11 +561,11 @@ mod tests {
     fn format_rate_limited_api_key_rewrites_consumer_subscription_upsell() {
         let body = "Some resource has been exhausted: You are sending requests too quickly. \
              Please slow down, or upgrade to a Grok subscription for higher limits: \
-             https://api.deepseek.com/supergrok";
+             https://api.deepseek.com/deepseek";
         let wire = format!("API error (status 429 Too Many Requests): {body}");
         // OAuth keeps the IC body (personal plan upgrade is correct).
         assert_eq!(format_rate_limited_user_message(Some(&wire), false), body);
-        // API key must not push api.deepseek.com SuperGrok; it gets the team credits / rate-limit tiers copy
+        // API key must not push api.deepseek.com deepseek; it gets the team credits / rate-limit tiers copy
         assert_eq!(
             format_rate_limited_user_message(Some(&wire), true),
             RATE_LIMITED_USER_MESSAGE_API_KEY

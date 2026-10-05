@@ -961,7 +961,7 @@ mod tests {
                 usage_visible: true,
                 chat_kind: false,
                 billing_redirect_url: None,
-                subscription_tier: Some("SuperGrok".to_string()),
+                subscription_tier: Some("deepseek".to_string()),
             },
         )
     }
@@ -1015,7 +1015,7 @@ mod tests {
         let text: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
         assert_eq!(
             text.first().map(String::as_str),
-            Some("Weekly limit (SuperGrok)")
+            Some("Weekly limit (deepseek)")
         );
         assert!(
             text.get(2).is_some_and(|l| l.ends_with("50%")),

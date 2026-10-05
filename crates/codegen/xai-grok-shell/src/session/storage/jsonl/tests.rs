@@ -155,7 +155,7 @@ async fn test_jsonl_round_trip() {
         .unwrap();
     let plan_state = create_test_plan_state();
     adapter.write_plan_state(&info, &plan_state).await.unwrap();
-    let new_model = acp::ModelId::new("grok-4.3");
+    let new_model = acp::ModelId::new("deepseek-4.3");
     adapter.update_current_model(&info, &new_model).await.unwrap();
     let loaded = adapter.load_session(&info).await.unwrap();
     assert_eq!(loaded.summary.info.id, info.id);
@@ -710,7 +710,7 @@ async fn test_subagent_notifications_round_trip() {
         panic!("expected two JSONL lines: {lines:?}");
     };
     let spawned_json: serde_json::Value = serde_json::from_str(spawned_line).unwrap();
-    assert_eq!(spawned_json.get("method").and_then(|v| v.as_str()), Some("_x.ai/session/update"));
+    assert_eq!(spawned_json.get("method").and_then(|v| v.as_str()), Some("_deepseek-build/session/update"));
     let spawned_update = spawned_json.get("params").and_then(|p| p.get("update"));
     assert_eq!(
             spawned_update
@@ -725,7 +725,7 @@ async fn test_subagent_notifications_round_trip() {
             Some("child-001")
         );
     let finished_json: serde_json::Value = serde_json::from_str(finished_line).unwrap();
-    assert_eq!(finished_json.get("method").and_then(|v| v.as_str()), Some("_x.ai/session/update"));
+    assert_eq!(finished_json.get("method").and_then(|v| v.as_str()), Some("_deepseek-build/session/update"));
     let finished_update = finished_json.get("params").and_then(|p| p.get("update"));
     assert_eq!(
             finished_update
@@ -1169,8 +1169,8 @@ async fn test_append_feedback_creates_file_and_persists() {
             turn_number: Some(3),
             rating_type: Some(RatingType::Thumbs),
             rating_value: Some(1),
-            model_id: Some("grok-3-fast".into()),
-            resolved_model_id: Some("grok-4.5".into()),
+            model_id: Some("deepseek-3-fast".into()),
+            resolved_model_id: Some("deepseek-4.5".into()),
             ..Default::default()
         }),
     });
@@ -2668,12 +2668,12 @@ async fn usage_json_rewrites_session_and_appends_turns() {
         cache_creation_prompt_tokens: 0,
     };
     let mut ledger = UsageLedger::default();
-    ledger.record_main_loop_call("grok-4", &tu(100, 20), Some(10), Some(50));
+    ledger.record_main_loop_call("deepseek-4", &tu(100, 20), Some(10), Some(50));
     let mut file = SessionUsageFile::new(info.id.to_string());
     let first = UsageSummary::from_ledger(&ledger);
     file.apply_turn(1, "t1", &first, None);
     adapter.write_usage(&info, &file).await.unwrap();
-    ledger.record_main_loop_call("grok-4", &tu(40, 10), Some(10), Some(20));
+    ledger.record_main_loop_call("deepseek-4", &tu(40, 10), Some(10), Some(20));
     let mut loaded = adapter.read_usage(&info).await.unwrap().unwrap();
     loaded.apply_turn(2, "t2", &UsageSummary::from_ledger(&ledger), Some(&first));
     adapter.write_usage(&info, &loaded).await.unwrap();

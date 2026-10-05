@@ -107,7 +107,7 @@ fn manual_recap_with_no_messages_toasts_empty_state_and_skips_request() {
     let effects = dispatch(Action::SendRecap { auto: false }, &mut app);
     assert!(
         effects.is_empty(),
-        "empty session must not fire x.ai/recap: {effects:?}"
+        "empty session must not fire deepseek-build/recap: {effects:?}"
     );
     let agent = app.agents.get(&id).unwrap();
     assert!(agent.pending_recap_entry.is_none(), "no loading spinner");
@@ -161,7 +161,7 @@ fn manual_recap_during_batch_load_with_prompts_still_requests() {
     let effects = dispatch(Action::SendRecap { auto: false }, &mut app);
     assert!(
         matches!(effects.as_slice(), [Effect::SendRecap { auto: false, .. }]),
-        "batched resume with user prompts must still fire x.ai/recap: {effects:?}"
+        "batched resume with user prompts must still fire deepseek-build/recap: {effects:?}"
     );
     let agent = app.agents.get(&id).unwrap();
     assert!(agent.pending_recap_entry.is_some());
@@ -1857,7 +1857,7 @@ fn plan_approval_ingress_displaces_feedback_modal() {
     let raw = serde_json::value::to_raw_value(&ext_req).unwrap();
     crate::app::acp_handler::handle(
         AcpClientMessage::ExtMethod(xai_acp_lib::AcpArgs {
-            request: acp::ExtRequest::new("x.ai/exit_plan_mode", raw.into()),
+            request: acp::ExtRequest::new("deepseek-build/exit_plan_mode", raw.into()),
             response_tx: tx,
         }),
         &mut app,
@@ -1888,7 +1888,7 @@ fn mcp_elicitation_ingress_displaces_feedback_modal() {
     .unwrap();
     crate::app::acp_handler::handle(
         AcpClientMessage::ExtMethod(xai_acp_lib::AcpArgs {
-            request: acp::ExtRequest::new("x.ai/mcp/elicit", raw.into()),
+            request: acp::ExtRequest::new("deepseek-build/mcp/elicit", raw.into()),
             response_tx: tx,
         }),
         &mut app,
@@ -2396,7 +2396,7 @@ fn composer_image() -> crate::prompt_images::PastedImage {
         preview: crate::prompt_images::PromptImagePreview::default(),
     }
 }
-/// `/btw` is a model call. Composer images must ride on `x.ai/btw`, not be deleted with the other slash actions.
+/// `/btw` is a model call. Composer images must ride on `deepseek-build/btw`, not be deleted with the other slash actions.
 #[test]
 fn btw_submit_sends_composer_images() {
     let mut app = test_app_with_agent();

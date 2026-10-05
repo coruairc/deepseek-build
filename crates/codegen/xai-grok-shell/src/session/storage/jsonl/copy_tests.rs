@@ -1070,7 +1070,7 @@ async fn copy_session_data_with_model_override() {
 
     let options = CopySessionOptions {
         parent_session_id: Some("source-model-test".to_string()),
-        new_model_id: Some("grok-3".to_string()),
+        new_model_id: Some("deepseek-3".to_string()),
         target_prompt_index: None,
         ..Default::default()
     };
@@ -1080,7 +1080,7 @@ async fn copy_session_data_with_model_override() {
         .unwrap();
 
     let loaded = adapter.load_session(&target_info).await.unwrap();
-    assert_eq!(loaded.summary.current_model_id.0.as_ref(), "grok-3");
+    assert_eq!(loaded.summary.current_model_id.0.as_ref(), "deepseek-3");
     assert_eq!(
         loaded.summary.parent_session_id,
         Some("source-model-test".to_string())

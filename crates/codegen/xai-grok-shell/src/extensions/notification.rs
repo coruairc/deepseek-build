@@ -50,7 +50,7 @@ pub struct MemoryCaptureDebugEntry {
 }
 
 /// `_meta` key on rename fan-out (`SessionSummaryGenerated` and ACP `SessionInfoUpdate`). Old clients ignore unknown meta.
-pub const TITLE_IS_MANUAL_META_KEY: &str = "x.ai/titleIsManual";
+pub const TITLE_IS_MANUAL_META_KEY: &str = "deepseek-build/titleIsManual";
 
 /// `_meta` object carried on a manual-rename fan-out.
 pub fn title_is_manual_meta() -> serde_json::Value {
@@ -690,7 +690,7 @@ pub enum SessionUpdate {
         session_summary: String,
     },
     /// A short "where was I" recap of the session so far.
-    /// The `x.ai/recap` ext method emits it: `/recap` sets `auto = false`, and returning to the terminal after being away sets `auto = true`.
+    /// The `deepseek-build/recap` ext method emits it: `/recap` sets `auto = false`, and returning to the terminal after being away sets `auto = true`.
     /// The pager renders it as an informational scrollback line; it is never added to the model conversation.
     SessionRecap {
         /// The one-line recap text (roughly 25 to 40 words; capped at a generous safety limit, so a normal recap is shown in full).
@@ -1123,7 +1123,7 @@ pub enum SessionUpdate {
     /// Session worker: ExecutePlan was accepted and is the running turn.
     PlanExecuting,
     /// The durable, replayable signal that a turn reached its terminal outcome.
-    /// Rides the persisted `_x.ai/session/update` rail, unlike the fire-and-forget `x.ai/session/prompt_complete` notification.
+    /// Rides the persisted `_deepseek-build/session/update` rail, unlike the fire-and-forget `deepseek-build/session/prompt_complete` notification.
     /// A viewer that re-attaches mid-turn can therefore finalize the turn from replay instead of staying stuck on "Waiting…".
     TurnCompleted {
         /// Correlation key the re-attaching viewer finalizes the turn on: the prompt/turn whose terminal outcome this carries.
@@ -1279,7 +1279,7 @@ impl From<&crate::session::image_normalize::ImageCompressionInfo> for ImageCompr
 pub const DISK_FULL_ERROR_TYPE: &str = "disk_full";
 pub const DISK_FULL_USER_MESSAGE: &str = "Out of disk space. Free some space and try again.";
 
-/// `x.ai/session/prompt_complete` payload key of a failed stop's typed error kind.
+/// `deepseek-build/session/prompt_complete` payload key of a failed stop's typed error kind.
 /// camelCase like its payload siblings (`stopReason`, `cancelTrigger`). Value: `SamplingErrorKind::as_str()`.
 /// The durable twin carries the same value in [`SessionUpdate::TurnCompleted`]'s typed `error_kind` field.
 pub const PROMPT_COMPLETE_ERROR_KIND_KEY: &str = "errorKind";
@@ -2313,7 +2313,7 @@ mod tests {
             total_worker_rounds: 4,
             total_verify_rounds: 2,
             live_subagent_tokens: Some(10_000),
-            live_tokens_by_model: vec![("grok-4".into(), 6_000), ("grok-3".into(), 4_000)],
+            live_tokens_by_model: vec![("deepseek-4".into(), 6_000), ("deepseek-3".into(), 4_000)],
             live_context_pct: Some(35),
             live_turn_count: Some(3),
             live_tool_call_count: Some(8),
@@ -2401,7 +2401,7 @@ mod tests {
         );
         assert_eq!(
             json.pointer("/live_tokens_by_model/0/0"),
-            Some(&serde_json::json!("grok-4"))
+            Some(&serde_json::json!("deepseek-4"))
         );
         assert_eq!(
             json.pointer("/live_tokens_by_model/0/1"),
@@ -2619,13 +2619,13 @@ mod tests {
     #[test]
     fn model_changed_serializes_snake_case_with_optional_effort() {
         let with_effort =
-            SessionUpdate::model_changed("grok-4", Some("high".into()), Some(500_000));
+            SessionUpdate::model_changed("deepseek-4", Some("high".into()), Some(500_000));
         let json = serde_json::to_value(&with_effort).unwrap();
         assert_eq!(
             json.get("sessionUpdate"),
             Some(&serde_json::json!("model_changed"))
         );
-        assert_eq!(json.get("model_id"), Some(&serde_json::json!("grok-4")));
+        assert_eq!(json.get("model_id"), Some(&serde_json::json!("deepseek-4")));
         assert_eq!(
             json.get("reasoning_effort"),
             Some(&serde_json::json!("high"))
@@ -2635,13 +2635,13 @@ mod tests {
             Some(&serde_json::json!(500_000))
         );
 
-        let without_effort = SessionUpdate::model_changed("grok-3", None, None);
+        let without_effort = SessionUpdate::model_changed("deepseek-3", None, None);
         let json = serde_json::to_value(&without_effort).unwrap();
         assert_eq!(
             json.get("sessionUpdate"),
             Some(&serde_json::json!("model_changed"))
         );
-        assert_eq!(json.get("model_id"), Some(&serde_json::json!("grok-3")));
+        assert_eq!(json.get("model_id"), Some(&serde_json::json!("deepseek-3")));
         assert!(
             json.get("reasoning_effort").is_none(),
             "reasoning_effort: None must be skipped on the wire so old pagers \
@@ -2655,7 +2655,7 @@ mod tests {
     /// The `#[serde(other)]` catch-all would swallow that on the pager side and break multi-client model sync without any test failing.
     #[test]
     fn model_changed_roundtrips_through_json() {
-        let original = SessionUpdate::model_changed("grok-4", Some("medium".into()), Some(256_000));
+        let original = SessionUpdate::model_changed("deepseek-4", Some("medium".into()), Some(256_000));
         let json_str = serde_json::to_string(&original).unwrap();
         let parsed: SessionUpdate = serde_json::from_str(&json_str).unwrap();
         assert_eq!(original, parsed);
@@ -2668,7 +2668,7 @@ mod tests {
     fn model_changed_envelope_carries_session_id_at_top_level() {
         let notif = SessionNotification {
             session_id: acp::SessionId::new("sess-abc"),
-            update: SessionUpdate::model_changed("grok-4", None, None),
+            update: SessionUpdate::model_changed("deepseek-4", None, None),
             meta: None,
         };
         let json = serde_json::to_value(&notif).unwrap();
@@ -2679,7 +2679,7 @@ mod tests {
         );
         assert_eq!(
             json.pointer("/update/model_id"),
-            Some(&serde_json::json!("grok-4"))
+            Some(&serde_json::json!("deepseek-4"))
         );
     }
 

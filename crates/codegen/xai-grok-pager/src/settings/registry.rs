@@ -1550,7 +1550,7 @@ mod tests {
     /// The baseline still folds to the empty sentinel, and a slug missing from the catalog passes through raw.
     #[test]
     fn fork_secondary_model_current_value_resolves_display_name() {
-        let slug = "grok-4.5-fast";
+        let slug = "deepseek-4.5-fast";
         assert_ne!(
             slug,
             xai_grok_shell::models::default_model(),

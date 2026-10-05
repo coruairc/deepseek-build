@@ -317,7 +317,7 @@ mod tests {
             .insert("grok-build".into(), model_row(100, 10, None));
         usage
             .model_usage
-            .insert("grok-4".into(), model_row(50, 5, None));
+            .insert("deepseek-4".into(), model_row(50, 5, None));
         let text = session_usage_block_text(&usage);
         insta::assert_snapshot!("session_usage_block_by_model", text);
     }
@@ -328,12 +328,12 @@ mod tests {
             ..Default::default()
         };
         usage.model_usage.insert(
-            "grok-4.7-build".into(),
+            "deepseek-4.7-build".into(),
             model_row(123_456, 1_000, Some(20_000_000)),
         );
         usage
             .model_usage
-            .insert("grok-4".into(), model_row(100, 10, None));
+            .insert("deepseek-4".into(), model_row(100, 10, None));
         let text = session_usage_block_text(&usage);
         let rows: Vec<&str> = text
             .lines()
@@ -343,8 +343,8 @@ mod tests {
         assert_eq!(
             rows,
             [
-                "    grok-4.7-build: 124,456 Tokens · $0.0020",
-                "    grok-4: 110 Tokens",
+                "    deepseek-4.7-build: 124,456 Tokens · $0.0020",
+                "    deepseek-4: 110 Tokens",
             ],
             "{text}"
         );

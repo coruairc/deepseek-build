@@ -1,11 +1,12 @@
 //! Home-directory resolution generally: USERPROFILE-first `home_dir`, plus
-//! grok-home (`$GROK_HOME` or `<home>/.grok`). Shared by `xai-grok-config`
-//! and `xai-fast-worktree`.
+//! grok-home (`$DEEPSEEK_BUILD_HOME`, falling back to the legacy `$GROK_HOME`,
+//! or `<home>/.deepseek-build`). Shared by `xai-grok-config` and
+//! `xai-fast-worktree`.
 //!
 //! Which function to call:
 //! - [`grok_home`]: the usual choice, a cached, created path to build on.
 //! - [`user_grok_home`]: `None` instead of a cwd fallback when no home resolves.
-//! - [`default_grok_home`]: the `<home>/.grok` default, ignoring `$GROK_HOME`, so callers can detect an override.
+//! - [`default_grok_home`]: the `<home>/.deepseek-build` default, ignoring the env overrides, so callers can detect an override.
 //! - [`resolve_grok_home`]: a fresh, uncached resolve.
 //! - [`resolve_grok_home_with_source`]: [`resolve_grok_home`] plus where the path came from.
 //! - [`home_dir`]: the home directory itself, for sibling dot dirs (`~/.claude`, `~/.agents`, ...).
@@ -18,15 +19,16 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
+use xai_grok_brand::{CONFIG_DIR_NAME, HOME_ENV_VAR, LEGACY_HOME_ENV_VAR};
 
 /// Where a resolved grok home came from, so "why did grok pick this
 /// directory?" is answerable in diagnostics without re-reading the
 /// environment at the asking site.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GrokHomeSource {
-    /// A non-empty `$GROK_HOME` override.
+    /// A non-empty `$DEEPSEEK_BUILD_HOME` (or legacy `$GROK_HOME`) override.
     EnvOverride,
-    /// `<home>/.grok` derived from the home directory.
+    /// `<home>/.deepseek-build` derived from the home directory.
     HomeDefault,
 }
 
@@ -38,15 +40,15 @@ pub fn home_dir() -> Option<PathBuf> {
     std::env::home_dir()
 }
 
-/// `<home>/.grok`, canonicalized via `dunce` (not `std::fs::canonicalize`,
-/// which yields Windows `\\?\` verbatim paths).
+/// `<home>/.deepseek-build`, canonicalized via `dunce` (not
+/// `std::fs::canonicalize`, which yields Windows `\\?\` verbatim paths).
 fn grok_home_in(home: &Path) -> PathBuf {
     dunce::canonicalize(home)
         .unwrap_or_else(|_| home.to_path_buf())
-        .join(".grok")
+        .join(CONFIG_DIR_NAME)
 }
 
-/// `$GROK_HOME` verbatim when non-empty, else `<home>/.grok`.
+/// A non-empty env override verbatim, else `<home>/.deepseek-build`.
 /// Used as-is (not canonicalized) so literal prefix checks and symlink guards still see original components.
 fn resolve_grok_home_from(
     grok_home_env: Option<&OsStr>,
@@ -64,14 +66,16 @@ pub fn resolve_grok_home() -> Option<PathBuf> {
 }
 
 /// [`resolve_grok_home`] plus the [`GrokHomeSource`] the path came from.
+///
+/// `$DEEPSEEK_BUILD_HOME` is the primary override; the legacy `$GROK_HOME` is
+/// still honored as a fallback so existing installs keep working.
 pub fn resolve_grok_home_with_source() -> Option<(PathBuf, GrokHomeSource)> {
-    resolve_grok_home_from(
-        std::env::var_os("GROK_HOME").as_deref(),
-        home_dir().as_deref(),
-    )
+    let env_override =
+        std::env::var_os(HOME_ENV_VAR).or_else(|| std::env::var_os(LEGACY_HOME_ENV_VAR));
+    resolve_grok_home_from(env_override.as_deref(), home_dir().as_deref())
 }
 
-/// The default `<home>/.grok`, used when `$GROK_HOME` is unset.
+/// The default `<home>/.deepseek-build`, used when the env overrides are unset.
 pub fn default_grok_home() -> PathBuf {
     grok_home_in(&home_dir().unwrap_or_else(|| PathBuf::from(".")))
 }
@@ -131,10 +135,19 @@ mod tests {
         assert_eq!(
             resolved,
             Some((
-                dunce::canonicalize(tmp.path()).unwrap().join(".grok"),
+                dunce::canonicalize(tmp.path())
+                    .unwrap()
+                    .join(".deepseek-build"),
                 GrokHomeSource::HomeDefault
             ))
         );
+    }
+
+    #[test]
+    fn legacy_config_dir_default_is_not_used_for_new_home() {
+        // Sanity: the resolved default is the rebranded dir, not `~/.grok`.
+        let home = default_grok_home();
+        assert!(home.ends_with(".deepseek-build"));
     }
 
     #[test]
@@ -144,7 +157,7 @@ mod tests {
         // comparisons. No-op assertion on Unix.
         let home = default_grok_home();
         assert!(!home.to_string_lossy().starts_with(r"\\?\"));
-        assert!(home.ends_with(".grok"));
+        assert!(home.ends_with(".deepseek-build"));
     }
 
     #[test]

@@ -495,11 +495,11 @@ impl WelcomeLayout {
 
 /// Controls what the version badge renders.
 pub(super) enum VersionBadgeMode<'a> {
-    /// Full badge: team | tier | api_key | **Grok Build** VERSION+channel (right-aligned).
+    /// Full badge: team | tier | api_key | **deepseek-build** VERSION+channel (right-aligned).
     Full { subscription_tier: Option<&'a str> },
     /// Hero footer: team | api_key | channel (right-aligned, gray).
     HeroFooter,
-    /// Hero inline: **Grok Build**  VERSION (left-aligned).
+    /// Hero inline: **deepseek-build**  VERSION (left-aligned).
     HeroInline,
 }
 
@@ -556,7 +556,7 @@ pub(super) fn render_version_badge(
     match &mode {
         VersionBadgeMode::Full { .. } => {
             spans.push(Span::styled(
-                "Grok Build  ",
+                "deepseek-build  ",
                 Style::default()
                     .fg(theme.text_primary)
                     .add_modifier(Modifier::BOLD),
@@ -576,7 +576,7 @@ pub(super) fn render_version_badge(
         }
         VersionBadgeMode::HeroInline => {
             spans.push(Span::styled(
-                "Grok Build  ",
+                "deepseek-build  ",
                 Style::default()
                     .fg(theme.text_primary)
                     .add_modifier(Modifier::BOLD),
@@ -847,7 +847,7 @@ pub fn render_welcome(
                 content_area,
                 buf,
                 Some((
-                    "Grok Build is not yet available for this account.",
+                    "deepseek-build is not yet available for this account.",
                     theme.gray_bright,
                 )),
                 &menu,
@@ -1027,7 +1027,7 @@ fn render_welcome_trust(
         Line::default(),
         // Two lines so the warning never clips at narrow / compact widths (a single ~78-char line would truncate "...posing security risks")
         Line::from(Span::styled(
-            "Grok Build may run or modify contents in this directory,",
+            "deepseek-build may run or modify contents in this directory,",
             Style::default().fg(theme.gray),
         ))
         .alignment(Alignment::Center),
@@ -2741,8 +2741,8 @@ mod tests {
                 "badge must not label the product: {rendered:?}"
             );
         }
-        assert!(full.contains("Grok Build"), "full badge: {full:?}");
-        assert!(inline.contains("Grok Build"), "inline badge: {inline:?}");
+        assert!(full.contains("deepseek-build"), "full badge: {full:?}");
+        assert!(inline.contains("deepseek-build"), "inline badge: {inline:?}");
         assert!(footer.contains("acme"), "footer keeps the team: {footer:?}");
         assert!(
             !footer.ends_with('\u{2502}'),
@@ -4177,18 +4177,18 @@ mod tests {
         );
         // Trailing params after the code are ignored.
         assert_eq!(
-            extract_user_code("https://x.ai/oauth2/device?user_code=WXYZ-1234&foo=bar"),
+            extract_user_code("https://deepseek-build/oauth2/device?user_code=WXYZ-1234&foo=bar"),
             Some("WXYZ-1234"),
         );
         // A param whose name merely ends in `user_code` must not be matched.
         assert_eq!(
-            extract_user_code("https://x.ai/d?foo_user_code=BAD&user_code=GOOD"),
+            extract_user_code("https://deepseek-build/d?foo_user_code=BAD&user_code=GOOD"),
             Some("GOOD"),
         );
         // No code param, empty code, and unexpected characters all yield None.
-        assert_eq!(extract_user_code("https://x.ai/oauth2/device"), None);
-        assert_eq!(extract_user_code("https://x.ai/d?user_code="), None);
-        assert_eq!(extract_user_code("https://x.ai/d?user_code=AB%20CD"), None);
+        assert_eq!(extract_user_code("https://deepseek-build/oauth2/device"), None);
+        assert_eq!(extract_user_code("https://deepseek-build/d?user_code="), None);
+        assert_eq!(extract_user_code("https://deepseek-build/d?user_code=AB%20CD"), None);
     }
 
     #[test]
@@ -4417,7 +4417,7 @@ the usual channels. "
         let area = Rect::new(0, 0, 100, 32);
         let ann = xai_grok_shell::util::config::RemoteAnnouncement {
             title: Some("Upgrade".into()),
-            message: Some("SuperGrok Heavy is available for your team today.".into()),
+            message: Some("deepseek Heavy is available for your team today.".into()),
             ..Default::default()
         };
         let input = |prompt_height| WelcomeLayoutInput {

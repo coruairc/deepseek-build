@@ -865,7 +865,7 @@ async fn recap_request_uses_small_model_and_compact_transcript() {
             assert!(conv_id.starts_with("recap-"), "{conv_id}");
 
             let body = recap_req.body.as_ref().expect("recap body must be JSON");
-            assert_eq!(j(body, "model").as_str(), Some("grok-4.5"));
+            assert_eq!(j(body, "model").as_str(), Some("deepseek-4.5"));
             assert_eq!(j(j(body, "reasoning"), "effort").as_str(), Some("low"));
             assert!(
                 j(body, "tools").as_array().is_none_or(|t| t.is_empty()),
@@ -1043,7 +1043,7 @@ async fn turn_summary_generate_persists_and_broadcasts() {
                 .expect("turn summary request");
             assert_eq!(
                 body.pointer("/model").and_then(|v| v.as_str()),
-                Some("grok-4.5")
+                Some("deepseek-4.5")
             );
             assert_eq!(
                 body.pointer("/reasoning/effort").and_then(|v| v.as_str()),
@@ -1060,7 +1060,7 @@ async fn turn_summary_generate_persists_and_broadcasts() {
                 let xai_acp_lib::AcpClientMessage::ExtNotification(args) = msg else {
                     continue;
                 };
-                if args.request.method.as_ref() != "x.ai/session_notification" {
+                if args.request.method.as_ref() != "deepseek-build/session_notification" {
                     continue;
                 }
                 let value: serde_json::Value =

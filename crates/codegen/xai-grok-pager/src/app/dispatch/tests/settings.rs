@@ -270,7 +270,7 @@ fn set_default_model_allowed_when_agent_chat_kind() {
 fn slash_model_valid_dispatches_set_default_model_with_switch_and_persist() {
     let mut app = test_app_with_agent();
     let id = AgentId(0);
-    let model_id = acp::ModelId::new(std::sync::Arc::from("grok-4.5"));
+    let model_id = acp::ModelId::new(std::sync::Arc::from("deepseek-4.5"));
     app.agents
         .get_mut(&id)
         .unwrap()
@@ -1349,7 +1349,7 @@ fn set_default_model_resolves_known_name() {
     use agent_client_protocol as acp;
     use std::sync::Arc;
     let mut app = test_app_with_agent();
-    let id = acp::ModelId::new(Arc::from("grok-4.5"));
+    let id = acp::ModelId::new(Arc::from("deepseek-4.5"));
     let info = acp::ModelInfo::new(id.clone(), "Grok 4.5".to_string());
     let agent_id = AgentId(0);
     app.agents
@@ -1364,7 +1364,7 @@ fn set_default_model_resolves_known_name() {
     assert!(matches!(effects.first(), Some(Effect::PersistSetting {
             key: "default_model",
             value: crate::settings::SettingValue::String(s),
-            .. }) if s == "grok-4.5"));
+            .. }) if s == "deepseek-4.5"));
     assert!(
         matches!(effects.get(1), Some(Effect::SwitchModel { choice, .. }) if choice.model_id == id)
     );

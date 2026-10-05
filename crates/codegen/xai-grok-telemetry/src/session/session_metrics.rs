@@ -207,7 +207,7 @@ mod tests {
             max_exact_sequence_tokens: Some(42),
             max_exact_repeat_count: Some(3),
             recovery_attempts: 1,
-            model: "grok-4.6".to_string(),
+            model: "deepseek-4.6".to_string(),
         })
         .unwrap();
         assert_eq!(
@@ -222,7 +222,7 @@ mod tests {
                 "max_exact_sequence_tokens": 42,
                 "max_exact_repeat_count": 3,
                 "recovery_attempts": 1,
-                "model": "grok-4.6",
+                "model": "deepseek-4.6",
             })
         );
     }
@@ -237,7 +237,7 @@ mod tests {
         );
         let value = serde_json::to_value(super::SessionContextSnapshot {
             session_id: "s1".to_string(),
-            model_id: "grok-4".to_string(),
+            model_id: "deepseek-4".to_string(),
             context_window: 1_000_000,
             used_tokens: 40_000,
             usage_pct: 4,
@@ -260,7 +260,7 @@ mod tests {
             value,
             serde_json::json!({
                 "session_id": "s1",
-                "model_id": "grok-4",
+                "model_id": "deepseek-4",
                 "context_window": 1_000_000,
                 "used_tokens": 40_000,
                 "usage_pct": 4,
@@ -292,7 +292,7 @@ mod tests {
             attempts: 2,
             accepted_after_budget: true,
             top_trigger: Some("tail_repetition:4@thinking".to_string()),
-            model: "grok-4.5".to_string(),
+            model: "deepseek-4.5".to_string(),
         })
         .unwrap();
         assert_eq!(
@@ -303,7 +303,7 @@ mod tests {
                 "attempts": 2,
                 "accepted_after_budget": true,
                 "top_trigger": "tail_repetition:4@thinking",
-                "model": "grok-4.5",
+                "model": "deepseek-4.5",
             })
         );
         let no_trigger = serde_json::to_value(super::DoomLoopRecovery {
@@ -312,7 +312,7 @@ mod tests {
             attempts: 1,
             accepted_after_budget: false,
             top_trigger: None,
-            model: "grok-4.5".to_string(),
+            model: "deepseek-4.5".to_string(),
         })
         .unwrap();
         assert!(no_trigger.get("top_trigger").is_none(), "None is omitted");
@@ -338,7 +338,7 @@ mod tests {
             max_call_reasoning_tokens: 5000,
             long_calls: 1,
             reminders_fired: 1,
-            model: "grok-4.7-build".to_string(),
+            model: "deepseek-4.7-build".to_string(),
         })
         .unwrap();
         assert_eq!(
@@ -354,7 +354,7 @@ mod tests {
                 "max_call_reasoning_tokens": 5000,
                 "long_calls": 1,
                 "reminders_fired": 1,
-                "model": "grok-4.7-build",
+                "model": "deepseek-4.7-build",
             }),
             event
         );

@@ -1429,7 +1429,7 @@ impl AgentDefinition {
             tool_config: default_grok_build_toolset(),
             ..Self::base(
                 BuiltinAgentName::GrokBuild,
-                "Grok Build agent for software engineering tasks.",
+                "deepseek-build agent for software engineering tasks.",
             )
         }
     }
@@ -1440,7 +1440,7 @@ impl AgentDefinition {
             agents_md: false,
             ..Self::base(
                 BuiltinAgentName::GrokBuildConcise,
-                "Grok Build agent with concise output format.",
+                "deepseek-build agent with concise output format.",
             )
         }
     }
@@ -1449,7 +1449,7 @@ impl AgentDefinition {
             tool_config: grok_build_plan_toolset(),
             ..Self::base(
                 BuiltinAgentName::GrokBuildPlan,
-                "Grok Build agent with plan mode support.",
+                "deepseek-build agent with plan mode support.",
             )
         }
     }
@@ -1458,7 +1458,7 @@ impl AgentDefinition {
             tool_config: grok_build_plan_no_subagents_toolset(),
             ..Self::base(
                 BuiltinAgentName::GrokBuildPlanNoSubagents,
-                "Grok Build agent with plan mode (no subagents).",
+                "deepseek-build agent with plan mode (no subagents).",
             )
         }
     }
@@ -1467,7 +1467,7 @@ impl AgentDefinition {
             tool_config: grok_build_ask_user_toolset(),
             ..Self::base(
                 BuiltinAgentName::GrokBuildAskUser,
-                "Grok Build agent with ask-user-question tool.",
+                "deepseek-build agent with ask-user-question tool.",
             )
         }
     }
@@ -2021,8 +2021,8 @@ Agent.
     fn test_model_override_display_shows_id() {
         assert_eq!(ModelOverride::Inherit.to_string(), "inherit");
         assert_eq!(
-            ModelOverride::Override("grok-3-fast".to_string()).to_string(),
-            "grok-3-fast"
+            ModelOverride::Override("deepseek-3-fast".to_string()).to_string(),
+            "deepseek-3-fast"
         );
     }
     #[test]
@@ -2036,7 +2036,7 @@ isolation: worktree
 background: true
 color: blue
 initialPrompt: "hello world"
-model: grok-3
+model: deepseek-3
 ---
 
 Agent body.
@@ -2048,7 +2048,7 @@ Agent body.
         assert_eq!(def.background, Some(true));
         assert_eq!(def.color, Some(AgentColor::Blue));
         assert_eq!(def.initial_prompt.as_deref(), Some("hello world"));
-        assert_eq!(def.model, ModelOverride::Override("grok-3".to_string()));
+        assert_eq!(def.model, ModelOverride::Override("deepseek-3".to_string()));
     }
     #[test]
     fn test_parse_minimal_definition() {
@@ -2451,9 +2451,9 @@ description: Test default tool config
     }
     #[test]
     fn test_model_override_serde_explicit_model_id() {
-        let yaml = "\"grok-3-fast\"";
+        let yaml = "\"deepseek-3-fast\"";
         let m: ModelOverride = serde_yaml::from_str(yaml).unwrap();
-        assert_eq!(m, ModelOverride::Override("grok-3-fast".to_string()));
+        assert_eq!(m, ModelOverride::Override("deepseek-3-fast".to_string()));
     }
     #[test]
     fn test_model_override_serialize_inherit() {
@@ -2463,17 +2463,17 @@ description: Test default tool config
     }
     #[test]
     fn test_model_override_serialize_override() {
-        let m = ModelOverride::Override("grok-3-fast".to_string());
+        let m = ModelOverride::Override("deepseek-3-fast".to_string());
         let s = serde_json::to_string(&m).unwrap();
-        assert_eq!(s, "\"grok-3-fast\"");
+        assert_eq!(s, "\"deepseek-3-fast\"");
     }
     #[test]
     fn test_model_override_in_frontmatter() {
-        let content = "---\nname: test\ndescription: Test\nmodel: grok-3-fast\n---\n";
+        let content = "---\nname: test\ndescription: Test\nmodel: deepseek-3-fast\n---\n";
         let def = AgentDefinition::parse(content).unwrap();
         assert_eq!(
             def.model,
-            ModelOverride::Override("grok-3-fast".to_string())
+            ModelOverride::Override("deepseek-3-fast".to_string())
         );
     }
     #[test]

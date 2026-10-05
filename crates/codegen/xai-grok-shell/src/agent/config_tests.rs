@@ -58,7 +58,7 @@ fn auto_mode_config_parses_from_toml_and_json_equivalently() {
     let toml_src = r#"
 enabled = true
 prompt_type = "no_user_tool_prefix"
-classifier_model = "grok-4.5"
+classifier_model = "deepseek-4.5"
 classify_timeout_ms = 45000
 reasoning_effort = "low"
 "#;
@@ -66,7 +66,7 @@ reasoning_effort = "low"
     let json = serde_json::json!({
         "enabled": true,
         "prompt_type": "no_user_tool_prefix",
-        "classifier_model": "grok-4.5",
+        "classifier_model": "deepseek-4.5",
         "classify_timeout_ms": 45000,
         "reasoning_effort": "low"
     });
@@ -81,7 +81,7 @@ reasoning_effort = "low"
             cfg.prompt_type,
             Some(ClassifierPromptType::NoUserToolPrefix)
         );
-        assert_eq!(cfg.classifier_model.as_deref(), Some("grok-4.5"));
+        assert_eq!(cfg.classifier_model.as_deref(), Some("deepseek-4.5"));
         assert_eq!(cfg.classify_timeout_ms, Some(45_000));
         assert_eq!(cfg.reasoning_effort, Some(ReasoningEffort::Low));
     }
@@ -886,7 +886,7 @@ fn parses_model_api_key() {
     let raw_config: toml::Value = toml::from_str(
         r#"
             [model.my-custom-model]
-            model = "grok-4.5"
+            model = "deepseek-4.5"
             base_url = "https://api.example.com/v1"
             context_window = 200000
             api_key = "sk-test-key-12345"
@@ -896,7 +896,7 @@ fn parses_model_api_key() {
     let cfg = Config::new_from_toml_cfg(&raw_config).expect("config should parse");
     let resolved = resolve_model_list(&cfg, None);
     let model = resolved.get("my-custom-model").expect("model should exist");
-    assert_eq!(model.info.model, "grok-4.5");
+    assert_eq!(model.info.model, "deepseek-4.5");
     assert_eq!(model.info.base_url, "https://api.example.com/v1");
     assert_eq!(model.api_key, Some("sk-test-key-12345".to_string()));
 }
@@ -1513,7 +1513,7 @@ fn resolve_credentials_env_key_byok_keeps_api_key_auth_with_session() {
 #[test]
 fn proxy_messages_models_use_bearer_auth_scheme() {
     let mut model = test_model_entry(
-        "grok-4.5",
+        "deepseek-4.5",
         crate::env::PROD_CLI_CHAT_PROXY_BASE_URL,
         None,
         None,
@@ -1647,7 +1647,7 @@ fn x_api_key_auth_scheme_flows_from_config_to_sampler() {
 #[test]
 fn auth_scheme_defaults_to_bearer_when_not_set_in_config() {
     let model = test_model_entry(
-        "grok-4.5",
+        "deepseek-4.5",
         "https://api.example.com/v1",
         Some("sk-openai-test"),
         None,
@@ -2090,7 +2090,7 @@ fn parses_model_api_backend_responses() {
     let raw_config: toml::Value = toml::from_str(
         r#"
             [model.my-responses-model]
-            model = "grok-4.5"
+            model = "deepseek-4.5"
             base_url = "https://api.example.com/v1"
             context_window = 200000
             api_backend = "responses"
@@ -2109,7 +2109,7 @@ fn parses_model_api_backend_chat_completions() {
     let raw_config: toml::Value = toml::from_str(
         r#"
             [model.my-chat-model]
-            model = "grok-4.5"
+            model = "deepseek-4.5"
             base_url = "https://api.example.com/v1"
             context_window = 200000
             api_backend = "chat_completions"
@@ -2130,7 +2130,7 @@ fn model_messages_backend_auto_defaults_supports_reasoning_effort() {
     let raw_config: toml::Value = toml::from_str(
         r#"
             [model.my-claude]
-            model = "grok-4.5"
+            model = "deepseek-4.5"
             base_url = "https://messages.example.com"
             context_window = 200000
             api_backend = "messages"
@@ -2151,7 +2151,7 @@ fn model_messages_backend_respects_explicit_supports_reasoning_effort_false() {
     let raw_config: toml::Value = toml::from_str(
         r#"
             [model.my-claude]
-            model = "grok-4.5"
+            model = "deepseek-4.5"
             base_url = "https://messages.example.com"
             context_window = 200000
             api_backend = "messages"
@@ -2195,7 +2195,7 @@ fn model_api_backend_defaults_to_chat_completions() {
     let raw_config: toml::Value = toml::from_str(
         r#"
             [model.my-model]
-            model = "grok-4.5"
+            model = "deepseek-4.5"
             base_url = "https://api.example.com/v1"
             context_window = 200000
             "#,
@@ -2951,7 +2951,7 @@ fn inference_idle_timeout_secs_round_trip() {
     let raw_config: toml::Value = toml::from_str(
         r#"
             [model.slow-model]
-            model = "grok-4.5"
+            model = "deepseek-4.5"
             base_url = "https://api.deepseek.com/v1"
             context_window = 200000
             inference_idle_timeout_secs = 600
@@ -3416,7 +3416,7 @@ fn config_models_default_custom_model_is_in_resolved_model_list() {
     let (_, models) = resolve_models_from_toml(
         r#"
             [model.acme-grok]
-            model = "grok-4.5"
+            model = "deepseek-4.5"
             base_url = "https://inference.example.com/v1"
             context_window = 256000
             env_key = "ENTERPRISE_AUTH_TOKEN"
@@ -3428,7 +3428,7 @@ fn config_models_default_custom_model_is_in_resolved_model_list() {
         "user-defined model must be in the resolved model list"
     );
     let model = models.get("acme-grok").unwrap();
-    assert_eq!(model.info.model, "grok-4.5");
+    assert_eq!(model.info.model, "deepseek-4.5");
     assert_eq!(model.info.base_url, "https://inference.example.com/v1");
 }
 #[test]
@@ -5350,13 +5350,13 @@ fn clear_goal_model_env() {
 }
 fn planner_pair() -> crate::util::config::GoalRoleModel {
     crate::util::config::GoalRoleModel {
-        model: "grok-4".to_string(),
+        model: "deepseek-4".to_string(),
         agent_type: "general-purpose".to_string(),
     }
 }
 fn strategist_pair() -> crate::util::config::GoalRoleModel {
     crate::util::config::GoalRoleModel {
-        model: "grok-4.5".to_string(),
+        model: "deepseek-4.5".to_string(),
         agent_type: "cursor".to_string(),
     }
 }
@@ -5848,7 +5848,7 @@ fn config_accepts_all_known_sections() {
             management_api_key = "mgmt-key"
             gcs_service_account_key = "gcs-key"
             [models]
-            default = "grok-3"
+            default = "deepseek-3"
             [ui]
             yolo = true
             theme = "dark"
@@ -7106,27 +7106,27 @@ default = "grok-build"
 [[version_overrides]]
 minimum_version = "1.8.0"
 [version_overrides.models]
-default = "grok-4.5"
+default = "deepseek-4.5"
 "#,
     )
     .unwrap();
     let v = semver::Version::parse("1.8.0").unwrap();
     xai_grok_config::apply_version_overrides(&mut value, &v).unwrap();
     let cfg = Config::new_from_toml_cfg(&value).unwrap();
-    assert_eq!(cfg.models.default.as_deref(), Some("grok-4.5"));
+    assert_eq!(cfg.models.default.as_deref(), Some("deepseek-4.5"));
 }
-/// Reproduce the enterprise managed config bug: [model.grok-build] sets context_window=500k for model="grok-4.5". [models].default="grok-4.5" still resolves to the bare prefetched entry (256k).
-/// Layer 3 only overrides key "grok-build", not key "grok-4.5". After the Layer 4 slug propagation fix, both keys should have 500k.
+/// Reproduce the enterprise managed config bug: [model.grok-build] sets context_window=500k for model="deepseek-4.5". [models].default="deepseek-4.5" still resolves to the bare prefetched entry (256k).
+/// Layer 3 only overrides key "grok-build", not key "deepseek-4.5". After the Layer 4 slug propagation fix, both keys should have 500k.
 #[test]
 fn slug_propagation_enterprise_managed_config_key_mismatch() {
     let default_cw = DEFAULT_CONTEXT_WINDOW;
     let raw: toml::Value = toml::from_str(
         r#"
             [models]
-            default = "grok-4.5"
+            default = "deepseek-4.5"
 
             [model.grok-build]
-            model = "grok-4.5"
+            model = "deepseek-4.5"
             context_window = 500000
             base_url = "https://inference.example.com/v1"
             api_backend = "responses"
@@ -7136,25 +7136,25 @@ fn slug_propagation_enterprise_managed_config_key_mismatch() {
     let cfg = Config::new_from_toml_cfg(&raw).expect("config should parse");
     let mut prefetched = IndexMap::new();
     let mut entry = test_model_entry(
-        "grok-4.5",
+        "deepseek-4.5",
         "https://inference.example.com/v1",
         None,
         None,
         None,
     );
     entry.info.context_window = NonZeroU64::new(default_cw).unwrap();
-    prefetched.insert("grok-4.5".to_owned(), entry);
+    prefetched.insert("deepseek-4.5".to_owned(), entry);
     let resolved = resolve_model_list(&cfg, Some(prefetched));
     let by_key = resolved
         .get("grok-build")
         .expect("grok-build key must exist");
     assert_eq!(by_key.info.context_window.get(), 500_000);
-    assert_eq!(by_key.info.model, "grok-4.5");
-    let by_latest = resolved.get("grok-4.5").expect("grok-4.5 key must exist");
+    assert_eq!(by_key.info.model, "deepseek-4.5");
+    let by_latest = resolved.get("deepseek-4.5").expect("deepseek-4.5 key must exist");
     assert_eq!(
         by_latest.info.context_window.get(),
         500_000,
-        "BUG: prefetched 'grok-4.5' should inherit 500k from \
+        "BUG: prefetched 'deepseek-4.5' should inherit 500k from \
          sibling 'grok-build' (same model slug), not stay at {default_cw}"
     );
 }
@@ -7165,7 +7165,7 @@ fn slug_propagation_inherits_api_backend_but_not_agent_type() {
     let raw: toml::Value = toml::from_str(
         r#"
             [model.grok-build]
-            model = "grok-4.5"
+            model = "deepseek-4.5"
             context_window = 500000
             base_url = "https://test.example.com/v1"
             api_backend = "responses"
@@ -7175,13 +7175,13 @@ fn slug_propagation_inherits_api_backend_but_not_agent_type() {
     .unwrap();
     let cfg = Config::new_from_toml_cfg(&raw).expect("config should parse");
     let mut prefetched = IndexMap::new();
-    let mut entry = test_model_entry("grok-4.5", "https://test.example.com/v1", None, None, None);
+    let mut entry = test_model_entry("deepseek-4.5", "https://test.example.com/v1", None, None, None);
     entry.info.context_window = NonZeroU64::new(default_cw).unwrap();
     entry.info.agent_type = default_agent_type();
     entry.info.api_backend = ApiBackend::default();
-    prefetched.insert("grok-4.5".to_owned(), entry);
+    prefetched.insert("deepseek-4.5".to_owned(), entry);
     let resolved = resolve_model_list(&cfg, Some(prefetched));
-    let latest = resolved.get("grok-4.5").unwrap();
+    let latest = resolved.get("deepseek-4.5").unwrap();
     assert_eq!(
         latest.info.agent_type,
         default_agent_type(),
@@ -7199,7 +7199,7 @@ fn slug_propagation_does_not_overwrite_explicit_context_window() {
     let raw: toml::Value = toml::from_str(
         r#"
             [model.grok-build]
-            model = "grok-4.5"
+            model = "deepseek-4.5"
             context_window = 500000
             base_url = "https://test.example.com/v1"
             "#,
@@ -7207,11 +7207,11 @@ fn slug_propagation_does_not_overwrite_explicit_context_window() {
     .unwrap();
     let cfg = Config::new_from_toml_cfg(&raw).expect("config should parse");
     let mut prefetched = IndexMap::new();
-    let mut entry = test_model_entry("grok-4.5", "https://test.example.com/v1", None, None, None);
+    let mut entry = test_model_entry("deepseek-4.5", "https://test.example.com/v1", None, None, None);
     entry.info.context_window = NonZeroU64::new(65_536).unwrap();
-    prefetched.insert("grok-4.5".to_owned(), entry);
+    prefetched.insert("deepseek-4.5".to_owned(), entry);
     let resolved = resolve_model_list(&cfg, Some(prefetched));
-    let latest = resolved.get("grok-4.5").unwrap();
+    let latest = resolved.get("deepseek-4.5").unwrap();
     assert_eq!(
         latest.info.context_window.get(),
         65_536,
@@ -7659,9 +7659,9 @@ fn resolve_model_list_config_reasoning_efforts_beats_remote() {
         "config.toml list must override remote"
     );
 }
-/// The prefetched `grok-4.6-build` row: a `["low", "high"]` menu with `high` marked default plus the legacy `high` scalar.
+/// The prefetched `deepseek-4.6-build` row: a `["low", "high"]` menu with `high` marked default plus the legacy `high` scalar.
 fn prefetched_menu_donor() -> ModelEntry {
-    let mut entry = prefetch_model_entry("grok-4.6-build", 200_000, ApiBackend::default());
+    let mut entry = prefetch_model_entry("deepseek-4.6-build", 200_000, ApiBackend::default());
     entry.info.reasoning_efforts = ["low", "high"]
         .into_iter()
         .map(|id| ReasoningEffortOption {
@@ -7675,23 +7675,23 @@ fn prefetched_menu_donor() -> ModelEntry {
     entry.info.reasoning_effort = Some(ReasoningEffort::High);
     entry
 }
-/// Resolves `config_toml` (rows pointing at `model = "grok-4.6-build"`) against `donor` prefetched under the wire id.
-/// A custom models endpoint keeps the built-in `grok-4.6` catalog row (which has its own menu) out of Layer 1.
+/// Resolves `config_toml` (rows pointing at `model = "deepseek-4.6-build"`) against `donor` prefetched under the wire id.
+/// A custom models endpoint keeps the built-in `deepseek-4.6` catalog row (which has its own menu) out of Layer 1.
 fn resolve_with_menu_donor(config_toml: &str, donor: ModelEntry) -> IndexMap<String, ModelEntry> {
     let raw: toml::Value = toml::from_str(config_toml).unwrap();
     let mut cfg = Config::new_from_toml_cfg(&raw).expect("config should parse");
     cfg.endpoints.models_base_url = Some("https://test.example.com/v1".to_owned());
     let mut prefetched = IndexMap::new();
-    prefetched.insert("grok-4.6-build".to_owned(), donor);
+    prefetched.insert("deepseek-4.6-build".to_owned(), donor);
     resolve_model_list(&cfg, Some(prefetched))
 }
-/// Resolves a single `[model."{key}"]` row (`model = "grok-4.6-build"`, no menu) against `donor`; `key` is the
+/// Resolves a single `[model."{key}"]` row (`model = "deepseek-4.6-build"`, no menu) against `donor`; `key` is the
 /// wire id itself or an alias of it.
 fn resolve_row_with_menu_donor(key: &str, extra_toml: &str, donor: ModelEntry) -> ModelEntry {
     let config_toml = format!(
         r#"
             [model."{key}"]
-            model = "grok-4.6-build"
+            model = "deepseek-4.6-build"
             base_url = "https://test.example.com/v1"
             {extra_toml}
             "#
@@ -7708,7 +7708,7 @@ fn effort_ids(info: &ModelInfo) -> Vec<&str> {
 }
 #[test]
 fn slug_propagation_inherits_reasoning_efforts_and_derives_legacy_fields() {
-    let info = resolve_row_with_menu_donor("grok-4.6", "", prefetched_menu_donor()).info;
+    let info = resolve_row_with_menu_donor("deepseek-4.6", "", prefetched_menu_donor()).info;
     assert_eq!(effort_ids(&info), ["low", "high"]);
     assert!(info.supports_reasoning_effort);
     assert_eq!(info.reasoning_effort, Some(ReasoningEffort::High));
@@ -7719,38 +7719,38 @@ fn slug_propagation_inherits_reasoning_efforts_and_derives_legacy_fields() {
 fn slug_propagation_prefers_same_key_menu_donor_over_restricted_alias() {
     let resolved = resolve_with_menu_donor(
         r#"
-            [model."grok-4.6"]
-            model = "grok-4.6-build"
+            [model."deepseek-4.6"]
+            model = "deepseek-4.6-build"
             base_url = "https://test.example.com/v1"
 
-            [model."grok-4.6-cheap"]
-            model = "grok-4.6-build"
+            [model."deepseek-4.6-cheap"]
+            model = "deepseek-4.6-build"
             base_url = "https://test.example.com/v1"
             reasoning_efforts = ["low"]
             "#,
         prefetched_menu_donor(),
     );
     let info = |key: &str| &resolved.get(key).expect(key).info;
-    assert_eq!(effort_ids(info("grok-4.6-build")), ["low", "high"]);
-    assert_eq!(effort_ids(info("grok-4.6")), ["low", "high"]);
+    assert_eq!(effort_ids(info("deepseek-4.6-build")), ["low", "high"]);
+    assert_eq!(effort_ids(info("deepseek-4.6")), ["low", "high"]);
     assert_eq!(
-        info("grok-4.6").reasoning_effort,
+        info("deepseek-4.6").reasoning_effort,
         Some(ReasoningEffort::High)
     );
-    assert_eq!(effort_ids(info("grok-4.6-cheap")), ["low"]);
+    assert_eq!(effort_ids(info("deepseek-4.6-cheap")), ["low"]);
 }
 /// Inheriting an unmarked `capabilities` menu must carry the server-default flag along, or the alias would
 /// derive `.first()` (`low`) where the same-key row sends nothing.
 #[test]
 fn slug_inherited_unmarked_capabilities_menu_keeps_no_default_effort() {
     let row = serde_json::json!({
-        "id": "grok-4.6-build",
+        "id": "deepseek-4.6-build",
         "capabilities": { "reasoning_effort": ["low", "medium", "high", "xhigh"] }
     });
     let parsed =
         crate::remote::client::parse_remote_model_value(&row, "https://test.example.com/v1")
             .expect("row parses");
-    let entry = resolve_row_with_menu_donor("grok-4.6", "", ModelEntry::from_config_entry(&parsed));
+    let entry = resolve_row_with_menu_donor("deepseek-4.6", "", ModelEntry::from_config_entry(&parsed));
     assert_eq!(effort_ids(&entry.info), ["low", "medium", "high", "xhigh"]);
     assert!(entry.info.supports_reasoning_effort);
     assert!(entry.info.reasoning_effort_server_default);
@@ -7762,7 +7762,7 @@ fn slug_inherited_unmarked_capabilities_menu_keeps_no_default_effort() {
 /// catalog row or from the config row itself, so nothing reaches the wire.
 #[test]
 fn explicit_supports_reasoning_effort_false_discards_inherited_menu() {
-    for key in ["grok-4.6-build", "grok-4.6"] {
+    for key in ["deepseek-4.6-build", "deepseek-4.6"] {
         let mut donor = prefetched_menu_donor();
         donor.info.reasoning_effort_server_default = true;
         let entry = resolve_row_with_menu_donor(
@@ -7791,7 +7791,7 @@ fn capabilities_menu_without_default_resolves_to_no_reasoning_effort() {
     let mut cfg = Config::default();
     cfg.endpoints.models_base_url = Some("https://test.example.com/v1".to_owned());
     let row = serde_json::json!({
-        "id": "grok-4.6-build",
+        "id": "deepseek-4.6-build",
         "capabilities": { "reasoning_effort": ["low", "medium", "high", "xhigh"] }
     });
     let parsed =
@@ -7799,12 +7799,12 @@ fn capabilities_menu_without_default_resolves_to_no_reasoning_effort() {
             .expect("row parses");
     let mut prefetched = IndexMap::new();
     prefetched.insert(
-        "grok-4.6-build".to_owned(),
+        "deepseek-4.6-build".to_owned(),
         ModelEntry::from_config_entry(&parsed),
     );
     let info = resolve_model_list(&cfg, Some(prefetched))
-        .shift_remove("grok-4.6-build")
-        .expect("grok-4.6-build key must exist")
+        .shift_remove("deepseek-4.6-build")
+        .expect("deepseek-4.6-build key must exist")
         .info;
     assert_eq!(info.reasoning_efforts.len(), 4);
     assert!(info.supports_reasoning_effort);
@@ -8004,7 +8004,7 @@ fn byok_config_overlay_visible_to_api_key_users() {
     let raw: toml::Value = toml::from_str(
         r#"
             [model.enterprise-alias]
-            model = "grok-4.5"
+            model = "deepseek-4.5"
             base_url = "https://inference.company.com/v1"
             env_key = "COMPANY_TOKEN"
             "#,

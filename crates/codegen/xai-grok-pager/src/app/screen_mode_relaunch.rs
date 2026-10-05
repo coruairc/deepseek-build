@@ -558,7 +558,7 @@ mod tests {
             args(&[
                 "grok",
                 "--model",
-                "grok-4",
+                "deepseek-4",
                 "--cwd",
                 "/tmp/proj",
                 "--leader-socket",
@@ -575,7 +575,7 @@ mod tests {
             as_strs(&out),
             vec![
                 "--model",
-                "grok-4",
+                "deepseek-4",
                 "--cwd",
                 "/tmp/proj",
                 "--leader-socket",
@@ -594,7 +594,7 @@ mod tests {
     #[test]
     fn keeps_equals_form_and_short_model_flag() {
         let out = build_screen_mode_relaunch_args(
-            args(&["grok", "-m", "grok-4", "--cwd=/tmp/proj", "--no-leader"]),
+            args(&["grok", "-m", "deepseek-4", "--cwd=/tmp/proj", "--no-leader"]),
             "sid",
             false,
         );
@@ -602,7 +602,7 @@ mod tests {
             as_strs(&out),
             vec![
                 "-m",
-                "grok-4",
+                "deepseek-4",
                 "--cwd=/tmp/proj",
                 "--no-leader",
                 "--resume",

@@ -593,7 +593,7 @@ fn promo_announcement(id: &str) -> xai_grok_shell::util::config::RemoteAnnouncem
         severity: Some("promo".into()),
         cta: Some(xai_grok_shell::util::config::AnnouncementCta {
             label: Some("Go".into()),
-            url: Some(format!("https://x.ai/{id}")),
+            url: Some(format!("https://deepseek-build/{id}")),
             caption: None,
         }),
         ..Default::default()
@@ -631,7 +631,7 @@ fn announcements_open_cta_opens_promo_and_noops_under_critical() {
         let effects = dispatch(Action::AnnouncementsOpenCta(surface), &mut app);
         assert!(effects.is_empty(), "open is a side effect, not an Effect");
         assert!(
-            opened().lines().any(|l| l == "https://x.ai/promo-open"),
+            opened().lines().any(|l| l == "https://deepseek-build/promo-open"),
             "surface {surface:?} must open the promo url; got {:?}",
             opened()
         );
@@ -964,7 +964,7 @@ fn announcements_show_clears_hidden_promo_ids() {
 fn switch_model_dispatch_produces_effect_and_sets_pending() {
     let mut app = test_app_with_agent();
     let id = AgentId(0);
-    let model_id = acp::ModelId::new(std::sync::Arc::from("grok-4.5"));
+    let model_id = acp::ModelId::new(std::sync::Arc::from("deepseek-4.5"));
     assert!(!agent_ref(&app, id).session.model_switch_pending);
     let effects = dispatch(
         Action::SwitchModel(ModelChoice::new(model_id.clone())),
@@ -981,8 +981,8 @@ fn switch_model_dispatch_produces_effect_and_sets_pending() {
 fn context_window_selection_is_refused_while_a_model_switch_is_pending() {
     let mut app = test_app_with_agent();
     let id = AgentId(0);
-    let old_model = acp::ModelId::new(std::sync::Arc::from("grok-4.5"));
-    let new_model = acp::ModelId::new(std::sync::Arc::from("grok-4.7"));
+    let old_model = acp::ModelId::new(std::sync::Arc::from("deepseek-4.5"));
+    let new_model = acp::ModelId::new(std::sync::Arc::from("deepseek-4.7"));
     test_agent_mut(&mut app, id).session.models.current = Some(old_model.clone());
     dispatch(Action::SwitchModel(ModelChoice::new(new_model)), &mut app);
     let scrollback_before = agent_ref(&app, id).scrollback.len();
@@ -1002,11 +1002,11 @@ fn context_window_selection_is_refused_while_a_model_switch_is_pending() {
 #[test]
 fn a_window_pick_sends_only_a_change_to_the_session_selection() {
     let cases = [
-        (Some(500_000), "grok-4.8", 500_000, None),
-        (Some(500_000), "grok-4.5", 256_000, None),
-        (None, "grok-4.8", 256_000, None),
-        (None, "grok-4.7", 256_000, Some(256_000)),
-        (Some(500_000), "grok-4.8", 256_000, Some(256_000)),
+        (Some(500_000), "deepseek-4.8", 500_000, None),
+        (Some(500_000), "deepseek-4.5", 256_000, None),
+        (None, "deepseek-4.8", 256_000, None),
+        (None, "deepseek-4.7", 256_000, Some(256_000)),
+        (Some(500_000), "deepseek-4.8", 256_000, Some(256_000)),
     ];
     for (selection, target, picked, expected) in cases {
         let mut app = test_app_with_catalog(selection);
@@ -1032,14 +1032,14 @@ fn a_redundant_window_pick_is_refused_while_a_model_switch_is_pending() {
     let mut app = test_app_with_catalog(Some(500_000));
     dispatch(
         Action::SwitchModel(ModelChoice::new(acp::ModelId::new(std::sync::Arc::from(
-            "grok-4.5",
+            "deepseek-4.5",
         )))),
         &mut app,
     );
     let scrollback_before = agent_ref(&app, AgentId(0)).scrollback.len();
     let effects = dispatch(
         Action::SwitchModel(ModelChoice {
-            model_id: acp::ModelId::new(std::sync::Arc::from("grok-4.8")),
+            model_id: acp::ModelId::new(std::sync::Arc::from("deepseek-4.8")),
             effort: None,
             context_window_selection: std::num::NonZeroU64::new(500_000),
         }),
@@ -1056,9 +1056,9 @@ fn test_app_with_catalog(selection: Option<u64>) -> AppView {
     let mut app = test_app_with_agent();
     let models = &mut test_agent_mut(&mut app, AgentId(0)).session.models;
     for (id, windows) in [
-        ("grok-4.7", [256_000, 500_000]),
-        ("grok-4.8", [256_000, 500_000]),
-        ("grok-4.5", [128_000, 256_000]),
+        ("deepseek-4.7", [256_000, 500_000]),
+        ("deepseek-4.8", [256_000, 500_000]),
+        ("deepseek-4.5", [128_000, 256_000]),
     ] {
         let info = xai_grok_test_support::acp_fixtures::model_info_with_meta(
             id,
@@ -1069,7 +1069,7 @@ fn test_app_with_catalog(selection: Option<u64>) -> AppView {
             .available
             .insert(acp::ModelId::new(std::sync::Arc::from(id)), info);
     }
-    models.current = Some(acp::ModelId::new(std::sync::Arc::from("grok-4.7")));
+    models.current = Some(acp::ModelId::new(std::sync::Arc::from("deepseek-4.7")));
     models.context_window_selection = selection;
     app
 }

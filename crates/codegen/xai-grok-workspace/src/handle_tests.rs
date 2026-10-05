@@ -1628,7 +1628,7 @@ fn rewind_metric_helpers_record_observable_effects() {
 async fn client_ext_sink_receives_emitted_notification() {
     let handle = make_handle();
     assert!(!handle.has_client_ext_sink());
-    handle.emit_client_ext("x.ai/noop".to_string(), serde_json::json!({}));
+    handle.emit_client_ext("deepseek-build/noop".to_string(), serde_json::json!({}));
     let captured = Arc::new(parking_lot::Mutex::new(Vec::new()));
     let sink_captured = captured.clone();
     handle.set_client_ext_sink(Arc::new(move |method, params| {
@@ -1636,7 +1636,7 @@ async fn client_ext_sink_receives_emitted_notification() {
     }));
     assert!(handle.has_client_ext_sink());
     handle.emit_client_ext(
-        "x.ai/search/fuzzy/status".to_string(),
+        "deepseek-build/search/fuzzy/status".to_string(),
         serde_json::json!({"a": 1}),
     );
     let got = captured.lock();
@@ -1644,11 +1644,11 @@ async fn client_ext_sink_receives_emitted_notification() {
     let Some(first) = got.first() else {
         panic!("expected one captured emit: {got:?}");
     };
-    assert_eq!(first.0, "x.ai/search/fuzzy/status");
+    assert_eq!(first.0, "deepseek-build/search/fuzzy/status");
     assert_eq!(first.1, serde_json::json!({"a": 1}));
 }
 /// End-to-end local streaming: open and change a fuzzy search over real files, then run the notification driver.
-/// A correctly-shaped `x.ai/search/fuzzy/status` must be delivered through the sink with the match.
+/// A correctly-shaped `deepseek-build/search/fuzzy/status` must be delivered through the sink with the match.
 #[tokio::test]
 async fn fuzzy_change_streams_status_through_sink() {
     use crate::file_system::TargetClientId;
@@ -1659,7 +1659,7 @@ async fn fuzzy_change_streams_status_through_sink() {
     let captured = Arc::new(parking_lot::Mutex::new(Vec::<serde_json::Value>::new()));
     let sink_captured = captured.clone();
     handle.set_client_ext_sink(Arc::new(move |method, params| {
-        if method == "x.ai/search/fuzzy/status" {
+        if method == "deepseek-build/search/fuzzy/status" {
             sink_captured.lock().push(params);
         }
     }));
@@ -1764,7 +1764,7 @@ async fn events_jsonl_captures_turn_tool_toggle_and_mcp_variants() {
             sid,
             &BeforeTurnPayload {
                 turn_number: 7,
-                model_id: "grok-4".to_owned(),
+                model_id: "deepseek-4".to_owned(),
                 yolo_mode: false,
                 conversation_message_count: 5,
                 session_relationship: "subagent".to_owned(),
@@ -1793,7 +1793,7 @@ async fn events_jsonl_captures_turn_tool_toggle_and_mcp_variants() {
                 outcome: TurnHookOutcome::Completed,
                 duration_ms: 1234,
                 tool_call_count: 1,
-                model_id: "grok-4".to_owned(),
+                model_id: "deepseek-4".to_owned(),
                 written_repo_paths: Vec::new(),
                 cancellation_category: None,
                 cancellation_context: None,
@@ -1821,7 +1821,7 @@ async fn events_jsonl_captures_turn_tool_toggle_and_mcp_variants() {
     assert_eq!(ts.get("turn_number").unwrap_or(&serde_json::Value::Null), 7);
     assert_eq!(
         ts.get("model_id").unwrap_or(&serde_json::Value::Null),
-        "grok-4"
+        "deepseek-4"
     );
     assert_eq!(
         ts.get("yolo_mode").unwrap_or(&serde_json::Value::Null),
@@ -1921,7 +1921,7 @@ async fn before_turn_hooks_sync_session_yolo_mode() {
             "main",
             &BeforeTurnPayload {
                 turn_number: 1,
-                model_id: "grok-4".to_owned(),
+                model_id: "deepseek-4".to_owned(),
                 yolo_mode: true,
                 ..Default::default()
             },
@@ -1933,7 +1933,7 @@ async fn before_turn_hooks_sync_session_yolo_mode() {
             "main",
             &TurnHookRequest::Before(BeforeTurnPayload {
                 turn_number: 2,
-                model_id: "grok-4".to_owned(),
+                model_id: "deepseek-4".to_owned(),
                 yolo_mode: false,
                 ..Default::default()
             }),
@@ -1953,7 +1953,7 @@ async fn before_turn_hooks_sync_session_yolo_mode() {
             "never-bound",
             &TurnHookRequest::Before(BeforeTurnPayload {
                 turn_number: 1,
-                model_id: "grok-4".to_owned(),
+                model_id: "deepseek-4".to_owned(),
                 yolo_mode: true,
                 ..Default::default()
             }),
@@ -1975,7 +1975,7 @@ async fn before_turn_yolo_transition_emits_yolo_toggled_event() {
                 sid,
                 &BeforeTurnPayload {
                     turn_number: turn,
-                    model_id: "grok-4".to_owned(),
+                    model_id: "deepseek-4".to_owned(),
                     yolo_mode: yolo,
                     ..Default::default()
                 },
@@ -2036,7 +2036,7 @@ async fn events_disabled_keeps_noop_and_writes_nothing() {
             sid,
             &BeforeTurnPayload {
                 turn_number: 1,
-                model_id: "grok-4".to_owned(),
+                model_id: "deepseek-4".to_owned(),
                 yolo_mode: false,
                 conversation_message_count: 0,
                 session_relationship: "primary".to_owned(),
@@ -2057,7 +2057,7 @@ async fn events_disabled_keeps_noop_and_writes_nothing() {
                 outcome: TurnHookOutcome::Completed,
                 duration_ms: 1,
                 tool_call_count: 1,
-                model_id: "grok-4".to_owned(),
+                model_id: "deepseek-4".to_owned(),
                 written_repo_paths: Vec::new(),
                 cancellation_category: None,
                 cancellation_context: None,
@@ -2086,7 +2086,7 @@ async fn session_end_evicts_event_writer_without_data_loss() {
             sid,
             &BeforeTurnPayload {
                 turn_number: 1,
-                model_id: "grok-4".to_owned(),
+                model_id: "deepseek-4".to_owned(),
                 yolo_mode: false,
                 conversation_message_count: 0,
                 session_relationship: "primary".to_owned(),
@@ -6900,7 +6900,7 @@ async fn the_configure_path_caps_advertised_tools() {
     );
     server_task.abort();
 }
-/// The legacy client-driven path (`workspace.configure_mcp`, used when `bind_mcp` is None: sandbox, standalone, Grok Build) across the full lifecycle: configure → hub unbind teardown → REBIND (which must re-open the `Closed` binding even without a machine-owned config) → configure again succeeds.
+/// The legacy client-driven path (`workspace.configure_mcp`, used when `bind_mcp` is None: sandbox, standalone, deepseek-build) across the full lifecycle: configure → hub unbind teardown → REBIND (which must re-open the `Closed` binding even without a machine-owned config) → configure again succeeds.
 /// Without the re-open, the drive fails closed on `Closed` forever and the session can never attach servers again.
 #[tokio::test]
 async fn a_rebind_reopens_for_the_client_driven_configure_path() {
@@ -8025,7 +8025,7 @@ async fn no_upload_queue_registers_no_inflight_enqueue() {
             "main",
             &BeforeTurnPayload {
                 turn_number: 1,
-                model_id: "grok-4".to_owned(),
+                model_id: "deepseek-4".to_owned(),
                 yolo_mode: false,
                 conversation_message_count: 0,
                 session_relationship: "primary".to_owned(),
@@ -8057,7 +8057,7 @@ async fn compute_turn_injections_after_returns_skipped_ack_without_queue() {
                 outcome: TurnHookOutcome::Completed,
                 duration_ms: 10,
                 tool_call_count: 0,
-                model_id: "grok-4".to_owned(),
+                model_id: "deepseek-4".to_owned(),
                 written_repo_paths: Vec::new(),
                 cancellation_category: None,
                 cancellation_context: None,
@@ -8087,7 +8087,7 @@ async fn compute_turn_injections_after_returns_skipped_ack_without_queue() {
                 outcome: TurnHookOutcome::Completed,
                 duration_ms: 10,
                 tool_call_count: 0,
-                model_id: "grok-4".to_owned(),
+                model_id: "deepseek-4".to_owned(),
                 written_repo_paths: Vec::new(),
                 cancellation_category: None,
                 cancellation_context: None,
@@ -8137,7 +8137,7 @@ async fn after_turn_decodes_cancellation_fields_into_events_jsonl() {
             sid,
             &BeforeTurnPayload {
                 turn_number: 2,
-                model_id: "grok-4".to_owned(),
+                model_id: "deepseek-4".to_owned(),
                 yolo_mode: false,
                 conversation_message_count: 0,
                 session_relationship: "primary".to_owned(),
@@ -8153,7 +8153,7 @@ async fn after_turn_decodes_cancellation_fields_into_events_jsonl() {
                 outcome: TurnHookOutcome::Cancelled,
                 duration_ms: 10,
                 tool_call_count: 0,
-                model_id: "grok-4".to_owned(),
+                model_id: "deepseek-4".to_owned(),
                 written_repo_paths: Vec::new(),
                 cancellation_category: Some("permission_rejected".to_owned()),
                 cancellation_context: Some(serde_json::json!({ "recovery": false })),

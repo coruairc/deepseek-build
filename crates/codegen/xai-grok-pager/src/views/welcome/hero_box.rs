@@ -26,7 +26,7 @@ const LOGO_H_PAD: u16 = 3;
 /// Reserved on top of the announcement text rows so the message never paints over the button.
 const UPGRADE_CTA_ROWS: u16 = 2;
 
-const HERO_SUBTITLE: &str = "Thanks for trying Grok Build, give feedback with /feedback!";
+const HERO_SUBTITLE: &str = "Thanks for trying deepseek-build, give feedback with /feedback!";
 
 use super::logo::LogoTier;
 use super::{PROMPT_HEIGHT, VERSION_GAP};
@@ -915,7 +915,7 @@ managed devices and accounts. Report security incidents";
         pinned.dismissible = Some(false);
         pinned.cta = Some(xai_grok_shell::util::config::AnnouncementCta {
             label: Some("Upgrade Account".into()),
-            url: Some("https://x.ai/grok".into()),
+            url: Some("https://deepseek-build/grok".into()),
             caption: Some("or use Ctrl+O".into()),
         });
         let mut buf = Buffer::empty(area);
@@ -965,7 +965,7 @@ managed devices and accounts. Report security incidents";
         let mut dismissible = ann(None, Some("Grok 4.5 is here. Upgrade now."));
         dismissible.cta = Some(xai_grok_shell::util::config::AnnouncementCta {
             label: Some("Upgrade Account".into()),
-            url: Some("https://x.ai/grok".into()),
+            url: Some("https://deepseek-build/grok".into()),
             caption: Some("or use Ctrl+O".into()),
         });
         let mut buf = Buffer::empty(area);

@@ -10,6 +10,7 @@ authors = ["xAI"]
 dunce = { workspace = true }
 xai-tty-utils = { workspace = true }
 xai-grok-version = { workspace = true }
+xai-grok-brand = { workspace = true }
 
 # Shared prompt-queue wire types
 xai-prompt-queue = { workspace = true }

@@ -14,7 +14,7 @@ fn notice() -> ConsentNotice {
             },
             ConsentSegment::Text(". Now's the time.".to_string()),
         ],
-        links: vec!["https://x.ai/legal/aup".to_string()],
+        links: vec!["https://deepseek-build/legal/aup".to_string()],
         accept_label: "I accept".to_string(),
     }
 }
@@ -169,7 +169,7 @@ fn a_pending_double_press_replaces_the_version_badge() {
 
     let screen = screen(&buf);
     assert!(screen.contains("press again to quit"), "{screen}");
-    assert!(!screen.contains("Grok Build"), "{screen}");
+    assert!(!screen.contains("deepseek-build"), "{screen}");
 }
 
 /// `Buffer::set_line` ignores a line's alignment, so the centring is done by hand.

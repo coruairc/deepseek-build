@@ -11,4 +11,4 @@ Session usage (since start or last resume):
 
   By model:
     grok-build: 110 Tokens
-    grok-4: 55 Tokens
+    deepseek-4: 55 Tokens

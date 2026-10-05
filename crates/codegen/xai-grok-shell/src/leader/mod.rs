@@ -40,7 +40,7 @@
 //! // Connect to existing leader or spawn a new one
 //! let caps = ClientCapabilities {
 //!     yolo_mode: true,
-//!     default_model: Some("grok-3-fast".to_string()),
+//!     default_model: Some("deepseek-3-fast".to_string()),
 //! };
 //! let conn = connect_or_spawn("my-client", ClientMode::Stdio, &env_urls, caps).await?;
 //!

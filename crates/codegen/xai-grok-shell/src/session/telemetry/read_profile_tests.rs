@@ -26,11 +26,11 @@ fn system_origin_leaves_the_model_absent_unless_it_is_known() {
         "call-2",
         Some("session"),
         Some(4),
-        Some("grok-4.6"),
+        Some("deepseek-4.6"),
         "GrokBuild:read_file",
         None,
     );
-    assert_eq!(known.requested_model(), Some("grok-4.6"));
+    assert_eq!(known.requested_model(), Some("deepseek-4.6"));
     assert_eq!(known.source(), InvocationSource::UserDirect);
 }
 

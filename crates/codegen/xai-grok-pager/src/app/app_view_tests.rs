@@ -2243,7 +2243,7 @@ fn apply_auth_meta_lifts_restrictions_for_paid_tiers_and_teams() {
     let mut app = test_app();
     advertise_media_tools(&mut app);
     let meta = xai_grok_login::AuthMeta {
-        subscription_tier: Some("SuperGrok".into()),
+        subscription_tier: Some("deepseek".into()),
         ..Default::default()
     };
     app.apply_auth_meta(&meta);
@@ -2253,7 +2253,7 @@ fn apply_auth_meta_lifts_restrictions_for_paid_tiers_and_teams() {
     advertise_media_tools(&mut app);
     app.apply_auth_meta(&xai_grok_login::AuthMeta::default());
     assert!(!app.tier_restricted_commands.is_empty());
-    app.subscription_tier = Some("SuperGrok".into());
+    app.subscription_tier = Some("deepseek".into());
     app.apply_tier_restrictions();
     assert!(app.tier_restricted_commands.is_empty());
     assert_tier_restricted_commands_present(&app);
@@ -2273,8 +2273,8 @@ fn is_restricted_tier_classification() {
     assert!(is_restricted_tier(Some("Free")));
     assert!(is_restricted_tier(Some("X Basic")));
     assert!(is_restricted_tier(Some("x_basic")));
-    assert!(!is_restricted_tier(Some("SuperGrok")));
-    assert!(!is_restricted_tier(Some("SuperGrok Heavy")));
+    assert!(!is_restricted_tier(Some("deepseek")));
+    assert!(!is_restricted_tier(Some("deepseek Heavy")));
     assert!(!is_restricted_tier(Some("X Premium")));
     assert!(!is_restricted_tier(Some("X Premium+")));
     assert!(!is_restricted_tier(Some("SomeFutureTier")));
@@ -2286,7 +2286,7 @@ fn is_voice_tier_restricted_tracks_tier() {
     assert!(app.is_voice_tier_restricted());
     let mut app = test_app();
     let meta = xai_grok_login::AuthMeta {
-        subscription_tier: Some("SuperGrok".into()),
+        subscription_tier: Some("deepseek".into()),
         ..Default::default()
     };
     app.apply_auth_meta(&meta);
@@ -2296,8 +2296,8 @@ fn is_voice_tier_restricted_tracks_tier() {
 fn apply_auth_meta_clears_gate_on_subscription() {
     let mut app = test_app();
     app.gate = Some(xai_grok_login::GateInfo {
-        message: "Subscribe to use Grok Build".into(),
-        url: Some("https://api.deepseek.com/supergrok?referrer=grok-build".into()),
+        message: "Subscribe to use deepseek-build".into(),
+        url: Some("https://api.deepseek.com/deepseek?referrer=grok-build".into()),
         label: None,
     });
     assert!(app.is_access_blocked());
@@ -2921,8 +2921,8 @@ fn consent_pending_app() -> AppView {
                 },
             ],
             links: vec![
-                "https://x.ai/legal/tos".to_string(),
-                "https://x.ai/legal/aup".to_string(),
+                "https://deepseek-build/legal/tos".to_string(),
+                "https://deepseek-build/legal/aup".to_string(),
             ],
             accept_label: "Accept".to_string(),
         },

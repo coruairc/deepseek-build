@@ -148,7 +148,7 @@ pub(crate) fn notify_client(gateway: &Option<GatewaySender>, info: &Info, title:
     );
     if let Ok(params) = serde_json::value::to_raw_value(&notification) {
         gateway.forward_fire_and_forget(acp::ExtNotification::new(
-            "x.ai/session_notification",
+            "deepseek-build/session_notification",
             params.into(),
         ));
     }
@@ -169,7 +169,7 @@ pub(crate) fn session_info_update(
     )
 }
 
-/// Unpin fan-out: no title (avoid blanking list-driven clients) plus `_meta.x.ai/titleIsManual: false`.
+/// Unpin fan-out: no title (avoid blanking list-driven clients) plus `_meta.deepseek-build/titleIsManual: false`.
 pub(crate) fn session_info_update_unpinned(session_id: acp::SessionId) -> acp::SessionNotification {
     acp::SessionNotification::new(
         session_id,

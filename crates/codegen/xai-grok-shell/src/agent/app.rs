@@ -161,7 +161,7 @@ fn internal_reload_request_line(
 ) -> String {
     crate::leader::protocol::internal_request_line(id, method, params)
 }
-/// Start a skills file watcher and wire it to inject `x.ai/internal/reload_skills` messages into the shared ACP incoming stream.
+/// Start a skills file watcher and wire it to inject `deepseek-build/internal/reload_skills` messages into the shared ACP incoming stream.
 /// The messages fire when SKILL.md files change on disk.
 /// Returns the watcher task, or `None` if no directories could be watched.
 fn spawn_skills_file_watcher<W>(
@@ -408,7 +408,7 @@ pub async fn run_headless(
         if !did_browser_flow {
             eprintln!();
             eprintln!(
-                "Open Grok Build: {} (press Enter to open in browser)",
+                "Open deepseek-build: {} (press Enter to open in browser)",
                 grok_code_url
             );
             eprintln!();
@@ -1327,7 +1327,7 @@ pub async fn run_leader(
                             info!("UI config change detected by watcher");
                             let notification = serde_json::json!({
                                 "jsonrpc": "2.0",
-                                "method": "x.ai/config_changed",
+                                "method": "deepseek-build/config_changed",
                                 "params": {
                                     "section": "ui",
                                     "changes": {
@@ -1774,7 +1774,7 @@ mod tests {
         let msg: serde_json::Value = serde_json::from_str(line.trim_end()).unwrap();
         assert_eq!(
             msg.get("method").and_then(|v| v.as_str()),
-            Some("_x.ai/internal/reload_models"),
+            Some("_deepseek-build/internal/reload_models"),
             "wire method must carry the `_` ext prefix or the ACP decoder \
              rejects it with method_not_found"
         );
@@ -1803,7 +1803,7 @@ mod tests {
         let msg: serde_json::Value = serde_json::from_str(line.trim_end()).unwrap();
         assert_eq!(
             msg.get("method").and_then(|v| v.as_str()),
-            Some("_x.ai/internal/auth_cleared")
+            Some("_deepseek-build/internal/auth_cleared")
         );
     }
     #[tokio::test]

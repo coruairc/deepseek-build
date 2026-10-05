@@ -43,7 +43,7 @@ pub enum ConfigUpdate {
     /// That method content-dedupes self-writes (`persist` / `renew_ttl`) before applying.
     /// The variant carries no payload: validation (TTL, version, auth method) requires `ModelsManager` state the reloader doesn't have.
     ModelsCacheChanged,
-    /// Updated UI settings; the agent broadcasts `x.ai/config_changed` to IPC clients.
+    /// Updated UI settings; the agent broadcasts `deepseek-build/config_changed` to IPC clients.
     Ui {
         theme: Option<String>,
         yolo: bool,
@@ -839,14 +839,14 @@ ignore = ["/tmp"]
 [ui]
 theme = "dark"
 yolo = true
-fork_secondary_model = "grok-4.5"
+fork_secondary_model = "deepseek-4.5"
 "#,
         )
         .unwrap();
         let (theme, yolo, fork) = extract_ui_fields(&config);
         assert_eq!(theme.as_deref(), Some("dark"));
         assert!(yolo);
-        assert_eq!(fork.as_deref(), Some("grok-4.5"));
+        assert_eq!(fork.as_deref(), Some("deepseek-4.5"));
     }
 
     #[test]
@@ -869,7 +869,7 @@ fork_secondary_model = "grok-4.5"
         let b: toml::Value = toml::from_str(
             r#"
 [model.my-custom]
-model = "grok-4.5"
+model = "deepseek-4.5"
 base_url = "https://api.example.com/v1"
 "#,
         )

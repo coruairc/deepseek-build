@@ -5,7 +5,7 @@
     use crate::app::actions::{Action, ModelChoice, TaskResult};
     use crate::app::dispatch::dispatch;
 
-    /// Regression: a machine-wide `x.ai/models/update` broadcast carries each model's static catalog-default effort (`high`).
+    /// Regression: a machine-wide `deepseek-build/models/update` broadcast carries each model's static catalog-default effort (`high`).
     /// It does not carry the session's chosen `xhigh` and must not clobber that per-session choice.
     #[test]
     fn models_update_preserves_user_reasoning_effort() {
@@ -47,15 +47,15 @@
         let mut app = make_app_with_agent("sess-1");
 
         let agent = app.agents.get_mut(&AgentId(0)).unwrap();
-        let id_3 = acp::ModelId::new(std::sync::Arc::from("grok-3"));
+        let id_3 = acp::ModelId::new(std::sync::Arc::from("deepseek-3"));
         agent
             .session
             .models
             .available
-            .insert(id_3.clone(), make_model_info("grok-3"));
+            .insert(id_3.clone(), make_model_info("deepseek-3"));
         agent.session.models.current = Some(id_3);
 
-        let notif = make_models_update_notif("grok-4.3", &["grok-4.3", "grok-4.5"]);
+        let notif = make_models_update_notif("deepseek-4.3", &["deepseek-4.3", "deepseek-4.5"]);
         handle_models_update(&notif, &mut app);
 
         let agent = app.agents.get(&AgentId(0)).unwrap();
@@ -66,7 +66,7 @@
                 .current
                 .as_ref()
                 .map(|id| id.0.as_ref()),
-            Some("grok-3"),
+            Some("deepseek-3"),
             "catalog refresh must not change the displayed session model"
         );
         assert!(
@@ -74,7 +74,7 @@
                 .session
                 .models
                 .available
-                .contains_key(&acp::ModelId::new(std::sync::Arc::from("grok-4.5"))),
+                .contains_key(&acp::ModelId::new(std::sync::Arc::from("deepseek-4.5"))),
             "the /model list should reflect the new catalog"
         );
     }
@@ -83,16 +83,16 @@
     fn models_update_keeps_app_current_when_still_in_catalog() {
         let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
         let mut app = AppView::new(tx, ModelState::default(), Vec::new(), crate::render::draw::EscapeWriter::disconnected());
-        let id = acp::ModelId::new(std::sync::Arc::from("grok-3"));
-        app.models.available.insert(id.clone(), make_model_info("grok-3"));
+        let id = acp::ModelId::new(std::sync::Arc::from("deepseek-3"));
+        app.models.available.insert(id.clone(), make_model_info("deepseek-3"));
         app.models.current = Some(id);
 
-        let notif = make_models_update_notif("grok-4", &["grok-3", "grok-4"]);
+        let notif = make_models_update_notif("deepseek-4", &["deepseek-3", "deepseek-4"]);
         handle_models_update(&notif, &mut app);
 
         assert_eq!(
             app.models.current.as_ref().map(|id| id.0.as_ref()),
-            Some("grok-3"),
+            Some("deepseek-3"),
             "app-level current stays if it is still in the new catalog"
         );
     }
@@ -105,12 +105,12 @@
         app.models.available.insert(old.clone(), make_model_info("opus"));
         app.models.current = Some(old);
 
-        let notif = make_models_update_notif("grok-4", &["grok-3", "grok-4"]);
+        let notif = make_models_update_notif("deepseek-4", &["deepseek-3", "deepseek-4"]);
         handle_models_update(&notif, &mut app);
 
         assert_eq!(
             app.models.current.as_ref().map(|id| id.0.as_ref()),
-            Some("grok-4"),
+            Some("deepseek-4"),
             "app-level current adopts the broadcast default when dropped from the catalog"
         );
     }
@@ -122,27 +122,27 @@
 
         {
             let agent_a = app.agents.get_mut(&AgentId(0)).unwrap();
-            let id_3 = acp::ModelId::new(std::sync::Arc::from("grok-3"));
+            let id_3 = acp::ModelId::new(std::sync::Arc::from("deepseek-3"));
             agent_a
                 .session
                 .models
                 .available
-                .insert(id_3.clone(), make_model_info("grok-3"));
+                .insert(id_3.clone(), make_model_info("deepseek-3"));
             agent_a.session.models.current = Some(id_3);
         }
 
         {
             let agent_b = app.agents.get_mut(&AgentId(1)).unwrap();
-            let id = acp::ModelId::new(std::sync::Arc::from("grok-4.5"));
+            let id = acp::ModelId::new(std::sync::Arc::from("deepseek-4.5"));
             agent_b
                 .session
                 .models
                 .available
-                .insert(id.clone(), make_model_info("grok-4.5"));
+                .insert(id.clone(), make_model_info("deepseek-4.5"));
             agent_b.session.models.current = Some(id);
         }
 
-        let notif = make_models_update_notif("grok-4", &["grok-3", "grok-4"]);
+        let notif = make_models_update_notif("deepseek-4", &["deepseek-3", "deepseek-4"]);
         handle_models_update(&notif, &mut app);
 
         let agent_a = app.agents.get(&AgentId(0)).unwrap();
@@ -153,7 +153,7 @@
                 .current
                 .as_ref()
                 .map(|id| id.0.as_ref()),
-            Some("grok-3"),
+            Some("deepseek-3"),
             "active agent's model must be preserved"
         );
 
@@ -165,7 +165,7 @@
                 .current
                 .as_ref()
                 .map(|id| id.0.as_ref()),
-            Some("grok-4.5"),
+            Some("deepseek-4.5"),
             "inactive agent must keep its session model when the catalog drops it"
         );
     }
@@ -176,7 +176,7 @@
     fn served_model_names_the_footer_without_moving_the_selection() {
         let mut app = make_app_with_agent("sess-1");
         let agent = app.agents.get_mut(&AgentId(0)).unwrap();
-        seed_models(agent, "auto", &["auto", "grok-4"]);
+        seed_models(agent, "auto", &["auto", "deepseek-4"]);
         let scrollback_before = agent.scrollback.len();
 
         let payload = SessionNotification {
@@ -187,7 +187,7 @@
             meta: None,
         };
         let raw = serde_json::value::to_raw_value(&payload).unwrap();
-        let notif = acp::ExtNotification::new("x.ai/session_notification", std::sync::Arc::from(raw));
+        let notif = acp::ExtNotification::new("deepseek-build/session_notification", std::sync::Arc::from(raw));
         assert!(handle_ext_notification(&notif, &mut app), "the footer changed");
 
         let agent = app.agents.get_mut(&AgentId(0)).unwrap();
@@ -215,12 +215,12 @@
     fn model_changed_updates_state_silently_on_follower() {
         let mut app = make_app_with_agent("sess-1");
         let agent = app.agents.get_mut(&AgentId(0)).unwrap();
-        seed_models(agent, "grok-3", &["grok-3", "grok-4"]);
+        seed_models(agent, "deepseek-3", &["deepseek-3", "deepseek-4"]);
         let scrollback_before = agent.scrollback.len();
         // Follower: no local switch in flight.
         assert!(!agent.session.model_switch_pending);
 
-        let notif = model_changed_ext("sess-1", "grok-4", None, None);
+        let notif = model_changed_ext("sess-1", "deepseek-4", None, None);
         let changed = handle_ext_notification(&notif, &mut app);
         assert!(
             changed,
@@ -235,7 +235,7 @@
                 .current
                 .as_ref()
                 .map(|id| id.0.as_ref()),
-            Some("grok-4"),
+            Some("deepseek-4"),
             "follower must mirror the remote switch into its local model state",
         );
         assert_eq!(
@@ -298,12 +298,12 @@
     fn model_changed_skipped_when_local_switch_in_flight() {
         let mut app = make_app_with_agent("sess-1");
         let agent = app.agents.get_mut(&AgentId(0)).unwrap();
-        seed_models(agent, "grok-3", &["grok-3", "grok-4"]);
+        seed_models(agent, "deepseek-3", &["deepseek-3", "deepseek-4"]);
         // Invoker: a local switch is in flight (set by Action::SwitchModel or set_default_model before the SetSessionModelRequest is sent)
         agent.session.model_switch_pending = true;
         let scrollback_before = agent.scrollback.len();
 
-        let notif = model_changed_ext("sess-1", "grok-4", None, None);
+        let notif = model_changed_ext("sess-1", "deepseek-4", None, None);
         let changed = handle_ext_notification(&notif, &mut app);
         assert!(
             !changed,
@@ -318,7 +318,7 @@
                 .current
                 .as_ref()
                 .map(|id| id.0.as_ref()),
-            Some("grok-3"),
+            Some("deepseek-3"),
             "models.current must stay at the pre-response snapshot — \
              SwitchModelComplete owns the final apply + system message"
         );
@@ -340,9 +340,9 @@
     fn model_changed_dropped_when_model_unknown_to_catalog() {
         let mut app = make_app_with_agent("sess-1");
         let agent = app.agents.get_mut(&AgentId(0)).unwrap();
-        seed_models(agent, "grok-3", &["grok-3", "grok-4"]);
+        seed_models(agent, "deepseek-3", &["deepseek-3", "deepseek-4"]);
 
-        let notif = model_changed_ext("sess-1", "grok-99-unknown", None, None);
+        let notif = model_changed_ext("sess-1", "deepseek-99-unknown", None, None);
         let changed = handle_ext_notification(&notif, &mut app);
         assert!(
             !changed,
@@ -357,21 +357,21 @@
                 .current
                 .as_ref()
                 .map(|id| id.0.as_ref()),
-            Some("grok-3"),
+            Some("deepseek-3"),
             "models.current must stay on the previously-known model"
         );
     }
 
     /// `reasoning_effort` round-trips through the broadcast: the follower applies it alongside the model id.
-    /// The prompt header and status bar then show the right effort without waiting for a later `x.ai/models/update`.
+    /// The prompt header and status bar then show the right effort without waiting for a later `deepseek-build/models/update`.
     #[test]
     fn model_changed_applies_reasoning_effort_on_follower() {
         use xai_grok_shell::sampling::types::ReasoningEffort;
         let mut app = make_app_with_agent("sess-1");
         let agent = app.agents.get_mut(&AgentId(0)).unwrap();
-        seed_models(agent, "grok-3", &["grok-3", "grok-4"]);
+        seed_models(agent, "deepseek-3", &["deepseek-3", "deepseek-4"]);
 
-        let notif = model_changed_ext("sess-1", "grok-4", Some("high"), None);
+        let notif = model_changed_ext("sess-1", "deepseek-4", Some("high"), None);
         assert!(handle_ext_notification(&notif, &mut app));
 
         let agent = app.agents.get(&AgentId(0)).unwrap();
@@ -386,17 +386,17 @@
     fn model_changed_sets_and_clears_the_window_selection_from_the_broadcast() {
         let mut app = make_app_with_agent("sess-1");
         let agent = app.agents.get_mut(&AgentId(0)).expect("agent under test");
-        seed_windowed_model(agent, "grok-4", 256_000, &[256_000, 500_000]);
-        agent.session.models.current = Some(acp_fixtures::model_id("grok-4"));
+        seed_windowed_model(agent, "deepseek-4", 256_000, &[256_000, 500_000]);
+        agent.session.models.current = Some(acp_fixtures::model_id("deepseek-4"));
 
-        let notif = model_changed_ext("sess-1", "grok-4", None, Some(500_000));
+        let notif = model_changed_ext("sess-1", "deepseek-4", None, Some(500_000));
         let changed = handle_ext_notification(&notif, &mut app);
 
         assert!(changed, "a selection-only change must request a redraw");
         let agent = app.agents.get(&AgentId(0)).expect("agent under test");
         assert_eq!(agent.session.models.context_window_selection, Some(500_000));
 
-        let notif = model_changed_ext("sess-1", "grok-4", None, None);
+        let notif = model_changed_ext("sess-1", "deepseek-4", None, None);
         handle_ext_notification(&notif, &mut app);
 
         let agent = app.agents.get(&AgentId(0)).expect("agent under test");
@@ -407,18 +407,18 @@
     fn a_model_changed_during_a_pending_switch_outranks_the_switch_selection() {
         let mut app = make_app_with_agent("sess-1");
         let agent = app.agents.get_mut(&AgentId(0)).expect("agent under test");
-        seed_windowed_model(agent, "grok-4", 256_000, &[256_000, 500_000]);
-        agent.session.models.current = Some(acp_fixtures::model_id("grok-4"));
+        seed_windowed_model(agent, "deepseek-4", 256_000, &[256_000, 500_000]);
+        agent.session.models.current = Some(acp_fixtures::model_id("deepseek-4"));
         agent.session.model_switch_pending = true;
 
-        handle_ext_notification(&model_changed_ext("sess-1", "grok-4", None, None), &mut app);
+        handle_ext_notification(&model_changed_ext("sess-1", "deepseek-4", None, None), &mut app);
         let scrollback_before = app.agents.get(&AgentId(0)).expect("agent under test").scrollback.len();
         dispatch(
             Action::TaskComplete(TaskResult::SwitchModelComplete {
                 agent_id: AgentId(0),
                 choice: ModelChoice {
                     context_window_selection: NonZeroU64::new(500_000),
-                    ..ModelChoice::new(acp_fixtures::model_id("grok-4"))
+                    ..ModelChoice::new(acp_fixtures::model_id("deepseek-4"))
                 },
                 result: Ok(()),
                 prev_model_id: None,
@@ -436,18 +436,18 @@
     fn the_switch_own_model_changed_keeps_the_success_message() {
         let mut app = make_app_with_agent("sess-1");
         let agent = app.agents.get_mut(&AgentId(0)).expect("agent under test");
-        seed_windowed_model(agent, "grok-4", 256_000, &[256_000, 500_000]);
-        agent.session.models.current = Some(acp_fixtures::model_id("grok-4"));
+        seed_windowed_model(agent, "deepseek-4", 256_000, &[256_000, 500_000]);
+        agent.session.models.current = Some(acp_fixtures::model_id("deepseek-4"));
         agent.session.model_switch_pending = true;
 
-        handle_ext_notification(&model_changed_ext("sess-1", "grok-4", None, Some(500_000)), &mut app);
+        handle_ext_notification(&model_changed_ext("sess-1", "deepseek-4", None, Some(500_000)), &mut app);
         let scrollback_before = app.agents.get(&AgentId(0)).expect("agent under test").scrollback.len();
         dispatch(
             Action::TaskComplete(TaskResult::SwitchModelComplete {
                 agent_id: AgentId(0),
                 choice: ModelChoice {
                     context_window_selection: NonZeroU64::new(500_000),
-                    ..ModelChoice::new(acp_fixtures::model_id("grok-4"))
+                    ..ModelChoice::new(acp_fixtures::model_id("deepseek-4"))
                 },
                 result: Ok(()),
                 prev_model_id: None,
@@ -464,18 +464,18 @@
     fn a_models_update_that_lists_the_selection_refreshes_the_context_meter() {
         let mut app = make_app_with_agent("sess-1");
         let agent = app.agents.get_mut(&AgentId(0)).expect("agent under test");
-        seed_windowed_model(agent, "grok-4", 256_000, &[]);
-        agent.session.models.current = Some(acp_fixtures::model_id("grok-4"));
+        seed_windowed_model(agent, "deepseek-4", 256_000, &[]);
+        agent.session.models.current = Some(acp_fixtures::model_id("deepseek-4"));
         agent.session.models.context_window_selection = Some(500_000);
         agent.apply_context_used(10_000, 256_000);
         let listed = acp_fixtures::model_info_with_meta(
-            "grok-4",
-            "grok-4",
+            "deepseek-4",
+            "deepseek-4",
             serde_json::json!({ "totalContextTokens": 256_000, "contextWindows": [256_000, 500_000] }),
         );
-        let state = acp::SessionModelState::new(acp_fixtures::model_id("grok-4"), vec![listed]);
+        let state = acp::SessionModelState::new(acp_fixtures::model_id("deepseek-4"), vec![listed]);
 
-        handle_ext_notification(&acp_fixtures::ext_notification("x.ai/models/update", &state), &mut app);
+        handle_ext_notification(&acp_fixtures::ext_notification("deepseek-build/models/update", &state), &mut app);
 
         let agent = app.agents.get(&AgentId(0)).expect("agent under test");
         let context = agent.context_state.as_ref().expect("context state");
@@ -488,9 +488,9 @@
     fn model_changed_dropped_for_unknown_session_id() {
         let mut app = make_app_with_agent("sess-1");
         let agent = app.agents.get_mut(&AgentId(0)).unwrap();
-        seed_models(agent, "grok-3", &["grok-3", "grok-4"]);
+        seed_models(agent, "deepseek-3", &["deepseek-3", "deepseek-4"]);
 
-        let notif = model_changed_ext("sess-OTHER", "grok-4", None, None);
+        let notif = model_changed_ext("sess-OTHER", "deepseek-4", None, None);
         let changed = handle_ext_notification(&notif, &mut app);
         assert!(!changed);
 
@@ -502,7 +502,7 @@
                 .current
                 .as_ref()
                 .map(|id| id.0.as_ref()),
-            Some("grok-3"),
+            Some("deepseek-3"),
             "unrelated-session broadcast must not touch this agent's model"
         );
     }

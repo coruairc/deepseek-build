@@ -1779,7 +1779,7 @@ async fn bootstrap_fork_live_parent_chat_state_is_forked_with_marker() {
     const MARKER: &str = "UNIQUE_LIVE_FORK_MARKER_xyz789";
     let req = bootstrap_test_request(true);
     let mut ctx = ctx_with_toggle(HashMap::new());
-    let chat = spawn_test_parent_chat_state("grok-4.5");
+    let chat = spawn_test_parent_chat_state("deepseek-4.5");
     chat.replace_conversation(
         vec![
             ConversationItem::system("parent system"),
@@ -2576,10 +2576,10 @@ const SELECTABLE_TOOL: ModelOverrideProvenance = ModelOverrideProvenance::Tool {
 #[test]
 fn fresh_tool_model_accepts_visible_key_and_internal_id() {
     let mut models = indexmap::IndexMap::new();
-    models.insert("grok-3".to_string(), test_model_entry("grok-3-2025-02-15"));
+    models.insert("deepseek-3".to_string(), test_model_entry("deepseek-3-2025-02-15"));
     assert!(
             admit_explicit_tool_model(
-                "grok-3",
+                "deepseek-3",
                 TaskModelSelection::Selectable,
                 &models,
                 false,
@@ -2589,7 +2589,7 @@ fn fresh_tool_model_accepts_visible_key_and_internal_id() {
         );
     assert!(
             admit_explicit_tool_model(
-                "grok-3-2025-02-15",
+                "deepseek-3-2025-02-15",
                 TaskModelSelection::Selectable,
                 &models,
                 false,
@@ -2598,7 +2598,7 @@ fn fresh_tool_model_accepts_visible_key_and_internal_id() {
             "info().model lookup should succeed"
         );
     assert_eq!(
-            admit_explicit_tool_model("grok-3", TaskModelSelection::Inherited, &models, false),
+            admit_explicit_tool_model("deepseek-3", TaskModelSelection::Inherited, &models, false),
             Err(TaskModelAdmissionError::HiddenSelection),
         );
 }

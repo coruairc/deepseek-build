@@ -1610,7 +1610,7 @@
         let models = crate::acp::model_state::ModelState::default();
 
         // Cursor inside the command token with args already present.
-        pw.textarea.insert_str("/mod grok-4");
+        pw.textarea.insert_str("/mod deepseek-4");
         pw.textarea.set_cursor(3);
         pw.refresh_slash(&models);
 
@@ -1628,7 +1628,7 @@
         assert!(pw.accept_slash_completion(&models));
         assert_eq!(
             pw.textarea.text(),
-            "/model grok-4",
+            "/model deepseek-4",
             "the row's trailing space must not stack on the existing separator"
         );
         // Absorb, not trim the insert: the cursor lands after the separator, so the post-accept refresh is in the args phase where Enter chains
@@ -1711,7 +1711,7 @@
 
         let mut pw = PromptWidget::new();
         let mut models = crate::acp::model_state::ModelState::default();
-        let model_id = agent_client_protocol::ModelId::new(Arc::from("grok-4.5"));
+        let model_id = agent_client_protocol::ModelId::new(Arc::from("deepseek-4.5"));
         models.available.insert(
             model_id.clone(),
             agent_client_protocol::ModelInfo::new(model_id, "Grok 4.5".to_string()),
@@ -4895,7 +4895,7 @@
     }
 
 
-    /// Widget with an active gate and a loaded suggestion: the state right after a turn ends with `x.ai/suggestPrompt` resolved.
+    /// Widget with an active gate and a loaded suggestion: the state right after a turn ends with `deepseek-build/suggestPrompt` resolved.
     fn widget_with_prompt_suggestion(text: &str) -> PromptWidget {
         let mut pw = PromptWidget::new();
         pw.prompt_suggestion_active = true;
@@ -5153,7 +5153,7 @@
             ..Default::default()
         };
         let info = PromptInfo {
-            model_name: "grok-3",
+            model_name: "deepseek-3",
             ..Default::default()
         };
         let mut pw = PromptWidget::new();
@@ -5162,7 +5162,7 @@
         pw.draw(&mut buf, area, None, &style, Some(&info), None);
 
         assert_eq!(buf_text_at(&buf, 26, 38, 0), " my session ");
-        assert_eq!(buf_text_at(&buf, 30, 38, 3), " grok-3 ");
+        assert_eq!(buf_text_at(&buf, 30, 38, 3), " deepseek-3 ");
         assert_eq!(buf_text_at(&buf, 38, 40, 0), "\u{2500}\u{256e}");
         assert_eq!(buf_text_at(&buf, 38, 40, 3), "\u{2500}\u{256f}");
     }

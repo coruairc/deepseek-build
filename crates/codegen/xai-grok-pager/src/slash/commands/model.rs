@@ -451,12 +451,12 @@ mod tests {
     #[test]
     fn split_model_rest_keeps_a_multi_word_label() {
         let mut state = ModelState::default();
-        let (id, info) = model_with_reasoning("grok-4.7", "Grok 4.7");
+        let (id, info) = model_with_reasoning("deepseek-4.7", "Grok 4.7");
         state.available.insert(id.clone(), info);
         assert_eq!(
             split_model_rest(&state, "Grok 4.7 Extra High")
                 .map(|(model, token)| { (model.0.to_string(), token.to_string()) }),
-            Some(("grok-4.7".to_string(), "Extra High".to_string()))
+            Some(("deepseek-4.7".to_string(), "Extra High".to_string()))
         );
         assert_eq!(
             split_model_rest(&state, "Grok 4.7 high").map(|(_, token)| token),
@@ -464,16 +464,16 @@ mod tests {
         );
         assert!(split_model_rest(&state, "Grok 4.7").is_none());
         assert_eq!(
-            split_model_rest(&state, "grok-4.7 Extra High")
+            split_model_rest(&state, "deepseek-4.7 Extra High")
                 .map(|(model, token)| (model.0.to_string(), token.to_string())),
-            Some(("grok-4.7".to_string(), "Extra High".to_string()))
+            Some(("deepseek-4.7".to_string(), "Extra High".to_string()))
         );
     }
 
     #[test]
     fn window_phase_sits_between_model_and_effort() {
         let mut state = ModelState::default();
-        let (id, info) = model_with_windows_and_reasoning("grok-4.7", "Grok 4.7");
+        let (id, info) = model_with_windows_and_reasoning("deepseek-4.7", "Grok 4.7");
         state.available.insert(id, info);
         let cmd = ModelCommand;
         let ctx = app_ctx(&state);
@@ -517,7 +517,7 @@ mod tests {
     #[test]
     fn picker_title_follows_the_chained_phase() {
         let mut state = ModelState::default();
-        let (id, info) = model_with_windows_and_reasoning("grok-4.7", "Grok 4.7");
+        let (id, info) = model_with_windows_and_reasoning("deepseek-4.7", "Grok 4.7");
         state.available.insert(id, info);
 
         assert_eq!(picker_title(&state, ""), "Pick model");
@@ -554,7 +554,7 @@ mod tests {
     #[test]
     fn run_parses_window_and_effort_after_the_model() {
         let mut state = ModelState::default();
-        let (id, info) = model_with_windows_and_reasoning("grok-4.7", "Grok 4.7");
+        let (id, info) = model_with_windows_and_reasoning("deepseek-4.7", "Grok 4.7");
         state.available.insert(id, info);
         let mut ctx = dummy_exec_ctx(&state);
 
@@ -564,7 +564,7 @@ mod tests {
                 effort,
                 context_window_selection,
             })) => {
-                assert_eq!(model_id.0.as_ref(), "grok-4.7");
+                assert_eq!(model_id.0.as_ref(), "deepseek-4.7");
                 assert_eq!(
                     effort, None,
                     "a window alone on another model sends no effort"
@@ -580,7 +580,7 @@ mod tests {
                 effort,
                 context_window_selection,
             })) => {
-                assert_eq!(model_id.0.as_ref(), "grok-4.7");
+                assert_eq!(model_id.0.as_ref(), "deepseek-4.7");
                 assert_eq!(effort, Some(ReasoningEffort::High));
                 assert_eq!(context_window_selection, NonZeroU64::new(500_000));
             }
@@ -613,7 +613,7 @@ mod tests {
     #[test]
     fn window_only_pick_keeps_the_current_models_effort() {
         let mut state = ModelState::default();
-        let (id, info) = model_with_windows_and_reasoning("grok-4.7", "Grok 4.7");
+        let (id, info) = model_with_windows_and_reasoning("deepseek-4.7", "Grok 4.7");
         state.available.insert(id.clone(), info);
         state.current = Some(id);
         state.reasoning_effort = Some(ReasoningEffort::Low);
@@ -636,10 +636,10 @@ mod tests {
     #[test]
     fn picker_preselects_the_window_the_switch_uses() {
         let mut state = ModelState::default();
-        let (current, current_info) = model_with_windows_and_reasoning("grok-4.7", "Grok 4.7");
-        let (listed, listed_info) = model_with_windows_and_reasoning("grok-4.8", "Grok 4.8");
+        let (current, current_info) = model_with_windows_and_reasoning("deepseek-4.7", "Grok 4.7");
+        let (listed, listed_info) = model_with_windows_and_reasoning("deepseek-4.8", "Grok 4.8");
         let unlisted_info = acp_fixtures::model_info_with_meta(
-            "grok-4.5",
+            "deepseek-4.5",
             "Grok 4.5",
             serde_json::json!({
                 "supportsReasoningEffort": true,
@@ -651,7 +651,7 @@ mod tests {
         state.available.insert(listed, listed_info);
         state
             .available
-            .insert(acp_fixtures::model_id("grok-4.5"), unlisted_info);
+            .insert(acp_fixtures::model_id("deepseek-4.5"), unlisted_info);
         state.current = Some(current);
         state.context_window_selection = Some(500_000);
         let ctx = app_ctx(&state);
@@ -667,7 +667,7 @@ mod tests {
     fn empty_query_returns_one_row_per_logical_model() {
         let mut state = ModelState::default();
         let (rid, rinfo) = model_with_reasoning("reasoning-x", "Reasoning X");
-        let (pid, pinfo) = plain_model("grok-4.5", "Grok 4.5");
+        let (pid, pinfo) = plain_model("deepseek-4.5", "Grok 4.5");
         state.available.insert(rid, rinfo);
         state.available.insert(pid, pinfo);
 
@@ -879,7 +879,7 @@ mod tests {
         // `/model Grok 4.5` must select the full name, not treat "4.5" as an effort on "Grok"
         let mut state = ModelState::default();
         let (short_id, short_info) = model_with_reasoning("grok", "Grok");
-        let (long_id, long_info) = model_with_reasoning("grok-4.5", "Grok 4.5");
+        let (long_id, long_info) = model_with_reasoning("deepseek-4.5", "Grok 4.5");
         state.available.insert(short_id, short_info);
         state.available.insert(long_id.clone(), long_info);
         let mut ctx = dummy_exec_ctx(&state);
@@ -895,7 +895,7 @@ mod tests {
     #[test]
     fn run_rejects_effort_for_non_reasoning_model() {
         let mut state = ModelState::default();
-        let (id, info) = plain_model("grok-4.5", "Grok 4.5");
+        let (id, info) = plain_model("deepseek-4.5", "Grok 4.5");
         state.available.insert(id, info);
         let mut ctx = dummy_exec_ctx(&state);
         let result = ModelCommand.run(&mut ctx, "Grok 4.5 high");
@@ -909,7 +909,7 @@ mod tests {
     #[test]
     fn run_bare_model_name_dispatches_set_default_model() {
         let mut state = ModelState::default();
-        let (id, info) = plain_model("grok-4.5", "Grok 4.5");
+        let (id, info) = plain_model("deepseek-4.5", "Grok 4.5");
         state.available.insert(id.clone(), info);
         let mut ctx = dummy_exec_ctx(&state);
         let result = ModelCommand.run(&mut ctx, "Grok 4.5");
@@ -925,7 +925,7 @@ mod tests {
     #[test]
     fn run_set_default_model_resolves_case_insensitively() {
         let mut state = ModelState::default();
-        let (id, info) = plain_model("grok-4.5", "Grok 4.5");
+        let (id, info) = plain_model("deepseek-4.5", "Grok 4.5");
         state.available.insert(id.clone(), info);
         let mut ctx = dummy_exec_ctx(&state);
         let result = ModelCommand.run(&mut ctx, "grok 4.5");

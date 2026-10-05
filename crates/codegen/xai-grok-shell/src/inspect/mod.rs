@@ -2448,8 +2448,8 @@ mod tests {
     fn config_warnings_inspect_smoke() {
         let effective: toml::Value = toml::from_str(
             r#"
-            [model."grok-4.5"]
-            model = "grok-4.5"
+            [model."deepseek-4.5"]
+            model = "deepseek-4.5"
             env_key = "ANTHROPIC_AUTH_TOKEN"
             compactions_remaining = 1
             send_compactions_remaining = true
@@ -2471,16 +2471,16 @@ mod tests {
                 .any(|w| w.field() == Some("reasoning_effort")),
             "invalid enum should warn: {warnings:?}"
         );
-        assert!(cfg.config_models.contains_key("grok-4.5"));
+        assert!(cfg.config_models.contains_key("deepseek-4.5"));
 
         let human = render_config_warnings(&warnings);
         assert!(human.contains("Config Warnings"), "{human}");
         assert!(
-            human.contains("[model.\"grok-4.5\"] send_compactions_remaining"),
+            human.contains("[model.\"deepseek-4.5\"] send_compactions_remaining"),
             "{human}"
         );
         assert!(
-            human.contains("[model.\"grok-4.5\"] reasoning_effort"),
+            human.contains("[model.\"deepseek-4.5\"] reasoning_effort"),
             "{human}"
         );
         // Auth-provider warnings render under their own table syntax.
@@ -2523,7 +2523,7 @@ mod tests {
         );
         assert_eq!(
             alias_warning.get("key").and_then(|v| v.as_str()),
-            Some("grok-4.5")
+            Some("deepseek-4.5")
         );
         assert_eq!(
             alias_warning.get("kind").and_then(|v| v.as_str()),

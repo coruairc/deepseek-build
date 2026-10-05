@@ -699,7 +699,7 @@ fn relay_initialize_gains_user_message_echo_capability() {
         "jsonrpc": "2.0", "id": 7, "method": "initialize",
         "params": {
             "protocolVersion": 1,
-            "clientCapabilities": { "_meta": { "x.ai/fs_notify": true } }
+            "clientCapabilities": { "_meta": { "deepseek-build/fs_notify": true } }
         }
     });
     assert!(declare_relay_client_capabilities(&mut frame));
@@ -707,10 +707,10 @@ fn relay_initialize_gains_user_message_echo_capability() {
         .pointer("/params/clientCapabilities/_meta")
         .expect("_meta present");
     assert_eq!(
-        meta.get("x.ai/userMessageEcho"),
+        meta.get("deepseek-build/userMessageEcho"),
         Some(&serde_json::json!(true))
     );
-    assert_eq!(meta.get("x.ai/fs_notify"), Some(&serde_json::json!(true)));
+    assert_eq!(meta.get("deepseek-build/fs_notify"), Some(&serde_json::json!(true)));
     assert_eq!(frame.get("id"), Some(&serde_json::json!(7)));
 }
 #[test]
@@ -729,7 +729,7 @@ fn relay_initialize_without_capabilities_block_gets_one() {
 fn relay_explicit_user_message_echo_is_respected() {
     let mut frame = serde_json::json!({
         "jsonrpc": "2.0", "id": 1, "method": "initialize",
-        "params": { "clientCapabilities": { "_meta": { "x.ai/userMessageEcho": false } } }
+        "params": { "clientCapabilities": { "_meta": { "deepseek-build/userMessageEcho": false } } }
     });
     assert!(!declare_relay_client_capabilities(&mut frame));
     assert_eq!(

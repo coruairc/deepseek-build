@@ -3433,15 +3433,15 @@ mod tests {
 
     #[test]
     fn test_conversation_item_with_model_id() {
-        let item = ConversationItem::assistant("Hello").with_model_id("grok-3");
+        let item = ConversationItem::assistant("Hello").with_model_id("deepseek-3");
 
         let ConversationItem::Assistant(a) = item else {
             panic!("Expected Assistant");
         };
-        assert_eq!(a.model_id, Some("grok-3".to_string()));
+        assert_eq!(a.model_id, Some("deepseek-3".to_string()));
 
         // Non-assistant should be unchanged
-        let user = ConversationItem::user("Hi").with_model_id("grok-3");
+        let user = ConversationItem::user("Hi").with_model_id("deepseek-3");
         assert_matches!(user, ConversationItem::User(_));
     }
 

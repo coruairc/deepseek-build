@@ -3000,11 +3000,11 @@ fn try_enter_picking_enum_returns_false_for_non_enum_row() {
 fn fork_secondary_model_picker_opens_on_persisted_model() {
     use agent_client_protocol as acp;
     // Must differ from the baseline slug or the empty-fold arm hides the lookup.
-    let slug = "grok-4.5-fast";
+    let slug = "deepseek-4.5-fast";
     assert_ne!(slug, xai_grok_shell::models::default_model());
     let snapshot = PagerLocalSnapshot {
         available_models: vec![
-            ("Grok 3".to_string(), acp::ModelId::new(Arc::from("grok-3"))),
+            ("Grok 3".to_string(), acp::ModelId::new(Arc::from("deepseek-3"))),
             (
                 "Grok 4.5 Fast".to_string(),
                 acp::ModelId::new(Arc::from(slug)),
@@ -3260,7 +3260,7 @@ fn picker_long_description_wraps_to_multiple_lines() {
         category: SettingCategory::Privacy,
         owner: SettingOwner::Shared,
         label: "Coding data sharing",
-        description: "Controls whether SpaceXAI may retain and train on coding data.",
+        description: "Controls whether deepseek-build may retain and train on coding data.",
         keywords: &["test"],
         kind: SettingKind::Enum {
             default: "opt-out",
@@ -3268,7 +3268,7 @@ fn picker_long_description_wraps_to_multiple_lines() {
                 EnumChoice {
                     canonical: "opt-in",
                     display: "Opt in",
-                    description: "Allow SpaceXAI to retain and use coding session data for training and product improvement.",
+                    description: "Allow deepseek-build to retain and use coding session data for training and product improvement.",
                 },
                 EnumChoice {
                     canonical: "opt-out",
@@ -3323,7 +3323,7 @@ fn picker_long_description_wraps_to_multiple_lines() {
         "choice 0 line 1 must contain the `·` separator, got: {r3:?}"
     );
     assert!(
-        r3.contains("Allow SpaceXAI"),
+        r3.contains("Allow deepseek-build"),
         "choice 0 line 1 must start the description, got: {r3:?}"
     );
 
@@ -3360,7 +3360,7 @@ fn picker_long_description_wraps_to_multiple_lines() {
     );
     for word in [
         "Allow",
-        "SpaceXAI",
+        "deepseek-build",
         "retain",
         "session",
         "training",
@@ -3519,7 +3519,7 @@ fn picker_multi_line_choice_hit_rect_spans_all_lines() {
         category: SettingCategory::Privacy,
         owner: SettingOwner::Shared,
         label: "Coding data sharing",
-        description: "Controls whether SpaceXAI may retain coding data.",
+        description: "Controls whether deepseek-build may retain coding data.",
         keywords: &["test"],
         kind: SettingKind::Enum {
             default: "opt-in",
@@ -3527,7 +3527,7 @@ fn picker_multi_line_choice_hit_rect_spans_all_lines() {
                 EnumChoice {
                     canonical: "opt-in",
                     display: "Opt in",
-                    description: "Allow SpaceXAI to retain and use coding session data for training and product improvement.",
+                    description: "Allow deepseek-build to retain and use coding session data for training and product improvement.",
                 },
                 EnumChoice {
                     canonical: "opt-out",

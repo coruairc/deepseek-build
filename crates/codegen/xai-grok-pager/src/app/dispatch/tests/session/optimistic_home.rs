@@ -694,8 +694,8 @@ fn leave_home_is_a_no_op_behind_the_startup_gate() {
 fn typing_on_a_gated_welcome_does_not_leave_home() {
     let mut app = test_app();
     app.gate = Some(xai_grok_shell::auth::GateInfo {
-        message: "SuperGrok subscription required".into(),
-        url: Some("https://api.deepseek.com/supergrok".into()),
+        message: "deepseek subscription required".into(),
+        url: Some("https://api.deepseek.com/deepseek".into()),
         label: Some("Subscribe".into()),
     });
     app.welcome_prompt_focused = true;

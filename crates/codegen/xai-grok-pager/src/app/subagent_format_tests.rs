@@ -27,20 +27,20 @@ fn subagent_meta_line_joins_present_fields() {
         (
             Some("researcher"),
             Some("analyst"),
-            Some("grok-3"),
-            " (researcher \u{00b7} analyst \u{00b7} grok-3)",
+            Some("deepseek-3"),
+            " (researcher \u{00b7} analyst \u{00b7} deepseek-3)",
         ),
         (
             Some("researcher"),
             None,
-            Some("grok-3"),
-            " (researcher \u{00b7} grok-3)",
+            Some("deepseek-3"),
+            " (researcher \u{00b7} deepseek-3)",
         ),
         (
             Some("reviewer"),
             Some("reviewer"),
-            Some("grok-3"),
-            " (reviewer \u{00b7} grok-3)",
+            Some("deepseek-3"),
+            " (reviewer \u{00b7} deepseek-3)",
         ),
         (
             Some("researcher"),
@@ -50,7 +50,7 @@ fn subagent_meta_line_joins_present_fields() {
         ),
         (None, Some("reviewer"), None, " (reviewer)"),
         (Some("reviewer"), None, None, " (reviewer)"),
-        (Some(""), Some(" "), Some("grok-3"), " (grok-3)"),
+        (Some(""), Some(" "), Some("deepseek-3"), " (deepseek-3)"),
     ];
     for (persona, role, model, expected) in cases {
         assert_eq!(

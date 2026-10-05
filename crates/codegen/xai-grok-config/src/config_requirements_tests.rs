@@ -17,11 +17,11 @@ fn list(patterns: &[&str]) -> AllowlistPin {
 fn malformed_allowed_models_fail_closed() {
     let cases = [
         (
-            "[models]\nallowed_models = \"grok-4\"\n",
+            "[models]\nallowed_models = \"deepseek-4\"\n",
             AllowlistPin::FailClosed,
         ),
         (
-            "[models]\nallowed_models = [\"grok-4\", 4]\n",
+            "[models]\nallowed_models = [\"deepseek-4\", 4]\n",
             AllowlistPin::FailClosed,
         ),
     ];
@@ -34,10 +34,10 @@ fn malformed_allowed_models_fail_closed() {
     }
 
     let text =
-        "[models]\ndefault = 4\nallowed_models = [\"grok-4\"]\n[features]\nimage_gen = false\n";
+        "[models]\ndefault = 4\nallowed_models = [\"deepseek-4\"]\n[features]\nimage_gen = false\n";
     let parsed = parse(text);
     assert_eq!(None, parsed.models.default_model);
-    assert_eq!(Some(list(&["grok-4"])), parsed.models.allowed_models);
+    assert_eq!(Some(list(&["deepseek-4"])), parsed.models.allowed_models);
     assert_eq!(Some(false), parsed.features.image_gen);
 }
 

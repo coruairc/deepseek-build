@@ -508,7 +508,7 @@ pub struct ModelsConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_description: Option<String>,
     /// Model pin for next-prompt suggestions (tab-autocomplete ghost text).
-    /// When unset: the remote pin, then the client hint / built-in `grok-4.6` default with the catalog guard; see `ModelOverrideConfig::resolve`.
+    /// When unset: the remote pin, then the client hint / built-in `deepseek-4.6` default with the catalog guard; see `ModelOverrideConfig::resolve`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt_suggestion: Option<String>,
     /// Restricts which models are user-selectable for normal chat (picker, `/model`, `-m`).
@@ -977,7 +977,7 @@ pub struct Config {
     /// Resolved to the compiled default (`default_session_summary_model`) when unset; see `ModelOverrideConfig::resolve`.
     #[serde(skip)]
     pub session_summary_model: Option<String>,
-    /// Image describe model (`grok-4.6` default via `ModelOverrideConfig::resolve`).
+    /// Image describe model (`deepseek-4.6` default via `ModelOverrideConfig::resolve`).
     #[serde(skip)]
     pub image_description_model: Option<String>,
     /// Next-prompt suggestion model pin (`env > [models] prompt_suggestion > remote`).
@@ -2339,7 +2339,7 @@ pub(crate) fn resolve_turn_transient_retry(
 }
 /// Canonical resolver for `mcp.push_server_status`.
 /// Stacks the same 7-step `BoolFlag` precedence as [`resolve_mcp_liveness_watchers`]: `requirement > cli > env (GROK_MCP_PUSH_SERVER_STATUS) > config > managed > feature_flag > default (true)`.
-/// `util::config::resolve_mcp_push_server_status` delegates here so the precedence is single-sourced. The default is `true`: the pager's subscription to `x.ai/mcp/server_status` is wired on by default. The flag exists primarily as a kill switch.
+/// `util::config::resolve_mcp_push_server_status` delegates here so the precedence is single-sourced. The default is `true`: the pager's subscription to `deepseek-build/mcp/server_status` is wired on by default. The flag exists primarily as a kill switch.
 pub fn resolve_mcp_push_server_status(
     requirement: Option<bool>,
     cli: Option<bool>,
@@ -3950,7 +3950,7 @@ pub struct Features {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub compaction_tool_choice: Option<String>,
     /// Per-`Ready`-client transport-liveness pollers and the session-actor `StatusDispatcher`. When `true` (default), each successfully-handshaken MCP client gets a poller.
-    /// The poller detects rmcp service-loop termination and pushes `x.ai/mcp/server_status` updates to the client.
+    /// The poller detects rmcp service-loop termination and pushes `deepseek-build/mcp/server_status` updates to the client.
     /// When `false`, neither watchers nor the dispatcher are spawned, useful as an emergency kill switch for the rollout. `None` defers to env / default (true). Not read through this struct: the live resolver re-reads the `[features]` key out-of-band from raw TOML in `util::config::resolve::mcp`. Declared so `serde_ignored` does not report it as an unrecognized key.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mcp_liveness_watchers: Option<bool>,
@@ -3963,7 +3963,7 @@ pub struct Features {
     /// The resolver reads raw TOML; declared only so `serde_ignored` allows the key.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub turn_transient_retry: Option<bool>,
-    /// Pager-side subscription to the `x.ai/mcp/server_status` push. Not read through this struct. The pager-side gate (`acp_handler::push_server_status_enabled`) uses an **env-only** OnceLock cache.
+    /// Pager-side subscription to the `deepseek-build/mcp/server_status` push. Not read through this struct. The pager-side gate (`acp_handler::push_server_status_enabled`) uses an **env-only** OnceLock cache.
     /// The `[features]` key itself is honoured out-of-band, re-read from raw TOML in `util::config::resolve::mcp`. This field is declared so `serde_ignored` does not report the key as unrecognized.
     /// Practical consequence: setting `[features] mcp_push_server_status = false` in `~/.grok/config.toml` will NOT disable the pager's subscription on a freshly-launched process. To disable the pager subscription, set `GROK_MCP_PUSH_SERVER_STATUS=0` in the env before launch.
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -64,7 +64,7 @@ mod tests {
         let prompt = Rect::new(0, 4, 40, 2);
         let mut buf = Buffer::empty(area);
         let long = crate::app::link_opener::browser_unavailable_line(
-            "https://x.ai/legal/terms-of-service",
+            "https://deepseek-build/legal/terms-of-service",
             false,
         );
 

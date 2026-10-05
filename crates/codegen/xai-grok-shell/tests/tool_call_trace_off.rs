@@ -101,7 +101,7 @@ async fn disabled_trace_export_stays_silent_while_product_posts() {
     let metadata = row.get("event_metadata").expect("metadata");
     assert_eq!(
         metadata.get("model_id").and_then(Value::as_str),
-        Some("grok-4.6")
+        Some("deepseek-4.6")
     );
     assert_eq!(
         metadata.get("tool_id").and_then(Value::as_str),

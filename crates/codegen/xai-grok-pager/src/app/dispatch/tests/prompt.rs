@@ -1512,7 +1512,7 @@ fn prompt_response_releases_retained_memory_once() {
     assert_eq!(test_support::calls(), before + 1);
 }
 
-/// Turn end with prompt suggestions enabled fires the `x.ai/suggestPrompt` fetch (before the billing refresh).
+/// Turn end with prompt suggestions enabled fires the `deepseek-build/suggestPrompt` fetch (before the billing refresh).
 /// The loaded suggestion routes back into the agent's controller by id and generation.
 #[test]
 fn turn_end_fetches_prompt_suggestion_when_enabled() {
@@ -1544,7 +1544,7 @@ fn turn_end_fetches_prompt_suggestion_when_enabled() {
     };
     assert_eq!(*agent_id, id);
     assert!(session_id.is_some());
-    // No `grok-4.6` in the test catalog and no env override, so `None` on the wire; the shell then uses its own `grok-4.6` default
+    // No `deepseek-4.6` in the test catalog and no env override, so `None` on the wire; the shell then uses its own `deepseek-4.6` default
     // Suggestion calls never use the session model
     assert_eq!(*model, None);
 
@@ -2003,7 +2003,7 @@ fn prompt_response_formatted_402_takes_credit_limit_path() {
     dispatch(
         Action::TaskComplete(TaskResult::PromptResponse {
             agent_id: id,
-            result: Err("Request failed (402): Grok Build usage balance exhausted".to_string()),
+            result: Err("Request failed (402): deepseek-build usage balance exhausted".to_string()),
             http_status: None,
             prompt_id: None,
         }),
@@ -2043,7 +2043,7 @@ fn credit_limit_402_does_not_overwrite_stash_when_in_flight_cleared() {
     dispatch(
         Action::TaskComplete(TaskResult::PromptResponse {
             agent_id: id,
-            result: Err("Request failed (402): Grok Build usage balance exhausted".to_string()),
+            result: Err("Request failed (402): deepseek-build usage balance exhausted".to_string()),
             http_status: Some(402),
             prompt_id: None,
         }),
@@ -2230,7 +2230,7 @@ fn turn_complete_notification_suppressed_when_queue_non_empty() {
 
 /// Regression: cancelling while prompts are queued must hand the queue to the agent untouched.
 /// The FRONT queued prompt runs next (promoted server-side) and the rest stay queued in order.
-/// The authoritative `x.ai/queue/changed` rebroadcast (not client-side prediction) updates the mirror.
+/// The authoritative `deepseek-build/queue/changed` rebroadcast (not client-side prediction) updates the mirror.
 #[test]
 fn cancel_hands_queue_to_agent_without_reordering() {
     use crate::app::prompt_queue::{QueueChanged, QueueEntryWire};
@@ -3484,7 +3484,7 @@ fn send_prompt_works_after_reconnect_clears() {
 fn switch_model_holds_prompt_until_complete() {
     let mut app = test_app_with_agent();
     let id = AgentId(0);
-    let model_id = acp::ModelId::new(std::sync::Arc::from("grok-4.5"));
+    let model_id = acp::ModelId::new(std::sync::Arc::from("deepseek-4.5"));
 
     dispatch(
         Action::SwitchModel(ModelChoice::new(model_id.clone())),
@@ -4595,7 +4595,7 @@ fn plain_send_during_pending_subagent_wait_keeps_confirmed_queue_row_reachable()
     crate::app::acp_handler::handle(
         AcpClientMessage::ExtNotification(xai_acp_lib::AcpArgs {
             request: acp::ExtNotification::new(
-                "x.ai/queue/changed",
+                "deepseek-build/queue/changed",
                 std::sync::Arc::from(serde_json::value::to_raw_value(&params).unwrap()),
             ),
             response_tx,
@@ -4904,7 +4904,7 @@ fn goal_send_now_painted_block_survives_queue_changed_removal() {
     crate::app::acp_handler::handle(
         AcpClientMessage::ExtNotification(xai_acp_lib::AcpArgs {
             request: acp::ExtNotification::new(
-                "x.ai/queue/changed",
+                "deepseek-build/queue/changed",
                 std::sync::Arc::from(serde_json::value::to_raw_value(&params).unwrap()),
             ),
             response_tx,

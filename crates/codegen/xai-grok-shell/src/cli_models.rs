@@ -71,17 +71,17 @@ pub async fn list_models(
     .await?;
     fetch_model_state(acp_tx).await
 }
-/// Fetch model state via `x.ai/models/list` over an initialized channel.
+/// Fetch model state via `deepseek-build/models/list` over an initialized channel.
 pub async fn fetch_model_state(acp_tx: &AcpAgentTx) -> Result<acp::SessionModelState> {
     let params = serde_json::value::to_raw_value(&serde_json::json!({}))?;
     let resp: acp::ExtResponse = acp_send(
-        acp::ExtRequest::new("x.ai/models/list", params.into()),
+        acp::ExtRequest::new("deepseek-build/models/list", params.into()),
         acp_tx,
     )
     .await?;
     parse_models_list_response(resp.0.get())
 }
-/// Parse an `x.ai/models/list` payload; a handler error wins over a missing result.
+/// Parse an `deepseek-build/models/list` payload; a handler error wins over a missing result.
 fn parse_models_list_response(raw: &str) -> Result<acp::SessionModelState> {
     let parsed: crate::session::ExtMethodResult<acp::SessionModelState> =
         serde_json::from_str(raw)?;
@@ -219,14 +219,14 @@ mod tests {
     #[test]
     fn models_list_response_round_trips() {
         let state = acp::SessionModelState::new(
-            acp::ModelId::new("grok-4"),
-            vec![acp::ModelInfo::new(acp::ModelId::new("grok-4"), "Grok 4")],
+            acp::ModelId::new("deepseek-4"),
+            vec![acp::ModelInfo::new(acp::ModelId::new("deepseek-4"), "Grok 4")],
         );
         let ok = crate::session::ExtMethodResult::success(state)
             .to_ext_response()
             .unwrap();
         let parsed = parse_models_list_response(ok.0.get()).unwrap();
-        assert_eq!(parsed.current_model_id.0.as_ref(), "grok-4");
+        assert_eq!(parsed.current_model_id.0.as_ref(), "deepseek-4");
         assert_eq!(parsed.available_models.len(), 1);
         let err = crate::session::ExtMethodResult::<acp::SessionModelState>::failure("boom")
             .to_ext_response()

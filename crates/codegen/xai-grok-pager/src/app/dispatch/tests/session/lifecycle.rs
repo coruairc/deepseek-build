@@ -911,7 +911,7 @@ fn switch_model_without_session_sends_nothing_to_server() {
     let mut app = test_app_with_agent();
     let id = AgentId(0);
     app.agents.get_mut(&id).unwrap().session.session_id = None;
-    let model_id = acp::ModelId::new(std::sync::Arc::from("grok-4.5"));
+    let model_id = acp::ModelId::new(std::sync::Arc::from("deepseek-4.5"));
     let effects = dispatch(Action::SwitchModel(ModelChoice::new(model_id)), &mut app);
     assert!(
         !effects
@@ -1140,7 +1140,7 @@ fn new_session_starts_with_prompt_focused() {
 fn switch_model_deferred_when_no_session_id() {
     let mut app = test_app_with_agent();
     let id = AgentId(0);
-    let model_id = acp::ModelId::new(std::sync::Arc::from("grok-4.5"));
+    let model_id = acp::ModelId::new(std::sync::Arc::from("deepseek-4.5"));
     app.agents.get_mut(&id).unwrap().session.session_id = None;
     let effects = dispatch(
         Action::SwitchModel(ModelChoice::new(model_id.clone())),
@@ -1228,7 +1228,7 @@ fn deferred_switch_prefers_authoritative_current_as_prev() {
 fn deferred_model_switch_applied_on_session_created() {
     let mut app = test_app_with_agent();
     let id = AgentId(0);
-    let model_id = acp::ModelId::new(std::sync::Arc::from("grok-4.5"));
+    let model_id = acp::ModelId::new(std::sync::Arc::from("deepseek-4.5"));
     let session_id: acp::SessionId = "new-session".into();
     app.agents.get_mut(&id).unwrap().session.session_id = None;
     app.agents
@@ -1268,7 +1268,7 @@ fn deferred_model_switch_applied_on_session_created() {
 #[test]
 fn deferred_model_switch_applied_on_worktree_session_created() {
     let mut app = test_app_git();
-    let model_id = acp::ModelId::new(std::sync::Arc::from("grok-4.5"));
+    let model_id = acp::ModelId::new(std::sync::Arc::from("deepseek-4.5"));
     dispatch(
         Action::NewWorktreeSession {
             load_session_id: None,
@@ -1488,13 +1488,13 @@ fn a_consent_link_opens_the_url_its_label_stands_for() {
             },
         ];
         notice.links = vec![
-            "https://x.ai/legal/tos".to_string(),
-            "https://x.ai/legal/aup".to_string(),
+            "https://deepseek-build/legal/tos".to_string(),
+            "https://deepseek-build/legal/aup".to_string(),
         ];
     }
     dispatch(Action::OpenConsentLink(1), &mut app);
     assert!(
-        opened().lines().any(|l| l == "https://x.ai/legal/aup"),
+        opened().lines().any(|l| l == "https://deepseek-build/legal/aup"),
         "the second link must open the second url; got {:?}",
         opened(),
     );

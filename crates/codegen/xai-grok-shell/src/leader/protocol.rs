@@ -197,7 +197,7 @@ pub struct ClientCapabilities {
     #[serde(default)]
     pub client_version: Option<String>,
 
-    /// Whether this client has advertised `x.ai/codeNavigation.enabled`.
+    /// Whether this client has advertised `deepseek-build/codeNavigation.enabled`.
     /// When true, the leader injects `codeNavEnabled: true` into `session/new` and `session/load` requests.
     /// The agent can then gate code-nav startup per client rather than reading shared last-initialized state.
     #[serde(default)]
@@ -215,12 +215,12 @@ pub struct ClientCapabilities {
     #[serde(default)]
     pub fs_write: bool,
 
-    /// Whether this client will draw a status row (`x.ai/statusLine`). When true, the leader injects `clientStatusLine: true`.
+    /// Whether this client will draw a status row (`deepseek-build/statusLine`). When true, the leader injects `clientStatusLine: true`.
     /// The agent then builds the payload for a client that asked, not for whichever one started the process. The flag it sets is per session, so other subscribers of a shared session receive the payload too.
     #[serde(default)]
     pub status_line: bool,
 
-    /// Whether this client wants live `user_message_chunk` during a prompt (`x.ai/userMessageEcho`).
+    /// Whether this client wants live `user_message_chunk` during a prompt (`deepseek-build/userMessageEcho`).
     /// When true, the leader injects `clientUserMessageEcho: true`. False is omitted so a client
     /// that advertised at initialize is not overridden (`grok agent` is persist-only).
     /// The flag it sets is per session, so other subscribers of a shared session receive the echo too.
@@ -581,14 +581,14 @@ pub(crate) enum InternalMethod {
 impl InternalMethod {
     pub(crate) const fn name(self) -> &'static str {
         match self {
-            Self::AuthCleared => "x.ai/internal/auth_cleared",
-            Self::EvictSessions => "x.ai/internal/evict_sessions",
-            Self::ReloadAllMcpServers => "x.ai/internal/reload_all_mcp_servers",
-            Self::ReloadModels => "x.ai/internal/reload_models",
-            Self::ReloadModelsCache => "x.ai/internal/reload_models_cache",
-            Self::ReloadProjectMcpServers => "x.ai/internal/reload_project_mcp_servers",
-            Self::ReloadSkills => "x.ai/internal/reload_skills",
-            Self::ReloadWorkflows => "x.ai/internal/reload_workflows",
+            Self::AuthCleared => "deepseek-build/internal/auth_cleared",
+            Self::EvictSessions => "deepseek-build/internal/evict_sessions",
+            Self::ReloadAllMcpServers => "deepseek-build/internal/reload_all_mcp_servers",
+            Self::ReloadModels => "deepseek-build/internal/reload_models",
+            Self::ReloadModelsCache => "deepseek-build/internal/reload_models_cache",
+            Self::ReloadProjectMcpServers => "deepseek-build/internal/reload_project_mcp_servers",
+            Self::ReloadSkills => "deepseek-build/internal/reload_skills",
+            Self::ReloadWorkflows => "deepseek-build/internal/reload_workflows",
         }
     }
 

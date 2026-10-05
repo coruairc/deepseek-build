@@ -103,7 +103,7 @@ impl ModelState {
         self.served_model_name = display_name;
     }
 
-    /// Machine-readable model ID string for the current model (e.g. "grok-4.5").
+    /// Machine-readable model ID string for the current model (e.g. "deepseek-4.5").
     pub fn current_model_id_str(&self) -> Option<&str> {
         Some(self.current.as_ref()?.0.as_ref())
     }

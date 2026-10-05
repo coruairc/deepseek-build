@@ -418,7 +418,7 @@ mod tests {
         assert!(!is_xai_api_url("https://generativelanguage.googleapis.com"));
         assert!(!is_xai_api_url("https://api.deepseek.com.evil.example/v1"));
         assert!(!is_xai_api_url("https://evil-x.ai.attacker.com/v1"));
-        assert!(!is_xai_api_url("https://prefixx.ai/v1"));
+        assert!(!is_xai_api_url("https://prefixdeepseek-build/v1"));
         assert!(!is_xai_api_url("not-a-url"));
         assert!(!is_xai_api_url(""));
         assert!(is_xai_api_url("http://api.deepseek.com/v1"));

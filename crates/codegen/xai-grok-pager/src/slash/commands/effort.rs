@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn none_and_minimal_rejected_when_model_menu_omits_them() {
-        // The legacy fallback menu is low..xhigh; `none`/`minimal` used to pass through and 400 on grok-4.5, so reject at the TUI instead
+        // The legacy fallback menu is low..xhigh; `none`/`minimal` used to pass through and 400 on deepseek-4.5, so reject at the TUI instead
         let mut state = ModelState::default();
         let (id, info) = model_with_reasoning("reasoning-x", "Reasoning X");
         state.available.insert(id.clone(), info);
@@ -277,7 +277,7 @@ mod tests {
     #[test]
     fn non_reasoning_model_errors() {
         let mut state = ModelState::default();
-        let (id, info) = plain_model("grok-4.5", "Grok 4.5");
+        let (id, info) = plain_model("deepseek-4.5", "Grok 4.5");
         state.available.insert(id.clone(), info);
         state.current = Some(id);
         let mut ctx = dummy_exec_ctx(&state);
@@ -317,7 +317,7 @@ mod tests {
         assert!(cmd.suggest_args(&ctx, "").is_none());
 
         let mut plain = ModelState::default();
-        let (id, info) = plain_model("grok-4.5", "Grok 4.5");
+        let (id, info) = plain_model("deepseek-4.5", "Grok 4.5");
         plain.available.insert(id.clone(), info);
         plain.current = Some(id);
         let ctx = AppCtx {
@@ -373,9 +373,9 @@ mod tests {
     #[test]
     fn typed_label_filters_in_the_picker_and_runs() {
         let mut state = ModelState::default();
-        let id = acp_fixtures::model_id("grok-4.7");
+        let id = acp_fixtures::model_id("deepseek-4.7");
         let info = acp_fixtures::model_info_with_meta(
-            "grok-4.7",
+            "deepseek-4.7",
             "Grok 4.7",
             serde_json::json!({
                 "supportsReasoningEffort": true,
@@ -426,7 +426,7 @@ mod tests {
             CommandResult::Action(Action::SwitchModel(ModelChoice {
                 model_id, effort, ..
             })) => {
-                assert_eq!(model_id.0.as_ref(), "grok-4.7");
+                assert_eq!(model_id.0.as_ref(), "deepseek-4.7");
                 assert_eq!(effort, Some(ReasoningEffort::Xhigh));
             }
             other => panic!("expected model switch, got {other:?}"),

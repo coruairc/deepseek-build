@@ -287,10 +287,10 @@ public struct BotUsageResult: Codable, Sendable, Equatable {
 	/// The allowance is a live trial grant rather than a weekly bucket.
 	public let trial: Bool
 	public let isTeamSeat: Bool
-	/// `supergrok-plus` / `supergrok-heavy` when the SuperGrok tier is the
+	/// `deepseek-plus` / `deepseek-heavy` when the deepseek tier is the
 	/// population funding the meter; absent when another plan funds it.
 	public let fundingPlan: String?
-	/// Server-owned meter label (e.g. `SuperGrok Heavy`, `Grok Bot Plan`).
+	/// Server-owned meter label (e.g. `deepseek Heavy`, `Grok Bot Plan`).
 	public let planLabel: String?
 	/// Where the caller manages on-demand usage for this meter.
 	public let manageUrl: String

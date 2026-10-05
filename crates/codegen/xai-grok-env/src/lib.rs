@@ -8,6 +8,7 @@
 #![deny(clippy::indexing_slicing)]
 mod registry;
 pub use registry::{FIRST_PARTY_CREDENTIAL_ENV_VARS, env_bool, env_string};
+use xai_grok_brand::ENV_PREFIX;
 /// The endpoint set for one backend environment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GrokBuildEndpoints {
@@ -50,9 +51,9 @@ impl GrokBuildEnvironment {
     pub fn is_production(&self) -> bool {
         matches!(self, GrokBuildEnvironment::Production)
     }
-    fn env_prefix(&self) -> &'static str {
+    fn env_prefix(&self) -> String {
         match self {
-            GrokBuildEnvironment::Production => "GROK_PRODUCTION",
+            GrokBuildEnvironment::Production => format!("{ENV_PREFIX}_PRODUCTION"),
         }
     }
     /// Compiled endpoint set for this environment (production by default).
@@ -181,12 +182,13 @@ impl Drop for EnvVarGuard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// The env-var prefixes are an operator interface; do not rename.
+    /// The env-var prefixes are an operator interface; the rebranded prefix is
+    /// the single source of truth from `xai-grok-brand`.
     #[test]
     fn test_env_prefix() {
         assert_eq!(
             GrokBuildEnvironment::Production.env_prefix(),
-            "GROK_PRODUCTION"
+            "DEEPSEEK_BUILD_PRODUCTION"
         );
     }
     #[test]

@@ -423,7 +423,7 @@ impl SessionActor {
             model: Some(model_id.clone()),
             temperature: Some(0.0),
             max_output_tokens: Some(LAZINESS_MAX_OUTPUT_TOKENS),
-            // `grok-4.5` and other tool-flavoured variants reject `reasoning_effort` with `400: Model does not support parameter reasoningEffort`
+            // `deepseek-4.5` and other tool-flavoured variants reject `reasoning_effort` with `400: Model does not support parameter reasoningEffort`
             // Omitting it lets each model apply its own default, which suffices for one short JSON object
             reasoning_effort: None,
             x_grok_conv_id: Some(format!("trace-classifier-{}", uuid::Uuid::new_v4())),

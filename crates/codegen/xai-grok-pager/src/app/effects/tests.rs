@@ -112,10 +112,10 @@ fn format_acp_error_rate_limit_surfaces_detail_or_fallback() {
         ));
     assert_eq!(format_acp_error(&capacity, false), cap_body);
     assert_eq!(format_acp_error(&capacity, true), cap_body);
-    let rpm_body = "You are sending requests too quickly. Please slow down, or upgrade to a Grok subscription for higher limits: https://api.deepseek.com/supergrok";
+    let rpm_body = "You are sending requests too quickly. Please slow down, or upgrade to a Grok subscription for higher limits: https://api.deepseek.com/deepseek";
     let rpm = acp::Error::new(RATE_LIMITED_ERROR_CODE, "Rate limited")
         .data(format!("API error (status 429 Too Many Requests): {rpm_body}"));
-    assert!(format_acp_error(&rpm, false).contains("api.deepseek.com/supergrok"));
+    assert!(format_acp_error(&rpm, false).contains("api.deepseek.com/deepseek"));
     assert_eq!(format_acp_error(&rpm, true), RATE_LIMITED_USER_MESSAGE_API_KEY);
     let empty = acp::Error::new(RATE_LIMITED_ERROR_CODE, "Rate limited");
     assert_eq!(format_acp_error(&empty, false), RATE_LIMITED_USER_MESSAGE_OAUTH);
@@ -176,7 +176,7 @@ fn prompt_request_meta_omits_screen_mode_when_unset() {
     let meta = prompt_request_meta("p-2", None);
     assert_eq!(meta, serde_json::json!({ "promptId": "p-2" }));
 }
-/// Text-only interjections must omit the `content` key entirely; the legacy `x.ai/interject` wire shape stays byte-identical.
+/// Text-only interjections must omit the `content` key entirely; the legacy `deepseek-build/interject` wire shape stays byte-identical.
 #[test]
 fn interject_params_omit_content_when_no_blocks() {
     let sid = acp::SessionId::new("s1");
@@ -1058,7 +1058,7 @@ async fn persist_setting_type_mismatch_errors_simple_mode() {
 }
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-/// Spawn a fake ACP agent that counts `x.ai/yolo_mode_changed` notifications.
+/// Spawn a fake ACP agent that counts `deepseek-build/yolo_mode_changed` notifications.
 /// Exits when the channel closes.
 fn spawn_fake_acp_agent(
     mut rx: tokio::sync::mpsc::UnboundedReceiver<xai_acp_lib::AcpAgentMessage>,
@@ -1068,7 +1068,7 @@ fn spawn_fake_acp_agent(
     tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             if let xai_acp_lib::AcpAgentMessage::ExtNotification(args) = msg {
-                if args.request.method.as_ref() == "x.ai/yolo_mode_changed" {
+                if args.request.method.as_ref() == "deepseek-build/yolo_mode_changed" {
                     let params: serde_json::Value = serde_json::from_str(
                             args.request.params.get(),
                         )
@@ -1188,7 +1188,7 @@ async fn persist_permission_mode_acp_notification_fires_once_on_best_effort() {
     assert_eq!(
             counter.load(Ordering::SeqCst),
             1,
-            "ACP `x.ai/yolo_mode_changed` notification must fire exactly once \
+            "ACP `deepseek-build/yolo_mode_changed` notification must fire exactly once \
              on BestEffort path (regardless of disk outcome)",
         );
     assert!(
@@ -1513,7 +1513,7 @@ async fn check_marketplace_updates_dispatches_update_and_skips_failed_notificati
         while let Some(msg) = rx.recv().await {
             if let AcpAgentMessage::ExtMethod(args) = msg {
                 match args.request.method.as_ref() {
-                    "x.ai/marketplace/list" => {
+                    "deepseek-build/marketplace/list" => {
                         let response = serde_json::json!({
                                 "result": {
                                     "sources": [{
@@ -1547,7 +1547,7 @@ async fn check_marketplace_updates_dispatches_update_and_skips_failed_notificati
                             .response_tx
                             .send(Ok(acp::ExtResponse::new(Arc::from(raw))));
                     }
-                    "x.ai/marketplace/action" => {
+                    "deepseek-build/marketplace/action" => {
                         action_calls_for_task.fetch_add(1, Ordering::SeqCst);
                         let req: xai_hooks_plugins_types::MarketplaceActionRequest = serde_json::from_str(
                                 args.request.params.get(),
@@ -1580,7 +1580,7 @@ async fn check_marketplace_updates_dispatches_update_and_skips_failed_notificati
                             .response_tx
                             .send(Ok(acp::ExtResponse::new(Arc::from(raw))));
                     }
-                    "x.ai/plugins/notify-updates" => {
+                    "deepseek-build/plugins/notify-updates" => {
                         saw_success_notification_for_task.store(true, Ordering::SeqCst);
                         let raw = serde_json::value::RawValue::from_string("{}".into())
                             .expect("serialize notify response");
@@ -1758,7 +1758,7 @@ async fn foreign_resume_detection_runs_as_task_result() {
         other => panic!("expected ForeignResumeHintDetected, got {other:?}"),
     }
 }
-/// `FetchSessionList` wire shape: search sends `query` (no `allowRelax`); browse opts into `allowRelax` and parses `x.ai/listScope`.
+/// `FetchSessionList` wire shape: search sends `query` (no `allowRelax`); browse opts into `allowRelax` and parses `deepseek-build/listScope`.
 /// All outcomes echo `seq` and `query`.
 #[tokio::test]
 async fn fetch_session_list_pushes_query_and_echoes_seq() {
@@ -1770,7 +1770,7 @@ async fn fetch_session_list_pushes_query_and_echoes_seq() {
     tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             if let AcpAgentMessage::ExtMethod(args) = msg {
-                assert_eq!(args.request.method.as_ref(), "x.ai/session/list");
+                assert_eq!(args.request.method.as_ref(), "deepseek-build/session/list");
                 let params: serde_json::Value = serde_json::from_str(
                         args.request.params.get(),
                     )
@@ -1785,7 +1785,7 @@ async fn fetch_session_list_pushes_query_and_echoes_seq() {
                     serde_json::json!({
                             "result": {
                                 "sessions": [],
-                                "_meta": { "x.ai/listScope": "repo" },
+                                "_meta": { "deepseek-build/listScope": "repo" },
                             }
                         })
                 } else {
@@ -1857,7 +1857,7 @@ async fn fetch_session_list_pushes_query_and_echoes_seq() {
             assert_eq!(query, None);
             assert!(
                     scope.is_relaxed(),
-                    "_meta[\"x.ai/listScope\"] must parse into the task result"
+                    "_meta[\"deepseek-build/listScope\"] must parse into the task result"
                 );
         }
         other => panic!("expected SessionListLoaded, got {other:?}"),
@@ -1938,7 +1938,7 @@ async fn fetch_dashboard_sessions_explicitly_excludes_headless() {
     tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             if let AcpAgentMessage::ExtMethod(args) = msg {
-                assert_eq!(args.request.method.as_ref(), "x.ai/session/list");
+                assert_eq!(args.request.method.as_ref(), "deepseek-build/session/list");
                 let params = serde_json::from_str(args.request.params.get())
                     .expect("params JSON");
                 *captured_for_task.lock().unwrap() = Some(params);
@@ -2014,7 +2014,7 @@ async fn fetch_session_list_sends_kind_facet_filter() {
     let captured = captured.lock().unwrap();
     assert_eq!(captured.len(), 1);
     assert_eq!(
-            j(j(j(nth(&captured, 0), "_meta"), "x.ai/facetFilters"), "kind"),
+            j(j(j(nth(&captured, 0), "_meta"), "deepseek-build/facetFilters"), "kind"),
             &serde_json::json!(["build"])
         );
 }
@@ -2028,7 +2028,7 @@ async fn fetch_workflows_list_sends_session_id() {
     tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             if let AcpAgentMessage::ExtMethod(args) = msg {
-                assert_eq!(args.request.method.as_ref(), "x.ai/workflows/list");
+                assert_eq!(args.request.method.as_ref(), "deepseek-build/workflows/list");
                 let params: serde_json::Value = serde_json::from_str(
                         args.request.params.get(),
                     )
@@ -2157,7 +2157,7 @@ async fn deep_search_sessions_echoes_routing_and_policy() {
     }
     let captured = captured.lock().unwrap();
     assert_eq!(captured.len(), 1);
-    assert_eq!(nth(&captured, 0).0, "x.ai/session/search");
+    assert_eq!(nth(&captured, 0).0, "deepseek-build/session/search");
     assert_eq!(j(&nth(&captured, 0).1, "headless"), "only");
 }
 /// The card-detail executor must echo host, generation, seq, and the row identity verbatim; a session missing on disk zeroes the stats.
@@ -2515,7 +2515,7 @@ fn to_meta_chat_mode_stamps_kind_and_omits_agent_profile() {
         ..Default::default()
     };
     let meta = flags.to_meta().expect("chat_mode must emit meta");
-    assert_eq!(j(j(&meta, "x.ai/session"), "kind"), "chat");
+    assert_eq!(j(j(&meta, "deepseek-build/session"), "kind"), "chat");
     assert!(
             meta.get("agentProfile").is_none(),
             "K12: chat mode must omit Build agentProfile"
@@ -2541,7 +2541,7 @@ fn load_meta_chat_kind_alone_stamps_kind_and_strips_profile() {
         scrub_chat_workspace_bind_meta(&mut meta);
     }
     let meta = meta.expect("chat_kind must produce meta");
-    assert_eq!(j(j(&meta, "x.ai/session"), "kind"), "chat");
+    assert_eq!(j(j(&meta, "deepseek-build/session"), "kind"), "chat");
     assert!(
             meta.get("agentProfile").is_none(),
             "entry chat_kind must strip Build agentProfile"
@@ -2560,7 +2560,7 @@ fn assert_chat_meta_has_no_workspace_bind_keys(meta: &serde_json::Value) {
             );
     }
     assert!(
-            meta.get("x.ai/cloud_existing_workspace").is_none(),
+            meta.get("deepseek-build/cloud_existing_workspace").is_none(),
             "chat meta without attach must not include existing workspace: {meta}"
         );
 }
@@ -2574,7 +2574,7 @@ fn chat_create_meta_never_includes_workspace_bind_keys_when_cloud_fields_set() {
     apply_chat_kind_meta(&mut meta);
     scrub_chat_workspace_bind_meta(&mut meta);
     let meta = meta.expect("chat create must emit meta");
-    assert_eq!(j(j(&meta, "x.ai/session"), "kind"), "chat");
+    assert_eq!(j(j(&meta, "deepseek-build/session"), "kind"), "chat");
     assert_chat_meta_has_no_workspace_bind_keys(
         &serde_json::Value::Object(meta.clone()),
     );
@@ -2587,9 +2587,9 @@ fn chat_load_meta_never_includes_workspace_bind_keys() {
     {
         let obj = meta.get_or_insert_with(acp::Meta::new);
         obj.insert("envId".into(), serde_json::json!("env-poison"));
-        obj.insert("x.ai/cloud_server_id".into(), serde_json::json!("srv-poison"));
+        obj.insert("deepseek-build/cloud_server_id".into(), serde_json::json!("srv-poison"));
         obj.insert(
-            "x.ai/cloud_existing_workspace".into(),
+            "deepseek-build/cloud_existing_workspace".into(),
             serde_json::json!({
                     "server_id": "srv-poison",
                     "cwd": "/ws",
@@ -2598,7 +2598,7 @@ fn chat_load_meta_never_includes_workspace_bind_keys() {
     }
     scrub_chat_workspace_bind_meta(&mut meta);
     let meta = meta.expect("chat load must emit meta");
-    assert_eq!(j(j(&meta, "x.ai/session"), "kind"), "chat");
+    assert_eq!(j(j(&meta, "deepseek-build/session"), "kind"), "chat");
     assert_chat_meta_has_no_workspace_bind_keys(
         &serde_json::Value::Object(meta.clone()),
     );
@@ -2612,17 +2612,17 @@ fn scrub_chat_workspace_matrix_attach_exception() {
     {
         let obj = meta.as_mut().unwrap();
         obj.insert("envId".into(), serde_json::json!("env-x"));
-        obj.insert("x.ai/cloud_server_id".into(), serde_json::json!("hub-x"));
+        obj.insert("deepseek-build/cloud_server_id".into(), serde_json::json!("hub-x"));
         obj.insert(
-            "x.ai/cloud_existing_workspace".into(),
+            "deepseek-build/cloud_existing_workspace".into(),
             serde_json::json!({"server_id": "srv-x", "cwd": "/ws"}),
         );
     }
     scrub_chat_workspace_bind_meta(&mut meta);
     let scrubbed = meta.as_ref().unwrap();
     assert!(scrubbed.get("envId").is_none());
-    assert!(scrubbed.get("x.ai/cloud_server_id").is_none());
-    assert!(scrubbed.get("x.ai/cloud_existing_workspace").is_none());
+    assert!(scrubbed.get("deepseek-build/cloud_server_id").is_none());
+    assert!(scrubbed.get("deepseek-build/cloud_existing_workspace").is_none());
     let mut meta = Some(acp::Meta::new());
     apply_local_workspace_meta(
         &mut meta,
@@ -2635,22 +2635,22 @@ fn scrub_chat_workspace_matrix_attach_exception() {
     {
         let obj = meta.as_mut().unwrap();
         obj.insert("envId".into(), serde_json::json!("env-must-go"));
-        obj.insert("x.ai/cloud_server_id".into(), serde_json::json!("hub-must-go"));
+        obj.insert("deepseek-build/cloud_server_id".into(), serde_json::json!("hub-must-go"));
     }
     scrub_chat_workspace_bind_meta(&mut meta);
     let scrubbed = meta.as_ref().unwrap();
     assert!(scrubbed.get("envId").is_none(), "envId must stay scrubbed");
     assert!(
-            scrubbed.get("x.ai/cloud_server_id").is_none(),
+            scrubbed.get("deepseek-build/cloud_server_id").is_none(),
             "Direct hub must stay scrubbed"
         );
     assert_eq!(
-            j(j(&scrubbed, "x.ai/cloud_existing_workspace"), "server_id"),
+            j(j(&scrubbed, "deepseek-build/cloud_existing_workspace"), "server_id"),
             "srv-dogfood"
         );
-    assert_eq!(j(j(&scrubbed, "x.ai/local_workspace"), "mode"), "attach");
-    assert_eq!(j(j(&scrubbed, "x.ai/local_workspace"), "server_id"), "srv-dogfood");
-    assert_eq!(j(j(&scrubbed, "x.ai/local_workspace"), "cwd"), "/tmp/repo");
+    assert_eq!(j(j(&scrubbed, "deepseek-build/local_workspace"), "mode"), "attach");
+    assert_eq!(j(j(&scrubbed, "deepseek-build/local_workspace"), "server_id"), "srv-dogfood");
+    assert_eq!(j(j(&scrubbed, "deepseek-build/local_workspace"), "cwd"), "/tmp/repo");
 }
 #[cfg(feature = "local-workspace")]
 #[test]
@@ -2666,11 +2666,11 @@ fn to_meta_chat_attach_stamps_local_and_existing() {
         ..Default::default()
     };
     let meta = flags.to_meta().expect("meta");
-    assert_eq!(j(j(&meta, "x.ai/session"), "kind"), "chat");
-    assert_eq!(j(j(&meta, "x.ai/local_workspace"), "mode"), "attach");
-    assert_eq!(j(j(&meta, "x.ai/cloud_existing_workspace"), "server_id"), "srv-1");
+    assert_eq!(j(j(&meta, "deepseek-build/session"), "kind"), "chat");
+    assert_eq!(j(j(&meta, "deepseek-build/local_workspace"), "mode"), "attach");
+    assert_eq!(j(j(&meta, "deepseek-build/cloud_existing_workspace"), "server_id"), "srv-1");
     assert!(meta.get("envId").is_none());
-    assert!(meta.get("x.ai/cloud_server_id").is_none());
+    assert!(meta.get("deepseek-build/cloud_server_id").is_none());
 }
 #[cfg(feature = "local-workspace")]
 #[test]
@@ -2686,11 +2686,11 @@ fn to_meta_chat_own_stamps_intent_without_existing() {
         ..Default::default()
     };
     let meta = flags.to_meta().expect("meta");
-    assert_eq!(j(j(&meta, "x.ai/local_workspace"), "mode"), "own");
-    assert_eq!(j(j(&meta, "x.ai/local_workspace"), "cwd"), "/tmp/repo-own");
-    assert!(j(&meta, "x.ai/local_workspace").get("server_id").is_none());
+    assert_eq!(j(j(&meta, "deepseek-build/local_workspace"), "mode"), "own");
+    assert_eq!(j(j(&meta, "deepseek-build/local_workspace"), "cwd"), "/tmp/repo-own");
+    assert!(j(&meta, "deepseek-build/local_workspace").get("server_id").is_none());
     assert!(
-            meta.get("x.ai/cloud_existing_workspace").is_none(),
+            meta.get("deepseek-build/cloud_existing_workspace").is_none(),
             "own must not stamp existing; shell mints server_id"
         );
     assert!(meta.get("envId").is_none());
@@ -2733,9 +2733,9 @@ fn finalize_chat_session_meta_stamps_attach_on_worktree_path() {
     let mut meta = flags.to_meta();
     finalize_chat_session_meta(&mut meta, true, &flags);
     let meta = meta.expect("meta");
-    assert_eq!(j(j(&meta, "x.ai/session"), "kind"), "chat");
-    assert_eq!(j(j(&meta, "x.ai/local_workspace"), "mode"), "attach");
-    assert_eq!(j(j(&meta, "x.ai/cloud_existing_workspace"), "server_id"), "srv-wt");
+    assert_eq!(j(j(&meta, "deepseek-build/session"), "kind"), "chat");
+    assert_eq!(j(j(&meta, "deepseek-build/local_workspace"), "mode"), "attach");
+    assert_eq!(j(j(&meta, "deepseek-build/cloud_existing_workspace"), "server_id"), "srv-wt");
     assert!(meta.get("envId").is_none());
 }
 #[test]
@@ -2818,7 +2818,7 @@ fn format_session_info_api_key_without_env() {
     assert!(!text.contains("XAI_API_KEY"), "{text}");
     assert!(!text.contains("Manage account and credits"), "{text}");
     assert!(
-            text.contains("Run `grok login` to use your SuperGrok subscription instead."),
+            text.contains("Run `grok login` to use your deepseek subscription instead."),
             "{text}"
         );
     assert!(!text.contains("api.deepseek.com"), "{text}");
@@ -2830,7 +2830,7 @@ fn format_session_info_api_key_auth_suggests_grok_login() {
     assert!(text.contains("Auth method: API key (XAI_API_KEY)"), "{text}");
     assert!(!text.contains("Manage account and credits"), "{text}");
     assert!(
-            text.contains("Run `grok login` to use your SuperGrok subscription instead."),
+            text.contains("Run `grok login` to use your deepseek subscription instead."),
             "{text}"
         );
     assert!(!text.contains("Also present: XAI_API_KEY"), "{text}");
@@ -2857,16 +2857,16 @@ fn format_session_info_shows_conversation_id_when_present() {
 }
 #[test]
 fn format_session_info_shows_resolved_when_enabled_and_different() {
-    let info = make_session_info("grok-4.5", Some("grok-4.3"), 1000, 10000);
+    let info = make_session_info("deepseek-4.5", Some("deepseek-4.3"), 1000, 10000);
     let text = format_session_info(&info, None, true, false, false);
-    assert!(text.contains("Model: grok-4.5 (grok-4.3)"));
+    assert!(text.contains("Model: deepseek-4.5 (deepseek-4.3)"));
 }
 #[test]
 fn format_session_info_hides_resolved_when_disabled() {
-    let info = make_session_info("grok-4.5", Some("grok-4.3"), 1000, 10000);
+    let info = make_session_info("deepseek-4.5", Some("deepseek-4.3"), 1000, 10000);
     let text = format_session_info(&info, None, false, false, false);
-    assert!(text.contains("Model: grok-4.5"));
-    assert!(!text.contains("grok-4.3"));
+    assert!(text.contains("Model: deepseek-4.5"));
+    assert!(!text.contains("deepseek-4.3"));
 }
 /// The (cwd, id)-derived summary path resolves and `generated_title` wins.
 #[tokio::test]
@@ -2899,10 +2899,10 @@ async fn lookup_session_title_loads_single_summary_by_cwd() {
 }
 #[test]
 fn format_session_info_no_parens_when_resolved_matches_requested() {
-    let info = make_session_info("grok-4.5", Some("grok-4.5"), 1000, 10000);
+    let info = make_session_info("deepseek-4.5", Some("deepseek-4.5"), 1000, 10000);
     let text = format_session_info(&info, None, true, false, false);
-    assert!(text.contains("Model: grok-4.5"));
-    assert!(!text.contains("(grok-4.5)"));
+    assert!(text.contains("Model: deepseek-4.5"));
+    assert!(!text.contains("(deepseek-4.5)"));
 }
 #[test]
 fn format_session_info_shows_model_hash_when_catalog_flag_set() {
@@ -2922,7 +2922,7 @@ fn format_session_info_hides_model_hash_for_noncoding_without_flag() {
 }
 #[test]
 fn format_session_info_hides_model_hash_for_coding_slug_without_flag() {
-    let mut info = make_session_info("grok-4.6", None, 1000, 10000);
+    let mut info = make_session_info("deepseek-4.6", None, 1000, 10000);
     info.data.model_fingerprint = Some("abc123".into());
     info.data.show_model_fingerprint = false;
     let text = format_session_info(&info, None, false, false, false);
@@ -3065,7 +3065,7 @@ async fn rewind_points_are_asked_only_after_the_cancel_is_answered() {
         .send(Ok(acp::ExtResponse::new(Arc::from(body))))
         .expect("the listing waits on points");
     assert_eq!("sess-1", cancel.request.session_id.0.as_ref());
-    assert_eq!("x.ai/rewind/points", points.request.method.as_ref());
+    assert_eq!("deepseek-build/rewind/points", points.request.method.as_ref());
     match listing.await.expect("the listing task finishes") {
         TaskResult::RewindPointsLoaded { agent_id, points } => {
             assert_eq!((AgentId(0), 0), (agent_id, points.len()));
@@ -3150,7 +3150,7 @@ async fn hydrate_team_capability_adapter_maps_every_reply_to_the_asking_identity
             let Some(AcpAgentMessage::ExtMethod(args)) = rx.recv().await else {
                 panic!("one ext request")
             };
-            assert_eq!(args.request.method.as_ref(), "x.ai/auth/hydrate_team_capability");
+            assert_eq!(args.request.method.as_ref(), "deepseek-build/auth/hydrate_team_capability");
             assert_eq!(
                     args.request.params.get(),
                     r#"{"email":"a@acme.test","teamId":"team-a"}"#

@@ -282,7 +282,7 @@ pub fn try_open_url(url: &str, filter: SchemeFilter) -> OpenUrlResult {
 }
 
 /// Leave an existing parameter untouched; on parse failure return the original so untrusted opener input stays safe.
-/// SuperGrok upsell stamps the param regardless of the remote `gate_url`.
+/// deepseek upsell stamps the param regardless of the remote `gate_url`.
 pub fn ensure_query_param(url: &str, key: &str, value: &str) -> String {
     let Ok(mut parsed) = url::Url::parse(url) else {
         return url.to_string();
@@ -448,51 +448,51 @@ mod tests {
     #[test]
     fn ensure_query_param_appends_when_missing() {
         let out = ensure_query_param(
-            "https://api.deepseek.com/supergrok",
+            "https://api.deepseek.com/deepseek",
             "referrer",
             "grok-build",
         );
         assert_eq!(
             out,
-            "https://api.deepseek.com/supergrok?referrer=grok-build"
+            "https://api.deepseek.com/deepseek?referrer=grok-build"
         );
     }
 
     #[test]
     fn ensure_query_param_preserves_existing_value() {
         let out = ensure_query_param(
-            "https://api.deepseek.com/supergrok?referrer=other",
+            "https://api.deepseek.com/deepseek?referrer=other",
             "referrer",
             "grok-build",
         );
-        assert_eq!(out, "https://api.deepseek.com/supergrok?referrer=other");
+        assert_eq!(out, "https://api.deepseek.com/deepseek?referrer=other");
     }
 
     #[test]
     fn ensure_query_param_keeps_other_query_pairs() {
         let out = ensure_query_param(
-            "https://api.deepseek.com/supergrok?heavy=1",
+            "https://api.deepseek.com/deepseek?heavy=1",
             "referrer",
             "grok-build",
         );
         assert_eq!(
             out,
-            "https://api.deepseek.com/supergrok?heavy=1&referrer=grok-build"
+            "https://api.deepseek.com/deepseek?heavy=1&referrer=grok-build"
         );
     }
 
     #[test]
     fn ensure_query_param_preserves_fragment() {
-        // The current remote settings value uses a hash fragment for client-side routing (`api.deepseek.com/#supergrok`)
+        // The current remote settings value uses a hash fragment for client-side routing (`api.deepseek.com/#deepseek`)
         // We still want the referrer attached
         let out = ensure_query_param(
-            "https://api.deepseek.com/#supergrok",
+            "https://api.deepseek.com/#deepseek",
             "referrer",
             "grok-build",
         );
         assert_eq!(
             out,
-            "https://api.deepseek.com/?referrer=grok-build#supergrok"
+            "https://api.deepseek.com/?referrer=grok-build#deepseek"
         );
     }
 
@@ -505,13 +505,13 @@ mod tests {
     #[test]
     fn ensure_query_param_url_encodes_value() {
         let out = ensure_query_param(
-            "https://api.deepseek.com/supergrok",
+            "https://api.deepseek.com/deepseek",
             "referrer",
-            "grok build",
+            "deepseek-build",
         );
         assert_eq!(
             out,
-            "https://api.deepseek.com/supergrok?referrer=grok+build"
+            "https://api.deepseek.com/deepseek?referrer=grok+build"
         );
     }
 
@@ -576,7 +576,7 @@ mod tests {
 
     #[test]
     fn browser_unavailable_message_includes_full_url() {
-        let url = "https://api.deepseek.com/supergrok?referrer=grok-build";
+        let url = "https://api.deepseek.com/deepseek?referrer=grok-build";
         assert_eq!(
             browser_unavailable_message(url),
             format!("{BROWSER_UNAVAILABLE_NOTICE}:\n{url}")
@@ -585,7 +585,7 @@ mod tests {
 
     #[test]
     fn browser_unavailable_line_is_url_first_single_line() {
-        let url = "https://api.deepseek.com/supergrok?referrer=grok-build";
+        let url = "https://api.deepseek.com/deepseek?referrer=grok-build";
         let plain = browser_unavailable_line(url, false);
         assert!(plain.starts_with(url), "{plain}");
         assert!(!plain.contains('\n'), "{plain}");

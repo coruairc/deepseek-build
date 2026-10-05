@@ -8,21 +8,26 @@ const CLAUDE_MANAGED_SETTINGS_PATH: &str =
 #[cfg(target_os = "linux")]
 const CLAUDE_MANAGED_SETTINGS_PATH: &str = "/etc/claude-code/managed-settings.json";
 
-/// Canonical grok application path: `$GROK_HOME/bin/grok` (Unix) or `grok.exe` (Windows).
+/// Canonical deepseek-build application path: `$DEEPSEEK_BUILD_HOME/bin/deepseek-build` (Unix) or
+/// `deepseek-build.exe` (Windows).
 pub fn grok_application() -> PathBuf {
     grok_application_in(&grok_home())
 }
 
-/// [`grok_application`] under an explicit home instead of `$GROK_HOME`.
+/// [`grok_application`] under an explicit home instead of `$DEEPSEEK_BUILD_HOME`.
 pub fn grok_application_in(home: &std::path::Path) -> PathBuf {
-    let name = if cfg!(windows) { "grok.exe" } else { "grok" };
+    let name = if cfg!(windows) {
+        format!("{}.exe", xai_grok_brand::NAME)
+    } else {
+        xai_grok_brand::NAME.to_string()
+    };
     home.join("bin").join(name)
 }
 
-/// System-wide config directory: `/etc/grok/` on Unix, `None` on Windows.
+/// System-wide config directory: `/etc/deepseek-build/` on Unix, `None` on Windows.
 pub fn system_config_dir() -> Option<PathBuf> {
     if cfg!(unix) {
-        Some(PathBuf::from("/etc/grok"))
+        Some(PathBuf::from(xai_grok_brand::SYSTEM_CONFIG_DIR))
     } else {
         None
     }

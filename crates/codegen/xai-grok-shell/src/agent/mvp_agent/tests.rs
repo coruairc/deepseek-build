@@ -21,7 +21,7 @@ fn jwt_tier_claim_maps_free_and_paid() {
     assert_eq!(jwt_tier_claim(&jwt_with_tier(0)).as_deref(), Some("free"));
     assert_eq!(
         jwt_tier_claim(&jwt_with_tier(1)).as_deref(),
-        Some("supergrok")
+        Some("deepseek")
     );
     assert_eq!(
         jwt_tier_claim(&jwt_with_tier(2)).as_deref(),
@@ -37,15 +37,15 @@ fn jwt_tier_claim_maps_free_and_paid() {
     );
     assert_eq!(
         jwt_tier_claim(&jwt_with_tier(5)).as_deref(),
-        Some("supergrok_heavy")
+        Some("deepseek_heavy")
     );
     assert_eq!(
         jwt_tier_claim(&jwt_with_tier(6)).as_deref(),
-        Some("supergrok_lite")
+        Some("deepseek_lite")
     );
     assert_eq!(
         jwt_tier_claim(&jwt_with_tier(7)).as_deref(),
-        Some("supergrok_plus")
+        Some("deepseek_plus")
     );
     assert_eq!(jwt_tier_claim(&jwt_with_tier(9)).as_deref(), Some("9"));
     assert_eq!(jwt_tier_claim(&jwt_with_tier(99)).as_deref(), Some("99"));
@@ -88,14 +88,14 @@ fn resolve_subscription_tier_prefers_display_then_api_key_then_jwt() {
 #[test]
 fn jwt_claim_matches_user_subscription_tier_known_pairs() {
     let cases = [
-        ("supergrok", "GrokPro"),
+        ("deepseek", "GrokPro"),
         ("x_basic", "XBasic"),
         ("x_premium", "XPremium"),
         ("x_premium_plus", "XPremiumPlus"),
-        ("supergrok_heavy", "SuperGrokPro"),
+        ("deepseek_heavy", "deepseekPro"),
         ("9", "EnterpriseMystery"),
-        ("supergrok_lite", "SuperGrokLite"),
-        ("supergrok_plus", "SuperGrokPlus"),
+        ("deepseek_lite", "deepseekLite"),
+        ("deepseek_plus", "deepseekPlus"),
     ];
     for (claim, user_tier) in cases {
         assert!(
@@ -108,24 +108,24 @@ fn jwt_claim_matches_user_subscription_tier_known_pairs() {
 fn jwt_claim_matches_user_subscription_tier_rejects_stale_and_unknown() {
     assert!(!jwt_claim_matches_user_subscription_tier(
         "x_basic",
-        "SuperGrokPro"
+        "deepseekPro"
     ));
     assert!(!jwt_claim_matches_user_subscription_tier(
-        "supergrok",
-        "SuperGrokPro"
+        "deepseek",
+        "deepseekPro"
     ));
     assert!(!jwt_claim_matches_user_subscription_tier(
-        "supergrok",
-        "SuperGrokPlus"
+        "deepseek",
+        "deepseekPlus"
     ));
     assert!(!jwt_claim_matches_user_subscription_tier(
-        "supergrok_heavy",
-        "SuperGrokPlus"
+        "deepseek_heavy",
+        "deepseekPlus"
     ));
     assert!(!jwt_claim_matches_user_subscription_tier("free", "GrokPro"));
     assert!(!jwt_claim_matches_user_subscription_tier("", "XPremium"));
     assert!(!jwt_claim_matches_user_subscription_tier(
-        "supergrok_heavy",
+        "deepseek_heavy",
         "EnterpriseMystery"
     ));
     assert!(!jwt_claim_matches_user_subscription_tier(
@@ -1295,10 +1295,10 @@ pub(super) fn make_test_handle(
 async fn lookup_session_model_returns_per_session_model() {
     let default_model = acp::ModelId::new("default-model");
     assert_eq!(
-        lookup_session_model(Some(acp::ModelId::new("grok-3-fast")), &default_model)
+        lookup_session_model(Some(acp::ModelId::new("deepseek-3-fast")), &default_model)
             .0
             .as_ref(),
-        "grok-3-fast"
+        "deepseek-3-fast"
     );
     assert_eq!(
         lookup_session_model(Some(acp::ModelId::new("codex-mini")), &default_model)
@@ -1309,10 +1309,10 @@ async fn lookup_session_model_returns_per_session_model() {
 }
 #[tokio::test]
 async fn lookup_session_model_fallback_no_session() {
-    let default_model = acp::ModelId::new("grok-3");
+    let default_model = acp::ModelId::new("deepseek-3");
     assert_eq!(
         lookup_session_model(None, &default_model).0.as_ref(),
-        "grok-3"
+        "deepseek-3"
     );
 }
 /// Mutating session A's model_id via the handle does not affect session B.
@@ -1322,8 +1322,8 @@ async fn set_session_model_does_not_cross_contaminate() {
     let sid_b = acp::SessionId::new("sess-b");
     let default_model = acp::ModelId::new("default");
     let mut sessions: HashMap<acp::SessionId, crate::session::SessionHandle> = [
-        (sid_a.clone(), make_test_handle("grok-3", false, None)),
-        (sid_b.clone(), make_test_handle("grok-3", false, None)),
+        (sid_a.clone(), make_test_handle("deepseek-3", false, None)),
+        (sid_b.clone(), make_test_handle("deepseek-3", false, None)),
     ]
     .into();
     sessions.get_mut(&sid_a).unwrap().model_id = acp::ModelId::new("codex-mini");
@@ -1343,7 +1343,7 @@ async fn set_session_model_does_not_cross_contaminate() {
         )
         .0
         .as_ref(),
-        "grok-3",
+        "deepseek-3",
         "Session B's model must not be affected by session A's model change"
     );
 }
@@ -1622,7 +1622,7 @@ async fn new_session_meta_effort_seeds_spawn_for_supported_model_and_drops_for_u
     assert_eq!(plain_cfg.reasoning_effort, None);
 }
 /// `/new` / `/clear` send no `_meta.reasoningEffort`.
-/// The last-used / config default must seed spawn so a fresh chat does not snap back to the catalog default (`high` on grok-4.6).
+/// The last-used / config default must seed spawn so a fresh chat does not snap back to the catalog default (`high` on deepseek-4.6).
 #[tokio::test]
 async fn new_session_without_meta_keeps_current_effort_over_catalog_default() {
     use crate::agent::config::{EndpointsConfig, ModelEntry};
@@ -1850,11 +1850,11 @@ async fn yolo_toggle_scoped_by_client_identifier() {
     let mut sessions: HashMap<acp::SessionId, crate::session::SessionHandle> = [
         (
             sid_tui.clone(),
-            make_test_handle("grok-3", false, Some("grok-tui")),
+            make_test_handle("deepseek-3", false, Some("grok-tui")),
         ),
         (
             sid_vscode.clone(),
-            make_test_handle("grok-3", false, Some("grok-code-extension")),
+            make_test_handle("deepseek-3", false, Some("grok-code-extension")),
         ),
     ]
     .into();
@@ -1878,11 +1878,11 @@ async fn yolo_toggle_can_disable_session_started_with_yolo_enabled() {
     let mut sessions: HashMap<acp::SessionId, crate::session::SessionHandle> = [
         (
             sid_tui.clone(),
-            make_test_handle("grok-3", true, Some("grok-tui")),
+            make_test_handle("deepseek-3", true, Some("grok-tui")),
         ),
         (
             sid_other.clone(),
-            make_test_handle("grok-3", true, Some("grok-code-extension")),
+            make_test_handle("deepseek-3", true, Some("grok-code-extension")),
         ),
     ]
     .into();
@@ -1977,7 +1977,7 @@ async fn drain_respects_deadline() {
 fn parse_code_nav_capability_present_and_true() {
     let mut meta = serde_json::Map::new();
     meta.insert(
-        "x.ai/codeNavigation".to_string(),
+        "deepseek-build/codeNavigation".to_string(),
         serde_json::json!({ "enabled": true }),
     );
     let init = acp::InitializeRequest::new(acp::ProtocolVersion::V1).client_capabilities(
@@ -2001,7 +2001,7 @@ fn parse_code_nav_capability_absent_returns_false() {
 fn parse_code_nav_capability_false_returns_false() {
     let mut meta = serde_json::Map::new();
     meta.insert(
-        "x.ai/codeNavigation".to_string(),
+        "deepseek-build/codeNavigation".to_string(),
         serde_json::json!({ "enabled": false }),
     );
     let init = acp::InitializeRequest::new(acp::ProtocolVersion::V1).client_capabilities(
@@ -2076,7 +2076,7 @@ async fn ext_method_routes_auth_cleared_and_refreshes_resident_sessions() {
             let params = serde_json::json!({});
             agent
                 .ext_method(acp::ExtRequest::new(
-                    "x.ai/internal/auth_cleared",
+                    "deepseek-build/internal/auth_cleared",
                     std::sync::Arc::from(serde_json::value::to_raw_value(&params).unwrap()),
                 ))
                 .await
@@ -2287,7 +2287,7 @@ async fn skills_list_refreshes_session_skill_baseline() {
     let (handle, _tx, mut cmd_rx) = make_live_session_handle(&sid, None);
     agent.insert_resident(&sid, handle);
     let req = acp::ExtRequest::new(
-        "x.ai/skills/list",
+        "deepseek-build/skills/list",
         serde_json::value::to_raw_value(&serde_json::json!({ "cwd": "/tmp" }))
             .unwrap()
             .into(),
@@ -2361,7 +2361,7 @@ fn build_minimal_agent_for_tests() -> MvpAgent {
 }
 fn session_usage_request(session_id: &str) -> acp::ExtRequest {
     acp::ExtRequest::new(
-        "x.ai/session/usage",
+        "deepseek-build/session/usage",
         serde_json::value::to_raw_value(&serde_json::json!({ "sessionId": session_id }))
             .unwrap()
             .into(),
@@ -2536,7 +2536,7 @@ async fn upload_trace_error(
     session_dir: Option<std::path::PathBuf>,
 ) -> acp::Error {
     let request = acp::ExtRequest::new(
-        "x.ai/feedback/upload-trace",
+        "deepseek-build/feedback/upload-trace",
         serde_json::value::to_raw_value(&params).unwrap().into(),
     );
     crate::extensions::feedback_trace::handle_upload_trace_for_test(agent, &request, session_dir)
@@ -3030,7 +3030,7 @@ async fn ensure_plugin_registry_lazily_populates_snapshot() {
         "snapshot must start empty (boot discovery deferred past initialize)"
     );
     let list_req = acp::ExtRequest::new(
-        "x.ai/plugins/list",
+        "deepseek-build/plugins/list",
         serde_json::value::to_raw_value(&serde_json::json!({ "sessionId": "no-such-session" }))
             .unwrap()
             .into(),
@@ -3072,7 +3072,7 @@ async fn ensure_plugin_registry_lazily_populates_snapshot() {
 /// Regression: the shared snapshot was built from the boot-time in-memory `[plugins]` config, which
 /// `config.toml` edits never refresh. A plugin toggled after the agent started (marketplace install,
 /// `grok plugin enable|disable`, a client editing the file) kept its boot-time `enabled` for
-/// session-less `x.ai/plugins/list` / `x.ai/skills/list` callers until restart, while per-session
+/// session-less `deepseek-build/plugins/list` / `deepseek-build/skills/list` callers until restart, while per-session
 /// registries, which read disk, were right. The shared rebuild must read disk too.
 ///
 /// Exercised through a project `.grok/config.toml` (merged by `resolve_effective_plugins_config` for
@@ -3124,7 +3124,7 @@ async fn shared_plugin_registry_snapshot_reads_plugins_config_from_disk() {
         "rebuild must take `disabled` from config on disk, not the boot-time config"
     );
 }
-/// Scaffolding for the session-less `x.ai/plugins/reload` regressions: a hermetic GROK_HOME, the
+/// Scaffolding for the session-less `deepseek-build/plugins/reload` regressions: a hermetic GROK_HOME, the
 /// folder-trust feature in its release-build default (`GROK_FOLDER_TRUST` unset), and an agent whose
 /// launch dir is `repo` (captured from the process cwd at construction, so callers hold `serial`).
 struct ReloadHarness {
@@ -3168,7 +3168,7 @@ impl ReloadHarness {
     }
     async fn reload(&self) {
         let req = acp::ExtRequest::new(
-            "x.ai/plugins/reload",
+            "deepseek-build/plugins/reload",
             serde_json::value::to_raw_value(&serde_json::json!({}))
                 .unwrap()
                 .into(),
@@ -3182,7 +3182,7 @@ fn write_plugin_manifest(dir: &std::path::Path, name: &str) {
     std::fs::create_dir_all(dir).unwrap();
     std::fs::write(dir.join("plugin.json"), format!(r#"{{"name": "{name}"}}"#)).unwrap();
 }
-/// Kill-switch ordering through the production session-less `x.ai/plugins/reload` path (no resident
+/// Kill-switch ordering through the production session-less `deepseek-build/plugins/reload` path (no resident
 /// session, so the rebuild targets the launch dir). The folder-trust gate's cold-key backstop
 /// resolves WITHOUT remote settings and records a durable verdict; if it ran before the real-remote
 /// resolve, a cold launch dir under an org
@@ -3225,7 +3225,7 @@ async fn plugins_reload_resolves_real_remote_trust_before_reading_disk_config() 
         "kill-switched folder counts trusted, so the project [plugins].paths plugin must be discovered"
     );
 }
-/// A session-less `x.ai/plugins/reload` must re-resolve the launch dir's folder trust rather than
+/// A session-less `deepseek-build/plugins/reload` must re-resolve the launch dir's folder trust rather than
 /// reuse the startup primer's memoized verdict. The primer records a point-in-time answer, and a
 /// no-configs launch dir yields a non-durable "trusted" allow; if repo-local plugin configs appear
 /// afterwards, a reload that reused that allow would grant them executable trust with no check.
@@ -3280,7 +3280,7 @@ async fn plugins_reload_rechecks_launch_dir_trust() {
 }
 /// The lazy boot build reads disk config through the folder-trust gate. It must not lean on the
 /// startup primer: with the gate on, a no-configs launch dir leaves the primer's allow non-durable
-/// (nothing recorded), so a later lazy build — reachable from a session-less `x.ai/plugins/list`
+/// (nothing recorded), so a later lazy build — reachable from a session-less `deepseek-build/plugins/list`
 /// long after startup, once repo-local configs have appeared and remote settings have moved to the
 /// kill-switch — would hit the gate's cold-key backstop, which resolves WITHOUT remote settings and
 /// records a kill-switch-blind deny that no reconcile can lift.
@@ -3423,7 +3423,7 @@ async fn resident_activity_reports_needs_input_when_pending() {
     use crate::agent::roster::RosterActivity;
     let agent = build_minimal_agent_for_tests();
     let sid = acp::SessionId::new("sess-pending");
-    let handle = make_test_handle("grok-3", false, None);
+    let handle = make_test_handle("deepseek-3", false, None);
     let pending = handle.pending_interactions.clone();
     let prompt_id = handle.current_prompt_id.clone();
     agent.insert_resident(&sid, handle);
@@ -3440,7 +3440,7 @@ async fn resident_activity_reports_needs_input_when_pending() {
     pending.lock().unwrap().clear();
     assert_eq!(agent.resident_activity(&sid), RosterActivity::Working);
 }
-/// Drain the agent gateway, returning the first `x.ai/sessions/changed` payload that carries an upserted entry.
+/// Drain the agent gateway, returning the first `deepseek-build/sessions/changed` payload that carries an upserted entry.
 /// Unrelated notifications parse into an empty `RosterChanged` and are ignored.
 fn drain_roster_changed(
     rx: &mut tokio::sync::mpsc::UnboundedReceiver<xai_acp_lib::AcpClientMessage>,
@@ -3461,7 +3461,7 @@ fn drain_roster_changed(
     }
     found
 }
-/// A turn-boundary activity delta (`push_roster_activity_delta`) broadcasts an `x.ai/sessions/changed` upsert carrying the *overridden* activity.
+/// A turn-boundary activity delta (`push_roster_activity_delta`) broadcasts an `deepseek-build/sessions/changed` upsert carrying the *overridden* activity.
 /// Every attached dashboard then reflects Working/Idle immediately instead of waiting out the roster poll's up-to-1s lag (turn-start/turn-end).
 /// The override matters because at turn-start the actor has not yet published `current_prompt_id`. A natural `resident_activity` read would emit `Idle` for a session that is in fact starting a turn.
 #[tokio::test]
@@ -3477,7 +3477,7 @@ async fn headless_residents_are_excluded_from_snapshots_and_deltas() {
     let agent = MvpAgent::new(gateway, &AgentConfig::default(), auth_manager, None, None)
         .expect("valid test config");
     let sid = acp::SessionId::new("sess-headless");
-    agent.insert_resident(&sid, make_test_handle("grok-3", false, None));
+    agent.insert_resident(&sid, make_test_handle("deepseek-3", false, None));
     agent.session_registry.mark_headless(&sid);
     assert!(agent.resident_roster_entry(&sid).is_none());
     assert!(agent.resident_roster_entries().is_empty());
@@ -3498,7 +3498,7 @@ async fn push_roster_activity_delta_broadcasts_overridden_activity() {
     let cfg = AgentConfig::default();
     let agent = MvpAgent::new(gateway, &cfg, auth_manager, None, None).expect("valid test config");
     let sid = acp::SessionId::new("sess-activity");
-    agent.insert_resident(&sid, make_test_handle("grok-3", false, None));
+    agent.insert_resident(&sid, make_test_handle("deepseek-3", false, None));
     agent.push_roster_activity_delta(&sid, RosterActivity::Working);
     let changed = drain_roster_changed(&mut rx).expect("turn-start delta emitted");
     assert_eq!(changed.upserted.len(), 1);
@@ -3703,12 +3703,12 @@ fn write_updates(dir: &std::path::Path, lines: &[&str]) -> PathBuf {
 }
 fn bg_line(task_id: &str) -> String {
     format!(
-        r#"{{"timestamp":1,"method":"_x.ai/session/update","params":{{"sessionId":"s","update":{{"sessionUpdate":"task_backgrounded","task_id":"{task_id}","command":"sleep 99","cwd":"/tmp"}}}}}}"#
+        r#"{{"timestamp":1,"method":"_deepseek-build/session/update","params":{{"sessionId":"s","update":{{"sessionUpdate":"task_backgrounded","task_id":"{task_id}","command":"sleep 99","cwd":"/tmp"}}}}}}"#
     )
 }
 fn completed_line(task_id: &str) -> String {
     format!(
-        r#"{{"timestamp":2,"method":"_x.ai/session/update","params":{{"sessionId":"s","update":{{"sessionUpdate":"task_completed","task_snapshot":{{"task_id":"{task_id}","completed":true}}}}}}}}"#
+        r#"{{"timestamp":2,"method":"_deepseek-build/session/update","params":{{"sessionId":"s","update":{{"sessionUpdate":"task_completed","task_snapshot":{{"task_id":"{task_id}","completed":true}}}}}}}}"#
     )
 }
 fn orphaned_ids(tasks: &[OrphanedTask]) -> std::collections::HashSet<&str> {
@@ -3785,7 +3785,7 @@ fn orphaned_tasks_skips_malformed_lines() {
 fn orphaned_tasks_ignores_unrelated_updates() {
     let tmp = tempfile::tempdir().unwrap();
     let bg = bg_line("t1");
-    let unrelated = r#"{"timestamp":1,"method":"_x.ai/session/update","params":{"sessionId":"s","update":{"sessionUpdate":"auto_compact_started","percentage":80}}}"#;
+    let unrelated = r#"{"timestamp":1,"method":"_deepseek-build/session/update","params":{"sessionId":"s","update":{"sessionUpdate":"auto_compact_started","percentage":80}}}"#;
     let path = write_updates(tmp.path(), &[&bg, unrelated]);
     let result = MvpAgent::find_orphaned_background_tasks(&Some(path));
     assert_eq!(result.len(), 1);
@@ -3795,7 +3795,7 @@ fn orphaned_tasks_filters_rewind_dead_branches() {
     let tmp = tempfile::tempdir().unwrap();
     let user_msg = r#"{"timestamp":0,"method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"user_message_chunk","content":{"type":"text","text":"hello"}}}}"#;
     let bg_before_rewind = bg_line("t-dead");
-    let rewind = r#"{"timestamp":3,"method":"_x.ai/session/update","params":{"sessionId":"s","update":{"sessionUpdate":"rewind_marker","target_prompt_index":0,"created_at":"2025-01-01T00:00:00Z"}}}"#;
+    let rewind = r#"{"timestamp":3,"method":"_deepseek-build/session/update","params":{"sessionId":"s","update":{"sessionUpdate":"rewind_marker","target_prompt_index":0,"created_at":"2025-01-01T00:00:00Z"}}}"#;
     let user_msg2 = r#"{"timestamp":4,"method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"user_message_chunk","content":{"type":"text","text":"retry"}}}}"#;
     let bg_after_rewind = bg_line("t-alive");
     let path = write_updates(
@@ -4121,7 +4121,7 @@ async fn prepare_video_gen_config_sends_client_identifier_header() {
          applies the coding ZDR opt-out to Build traffic"
     );
 }
-/// Regression: `x.ai/auth/info` must return profile fields even when the access token is expired.
+/// Regression: `deepseek-build/auth/info` must return profile fields even when the access token is expired.
 /// Profile data does not expire with the token, and hiding it made the desktop render "Signed in" with no identity.
 #[tokio::test]
 async fn auth_info_returns_profile_when_token_expired() {
@@ -4135,7 +4135,7 @@ async fn auth_info_returns_profile_when_token_expired() {
     let resp = crate::extensions::auth::handle(
         &agent,
         &acp::ExtRequest::new(
-            "x.ai/auth/info",
+            "deepseek-build/auth/info",
             std::sync::Arc::from(serde_json::value::to_raw_value(&serde_json::json!({})).unwrap()),
         ),
     )
@@ -4658,22 +4658,22 @@ fn parse_session_kind_matrix() {
     let cases: &[(&str, serde_json::Value, SessionKind)] = &[
         (
             "chat",
-            json!({"x.ai/session": {"kind": "chat"}}),
+            json!({"deepseek-build/session": {"kind": "chat"}}),
             SessionKind::Chat,
         ),
         (
             "build",
-            json!({"x.ai/session": {"kind": "build"}}),
+            json!({"deepseek-build/session": {"kind": "build"}}),
             SessionKind::Build,
         ),
         (
             "chat_malformed_sibling",
-            json!({"x.ai/session": {"kind": "chat", "facets": "not-a-map"}}),
+            json!({"deepseek-build/session": {"kind": "chat", "facets": "not-a-map"}}),
             SessionKind::Chat,
         ),
         (
             "unknown_kind",
-            json!({"x.ai/session": {"kind": "frob"}}),
+            json!({"deepseek-build/session": {"kind": "frob"}}),
             SessionKind::Build,
         ),
         ("absent", json!({}), SessionKind::Build),
@@ -4687,13 +4687,13 @@ fn parse_session_kind_matrix() {
 fn reject_chat_kind_without_feature_errors_without_chat_feature() {
     use serde_json::json;
     assert!(
-        reject_chat_kind_without_feature(json!({"x.ai/session": {"kind": "chat"}}).as_object())
+        reject_chat_kind_without_feature(json!({"deepseek-build/session": {"kind": "chat"}}).as_object())
             .is_err()
     );
     assert!(reject_chat_kind_without_feature(None).is_ok());
     assert!(
         reject_chat_kind_without_feature(
-            json!({ "x.ai/session" : { "kind" : "build" } }).as_object()
+            json!({ "deepseek-build/session" : { "kind" : "build" } }).as_object()
         )
         .is_ok()
     );
@@ -4701,9 +4701,9 @@ fn reject_chat_kind_without_feature_errors_without_chat_feature() {
 #[test]
 fn chat_initial_model_matrix() {
     let cases: &[(&str, bool, Option<&str>, Option<&str>)] = &[
-        ("chat_with_model", true, Some("grok-4.5"), Some("grok-4.5")),
+        ("chat_with_model", true, Some("deepseek-4.5"), Some("deepseek-4.5")),
         ("chat_without_model", true, None, None),
-        ("build_with_model", false, Some("grok-4.5"), None),
+        ("build_with_model", false, Some("deepseek-4.5"), None),
         ("build_without_model", false, None, None),
     ];
     for (label, is_chat_kind, custom_model_id, expected) in cases {
@@ -4730,27 +4730,27 @@ fn chat_new_session_model_state_matrix() {
     let cases: &[(&str, acp::SessionModelState, Option<&str>, &str)] = &[
         (
             "requested_in_catalog",
-            state_with("auto", &["auto", "grok-4"]),
-            Some("grok-4"),
-            "grok-4",
+            state_with("auto", &["auto", "deepseek-4"]),
+            Some("deepseek-4"),
+            "deepseek-4",
         ),
         (
             "no_request_keeps_catalog_default",
-            state_with("auto", &["auto", "grok-4"]),
+            state_with("auto", &["auto", "deepseek-4"]),
             None,
             "auto",
         ),
         (
             "requested_not_in_catalog",
             state_with("auto", &["auto"]),
-            Some("grok-4.5"),
-            "grok-4.5",
+            Some("deepseek-4.5"),
+            "deepseek-4.5",
         ),
         (
             "requested_with_empty_catalog",
             state_with("", &[]),
-            Some("grok-4"),
-            "grok-4",
+            Some("deepseek-4"),
+            "deepseek-4",
         ),
     ];
     for (label, state, requested, expected) in cases {
@@ -4763,7 +4763,7 @@ fn chat_new_session_model_state_matrix() {
         );
     }
 }
-/// A valid `x.ai/local_workspace` parses to ExistingWorkspace only.
+/// A valid `deepseek-build/local_workspace` parses to ExistingWorkspace only.
 /// It never reads `envId` and never emits SandboxEnvironment.
 #[cfg(feature = "local-workspace")]
 #[test]
@@ -4780,7 +4780,7 @@ fn parse_session_computer_sessions_local_workspace_matrix() {
         (
             "attach_server_id_on_local",
             json!({
-                "x.ai/local_workspace": {
+                "deepseek-build/local_workspace": {
                     "mode": "attach",
                     "server_id": "lw-attach-1",
                     "cwd": "/repo",
@@ -4792,11 +4792,11 @@ fn parse_session_computer_sessions_local_workspace_matrix() {
         (
             "attach_server_id_from_cloud_existing",
             json!({
-                "x.ai/local_workspace": {
+                "deepseek-build/local_workspace": {
                     "mode": "attach",
                     "cwd": "/repo",
                 },
-                "x.ai/cloud_existing_workspace": {
+                "deepseek-build/cloud_existing_workspace": {
                     "server_id": "lw-attach-2",
                     "cwd": "/repo-existing",
                 },
@@ -4807,7 +4807,7 @@ fn parse_session_computer_sessions_local_workspace_matrix() {
         (
             "own_with_server_id_ignores_envid",
             json!({
-                "x.ai/local_workspace": {
+                "deepseek-build/local_workspace": {
                     "mode": "own",
                     "server_id": "lw-own-1",
                     "cwd": "/Users/me/src",
@@ -4819,7 +4819,7 @@ fn parse_session_computer_sessions_local_workspace_matrix() {
         (
             "own_without_server_id_no_sandbox_fallback",
             json!({
-                "x.ai/local_workspace": {
+                "deepseek-build/local_workspace": {
                     "mode": "own",
                     "cwd": "/Users/me/src",
                 },
@@ -4830,7 +4830,7 @@ fn parse_session_computer_sessions_local_workspace_matrix() {
         (
             "invalid_mode_falls_through_to_envid",
             json!({
-                "x.ai/local_workspace": {
+                "deepseek-build/local_workspace": {
                     "mode": "bogus",
                     "server_id": "lw-x",
                 },
@@ -4843,7 +4843,7 @@ fn parse_session_computer_sessions_local_workspace_matrix() {
         (
             "non_object_local_falls_through_to_envid",
             json!({
-                "x.ai/local_workspace": "not-an-object",
+                "deepseek-build/local_workspace": "not-an-object",
                 "envId": "env-prod",
             }),
             Some(vec![ComputerSession::SandboxEnvironment {
@@ -4866,8 +4866,8 @@ fn parse_session_computer_sessions_local_workspace_matrix() {
 fn resolve_local_workspace_missing_server_id_fails_closed() {
     use serde_json::json;
     let meta = json!({
-        "x.ai/session": { "kind": "chat" },
-        "x.ai/local_workspace": {
+        "deepseek-build/session": { "kind": "chat" },
+        "deepseek-build/local_workspace": {
             "mode": "own",
             "cwd": "/repo",
         }
@@ -4952,12 +4952,12 @@ fn start_own_registers_and_stamps_server_id() {
         let server_id = handle.server_id.clone();
         let mut meta = acp::Meta::new();
         meta.insert(
-            "x.ai/local_workspace".into(),
+            "deepseek-build/local_workspace".into(),
             serde_json::json!({"mode": "own", "cwd": "/tmp/repo"}),
         );
         stamp_server_id_into_meta(&mut meta, &server_id);
         assert_eq!(
-            meta.get("x.ai/local_workspace")
+            meta.get("deepseek-build/local_workspace")
                 .and_then(|v| v.get("server_id"))
                 .and_then(|v| v.as_str()),
             Some(server_id.as_str())
@@ -6035,7 +6035,7 @@ fn ext_method_rewind_uses_local_dispatch_without_bridge() {
         let params = serde_json::json!({ "sessionId": "sess-local" });
         let err = agent
             .ext_method(acp::ExtRequest::new(
-                "x.ai/rewind/points",
+                "deepseek-build/rewind/points",
                 std::sync::Arc::from(serde_json::value::to_raw_value(&params).unwrap()),
             ))
             .await
@@ -6269,12 +6269,12 @@ fn spawn_active_work_actor(
         }
     });
 }
-/// Drive `x.ai/internal/evict_sessions` through the real `ext_notification` handler path (not the internal helper).
+/// Drive `deepseek-build/internal/evict_sessions` through the real `ext_notification` handler path (not the internal helper).
 /// This matches how the leader server signals a client disconnect.
 async fn drive_disconnect(agent: &MvpAgent, sid: &acp::SessionId) {
     drive_disconnect_many(agent, &[sid]).await;
 }
-/// Like `drive_disconnect`, but evicts several sessions in a single `x.ai/internal/evict_sessions` notification.
+/// Like `drive_disconnect`, but evicts several sessions in a single `deepseek-build/internal/evict_sessions` notification.
 /// That is the realistic shape of a real client disconnect.
 /// It is also the path that exercises `handle_evict_sessions`' concurrent `join_all` check pass followed by the sequential act pass.
 async fn drive_disconnect_many(agent: &MvpAgent, sids: &[&acp::SessionId]) {
@@ -6284,13 +6284,13 @@ async fn drive_disconnect_many(agent: &MvpAgent, sids: &[&acp::SessionId]) {
     let params_json = serde_json::value::to_raw_value(&params).unwrap();
     agent
         .ext_notification(acp::ExtNotification::new(
-            "x.ai/internal/evict_sessions",
+            "deepseek-build/internal/evict_sessions",
             params_json.into(),
         ))
         .await
         .expect("evict_sessions notification must be handled");
 }
-/// Drive `x.ai/session/close` through the real `ext_method` dispatch (`ext_method`, then `handlers::session::handle`, then `handle_session_close`).
+/// Drive `deepseek-build/session/close` through the real `ext_method` dispatch (`ext_method`, then `handlers::session::handle`, then `handle_session_close`).
 /// This exercises the exact production path that finalizes the replica.
 async fn drive_close(agent: &MvpAgent, session_id: &str) -> Result<acp::ExtResponse, acp::Error> {
     use acp::Agent as _;
@@ -6298,7 +6298,7 @@ async fn drive_close(agent: &MvpAgent, session_id: &str) -> Result<acp::ExtRespo
     let params_json = serde_json::value::to_raw_value(&params).unwrap();
     agent
         .ext_method(acp::ExtRequest::new(
-            "x.ai/session/close",
+            "deepseek-build/session/close",
             std::sync::Arc::from(params_json),
         ))
         .await
@@ -6315,7 +6315,7 @@ async fn ext_notification_forwards_each_queue_method_to_session_actor() {
     let session_id = sid.0.as_ref();
     let cases: [(&str, serde_json::Value); 7] = [
         (
-            "x.ai/queue/remove",
+            "deepseek-build/queue/remove",
             serde_json::json!({
                 "sessionId": session_id,
                 "id": "p-remove",
@@ -6324,21 +6324,21 @@ async fn ext_notification_forwards_each_queue_method_to_session_actor() {
             }),
         ),
         (
-            "x.ai/queue/reorder",
+            "deepseek-build/queue/reorder",
             serde_json::json!({
                 "sessionId": session_id,
                 "orderedIds": ["a", "b"],
             }),
         ),
         (
-            "x.ai/queue/clear",
+            "deepseek-build/queue/clear",
             serde_json::json!({
                 "sessionId": session_id,
                 "clientIdentifier": "grok-desktop",
             }),
         ),
         (
-            "x.ai/queue/edit",
+            "deepseek-build/queue/edit",
             serde_json::json!({
                 "sessionId": session_id,
                 "id": "p-edit",
@@ -6347,7 +6347,7 @@ async fn ext_notification_forwards_each_queue_method_to_session_actor() {
             }),
         ),
         (
-            "x.ai/queue/interject",
+            "deepseek-build/queue/interject",
             serde_json::json!({
                 "sessionId": session_id,
                 "id": "p-interject",
@@ -6357,14 +6357,14 @@ async fn ext_notification_forwards_each_queue_method_to_session_actor() {
             }),
         ),
         (
-            "x.ai/queue/hold_edit",
+            "deepseek-build/queue/hold_edit",
             serde_json::json!({
                 "sessionId": session_id,
                 "id": "p-hold",
             }),
         ),
         (
-            "x.ai/queue/release_edit",
+            "deepseek-build/queue/release_edit",
             serde_json::json!({
                 "sessionId": session_id,
                 "id": "p-release",
@@ -6382,7 +6382,7 @@ async fn ext_notification_forwards_each_queue_method_to_session_actor() {
         });
         match (method, cmd) {
             (
-                "x.ai/queue/remove",
+                "deepseek-build/queue/remove",
                 SessionCommand::RemoveQueuedPrompt {
                     id,
                     expected_version,
@@ -6393,14 +6393,14 @@ async fn ext_notification_forwards_each_queue_method_to_session_actor() {
                 assert_eq!(expected_version, 3);
                 assert_eq!(owner.as_deref(), Some("grok-tui"));
             }
-            ("x.ai/queue/reorder", SessionCommand::ReorderQueue { ordered_ids }) => {
+            ("deepseek-build/queue/reorder", SessionCommand::ReorderQueue { ordered_ids }) => {
                 assert_eq!(ordered_ids, vec!["a", "b"]);
             }
-            ("x.ai/queue/clear", SessionCommand::ClearQueue { owner }) => {
+            ("deepseek-build/queue/clear", SessionCommand::ClearQueue { owner }) => {
                 assert_eq!(owner.as_deref(), Some("grok-desktop"));
             }
             (
-                "x.ai/queue/edit",
+                "deepseek-build/queue/edit",
                 SessionCommand::EditQueuedPrompt {
                     id,
                     new_text,
@@ -6412,7 +6412,7 @@ async fn ext_notification_forwards_each_queue_method_to_session_actor() {
                 assert_eq!(editor.as_deref(), Some("grok-vscode"));
             }
             (
-                "x.ai/queue/interject",
+                "deepseek-build/queue/interject",
                 SessionCommand::InterjectQueuedPrompt {
                     id,
                     expected_version,
@@ -6425,10 +6425,10 @@ async fn ext_notification_forwards_each_queue_method_to_session_actor() {
                 assert_eq!(owner.as_deref(), Some("grok-tui"));
                 assert_eq!(new_text.as_deref(), Some("now"));
             }
-            ("x.ai/queue/hold_edit", SessionCommand::HoldEdit { id }) => {
+            ("deepseek-build/queue/hold_edit", SessionCommand::HoldEdit { id }) => {
                 assert_eq!(id, "p-hold");
             }
-            ("x.ai/queue/release_edit", SessionCommand::ReleaseEdit { id }) => {
+            ("deepseek-build/queue/release_edit", SessionCommand::ReleaseEdit { id }) => {
                 assert_eq!(id, "p-release");
             }
             (method, _) => {
@@ -6455,11 +6455,11 @@ async fn ext_notification_queue_rejects_unknown_method_missing_id_and_unknown_se
     let session_id = sid.0.as_ref();
     let negatives: [(&str, serde_json::Value); 9] = [
         (
-            "x.ai/queue/bogus",
+            "deepseek-build/queue/bogus",
             serde_json::json!({ "sessionId": session_id, "id": "p1" }),
         ),
         (
-            "x.ai/queue/changed",
+            "deepseek-build/queue/changed",
             serde_json::json!({
                 "sessionId": session_id,
                 "entries": [{
@@ -6472,31 +6472,31 @@ async fn ext_notification_queue_rejects_unknown_method_missing_id_and_unknown_se
             }),
         ),
         (
-            "x.ai/queue/hold_edit",
+            "deepseek-build/queue/hold_edit",
             serde_json::json!({ "sessionId": session_id }),
         ),
         (
-            "x.ai/queue/release_edit",
+            "deepseek-build/queue/release_edit",
             serde_json::json!({ "sessionId": session_id }),
         ),
         (
-            "x.ai/queue/remove",
+            "deepseek-build/queue/remove",
             serde_json::json!({ "sessionId": session_id }),
         ),
         (
-            "x.ai/queue/edit",
+            "deepseek-build/queue/edit",
             serde_json::json!({ "sessionId": session_id, "newText": "x" }),
         ),
         (
-            "x.ai/queue/edit",
+            "deepseek-build/queue/edit",
             serde_json::json!({ "sessionId": session_id, "id": "p-edit" }),
         ),
         (
-            "x.ai/queue/interject",
+            "deepseek-build/queue/interject",
             serde_json::json!({ "sessionId": session_id }),
         ),
         (
-            "x.ai/queue/hold_edit",
+            "deepseek-build/queue/hold_edit",
             serde_json::json!({ "sessionId": "no-such-session", "id": "p1" }),
         ),
     ];
@@ -6522,7 +6522,7 @@ async fn ext_notification_queue_rejects_unknown_method_missing_id_and_unknown_se
     .expect("serialize");
     agent_empty
         .ext_notification(acp::ExtNotification::new(
-            "x.ai/queue/release_edit",
+            "deepseek-build/queue/release_edit",
             params_json.into(),
         ))
         .await
@@ -6545,7 +6545,7 @@ async fn ext_notification_queue_edit_survives_dropped_actor_mailbox() {
     let params_json = serde_json::value::to_raw_value(&params).expect("serialize queue params");
     agent
         .ext_notification(acp::ExtNotification::new(
-            "x.ai/queue/hold_edit",
+            "deepseek-build/queue/hold_edit",
             params_json.into(),
         ))
         .await
@@ -6858,7 +6858,7 @@ fn disconnect_keeps_the_workflow_session_and_evicts_the_idle_one() {
         );
     });
 }
-/// Mixed batch in a *single* `x.ai/internal/evict_sessions` notification, the realistic disconnect shape.
+/// Mixed batch in a *single* `deepseek-build/internal/evict_sessions` notification, the realistic disconnect shape.
 /// This is the path that exercises `handle_evict_sessions`' `join_all` two-pass (concurrent `IsBusy` checks, then sequential act).
 /// One session's actor reports busy (kept resident, `Working`, no `Shutdown`); the other is idle (unloaded, `Dormant`, `Shutdown` sent). Each must get its own outcome with no cross-contamination between the concurrent check pass and the sequential act pass.
 #[test]
@@ -6945,7 +6945,7 @@ fn session_live_state_map_is_bounded_across_cycles() {
         );
     });
 }
-/// Finalize fires on a genuine terminal close, driven through the real `x.ai/session/close` dispatch rather than the internal helper.
+/// Finalize fires on a genuine terminal close, driven through the real `deepseek-build/session/close` dispatch rather than the internal helper.
 #[test]
 fn explicit_close_finalizes_the_replica() {
     run_local_for_bridge_test(|| async {
@@ -7281,7 +7281,7 @@ fn gated_reconnect_recheck_lifts_gate_clearing_paywall_flash() {
                         let head = String::from_utf8_lossy(&head);
                         let response = if head.contains("/user?include=subscription") {
                             let body =
-                                r#"{"userId":"user-flash","subscriptionTier":"SuperGrokPro"}"#;
+                                r#"{"userId":"user-flash","subscriptionTier":"deepseekPro"}"#;
                             format!(
                                 "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\
                                  Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
@@ -7403,7 +7403,7 @@ fn team_auth() -> xai_grok_login::GrokAuth {
 }
 async fn hydrate(agent: &MvpAgent, email: &str) -> Option<bool> {
     let req = acp::ExtRequest::new(
-        "x.ai/auth/hydrate_team_capability",
+        "deepseek-build/auth/hydrate_team_capability",
         serde_json::value::to_raw_value(&serde_json::json!({ "email": email, "teamId": "team-a" }))
             .unwrap()
             .into(),
@@ -7595,14 +7595,14 @@ async fn personal_account_does_not_fetch_the_team_capability() {
     assert_eq!(hydrate(&agent, USER_A).await, None);
     assert_eq!(server.request_count_for("/v1/user"), 0);
 }
-/// Drain the gateway, returning `true` if any `x.ai/settings/update` notification was emitted (and acking each so the sender doesn't warn).
+/// Drain the gateway, returning `true` if any `deepseek-build/settings/update` notification was emitted (and acking each so the sender doesn't warn).
 fn drained_settings_update(
     rx: &mut tokio::sync::mpsc::UnboundedReceiver<xai_acp_lib::AcpClientMessage>,
 ) -> bool {
     let mut found = false;
     while let Ok(msg) = rx.try_recv() {
         if let xai_acp_lib::AcpClientMessage::ExtNotification(args) = msg {
-            if &*args.request.method == "x.ai/settings/update" {
+            if &*args.request.method == "deepseek-build/settings/update" {
                 found = true;
             }
             let _ = args.response_tx.send(Ok(()));
@@ -7654,7 +7654,7 @@ async fn access_gate_does_not_leak_verdict_across_identities() {
     );
 }
 /// First-party xAI auth with `writeback_enabled` settings upgrades storage to Writeback.
-/// The settings arrival also emits `x.ai/settings/update` and opens the external-OTEL gate.
+/// The settings arrival also emits `deepseek-build/settings/update` and opens the external-OTEL gate.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[serial_test::serial]
 async fn post_auth_settings_xai_upgrades_writeback_emits_and_opens_gate() {
@@ -7695,7 +7695,7 @@ async fn post_auth_settings_xai_upgrades_writeback_emits_and_opens_gate() {
     );
     assert!(
         drained_settings_update(&mut rx),
-        "settings arrival must push x.ai/settings/update to clients"
+        "settings arrival must push deepseek-build/settings/update to clients"
     );
 }
 /// BYOK auth must not be upgraded to `Writeback` even when the server advertises it; the push and gate still fire.
@@ -7735,7 +7735,7 @@ async fn post_auth_settings_non_xai_keeps_local_but_still_emits() {
     );
     assert!(
         drained_settings_update(&mut rx),
-        "settings arrival must push x.ai/settings/update for non-xai auth too"
+        "settings arrival must push deepseek-build/settings/update for non-xai auth too"
     );
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -7915,7 +7915,7 @@ fn reload_after_terminal_removal_starts_clean() {
     });
 }
 /// Build an agent whose gateway is wired to a live receiver.
-/// A test can observe (and answer) agent-to-client reverse-requests like the dormant `x.ai/folder_trust/request` round-trip.
+/// A test can observe (and answer) agent-to-client reverse-requests like the dormant `deepseek-build/folder_trust/request` round-trip.
 fn build_agent_with_gateway_rx() -> (
     MvpAgent,
     tokio::sync::mpsc::UnboundedReceiver<xai_acp_lib::AcpClientMessage>,
@@ -8085,7 +8085,7 @@ fn project_roles_personas_gated_via_resolve_and_record_chain() {
         );
     });
 }
-/// Pull the next `x.ai/folder_trust/request` reverse-request off the gateway and answer it with `outcome`.
+/// Pull the next `deepseek-build/folder_trust/request` reverse-request off the gateway and answer it with `outcome`.
 /// Returns the request's decoded params.
 async fn answer_folder_trust_request(
     gw_rx: &mut tokio::sync::mpsc::UnboundedReceiver<xai_acp_lib::AcpClientMessage>,
@@ -8098,7 +8098,7 @@ async fn answer_folder_trust_request(
     let xai_acp_lib::AcpClientMessage::ExtMethod(args) = msg else {
         panic!("expected an ext_method reverse-request, got a different message");
     };
-    assert_eq!(args.request.method.as_ref(), "x.ai/folder_trust/request");
+    assert_eq!(args.request.method.as_ref(), "deepseek-build/folder_trust/request");
     let params: serde_json::Value = serde_json::from_str(args.request.params.get()).unwrap();
     let resp: acp::ExtResponse = acp::ExtResponse::new(std::sync::Arc::from(
         serde_json::value::to_raw_value(&serde_json::json!({ "outcome": outcome })).unwrap(),
@@ -8892,7 +8892,7 @@ async fn emit_announcements_gate_emits_updates_baseline_and_bumps_gen() {
             let xai_acp_lib::AcpClientMessage::ExtNotification(args) = msg else {
                 panic!("expected ExtNotification, got another message kind");
             };
-            assert_eq!(args.request.method.as_ref(), "x.ai/announcements/update");
+            assert_eq!(args.request.method.as_ref(), "deepseek-build/announcements/update");
             let parsed: serde_json::Value =
                 serde_json::from_str(args.request.params.get()).expect("valid JSON payload");
             parsed
@@ -8947,7 +8947,7 @@ async fn emit_announcements_gate_keeps_baseline_on_failed_send_and_retries() {
     let xai_acp_lib::AcpClientMessage::ExtNotification(args) = msg else {
         panic!("expected ExtNotification, got another message kind");
     };
-    assert_eq!(args.request.method.as_ref(), "x.ai/announcements/update");
+    assert_eq!(args.request.method.as_ref(), "deepseek-build/announcements/update");
     assert_eq!(
         *agent.last_emitted_announcements.borrow(),
         vec![ann("a")],
@@ -8975,22 +8975,22 @@ mod direct_hub_cloud_removed {
     }
     #[test]
     fn cloud_server_id_meta_is_hard_error() {
-        let meta = serde_json::json!({ "x.ai/cloud_server_id": "srv-123" });
+        let meta = serde_json::json!({ "deepseek-build/cloud_server_id": "srv-123" });
         let err = reject_direct_hub_cloud_meta(meta.as_object()).expect_err("must reject");
         assert_direct_hub_error(err);
     }
     #[test]
     fn cloud_server_id_null_still_present_is_hard_error() {
-        let meta = serde_json::json!({ "x.ai/cloud_server_id": null });
+        let meta = serde_json::json!({ "deepseek-build/cloud_server_id": null });
         let err = reject_direct_hub_cloud_meta(meta.as_object()).expect_err("must reject");
         assert_direct_hub_error(err);
     }
     #[test]
     fn cloud_server_id_with_gateway_meta_still_hard_error() {
         let meta = serde_json::json!({
-            "x.ai/cloud_server_id": "srv-legacy",
+            "deepseek-build/cloud_server_id": "srv-legacy",
             "envId": "env-1",
-            "x.ai/cloud_existing_workspace": {
+            "deepseek-build/cloud_existing_workspace": {
                 "server_id": "ws-1",
                 "cwd": "/workspace"
             }
@@ -9014,7 +9014,7 @@ mod direct_hub_cloud_removed {
         assert!(
             reject_direct_hub_cloud_meta(
                 serde_json::json!({
-                    "x.ai/cloud_existing_workspace": {
+                    "deepseek-build/cloud_existing_workspace": {
                         "server_id": "ws-1",
                         "cwd": "/workspace"
                     }
@@ -9094,7 +9094,7 @@ mod soft_default_settings_emit {
                 let xai_acp_lib::AcpClientMessage::ExtNotification(args) = msg else {
                     panic!("expected ExtNotification, got {msg:?}");
                 };
-                assert_eq!(args.request.method.as_ref(), "x.ai/settings/update");
+                assert_eq!(args.request.method.as_ref(), "deepseek-build/settings/update");
                 let params: serde_json::Value =
                     serde_json::from_str(args.request.params.get()).expect("parse params");
                 assert_eq!(

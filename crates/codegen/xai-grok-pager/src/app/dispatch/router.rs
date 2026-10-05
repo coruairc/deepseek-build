@@ -1170,7 +1170,7 @@ fn dispatch_inner(action: Action, app: &mut AppView) -> Vec<Effect> {
         Action::Logout => dispatch_logout(app),
         Action::SwitchAccount => dispatch_switch_account(app),
         Action::CheckSubscription => vec![Effect::CheckSubscription { verify: None }],
-        Action::OpenSupergrokUrl => vec![],
+        Action::OpendeepseekUrl => vec![],
         Action::RetryCreditLimitPrompt => super::billing::dispatch_retry_credit_limit_prompt(app),
         Action::OpenUrl(url) => {
             if url.starts_with("file://") {

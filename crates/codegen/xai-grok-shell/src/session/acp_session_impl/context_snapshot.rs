@@ -18,7 +18,7 @@ impl SessionActor {
         };
         let info = self.build_session_info().await;
         // `/tokenize-text` is the xAI tokenizer
-        // Always use the baked product default (grok-4.6 from `default_models.json`), not the session model
+        // Always use the baked product default (deepseek-4.6 from `default_models.json`), not the session model
         // The session model may be a third-party id the endpoint does not serve
         let model = crate::models::default_model();
         tracing::info!(model, "session_context_snapshot: tokenizing");
@@ -343,7 +343,7 @@ mod tests {
     fn info() -> SessionInfoData {
         SessionInfoData {
             agent_name: Some("grok-build".into()),
-            model: Some("grok-4".into()),
+            model: Some("deepseek-4".into()),
             model_display_name: None,
             resolved_model_id: None,
             model_fingerprint: None,
@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn tokenize_uses_baked_product_default_model() {
-        assert_eq!(crate::models::default_model(), "grok-4.6");
+        assert_eq!(crate::models::default_model(), "deepseek-4.6");
     }
 
     #[test]
@@ -449,7 +449,7 @@ mod tests {
             },
         );
         assert_eq!(ev.session_id, "s1");
-        assert_eq!(ev.model_id, "grok-4");
+        assert_eq!(ev.model_id, "deepseek-4");
         assert_eq!(ev.context_window, 1_000_000);
         assert_eq!(ev.used_tokens, 40_000);
         assert_eq!(ev.system_prompt_tokens, 111);

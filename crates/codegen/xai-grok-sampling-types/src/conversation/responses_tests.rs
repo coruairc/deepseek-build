@@ -9,11 +9,11 @@ fn test_conversation_request_to_responses_api() {
         ConversationItem::system("System prompt"),
         ConversationItem::user("User message"),
     ])
-    .with_model("grok-3")
+    .with_model("deepseek-3")
     .with_temperature(0.7);
 
     let responses_req: rs::CreateResponse = (&req).into();
-    assert_eq!(responses_req.model, Some("grok-3".to_string()));
+    assert_eq!(responses_req.model, Some("deepseek-3".to_string()));
     assert_eq!(responses_req.temperature, Some(0.7));
 
     let rs::InputParam::Items(items) = responses_req.input else {
@@ -203,7 +203,7 @@ fn test_responses_api_response_to_conversation_item() {
         instructions: None,
         max_output_tokens: None,
         metadata: None,
-        model: "grok-3".to_string(),
+        model: "deepseek-3".to_string(),
         object: "response".to_string(),
         output: vec![rs::OutputItem::Message(rs::OutputMessage {
             content: vec![rs::OutputMessageContent::OutputText(
@@ -245,7 +245,7 @@ fn test_responses_api_response_to_conversation_item() {
     let ConversationItem::Assistant(a) = &item else {
         panic!("Expected Assistant item");
     };
-    assert_eq!(a.model_id, Some("grok-3".to_string()));
+    assert_eq!(a.model_id, Some("deepseek-3".to_string()));
     assert_eq!(
         a.reasoning_effort, None,
         "no reasoning config on the response => no effort recorded"
@@ -264,7 +264,7 @@ fn test_responses_api_response_to_conversation_item() {
         instructions: None,
         max_output_tokens: None,
         metadata: None,
-        model: "grok-3".to_string(),
+        model: "deepseek-3".to_string(),
         object: "response".to_string(),
         output: vec![rs::OutputItem::FunctionCall(rs::FunctionToolCall {
             arguments: r#"{"path": "/bar.txt"}"#.to_string(),
@@ -323,7 +323,7 @@ fn test_response_reasoning_effort_stamped_on_assistant() {
         instructions: None,
         max_output_tokens: None,
         metadata: None,
-        model: "grok-3".to_string(),
+        model: "deepseek-3".to_string(),
         object: "response".to_string(),
         output: vec![],
         parallel_tool_calls: None,
@@ -492,7 +492,7 @@ fn test_responses_api_with_encrypted_reasoning() {
         instructions: None,
         max_output_tokens: None,
         metadata: None,
-        model: "grok-3".to_string(),
+        model: "deepseek-3".to_string(),
         object: "response".to_string(),
         output: vec![
             rs::OutputItem::Reasoning(rs::ReasoningItem {
@@ -581,7 +581,7 @@ fn test_responses_api_with_only_encrypted_reasoning() {
         instructions: None,
         max_output_tokens: None,
         metadata: None,
-        model: "grok-3".to_string(),
+        model: "deepseek-3".to_string(),
         object: "response".to_string(),
         output: vec![
             rs::OutputItem::Reasoning(rs::ReasoningItem {
@@ -658,7 +658,7 @@ fn test_encrypted_reasoning_included_in_responses_api_request() {
         ConversationItem::Assistant(AssistantItem {
             content: "The answer is 4.".into(),
             tool_calls: vec![],
-            model_id: Some("grok-3".to_string()),
+            model_id: Some("deepseek-3".to_string()),
             model_fingerprint: None,
             reasoning_effort: None,
         }),
@@ -982,7 +982,7 @@ fn test_transform_cwd_rewrites_reasoning_sibling() {
         ConversationItem::Assistant(AssistantItem {
             content: format!("I edited {worktree}/src/main.rs").into(),
             tool_calls: vec![],
-            model_id: Some("grok-3".to_string()),
+            model_id: Some("deepseek-3".to_string()),
             model_fingerprint: None,
             reasoning_effort: None,
         }),
@@ -1111,7 +1111,7 @@ fn responses_api_conversion_preserves_model_fingerprint() {
         instructions: None,
         max_output_tokens: None,
         metadata: Some(metadata),
-        model: "grok-4.5".into(),
+        model: "deepseek-4.5".into(),
         object: "response".into(),
         output: vec![rs::OutputItem::Message(rs::OutputMessage {
             content: vec![rs::OutputMessageContent::OutputText(
@@ -1151,7 +1151,7 @@ fn responses_api_conversion_preserves_model_fingerprint() {
         .expect("response produces at least a trailing Assistant");
     assert_matches!(item, ConversationItem::Assistant(ref a) => {
         assert_eq!(a.model_fingerprint.as_deref(), Some("fp_abc123"));
-        assert_eq!(a.model_id.as_deref(), Some("grok-4.5"));
+        assert_eq!(a.model_id.as_deref(), Some("deepseek-4.5"));
         assert_eq!(a.content.as_ref(), "hello");
     });
 }

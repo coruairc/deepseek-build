@@ -611,7 +611,7 @@ pub struct RemoteSettings {
     pub image_description_model: Option<String>,
     /// Server-side pin for the next-prompt suggestion model (tab-autocomplete ghost text), from the `grok_build_settings` remote settings flag.
     /// It sits below env (`GROK_PROMPT_SUGGESTIONS_MODEL`) and `[models] prompt_suggestion` in config.toml.
-    /// It sits above the client hint and the built-in `grok-4.6` default.
+    /// It sits above the client hint and the built-in `deepseek-4.6` default.
     /// When the effective model is not in the shell's model catalog the suggestion request is skipped entirely; the session model is never used instead.
     /// See `ModelOverrideConfig::resolve` and `handle_suggest_prompt`.
     #[serde(default)]
@@ -729,7 +729,7 @@ pub struct RemoteSettings {
     pub sharing_enabled: Option<bool>,
     /// Voice mode (STT dictation). The client default is on when absent.
     /// `Some(false)` is a remote kill switch; `Some(true)` forces on.
-    /// `GROK_VOICE_MODE` overrides it locally. The free-tier SuperGrok upsell is a separate client tier gate.
+    /// `GROK_VOICE_MODE` overrides it locally. The free-tier deepseek upsell is a separate client tier gate.
     #[serde(default)]
     pub voice_mode_enabled: Option<bool>,
     /// Consolidated panel dock above the prompt. Off when absent.
@@ -814,7 +814,7 @@ pub struct RemoteSettings {
     #[serde(default)]
     pub permission_mode: Option<String>,
     /// User's subscription tier from remote settings `grok_build_access_gate`.
-    /// E.g. "free", "premium", "supergrok", "supergrok_heavy".
+    /// E.g. "free", "premium", "deepseek", "deepseek_heavy".
     /// It is stamped on analytics events and the user profile for filtering.
     #[serde(default)]
     pub subscription_tier: Option<String>,
@@ -831,12 +831,12 @@ pub struct RemoteSettings {
     /// When `None` or `Some(false)`, sessions are shown in a flat list.
     #[serde(default)]
     pub session_picker_grouped: Option<bool>,
-    /// Whether the user is allowed to use Grok Build. Remote settings `grok_build_access_gate` targeting rules set it.
+    /// Whether the user is allowed to use deepseek-build. Remote settings `grok_build_access_gate` targeting rules set it.
     /// `None` means no server response yet (the client uses its own fallback check); `Some(false)` means blocked.
     #[serde(default)]
     pub allow_access: Option<bool>,
     /// User-friendly display name for the current subscription tier
-    /// (e.g. "SuperGrok", "X Premium+", "Free", "API Key"). Set by CCP
+    /// (e.g. "deepseek", "X Premium+", "Free", "API Key"). Set by CCP
     /// from the JWT tier claim (OAuth) or credential kind (API key).
     /// Free/Invalid OAuth → `"Free"`; API keys → `"API Key"` (never free).
     #[serde(default)]
@@ -1061,7 +1061,7 @@ where
 /// The pair is the atomic configurable unit because a model is only guaranteed to work with a compatible harness (cursor vs grok-build).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GoalRoleModel {
-    /// Model id, e.g. "grok-4". It resolves against available models at spawn time; unknown or unauthorized fails open to the current model.
+    /// Model id, e.g. "deepseek-4". It resolves against available models at spawn time; unknown or unauthorized fails open to the current model.
     pub model: String,
     /// Harness `agent_type` (e.g. "cursor", "grok-build-plan") whose `AgentDefinition` decides the role subagent's harness flavor.
     /// The flavor (system prompt and cursor-vs-grok-build toolset) applies regardless of the session or parent agent.

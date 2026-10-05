@@ -42,15 +42,15 @@ fn test_auth_manager() -> Arc<xai_grok_login::AuthManager> {
 #[test]
 fn parse_openai_format_uses_id_field() {
     let value = serde_json::json!({
-        "id": "grok-3",
+        "id": "deepseek-3",
         "object": "model",
         "owned_by": "xai",
         "context_window": 131072
     });
     let result = parse_remote_model_value(&value, "https://api.deepseek.com/v1").unwrap();
-    assert_eq!(result.model, "grok-3");
+    assert_eq!(result.model, "deepseek-3");
     assert_eq!(result.base_url, "https://api.deepseek.com/v1");
-    assert_eq!(result.name.as_deref(), Some("grok-3"));
+    assert_eq!(result.name.as_deref(), Some("deepseek-3"));
 }
 #[test]
 fn parse_model_field_takes_priority_over_id() {
@@ -67,14 +67,14 @@ fn parse_model_field_takes_priority_over_id() {
 #[test]
 fn parse_reads_rate_limit_retry_threshold() {
     let value = serde_json::json!({
-        "model": "grok-4.5",
+        "model": "deepseek-4.5",
         "context_window": 1_000_000,
         "rateLimitRetryThreshold": 6
     });
     let result = parse_remote_model_value(&value, "https://default.url").unwrap();
     assert_eq!(result.rate_limit_retry_threshold, Some(6));
     let value = serde_json::json!({
-        "model": "grok-4.5",
+        "model": "deepseek-4.5",
         "context_window": 1_000_000,
         "rate_limit_retry_threshold": 7
     });
@@ -116,7 +116,7 @@ fn parse_keeps_the_model_when_its_notice_is_malformed() {
 #[test]
 fn parse_reads_model_family() {
     let value = serde_json::json!({
-        "model": "grok-4.5",
+        "model": "deepseek-4.5",
         "context_window": 1_000_000,
         "model_family": "xai"
     });
@@ -137,7 +137,7 @@ fn parse_reads_model_family() {
 fn parse_reads_reasoning_effort_fields() {
     use xai_grok_sampling_types::ReasoningEffort;
     let value = serde_json::json!({
-        "model": "grok-4.5",
+        "model": "deepseek-4.5",
         "context_window": 1_000_000,
         "supports_reasoning_effort": true,
         "reasoning_effort": "high"
@@ -146,7 +146,7 @@ fn parse_reads_reasoning_effort_fields() {
     assert!(result.supports_reasoning_effort);
     assert_eq!(result.reasoning_effort, Some(ReasoningEffort::High));
     let value = serde_json::json!({
-        "model": "grok-4.5",
+        "model": "deepseek-4.5",
         "contextWindow": 1_000_000,
         "supportsReasoningEffort": true,
         "reasoningEffort": "xhigh"
@@ -163,7 +163,7 @@ fn parse_reads_reasoning_effort_fields() {
 fn parse_reads_reasoning_efforts_list() {
     use xai_grok_sampling_types::ReasoningEffort;
     let value = serde_json::json!({
-        "model": "grok-4.5",
+        "model": "deepseek-4.5",
         "context_window": 1_000_000,
         "reasoning_efforts": [
             { "id": "deep", "value": "xhigh", "label": "Deep" },
@@ -217,7 +217,7 @@ fn parse_reads_reasoning_efforts_from_capabilities() {
             default,
         };
     let value = serde_json::json!({
-        "id": "grok-4.6",
+        "id": "deepseek-4.6",
         "object": "model",
         "owned_by": "xai",
         "capabilities": {
@@ -237,7 +237,7 @@ fn parse_reads_reasoning_efforts_from_capabilities() {
     );
     assert!(!result.reasoning_effort_server_default);
     let value = serde_json::json!({
-        "id": "grok-4.6",
+        "id": "deepseek-4.6",
         "reasoning_efforts": ["low"],
         "capabilities": { "reasoning_effort": ["high"], "default_reasoning_effort": "high" }
     });
@@ -247,7 +247,7 @@ fn parse_reads_reasoning_efforts_from_capabilities() {
         vec![option("low", ReasoningEffort::Low, "Low", false)]
     );
     let value = serde_json::json!({
-        "id": "grok-4.6",
+        "id": "deepseek-4.6",
         "reasoning_efforts": [{ "value": "quantum" }],
         "capabilities": { "reasoning_effort": ["high"], "default_reasoning_effort": "high" }
     });
@@ -257,7 +257,7 @@ fn parse_reads_reasoning_efforts_from_capabilities() {
         vec![option("high", ReasoningEffort::High, "High", true)]
     );
     let value = serde_json::json!({
-        "id": "grok-4.6",
+        "id": "deepseek-4.6",
         "capabilities": { "reasoning_effort": ["low", "quantum", "high"] }
     });
     let result = parse_remote_model_value(&value, "https://default.url").unwrap();
@@ -270,7 +270,7 @@ fn parse_reads_reasoning_efforts_from_capabilities() {
     );
     assert!(result.reasoning_effort_server_default);
     let value = serde_json::json!({
-        "id": "grok-4.6",
+        "id": "deepseek-4.6",
         "capabilities": { "reasoning_effort": ["low", "high"], "default_reasoning_effort": "medium" }
     });
     let result = parse_remote_model_value(&value, "https://default.url").unwrap();
@@ -300,7 +300,7 @@ fn parse_remote_model_value_context_window_is_default_and_context_windows_are_ch
     let snake = serde_json::json!({ "context_windows": [500_000, 256_000] });
     let meta = serde_json::json!({ "_meta": { "contextWindows": [500_000, 256_000] } });
     for listed in [camel, snake, meta] {
-        let mut value = serde_json::json!({ "model": "grok-4.7", "context_window": 256_000 });
+        let mut value = serde_json::json!({ "model": "deepseek-4.7", "context_window": 256_000 });
         value
             .as_object_mut()
             .unwrap()
@@ -319,7 +319,7 @@ fn parse_remote_model_value_bad_context_windows_fall_back_to_context_window() {
         serde_json::json!(500_000),
     ] {
         let value = serde_json::json!({
-            "model": "grok-4",
+            "model": "deepseek-4",
             "context_window": 300_000,
             "context_windows": bad.clone(),
         });
@@ -327,13 +327,13 @@ fn parse_remote_model_value_bad_context_windows_fall_back_to_context_window() {
         assert_eq!(result.context_window.get(), 300_000, "{bad}");
         assert!(result.context_windows.is_empty(), "{bad}");
     }
-    let value = serde_json::json!({ "model": "grok-4", "context_window": 0 });
+    let value = serde_json::json!({ "model": "deepseek-4", "context_window": 0 });
     assert!(parse_remote_model_value(&value, "https://default.url").is_none());
 }
 #[test]
 fn parse_remote_model_value_no_laziness_detector_block_yields_default() {
     let value = serde_json::json!({
-        "model": "grok-4",
+        "model": "deepseek-4",
         "context_window": 256_000,
     });
     let result = parse_remote_model_value(&value, "https://default.url").unwrap();
@@ -345,7 +345,7 @@ fn parse_remote_model_value_no_laziness_detector_block_yields_default() {
 #[test]
 fn parse_remote_model_value_parses_camelcase_key() {
     let value = serde_json::json!({
-        "model": "grok-4",
+        "model": "deepseek-4",
         "context_window": 256_000,
         "lazinessDetector": {
             "enabled": true,
@@ -367,7 +367,7 @@ fn parse_remote_model_value_parses_camelcase_key() {
 #[test]
 fn parse_remote_model_value_parses_snake_case_laziness_detector() {
     let value = serde_json::json!({
-        "model": "grok-4",
+        "model": "deepseek-4",
         "context_window": 256_000,
         "laziness_detector": {
             "enabled": true,
@@ -389,7 +389,7 @@ fn parse_remote_model_value_parses_snake_case_laziness_detector() {
 #[test]
 fn parse_remote_model_value_parses_meta_laziness_detector() {
     let value = serde_json::json!({
-        "model": "grok-4",
+        "model": "deepseek-4",
         "context_window": 256_000,
         "_meta": {
             "lazinessDetector": {
@@ -413,7 +413,7 @@ fn parse_remote_model_value_parses_meta_laziness_detector() {
 #[test]
 fn parse_remote_model_value_partial_block_uses_field_defaults() {
     let value = serde_json::json!({
-        "model": "grok-4",
+        "model": "deepseek-4",
         "context_window": 256_000,
         "lazinessDetector": {
             "enabled": true,
@@ -432,7 +432,7 @@ fn parse_remote_model_value_partial_block_uses_field_defaults() {
 #[test]
 fn parse_remote_model_value_malformed_block_falls_back_to_default() {
     let value = serde_json::json!({
-        "model": "grok-4",
+        "model": "deepseek-4",
         "context_window": 256_000,
         "lazinessDetector": {
             "enabled": true,
@@ -448,7 +448,7 @@ fn parse_remote_model_value_malformed_block_falls_back_to_default() {
 #[test]
 fn parse_remote_model_value_non_object_value_falls_back_to_default() {
     let value = serde_json::json!({
-        "model": "grok-4",
+        "model": "deepseek-4",
         "context_window": 256_000,
         "lazinessDetector": "not-an-object",
     });
@@ -461,7 +461,7 @@ fn parse_remote_model_value_non_object_value_falls_back_to_default() {
 #[test]
 fn parse_remote_model_value_top_level_camelcase_wins_over_snake_case() {
     let value = serde_json::json!({
-        "model": "grok-4",
+        "model": "deepseek-4",
         "context_window": 256_000,
         "lazinessDetector": {
             "enabled": true,
@@ -487,7 +487,7 @@ fn parse_remote_model_value_top_level_camelcase_wins_over_snake_case() {
 #[test]
 fn parse_remote_model_value_parses_include_reasoning_under_camelcase_wrapper() {
     let value = serde_json::json!({
-        "model": "grok-4",
+        "model": "deepseek-4",
         "context_window": 256_000,
         "lazinessDetector": {
             "enabled": true,
@@ -500,7 +500,7 @@ fn parse_remote_model_value_parses_include_reasoning_under_camelcase_wrapper() {
 #[test]
 fn parse_remote_model_value_parses_include_reasoning_under_snake_case_wrapper() {
     let value = serde_json::json!({
-        "model": "grok-4",
+        "model": "deepseek-4",
         "context_window": 256_000,
         "laziness_detector": {
             "enabled": true,
@@ -513,7 +513,7 @@ fn parse_remote_model_value_parses_include_reasoning_under_snake_case_wrapper() 
 #[test]
 fn parse_remote_model_value_omitted_include_reasoning_defaults_to_none() {
     let value = serde_json::json!({
-        "model": "grok-4",
+        "model": "deepseek-4",
         "context_window": 256_000,
         "lazinessDetector": {
             "enabled": true,
@@ -529,7 +529,7 @@ fn parse_remote_model_value_omitted_include_reasoning_defaults_to_none() {
 #[test]
 fn parse_remote_model_value_top_level_wins_over_meta() {
     let value = serde_json::json!({
-        "model": "grok-4",
+        "model": "deepseek-4",
         "context_window": 256_000,
         "lazinessDetector": {
             "enabled": true,

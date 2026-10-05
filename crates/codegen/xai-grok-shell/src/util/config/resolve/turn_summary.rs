@@ -1,7 +1,7 @@
 use toml::Value as TomlValue;
 use xai_grok_sampling_types::ReasoningEffort;
 
-const TURN_SUMMARY_MODEL_DEFAULT: &str = "grok-4.5";
+const TURN_SUMMARY_MODEL_DEFAULT: &str = "deepseek-4.5";
 const TURN_SUMMARY_REASONING_EFFORT_DEFAULT: ReasoningEffort = ReasoningEffort::Low;
 /// Pasted logs or files can make the user message huge; its opening carries the ask.
 const TURN_SUMMARY_USER_MESSAGE_MAX_CHARS_DEFAULT: usize = 4_000;
@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn local_fields_win_over_remote_and_defaults_fill_the_rest() {
         let local: TurnSummaryConfig = toml::from_str::<TomlValue>(
-            "[turn_summary]\nmodel = \"grok-4.20\"\ntimeout_ms = 999999",
+            "[turn_summary]\nmodel = \"deepseek-4.20\"\ntimeout_ms = 999999",
         )
         .ok()
         .and_then(|v| turn_summary_config_from_toml(Some(&v)))
@@ -154,7 +154,7 @@ mod tests {
         }))
         .unwrap();
         let settings = merge_turn_summary_config(local, remote).settings();
-        assert_eq!(settings.model, "grok-4.20");
+        assert_eq!(settings.model, "deepseek-4.20");
         assert_eq!(settings.reasoning_effort, ReasoningEffort::Medium);
         assert_eq!(
             settings.timeout,

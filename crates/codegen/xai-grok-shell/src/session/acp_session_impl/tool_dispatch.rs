@@ -227,7 +227,7 @@ impl SessionActor {
             is_background: false,
             block_until_ms: None,
         });
-        // Bash mode has no model-issued wire name; resolve the toolset's execute tool by kind so the x.ai/tool identity still stamps
+        // Bash mode has no model-issued wire name; resolve the toolset's execute tool by kind so the deepseek-build/tool identity still stamps
         let bash_marker = serde_json::json!({"bash_mode": true}).as_object().cloned();
         let exec_wire = {
             let agent = self.agent.borrow();

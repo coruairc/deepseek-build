@@ -1,4 +1,4 @@
-//! Immediate placement made grok-4.7 reason more in step replay; one call later it reasoned
+//! Immediate placement made deepseek-4.7 reason more in step replay; one call later it reasoned
 //! about a third less, so `delay` defaults to 1.
 
 use std::collections::VecDeque;

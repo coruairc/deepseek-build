@@ -1415,7 +1415,7 @@ fn analyze_input(text: &str, cursor: usize) -> Option<SlashInput> {
 
 /// Parsed slash command invocation.
 pub struct SlashInvocation<'a> {
-    /// Command token (e.g., "model" for "/model grok-4").
+    /// Command token (e.g., "model" for "/model deepseek-4").
     pub token: &'a str,
     /// Everything after the command token, trimmed on the left.
     pub args: &'a str,
@@ -1736,7 +1736,7 @@ mod tests {
         // /model has takes_args=true, args_required=true.
         assert!(!is_command_complete("/model", &reg));
         assert!(!is_command_complete("/model ", &reg));
-        assert!(is_command_complete("/model grok-4", &reg));
+        assert!(is_command_complete("/model deepseek-4", &reg));
     }
 
     #[test]
@@ -1977,8 +1977,8 @@ mod tests {
         let state = SlashState::default();
         let models = ModelState::default();
 
-        // Cursor 3 in "/mod grok-4" clamps the query to "mo".
-        ctrl.refresh(&state, "/mod grok-4", 3, &models);
+        // Cursor 3 in "/mod deepseek-4" clamps the query to "mo".
+        ctrl.refresh(&state, "/mod deepseek-4", 3, &models);
         let snapshot = state.snapshot();
         assert!(snapshot.open);
         assert_eq!(snapshot.query, "mo");
@@ -1996,7 +1996,7 @@ mod tests {
         let state = SlashState::default();
         let models = ModelState::default();
 
-        ctrl.refresh(&state, "/model grok-4", 3, &models);
+        ctrl.refresh(&state, "/model deepseek-4", 3, &models);
         let snapshot = state.snapshot();
         assert!(snapshot.open);
         assert!(snapshot.command_recognized);
@@ -3599,7 +3599,7 @@ mod tests {
         let mut ctrl = SlashController::with_builtins(std::path::PathBuf::from("."));
         let state = SlashState::default();
         let mut models = ModelState::default();
-        let id = acp::ModelId::new(Arc::from("grok-4.7"));
+        let id = acp::ModelId::new(Arc::from("deepseek-4.7"));
         models.available.insert(
             id.clone(),
             acp::ModelInfo::new(id, "Grok 4.7").meta(
@@ -3609,23 +3609,23 @@ mod tests {
             ),
         );
 
-        // `grok-4.7` is not a subsequence of `Grok 4.7` (the hyphen). Rows must carry the id.
-        let text = "/model grok-4.7 ";
+        // `deepseek-4.7` is not a subsequence of `Grok 4.7` (the hyphen). Rows must carry the id.
+        let text = "/model deepseek-4.7 ";
         ctrl.refresh(&state, text, text.len(), &models);
         let snap = state.snapshot();
         assert!(snap.open, "effort menu closed for a catalog id");
         assert_eq!(
-            Some("grok-4.7 high"),
+            Some("deepseek-4.7 high"),
             snap.selection().map(|row| row.insert_text.as_str())
         );
 
-        let text = "/model grok-4.7 hi";
+        let text = "/model deepseek-4.7 hi";
         ctrl.refresh(&state, text, text.len(), &models);
         let snap = state.snapshot();
         assert!(
             snap.matches
                 .iter()
-                .any(|row| row.insert_text == "grok-4.7 high"),
+                .any(|row| row.insert_text == "deepseek-4.7 high"),
             "id prefix filtered out the effort rows: {:?}",
             snap.matches
                 .iter()

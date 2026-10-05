@@ -82,29 +82,29 @@ async fn renamed_grep_keeps_its_output_after_a_later_model_request() {
                 .prepare_tool_call(
                     search_call("prep", file.to_str().unwrap()),
                     &mut deferred,
-                    Some("grok-4.6"),
+                    Some("deepseek-4.6"),
                 )
                 .await
                 .expect("prepare")
                 .expect("search_code prepares");
             assert_eq!(prepared.tool_id, "GrokBuild:grep");
-            assert_eq!(prepared.model_id.as_deref(), Some("grok-4.6"));
+            assert_eq!(prepared.model_id.as_deref(), Some("deepseek-4.6"));
             assert_ne!(prepared.invocation_id, prepared.call_id);
             let mut config = actor
                 .chat_state_handle
                 .get_sampling_config()
                 .await
                 .expect("sampling config");
-            config.model = "grok-4.5".into();
+            config.model = "deepseek-4.5".into();
             actor
                 .chat_state_handle
                 .update_sampling_config(config.clone());
-            assert_eq!(prepared.model_id.as_deref(), Some("grok-4.6"));
+            assert_eq!(prepared.model_id.as_deref(), Some("deepseek-4.6"));
 
             actor
                 .execute_tool_calls(
                     vec![search_call("grep-1", file.to_str().unwrap())],
-                    Some("grok-4.6".into()),
+                    Some("deepseek-4.6".into()),
                 )
                 .await
                 .expect("execute");
@@ -124,7 +124,7 @@ async fn renamed_grep_keeps_its_output_after_a_later_model_request() {
                 .build_request(Vec::new(), None, false, None, "conv".into(), "req".into())
                 .await
                 .expect("later request");
-            assert_eq!(request.model.as_deref(), Some("grok-4.5"));
+            assert_eq!(request.model.as_deref(), Some("deepseek-4.5"));
             let later = request
                 .items
                 .iter()

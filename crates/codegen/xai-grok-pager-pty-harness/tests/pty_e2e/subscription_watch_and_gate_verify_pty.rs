@@ -8,10 +8,10 @@ use super::common::*;
 const GATE_MSG: &str = "ZZSUBGATEMSG";
 
 /// A tier in the shell's `QUALIFYING_TIERS` list.
-const PAID_TIER: &str = "SuperGrokPro";
+const PAID_TIER: &str = "deepseekPro";
 
 /// Display name delivered via `/settings` `subscription_tier_display`.
-const PAID_TIER_DISPLAY: &str = "SuperGrok Pro";
+const PAID_TIER_DISPLAY: &str = "deepseek Pro";
 
 /// Count of live subscription checks the client made against the mock (`GET /v1/user?include=subscription`).
 /// Plain `/v1/user` enrichment fetches are deliberately excluded.
@@ -208,7 +208,7 @@ fn spawn_subscription_session(
 async fn subscription_watch_polls_free_tier_then_goes_dormant_after_upgrade() {
     // Start free-targeted (no paid-only model); swap after upgrade.
     // OIDC mock is started only after free-phase polling so early refresh still connection-refuses (keeps the free watch path hermetic)
-    let content = ContentController::start_with_models(vec![MockModel::new("grok-3")])
+    let content = ContentController::start_with_models(vec![MockModel::new("deepseek-3")])
         .await
         .expect("start content");
     content.set_response(format!("{MOCK_RESPONSE_SENTINEL} watch cadence."));
@@ -239,7 +239,7 @@ async fn subscription_watch_polls_free_tier_then_goes_dormant_after_upgrade() {
         "subscription_tier_display": PAID_TIER_DISPLAY,
     }));
     content.server().set_models(vec![
-        MockModel::new("grok-3"),
+        MockModel::new("deepseek-3"),
         MockModel::new(PAID_ONLY_MODEL),
     ]);
     let models_before = models_count(&content);
@@ -301,7 +301,7 @@ async fn startup_gate_shows_paywall_for_free_user_after_live_check() {
     content.server().set_settings(json!({
         "allow_access": false,
         "gate_message": GATE_MSG,
-        "gate_url": "https://api.deepseek.com/supergrok?referrer=grok-build",
+        "gate_url": "https://api.deepseek.com/deepseek?referrer=grok-build",
         "gate_label": "Subscribe",
     }));
 

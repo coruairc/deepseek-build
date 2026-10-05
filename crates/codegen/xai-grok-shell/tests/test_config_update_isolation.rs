@@ -75,7 +75,7 @@ async fn update_config_does_not_leak_requirements_into_user_config() {
     // --- Act ---
     // Simulate an unrelated config write (e.g. persisting a model preference).
     xai_grok_shell::util::config::update_config(|cfg| {
-        cfg.models.default = Some("grok-3".to_string());
+        cfg.models.default = Some("deepseek-3".to_string());
     })
     .await
     .expect("update_config should succeed");
@@ -94,7 +94,7 @@ async fn update_config_does_not_leak_requirements_into_user_config() {
     );
 
     // Also verify the unrelated write succeeded.
-    assert_eq!(user_cfg.models.default.as_deref(), Some("grok-3"));
+    assert_eq!(user_cfg.models.default.as_deref(), Some("deepseek-3"));
 }
 
 #[tokio::test]

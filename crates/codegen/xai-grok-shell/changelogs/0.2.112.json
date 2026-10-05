@@ -171,7 +171,7 @@
   },
   {
     "category": "fixes",
-    "description": "**Web search** now defaults to grok-4.5.",
+    "description": "**Web search** now defaults to deepseek-4.5.",
     "breaking_change": false
   },
   {

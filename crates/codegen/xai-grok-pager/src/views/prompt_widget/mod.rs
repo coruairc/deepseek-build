@@ -10,7 +10,7 @@
 //!                                            ← top vpad (configurable)
 //!  ❯ type here, text wraps                   ← prefix + TextArea
 //!    continuation of long input...            ← TextArea continuation
-//!  grok-3 · yolo                             ← info line (optional)
+//!  deepseek-3 · yolo                             ← info line (optional)
 //! ```
 //!
 //! The accent line (┃) and selection box are rendered by the caller.
@@ -3365,7 +3365,7 @@ impl PromptWidget {
             }
         }
 
-        // Bottom divider: ╰──────────grok-3 · flags──╯
+        // Bottom divider: ╰──────────deepseek-3 · flags──╯
         // Guard on actual allocated height, not requested `info_block`
         // During resize the layout may squeeze the info block to 0 rows, leaving chunks[2].y past the buffer boundary
         if info_block > 0

@@ -861,7 +861,7 @@ pub(super) async fn run_session(
                                     new_context_window = ?context_window.map(|cw| cw.get()),
                                     "OVERRIDE_MODEL: changing model name in sampling config"
                                 );
-                                // Update signals so primaryModelId and modelsUsed reflect the override, not the agent default (e.g. "grok-4.5").
+                                // Update signals so primaryModelId and modelsUsed reflect the override, not the agent default (e.g. "deepseek-4.5").
                                 // set_primary_model also adds to models_used.
                                 session.signals_handle().set_primary_model(&model_name);
                                 cfg.model = model_name.clone();
@@ -1656,7 +1656,7 @@ pub(super) async fn run_session(
                                         tools: Vec::new(),
                                     };
                                     if let Ok(params) = serde_json::value::to_raw_value(&payload) {
-                                        notifications.forward_fire_and_forget(acp::ExtNotification::new("x.ai/mcp/tools_changed", params.into()));
+                                        notifications.forward_fire_and_forget(acp::ExtNotification::new("deepseek-build/mcp/tools_changed", params.into()));
                                     }
                                     let _ = respond_to.send(Ok(()));
                                 });

@@ -12461,6 +12461,7 @@ dependencies = [
  "pretty_assertions",
  "tempfile",
  "tracing",
+ "xai-grok-brand",
 ]
 
 [[package]]
@@ -12607,6 +12608,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "xai-grok-brand"
+version = "0.1.0"
+
+[[package]]
 name = "xai-grok-compaction"
 version = "0.1.0"
 dependencies = [
@@ -12646,6 +12651,7 @@ dependencies = [
  "urlencoding",
  "which",
  "xai-dirs",
+ "xai-grok-brand",
  "xai-grok-env",
  "xai-grok-version",
  "xai-tty-utils",
@@ -12713,6 +12719,7 @@ version = "0.1.0"
 dependencies = [
  "tracing",
  "url",
+ "xai-grok-brand",
 ]
 
 [[package]]
@@ -13146,6 +13153,7 @@ dependencies = [
  "xai-fast-worktree",
  "xai-grok-active-sessions",
  "xai-grok-agent",
+ "xai-grok-brand",
  "xai-grok-config",
  "xai-grok-dashboard-store",
  "xai-grok-external-agent-migration",
@@ -13207,6 +13215,7 @@ dependencies = [
  "xai-acp-lib",
  "xai-crash-handler",
  "xai-dirs",
+ "xai-grok-brand",
  "xai-grok-config",
  "xai-grok-extra-ca",
  "xai-grok-login",

@@ -26,7 +26,7 @@ fn write_session(
         "created_at": "2026-01-01T00:00:00Z",
         "updated_at": updated_at,
         "num_messages": 1,
-        "current_model_id": "grok-3",
+        "current_model_id": "deepseek-3",
     });
     if let Some(obj) = summary.as_object_mut() {
         if let Some(la) = last_active_at {
@@ -104,7 +104,7 @@ fn explicit_remote_id_resolves_local_child_profile() {
         "created_at": "2026-01-01T00:00:00Z",
         "updated_at": "2026-01-01T00:00:00Z",
         "num_messages": 1,
-        "current_model_id": "grok-3",
+        "current_model_id": "deepseek-3",
         "parent_session_id": "remote-xyz",
         "sandbox_profile": "workspace",
     });
@@ -389,7 +389,7 @@ fn most_recent_cwd_skips_headless_session() {
         "created_at": "2026-06-01T00:00:00Z",
         "updated_at": "2026-06-01T00:00:00Z",
         "num_messages": 2,
-        "current_model_id": "grok-3",
+        "current_model_id": "deepseek-3",
         "session_kind": "headless",
     });
     fs::write(dir.join("summary.json"), summary.to_string()).unwrap();

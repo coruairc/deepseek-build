@@ -8,7 +8,7 @@ use super::common::*;
 #[ignore]
 async fn reasoning_efforts_from_config_toml_menu() {
     let content = ContentController::start_with_models(vec![
-        MockModel::new("grok-4.5").with_supports_reasoning_effort(true),
+        MockModel::new("deepseek-4.5").with_supports_reasoning_effort(true),
     ])
     .await
     .expect("start content");
@@ -17,10 +17,10 @@ async fn reasoning_efforts_from_config_toml_menu() {
     // Seed `~/.grok/config.toml` with a per-model reasoning-effort menu.
     let grok_home = content.home().join(".grok");
     std::fs::create_dir_all(&grok_home).expect("create .grok");
-    // Quote the dotted model id: bare `[model.grok-4.5]` is TOML key-path syntax (model.grok-4.5), not the id "grok-4.5".
+    // Quote the dotted model id: bare `[model.deepseek-4.5]` is TOML key-path syntax (model.deepseek-4.5), not the id "deepseek-4.5".
     std::fs::write(
         grok_home.join("config.toml"),
-        "[model.\"grok-4.5\"]\nreasoning_efforts = [{ value = \"high\", label = \"ConfigHigh\" }]\n",
+        "[model.\"deepseek-4.5\"]\nreasoning_efforts = [{ value = \"high\", label = \"ConfigHigh\" }]\n",
     )
     .expect("write config.toml");
 

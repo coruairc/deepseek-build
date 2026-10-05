@@ -3,16 +3,16 @@
 use super::common::*;
 
 /// `/model <name> ` opens the effort sub-menu on the model's default effort, so a bare Enter picks that level.
-/// The current model is `grok-4.5` so the session's live effort (`xhigh`) cannot mask `grok-4.6`'s catalog default.
+/// The current model is `deepseek-4.5` so the session's live effort (`xhigh`) cannot mask `deepseek-4.6`'s catalog default.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore]
 async fn reasoning_efforts_model_menu_opens_on_default() {
     let content = ContentController::start_with_models(vec![
-        MockModel::new("grok-4.5")
+        MockModel::new("deepseek-4.5")
             .with_api_backend("responses")
             .with_supports_reasoning_effort(true)
             .with_reasoning_effort("xhigh"),
-        MockModel::new("grok-4.6")
+        MockModel::new("deepseek-4.6")
             .with_api_backend("responses")
             .with_supports_reasoning_effort(true)
             .with_reasoning_effort("high"),
@@ -39,7 +39,7 @@ async fn reasoning_efforts_model_menu_opens_on_default() {
         .expect("first turn rendered");
 
     // The trailing space chains into the effort sub-menu.
-    inject_keys_paced(&mut harness, b"/model grok-4.6 ");
+    inject_keys_paced(&mut harness, b"/model deepseek-4.6 ");
     harness
         .wait_for_text("Heavy reasoning", Duration::from_secs(10))
         .expect("effort sub-menu rendered");
@@ -48,7 +48,7 @@ async fn reasoning_efforts_model_menu_opens_on_default() {
         .expect("accept highlighted effort");
     harness
         .wait_for_text(
-            "Switched to grok-4.6 (high effort)",
+            "Switched to deepseek-4.6 (high effort)",
             Duration::from_secs(10),
         )
         .expect("switch landed on the default effort");
@@ -72,7 +72,7 @@ async fn reasoning_efforts_model_menu_opens_on_default() {
         panic!("no request body carries the second prompt\nbodies: {bodies:#?}");
     };
     assert_eq!(
-        Some("grok-4.6"),
+        Some("deepseek-4.6"),
         second_turn.pointer("/model").and_then(|v| v.as_str()),
         "second turn must run on the switched model\nbody: {second_turn:#?}"
     );

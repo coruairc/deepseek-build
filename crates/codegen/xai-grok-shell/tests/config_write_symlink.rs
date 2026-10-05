@@ -20,7 +20,7 @@ fn user_config_writers_write_through_a_symlink() {
 
     let dotfiles = tempfile::tempdir().expect("dotfiles");
     let target = dotfiles.path().join("config.toml");
-    std::fs::write(&target, "[models]\ndefault = \"grok-4.6\"\n").unwrap();
+    std::fs::write(&target, "[models]\ndefault = \"deepseek-4.6\"\n").unwrap();
     let link = xai_grok_shell::util::config::user_config_path();
     assert_eq!(link, grok_home.path().join("config.toml"));
     std::os::unix::fs::symlink(&target, &link).unwrap();
@@ -61,7 +61,7 @@ fn user_config_writers_write_through_a_symlink() {
             assert!(
                 written.contains("[mcp_servers.qa-echo]")
                     && written.contains("simple_mode = true")
-                    && written.contains("default = \"grok-4.6\""),
+                    && written.contains("default = \"deepseek-4.6\""),
                 "the link target must hold every edit: {written}"
             );
 

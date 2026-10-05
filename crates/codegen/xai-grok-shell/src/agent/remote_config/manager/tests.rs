@@ -131,7 +131,7 @@ async fn catalog_retry_recovers_after_endpoint_returns() {
     )
     .endpoint(Arc::new(RecoveringEndpoint {
         calls: calls.clone(),
-        catalog: make_prefetched(&["grok-4"]),
+        catalog: make_prefetched(&["deepseek-4"]),
     }))
     .build();
     assert!(!mgr.has_fetched_real_catalog());
@@ -148,7 +148,7 @@ async fn catalog_retry_recovers_after_endpoint_returns() {
         recovered,
         "catalog retry did not recover after the endpoint returned"
     );
-    assert!(mgr.models().contains_key("grok-4"));
+    assert!(mgr.models().contains_key("deepseek-4"));
     assert!(
         calls.load(Ordering::SeqCst) >= 2,
         "expected a failed attempt then a success",
@@ -166,7 +166,7 @@ async fn disk_cache_reload_applies_without_fetching() {
         IndexMap::new(),
         acp::ModelId::new("default"),
         auth_manager,
-        config_from_toml("[models]\ndefault = \"grok-4.5\""),
+        config_from_toml("[models]\ndefault = \"deepseek-4.5\""),
     )
     .endpoint(Arc::new(CountingEndpoint {
         calls: calls.clone(),
@@ -175,7 +175,7 @@ async fn disk_cache_reload_applies_without_fetching() {
     .build();
     let seeder = test_cache_manager(tmp.path());
     seeder.persist(
-        &make_prefetched(&["grok-4.5"]),
+        &make_prefetched(&["deepseek-4.5"]),
         Some("etag-x"),
         &mgr.cache_scope(),
         Utc::now(),
@@ -186,11 +186,11 @@ async fn disk_cache_reload_applies_without_fetching() {
         0,
         "the disk cache load must never hit the transport",
     );
-    assert!(mgr.models().contains_key("grok-4.5"));
+    assert!(mgr.models().contains_key("deepseek-4.5"));
     assert!(mgr.has_fetched_real_catalog());
     assert_eq!(
         mgr.current_model_id().0.as_ref(),
-        "grok-4.5",
+        "deepseek-4.5",
         "first real catalog from the disk cache must resolve the configured default",
     );
 }
@@ -225,7 +225,7 @@ async fn auth_refresh_watcher_refetches_on_notify() {
     )
     .endpoint(Arc::new(NotifyEndpoint {
         calls: calls.clone(),
-        catalog: make_prefetched(&["grok-4"]),
+        catalog: make_prefetched(&["deepseek-4"]),
     }))
     .build();
     assert!(!mgr.has_fetched_real_catalog());
@@ -241,7 +241,7 @@ async fn auth_refresh_watcher_refetches_on_notify() {
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     }
     assert!(updated, "watcher did not re-fetch the catalog on notify");
-    assert!(mgr.models().contains_key("grok-4"));
+    assert!(mgr.models().contains_key("deepseek-4"));
     assert!(calls.load(Ordering::SeqCst) >= 1);
 }
 #[tokio::test(start_paused = true)]
@@ -263,7 +263,7 @@ async fn slow_fetch_within_timeout_still_applies() {
     let mgr = cold_manager(
         config::Config::default(),
         Arc::new(SlowEndpoint {
-            catalog: make_prefetched(&["grok-4"]),
+            catalog: make_prefetched(&["deepseek-4"]),
             delay: crate::http::STARTUP_FETCH_TIMEOUT / 2,
         }),
     );
@@ -272,7 +272,7 @@ async fn slow_fetch_within_timeout_still_applies() {
         mgr.has_fetched_real_catalog(),
         "a fetch within the timeout must apply, not degrade",
     );
-    assert!(mgr.models().contains_key("grok-4"));
+    assert!(mgr.models().contains_key("deepseek-4"));
 }
 #[tokio::test(start_paused = true)]
 async fn etag_refresh_is_bounded_and_single_flighted() {
@@ -336,7 +336,7 @@ async fn first_catalog_wait_unblocks_on_fetch_and_skips_dead_dwell() {
     let mgr = cold_manager(
         config_from_toml("[endpoints]\ndeployment_key = \"deploy-key\""),
         Arc::new(SlowEndpoint {
-            catalog: make_prefetched(&["grok-4"]),
+            catalog: make_prefetched(&["deepseek-4"]),
             delay: crate::http::STARTUP_FETCH_TIMEOUT / 2,
         }),
     );
@@ -358,7 +358,7 @@ async fn first_catalog_wait_unblocks_on_fetch_and_skips_dead_dwell() {
             .await,
         "the wait must observe the completed fetch",
     );
-    assert!(mgr.models().contains_key("grok-4"));
+    assert!(mgr.models().contains_key("deepseek-4"));
     let start = tokio::time::Instant::now();
     assert!(
         mgr.wait_for_first_catalog(/*remote_fetch_enabled*/ true)
@@ -415,7 +415,7 @@ async fn first_catalog_wait_observes_inline_fetch() {
     let mgr = cold_manager(
         config_from_toml("[endpoints]\ndeployment_key = \"deploy-key\""),
         Arc::new(SlowEndpoint {
-            catalog: make_prefetched(&["grok-4"]),
+            catalog: make_prefetched(&["deepseek-4"]),
             delay: crate::http::STARTUP_FETCH_TIMEOUT / 2,
         }),
     );
@@ -555,14 +555,14 @@ fn validate_selectable_rejects_bad_allowlists() {
     let excluded = config_from_toml(
         r#"
             [models]
-            default = "grok-3"
-            allowed_models = ["grok-4*"]
-            [model.grok-3]
-            model = "grok-3"
+            default = "deepseek-3"
+            allowed_models = ["deepseek-4*"]
+            [model.deepseek-3]
+            model = "deepseek-3"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
-            [model.grok-4]
-            model = "grok-4"
+            [model.deepseek-4]
+            model = "deepseek-4"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
@@ -571,14 +571,14 @@ fn validate_selectable_rejects_bad_allowlists() {
     assert!(
         validate_selectable(&excluded, &catalog)
             .unwrap_err()
-            .contains("grok-3")
+            .contains("deepseek-3")
     );
     let zero = config_from_toml(
         r#"
             [models]
             allowed_models = ["nomatch-*"]
-            [model.grok-4]
-            model = "grok-4"
+            [model.deepseek-4]
+            model = "deepseek-4"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
@@ -611,12 +611,12 @@ fn set_session_model_fleet_deny_uses_organization_message() {
     let raw: toml::Value = toml::from_str(
         r#"
             [models]
-            [model.grok-3]
-            model = "grok-3"
+            [model.deepseek-3]
+            model = "deepseek-3"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
-            [model.grok-4]
-            model = "grok-4"
+            [model.deepseek-4]
+            model = "deepseek-4"
             base_url = "https://api.deepseek.com/v1"
             context_window = 256000
             "#,
@@ -624,12 +624,12 @@ fn set_session_model_fleet_deny_uses_organization_message() {
     .unwrap();
     let mut cfg = config::Config::new_from_toml_cfg(&raw).unwrap();
     cfg.requirements.allowed_models.pin(
-        crate::agent::config::AllowlistPin::List(vec!["grok-4".into()]),
+        crate::agent::config::AllowlistPin::List(vec!["deepseek-4".into()]),
         crate::config::RequirementSource::Unknown,
     );
     let catalog = resolve_model_catalog(&cfg, None);
-    let Some(grok3) = catalog.get("grok-3") else {
-        panic!("expected grok-3: {catalog:?}");
+    let Some(grok3) = catalog.get("deepseek-3") else {
+        panic!("expected deepseek-3: {catalog:?}");
     };
     assert!(!grok3.info.user_selectable);
     let msg = allowlist_denied_message(&cfg);
@@ -666,7 +666,7 @@ async fn set_current_model_id_change_fires_watch_to_all_subscribers() {
         !same_id_ticked,
         "set_current_model_id(same id) must NOT bump the watch generation",
     );
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     tokio::time::timeout(std::time::Duration::from_millis(100), rx_a.changed())
         .await
         .expect("rx_a saw the switch")
@@ -683,20 +683,20 @@ async fn set_current_model_id_change_fires_watch_to_all_subscribers() {
 async fn model_switch_generation_snapshot_reflects_current_state() {
     let mgr = test_manager();
     let start = mgr.model_switch_generation();
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     assert_eq!(mgr.model_switch_generation(), start + 1);
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     assert_eq!(mgr.model_switch_generation(), start + 1);
-    mgr.set_current_model_id(acp::ModelId::new("grok-3"));
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-3"));
     assert_eq!(mgr.model_switch_generation(), start + 2);
 }
 #[test]
 fn first_catalog_reselect_bumps_model_switch_watch() {
     let mgr = test_manager();
     let start = mgr.model_switch_generation();
-    let cfg = config_from_toml("[models]\ndefault = \"grok-4.5\"");
-    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["grok-4.5", "grok-4"])), None);
-    assert_eq!(mgr.current_model_id().0.as_ref(), "grok-4.5");
+    let cfg = config_from_toml("[models]\ndefault = \"deepseek-4.5\"");
+    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["deepseek-4.5", "deepseek-4"])), None);
+    assert_eq!(mgr.current_model_id().0.as_ref(), "deepseek-4.5");
     assert!(
         mgr.model_switch_generation() > start,
         "background reselection must fire the model-switch watch",
@@ -706,11 +706,11 @@ fn first_catalog_reselect_bumps_model_switch_watch() {
 fn reselect_missing_current_model_bumps_watch() {
     let mgr = test_manager();
     let cfg = config::Config::default();
-    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["grok-4", "grok-3"])), None);
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
+    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["deepseek-4", "deepseek-3"])), None);
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     let start = mgr.model_switch_generation();
-    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["grok-3"])), None);
-    assert_ne!(mgr.current_model_id().0.as_ref(), "grok-4");
+    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["deepseek-3"])), None);
+    assert_ne!(mgr.current_model_id().0.as_ref(), "deepseek-4");
     assert!(
         mgr.model_switch_generation() > start,
         "reselecting away from a removed current model must fire the watch",
@@ -794,7 +794,7 @@ fn reasoning_effort_override_skips_models_that_do_not_offer_level() {
         ..Default::default()
     };
     let mut prefetched = IndexMap::new();
-    let mut no_none = make_model_entry("grok-4.5");
+    let mut no_none = make_model_entry("deepseek-4.5");
     no_none.info.supports_reasoning_effort = true;
     no_none.info.reasoning_efforts = vec![ReasoningEffortOption {
         id: "high".into(),
@@ -804,7 +804,7 @@ fn reasoning_effort_override_skips_models_that_do_not_offer_level() {
         default: true,
     }];
     no_none.info.reasoning_effort = Some(ReasoningEffort::High);
-    prefetched.insert("grok-4.5".to_string(), no_none);
+    prefetched.insert("deepseek-4.5".to_string(), no_none);
     let mut with_none = make_model_entry("legacy-none");
     with_none.info.supports_reasoning_effort = true;
     with_none.info.reasoning_efforts = vec![ReasoningEffortOption {
@@ -816,8 +816,8 @@ fn reasoning_effort_override_skips_models_that_do_not_offer_level() {
     }];
     prefetched.insert("legacy-none".to_string(), with_none);
     let catalog = resolve_model_catalog(&cfg, Some(prefetched));
-    let Some(grok45) = catalog.get("grok-4.5") else {
-        panic!("expected grok-4.5: {catalog:?}");
+    let Some(grok45) = catalog.get("deepseek-4.5") else {
+        panic!("expected deepseek-4.5: {catalog:?}");
     };
     assert_eq!(
         grok45.info.reasoning_effort,
@@ -1005,10 +1005,10 @@ async fn spawn_background_refresh_never_blocks_on_a_hanging_endpoint() {
     let auth_manager = Arc::new(AuthManager::new(tmp.path(), GrokComConfig::default()));
     let mgr = ModelsManagerBuilder::new(
         None,
-        make_prefetched(&["grok-4", "grok-4.5"]),
-        acp::ModelId::new("grok-4.5"),
+        make_prefetched(&["deepseek-4", "deepseek-4.5"]),
+        acp::ModelId::new("deepseek-4.5"),
         auth_manager,
-        config_from_toml("[models]\ndefault = \"grok-4.5\""),
+        config_from_toml("[models]\ndefault = \"deepseek-4.5\""),
     )
     .endpoint(Arc::new(NeverResolvingEndpoint {
         polled: polled.clone(),
@@ -1036,10 +1036,10 @@ async fn sign_out_clears_catalog_rebuilds_bundled_without_fetching() {
     let auth_manager = Arc::new(AuthManager::new(tmp.path(), GrokComConfig::default()));
     let mgr = ModelsManagerBuilder::new(
         None,
-        make_prefetched(&["grok-4", "grok-4.5"]),
-        acp::ModelId::new("grok-4.5"),
+        make_prefetched(&["deepseek-4", "deepseek-4.5"]),
+        acp::ModelId::new("deepseek-4.5"),
         auth_manager,
-        config_from_toml("[models]\ndefault = \"grok-4.5\""),
+        config_from_toml("[models]\ndefault = \"deepseek-4.5\""),
     )
     .endpoint(Arc::new(CountingEndpoint {
         calls: calls.clone(),
@@ -1101,28 +1101,28 @@ fn from_config_without_prefetch_produces_usable_catalog() {
 fn first_apply_refresh_reselects_default_model() {
     let mgr = test_manager();
     let mut cfg = config::Config::default();
-    cfg.models.default = Some("grok-3".to_string());
+    cfg.models.default = Some("deepseek-3".to_string());
     assert!(!mgr.has_fetched_real_catalog());
-    let prefetched = make_prefetched(&["grok-3", "grok-4"]);
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
     assert!(mgr.has_fetched_real_catalog());
-    assert_eq!(mgr.current_model_id().0.as_ref(), "grok-3");
+    assert_eq!(mgr.current_model_id().0.as_ref(), "deepseek-3");
 }
 #[test]
 fn subsequent_apply_refresh_preserves_user_model() {
     let mgr = test_manager();
     let mut cfg = config::Config::default();
-    cfg.models.default = Some("grok-3".to_string());
-    let prefetched = make_prefetched(&["grok-3", "grok-4"]);
+    cfg.models.default = Some("deepseek-3".to_string());
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     mgr.inner.catalog.write().prefetched = None;
     mgr.inner.catalog.write().etag = None;
-    let prefetched = make_prefetched(&["grok-3", "grok-4"]);
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
     assert_eq!(
         mgr.current_model_id().0.as_ref(),
-        "grok-4",
+        "deepseek-4",
         "user's model selection must survive auth-change refresh"
     );
 }
@@ -1130,15 +1130,15 @@ fn subsequent_apply_refresh_preserves_user_model() {
 fn subsequent_refresh_reselects_when_model_removed() {
     let mgr = test_manager();
     let mut cfg = config::Config::default();
-    cfg.models.default = Some("grok-3".to_string());
-    let prefetched = make_prefetched(&["grok-3", "grok-4"]);
+    cfg.models.default = Some("deepseek-3".to_string());
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
-    let prefetched = make_prefetched(&["grok-3", "grok-4.5"]);
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4.5"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
     assert_eq!(
         mgr.current_model_id().0.as_ref(),
-        "grok-3",
+        "deepseek-3",
         "should fall back to config default when current is removed"
     );
 }
@@ -1146,19 +1146,19 @@ fn subsequent_refresh_reselects_when_model_removed() {
 fn apply_config_honors_new_preferred_model() {
     let mgr = test_manager();
     let mut cfg = config::Config::default();
-    cfg.models.default = Some("grok-3".to_string());
-    let prefetched = make_prefetched(&["grok-3", "grok-4"]);
+    cfg.models.default = Some("deepseek-3".to_string());
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     let mut stale_cfg = config::Config::default();
     stale_cfg.models.default = None;
     *mgr.inner.cfg.write() = stale_cfg;
     let mut new_cfg = config::Config::default();
-    new_cfg.models.default = Some("grok-3".to_string());
+    new_cfg.models.default = Some("deepseek-3".to_string());
     mgr.apply_config(new_cfg);
     assert_eq!(
         mgr.current_model_id().0.as_ref(),
-        "grok-3",
+        "deepseek-3",
         "apply_config must honor updated preferred model from config"
     );
 }
@@ -1166,14 +1166,14 @@ fn apply_config_honors_new_preferred_model() {
 fn apply_config_preserves_current_when_preferred_unchanged() {
     let mgr = test_manager();
     let cfg = config::Config::default();
-    let prefetched = make_prefetched(&["grok-3", "grok-4"]);
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     let new_cfg = config::Config::default();
     mgr.apply_config(new_cfg);
     assert_eq!(
         mgr.current_model_id().0.as_ref(),
-        "grok-4",
+        "deepseek-4",
         "apply_config must not reset model when preferred hasn't changed"
     );
 }
@@ -1181,10 +1181,10 @@ fn apply_config_preserves_current_when_preferred_unchanged() {
 fn apply_config_falls_back_when_preferred_not_in_catalog() {
     let mgr = test_manager();
     let mut cfg = config::Config::default();
-    cfg.models.default = Some("grok-3".to_string());
-    let prefetched = make_prefetched(&["grok-3", "grok-4"]);
+    cfg.models.default = Some("deepseek-3".to_string());
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     let mut new_cfg = config::Config::default();
     new_cfg.models.default = Some("grok-nonexistent".to_string());
     mgr.apply_config(new_cfg);
@@ -1200,14 +1200,14 @@ fn apply_config_falls_back_when_preferred_not_in_catalog() {
 fn apply_config_both_none_preferred_preserves_current() {
     let mgr = test_manager();
     let cfg = config::Config::default();
-    let prefetched = make_prefetched(&["grok-3", "grok-4"]);
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     let new_cfg = config::Config::default();
     mgr.apply_config(new_cfg);
     assert_eq!(
         mgr.current_model_id().0.as_ref(),
-        "grok-4",
+        "deepseek-4",
         "both-None preferred must preserve user's runtime model"
     );
 }
@@ -1215,16 +1215,16 @@ fn apply_config_both_none_preferred_preserves_current() {
 fn apply_config_old_some_new_none_preserves_current() {
     let mgr = test_manager();
     let mut cfg = config::Config::default();
-    cfg.models.default = Some("grok-3".to_string());
-    let prefetched = make_prefetched(&["grok-3", "grok-4"]);
+    cfg.models.default = Some("deepseek-3".to_string());
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
-    assert_eq!(mgr.current_model_id().0.as_ref(), "grok-3");
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
+    assert_eq!(mgr.current_model_id().0.as_ref(), "deepseek-3");
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     let new_cfg = config::Config::default();
     mgr.apply_config(new_cfg);
     assert_eq!(
         mgr.current_model_id().0.as_ref(),
-        "grok-4",
+        "deepseek-4",
         "old=Some new=None must not reset model (is_some guard)"
     );
 }
@@ -1232,19 +1232,19 @@ fn apply_config_old_some_new_none_preserves_current() {
 fn auth_refresh_then_config_reload_preserves_user_model() {
     let mgr = test_manager();
     let mut cfg = config::Config::default();
-    cfg.models.default = Some("grok-3".to_string());
-    let prefetched = make_prefetched(&["grok-3", "grok-4"]);
+    cfg.models.default = Some("deepseek-3".to_string());
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     mgr.inner.catalog.write().prefetched = None;
     mgr.inner.catalog.write().etag = None;
-    let prefetched = make_prefetched(&["grok-3", "grok-4"]);
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
-    assert_eq!(mgr.current_model_id().0.as_ref(), "grok-4");
+    assert_eq!(mgr.current_model_id().0.as_ref(), "deepseek-4");
     let mut new_cfg = config::Config::default();
-    new_cfg.models.default = Some("grok-4".to_string());
+    new_cfg.models.default = Some("deepseek-4".to_string());
     mgr.apply_config(new_cfg);
-    assert_eq!(mgr.current_model_id().0.as_ref(), "grok-4");
+    assert_eq!(mgr.current_model_id().0.as_ref(), "deepseek-4");
 }
 fn test_cache_manager(dir: &std::path::Path) -> ModelsCacheManager {
     ModelsCacheManager::at(dir.join(MODELS_CACHE_FILE), CACHE_TTL)
@@ -1256,15 +1256,15 @@ fn reload_from_disk_cache_applies_external_catalog() {
     let tmp = tempfile::TempDir::new().unwrap();
     let cache = test_cache_manager(tmp.path());
     cache.persist(
-        &make_prefetched(&["grok-4.5", "grok-4.3"]),
+        &make_prefetched(&["deepseek-4.5", "deepseek-4.3"]),
         Some("etag-ext"),
         &mgr.cache_scope(),
         Utc::now(),
     );
     mgr.reload_from_cache_manager(&cache);
     assert!(mgr.has_fetched_real_catalog());
-    assert!(mgr.models().contains_key("grok-4.5"));
-    assert!(mgr.models().contains_key("grok-4.3"));
+    assert!(mgr.models().contains_key("deepseek-4.5"));
+    assert!(mgr.models().contains_key("deepseek-4.3"));
     assert_eq!(mgr.inner.catalog.read().etag.as_deref(), Some("etag-ext"));
 }
 #[test]
@@ -1321,16 +1321,16 @@ fn reload_from_disk_cache_resolves_default_on_first_catalog() {
 fn reload_from_disk_cache_skips_identical_catalog_and_adopts_etag() {
     let mgr = test_manager();
     let cfg = config::Config::default();
-    let prefetched = make_prefetched(&["grok-3", "grok-4"]);
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched.clone()), Some("etag-a".into()));
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     let tmp = tempfile::TempDir::new().unwrap();
     let cache = test_cache_manager(tmp.path());
     cache.persist(&prefetched, Some("etag-b"), &mgr.cache_scope(), Utc::now());
     mgr.reload_from_cache_manager(&cache);
     assert_eq!(
         mgr.current_model_id().0.as_ref(),
-        "grok-4",
+        "deepseek-4",
         "identical catalog must not disturb the user's model"
     );
     assert_eq!(
@@ -1691,13 +1691,13 @@ fn reload_from_disk_cache_ignores_legacy_cache_without_origin() {
 fn clear_resets_has_fetched_real_catalog() {
     let mgr = test_manager();
     let mut cfg = config::Config::default();
-    cfg.models.default = Some("grok-3".to_string());
-    let prefetched = make_prefetched(&["grok-3", "grok-4"]);
+    cfg.models.default = Some("deepseek-3".to_string());
+    let prefetched = make_prefetched(&["deepseek-3", "deepseek-4"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
     assert!(mgr.has_fetched_real_catalog());
     mgr.clear();
     assert!(!mgr.has_fetched_real_catalog());
-    let prefetched = make_prefetched(&["grok-4.5", "grok-4.3"]);
+    let prefetched = make_prefetched(&["deepseek-4.5", "deepseek-4.3"]);
     mgr.apply_refresh_result(&cfg, Some(prefetched), None);
     let first_available = mgr.available().keys().next().unwrap().clone();
     assert_eq!(
@@ -1996,7 +1996,7 @@ fn make_entry_config_with_id(
 fn build_prefetched_map_distinct_ids_same_slug() {
     let entries = vec![
         make_entry_config_with_id(Some("auto"), "grok-build", Some("Auto")),
-        make_entry_config_with_id(Some("grok-build"), "grok-build", Some("Grok Build")),
+        make_entry_config_with_id(Some("grok-build"), "grok-build", Some("deepseek-build")),
         make_entry_config_with_id(
             Some("experimental-fast"),
             "experimental-fast",
@@ -2062,30 +2062,30 @@ fn resolve_catalog_key_maps_routing_slug_to_config_key() {
     let mut models = IndexMap::new();
     models.insert(
         "enterprise-grok-build".to_string(),
-        make_model_entry("grok-4.5"),
+        make_model_entry("deepseek-4.5"),
     );
-    models.insert("grok-4.3".to_string(), make_model_entry("grok-4.3"));
-    let persisted = acp::ModelId::new("grok-4.5");
+    models.insert("deepseek-4.3".to_string(), make_model_entry("deepseek-4.3"));
+    let persisted = acp::ModelId::new("deepseek-4.5");
     let key = resolve_catalog_key(&models, &persisted).expect("slug must resolve");
     assert_eq!(key.0.as_ref(), "enterprise-grok-build");
 }
 #[test]
 fn resolve_catalog_key_prefers_exact_key_match() {
     let mut models = IndexMap::new();
-    models.insert("grok-4.5".to_string(), make_model_entry("grok-4.5"));
-    let persisted = acp::ModelId::new("grok-4.5");
+    models.insert("deepseek-4.5".to_string(), make_model_entry("deepseek-4.5"));
+    let persisted = acp::ModelId::new("deepseek-4.5");
     let key = resolve_catalog_key(&models, &persisted).expect("exact key must resolve");
-    assert_eq!(key.0.as_ref(), "grok-4.5");
+    assert_eq!(key.0.as_ref(), "deepseek-4.5");
 }
 #[test]
 fn resolve_catalog_key_last_slug_match_wins() {
     let mut models = IndexMap::new();
     models.insert(
         "default-grok-build".to_string(),
-        make_model_entry("grok-4.5"),
+        make_model_entry("deepseek-4.5"),
     );
-    models.insert("user-grok-build".to_string(), make_model_entry("grok-4.5"));
-    let persisted = acp::ModelId::new("grok-4.5");
+    models.insert("user-grok-build".to_string(), make_model_entry("deepseek-4.5"));
+    let persisted = acp::ModelId::new("deepseek-4.5");
     let key = resolve_catalog_key(&models, &persisted).expect("slug must resolve");
     assert_eq!(key.0.as_ref(), "user-grok-build");
 }
@@ -2094,10 +2094,10 @@ fn selectable_catalog_key_for_persisted_none_when_resolved_not_available() {
     let mut models = IndexMap::new();
     models.insert(
         "enterprise-grok-build".to_string(),
-        make_model_entry("grok-4.5"),
+        make_model_entry("deepseek-4.5"),
     );
     let available: IndexMap<_, _> = IndexMap::new();
-    let persisted = acp::ModelId::new("grok-4.5");
+    let persisted = acp::ModelId::new("deepseek-4.5");
     assert!(selectable_catalog_key_for_persisted(&models, &available, &persisted).is_none());
 }
 #[test]
@@ -2108,8 +2108,8 @@ fn selectable_prefers_available_identity_over_non_selectable_exact_key() {
         "enterprise-grok-build".to_string(),
         make_model_entry("grok-build"),
     );
-    models.insert("grok-4.3".to_string(), make_model_entry("grok-4.3"));
-    let available = test_available_keys(&["enterprise-grok-build", "grok-4.3"]);
+    models.insert("deepseek-4.3".to_string(), make_model_entry("deepseek-4.3"));
+    let available = test_available_keys(&["enterprise-grok-build", "deepseek-4.3"]);
     let persisted = acp::ModelId::new("grok-build");
     assert_eq!(
         resolve_catalog_key(&models, &persisted)
@@ -2129,8 +2129,8 @@ fn selectable_matches_routing_slug_when_no_exact_key() {
         "enterprise-grok-build".to_string(),
         make_model_entry("grok-build"),
     );
-    models.insert("grok-4.3".to_string(), make_model_entry("grok-4.3"));
-    let available = test_available_keys(&["enterprise-grok-build", "grok-4.3"]);
+    models.insert("deepseek-4.3".to_string(), make_model_entry("deepseek-4.3"));
+    let available = test_available_keys(&["enterprise-grok-build", "deepseek-4.3"]);
     let persisted = acp::ModelId::new("grok-build");
     let key = selectable_catalog_key_for_persisted(&models, &available, &persisted)
         .expect("slug must resolve to selectable key");
@@ -2139,7 +2139,7 @@ fn selectable_matches_routing_slug_when_no_exact_key() {
 #[test]
 fn selectable_prefers_exact_key_over_later_slug_match() {
     let mut models = IndexMap::new();
-    models.insert("grok-build".to_string(), make_model_entry("grok-4.5"));
+    models.insert("grok-build".to_string(), make_model_entry("deepseek-4.5"));
     models.insert("other".to_string(), make_model_entry("grok-build"));
     let available = test_available_keys(&["grok-build", "other"]);
     let persisted = acp::ModelId::new("grok-build");
@@ -2178,25 +2178,25 @@ async fn bounded_auth_refresh_passes_through_ready_value() {
 #[tokio::test]
 async fn explicit_model_pick_survives_first_real_catalog() {
     let mgr = test_manager();
-    let cfg = config_from_toml("[models]\ndefault = \"grok-4.5\"");
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
-    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["grok-4.5", "grok-4"])), None);
+    let cfg = config_from_toml("[models]\ndefault = \"deepseek-4.5\"");
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
+    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["deepseek-4.5", "deepseek-4"])), None);
     assert_eq!(
         mgr.current_model_id().0.as_ref(),
-        "grok-4",
+        "deepseek-4",
         "an explicit /model pick must survive the first real catalog",
     );
 }
 #[tokio::test]
 async fn identity_switch_clears_user_pick_latch() {
     let mgr = test_manager();
-    let cfg = config_from_toml("[models]\ndefault = \"grok-4.5\"");
-    mgr.set_current_model_id(acp::ModelId::new("grok-4"));
+    let cfg = config_from_toml("[models]\ndefault = \"deepseek-4.5\"");
+    mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     mgr.clear();
-    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["grok-4.5", "grok-4"])), None);
+    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["deepseek-4.5", "deepseek-4"])), None);
     assert_eq!(
         mgr.current_model_id().0.as_ref(),
-        "grok-4.5",
+        "deepseek-4.5",
         "a new identity's first catalog must reselect the default after clear()",
     );
 }

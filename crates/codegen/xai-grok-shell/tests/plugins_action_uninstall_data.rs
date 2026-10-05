@@ -1,4 +1,4 @@
-//! E2E: the pager modal Uninstall (`x.ai/plugins/action`) must clean up
+//! E2E: the pager modal Uninstall (`deepseek-build/plugins/action`) must clean up
 //! `~/.grok/plugin-data/<id>/` like the CLI uninstall path, not orphan it.
 
 mod acp_harness;
@@ -27,7 +27,7 @@ fn plugins_action_uninstall_removes_plugin_data_dir() {
 
         let response = ext_method(
             &conn,
-            "x.ai/plugins/action",
+            "deepseek-build/plugins/action",
             json!({
                 "sessionId": session_id.0.to_string(),
                 "action": {"type": "install", "source": plugin_dir.display().to_string()},
@@ -61,7 +61,7 @@ fn plugins_action_uninstall_removes_plugin_data_dir() {
 
         let response = ext_method(
             &conn,
-            "x.ai/plugins/action",
+            "deepseek-build/plugins/action",
             json!({
                 "sessionId": session_id.0.to_string(),
                 "action": {"type": "uninstall", "plugin_id": "data-demo", "confirmed": false},

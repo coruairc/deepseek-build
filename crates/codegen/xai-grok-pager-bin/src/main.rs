@@ -129,12 +129,12 @@ mod test_seam {
         let bytes = match std::fs::read(&path) {
             Ok(bytes) => bytes,
             Err(e) => {
-                eprintln!("grok test-seams: cannot read {path}: {e}");
+                eprintln!("deepseek-build test-seams: cannot read {path}: {e}");
                 return;
             }
         };
         let Some(separator) = bytes.iter().position(|byte| *byte == b'\n') else {
-            eprintln!("grok test-seams: pubkey file lacks a key_id separator");
+            eprintln!("deepseek-build test-seams: pubkey file lacks a key_id separator");
             return;
         };
         let (key_id, rest) = bytes.split_at(separator);
@@ -142,13 +142,13 @@ mod test_seam {
             return;
         };
         let Ok(key_id) = std::str::from_utf8(key_id) else {
-            eprintln!("grok test-seams: key_id is not utf8");
+            eprintln!("deepseek-build test-seams: key_id is not utf8");
             return;
         };
         let key_id = key_id.trim();
         if public_key.len() != 32 {
             eprintln!(
-                "grok test-seams: pubkey must be 32 bytes, found {}",
+                "deepseek-build test-seams: pubkey must be 32 bytes, found {}",
                 public_key.len()
             );
             return;
@@ -198,7 +198,7 @@ fn resolve_agent_profile_path(path: &std::path::Path) -> std::path::PathBuf {
 /// Print startup information for the serve command.
 fn print_serve_startup_info(bind_addr: SocketAddr, secret: &str) {
     eprintln!();
-    eprintln!("   Grok agent server starting...");
+    eprintln!("   deepseek-build agent server starting...");
     eprintln!();
     eprintln!("   Address:  {}:{}", bind_addr.ip(), bind_addr.port());
     eprintln!("   Secret:   {}", secret);
@@ -240,7 +240,7 @@ fn init_tracing_simple(app_entrypoint: &'static str) {
         .with(xai_grok_telemetry::hooks_log::layer())
         .with(xai_grok_telemetry::otel_layer::build_otel_layer(
             xai_grok_telemetry::otel_layer::OtelClientInfo {
-                client_name: "grok-pager",
+                client_name: xai_grok_brand::NAME,
                 client_version: xai_grok_version::VERSION,
                 service_version: env!("VERSION_WITH_COMMIT"),
                 app_entrypoint,
@@ -256,7 +256,9 @@ async fn run_setup_command(json: bool) {
     if !managed_config::has_principal() {
         eprintln!("No deployment key or team sign-in found.");
         eprintln!();
-        eprintln!("To install managed configuration, sign in with a team using `grok login`,");
+        eprintln!(
+            "To install managed configuration, sign in with a team using `deepseek-build login`,"
+        );
         eprintln!("or set a deployment key:");
         eprintln!();
         if cfg!(unix) {
@@ -264,15 +266,15 @@ async fn run_setup_command(json: bool) {
         } else {
             eprintln!("  $env:GROK_DEPLOYMENT_KEY=\"<your-key>\"");
         }
-        eprintln!("  grok setup");
+        eprintln!("  deepseek-build setup");
         eprintln!();
-        eprintln!("Or add the key to ~/.grok/config.toml:");
+        eprintln!("Or add the key to ~/.deepseek-build/config.toml:");
         eprintln!();
         eprintln!("  [endpoints]");
         eprintln!("  deployment_key = \"<your-key>\"");
         eprintln!();
         eprintln!(
-            "If you don't have a deployment key, contact your organization's Grok administrator."
+            "If you don't have a deployment key, contact your organization's deepseek-build administrator."
         );
         std::process::exit(1);
     }
@@ -304,12 +306,12 @@ async fn run_setup_command(json: bool) {
         }
         SetupOutcome::Skipped => {
             eprintln!(
-                "Managed configuration was not applied this run (another process held the apply lock, or the credential changed during the fetch). Run `grok setup` again."
+                "Managed configuration was not applied this run (another process held the apply lock, or the credential changed during the fetch). Run `deepseek-build setup` again."
             );
         }
         SetupOutcome::Staged => {
             eprintln!(
-                "Managed configuration update verified; it takes effect the next time Grok starts."
+                "Managed configuration update verified; it takes effect the next time deepseek-build starts."
             );
         }
         SetupOutcome::Failed(e) => {
@@ -380,7 +382,7 @@ async fn kill_leaders() -> Result<()> {
         };
         if !xai_grok_shell::util::is_grok_process(pid) {
             if let Some(ref lock) = d.lock_path {
-                eprintln!("  PID {pid} is not a grok process, removing stale lock");
+                eprintln!("  PID {pid} is not a deepseek-build process, removing stale lock");
                 let _ = std::fs::remove_file(lock);
                 cleaned += 1;
             }
@@ -477,12 +479,12 @@ fn ensure_control_caps(reg: &LeaderRegistration) -> Result<&LeaderCapabilities> 
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("Leader does not advertise capabilities (legacy version)"))
 }
-/// Env override for the `grok workspace` gate: any truthy value enables the command locally, a falsy one disables it.
+/// Env override for the `deepseek-build workspace` gate: any truthy value enables the command locally, a falsy one disables it.
 /// Either way it bypasses the remote settings flag.
 const WORKSPACE_COMMAND_ENV: &str = "GROK_WORKSPACE_COMMAND";
 /// One leader door's CLI identity, shared by `connect_leader_control` and `spawn_and_connect_leader`.
 struct LeaderDoorCli {
-    /// The command name as the user types it (`grok workspace`); `<name> start` is its start command.
+    /// The command name as the user types it (`deepseek-build workspace`); `<name> start` is its start command.
     name: &'static str,
     /// IPC client type the leader records for connections from this command.
     client_type: &'static str,
@@ -490,11 +492,11 @@ struct LeaderDoorCli {
     leader_mode_reason: &'static str,
 }
 const WORKSPACE_DOOR: LeaderDoorCli = LeaderDoorCli {
-    name: "grok workspace",
+    name: "deepseek-build workspace",
     client_type: "grok-workspace-cli",
     leader_mode_reason: "the workspace is shared via the leader",
 };
-/// Resolution of the `grok workspace` gate.
+/// Resolution of the `deepseek-build workspace` gate.
 /// `Unknown` is kept separate from `Disabled` so we don't tell the user the flag is off when the settings were never read.
 /// Both fail closed, but `Unknown` earns an honest message.
 #[derive(Debug, PartialEq, Eq)]
@@ -572,7 +574,7 @@ async fn run_workspace_mgmt(args: WorkspaceMgmtArgs) -> Result<()> {
     ) && let Some(profile) = xai_grok_sandbox::requested_confinement_profile()
     {
         anyhow::bail!(
-            "`grok workspace` start/restart/resume is unavailable under sandbox profile '{profile}': \
+            "`deepseek-build workspace` start/restart/resume is unavailable under sandbox profile '{profile}': \
              those commands (re)activate shared-leader workspace exposure that this session cannot \
              prove is confined by that profile. Disable the profile at the source that selected it \
              (CLI, env, config, or a managed requirement)."
@@ -589,14 +591,14 @@ async fn run_workspace_mgmt(args: WorkspaceMgmtArgs) -> Result<()> {
         WorkspaceGate::Enabled => {}
         WorkspaceGate::Disabled => {
             anyhow::bail!(
-                "`grok workspace` is not enabled for this account \
+                "`deepseek-build workspace` is not enabled for this account \
              (gated by a server-side feature flag that is currently off)."
             )
         }
         WorkspaceGate::Unknown => {
             anyhow::bail!(
-                "Could not load your settings for `grok workspace`. Check your \
-             network connection (run `grok login` if you are signed out), then \
+                "Could not load your settings for `deepseek-build workspace`. Check your \
+             network connection (run `deepseek-build login` if you are signed out), then \
              try again."
             )
         }
@@ -664,7 +666,7 @@ async fn connect_leader_control(
     .map_err(|e| {
         anyhow::anyhow!(
             "no running leader for this environment ({e}). \
-             Start a grok session, or run `{} start`.",
+             Start a deepseek-build session, or run `{} start`.",
             door.name
         )
     })
@@ -695,7 +697,7 @@ async fn spawn_and_connect_leader(
     if !use_leader {
         anyhow::bail!(
             "`{}` requires leader mode ({}).\n\
-             Enable it with `[cli] use_leader = true` in ~/.grok/config.toml, or pass --leader.",
+             Enable it with `[cli] use_leader = true` in ~/.deepseek-build/config.toml, or pass --leader.",
             door.name,
             door.leader_mode_reason
         );
@@ -705,7 +707,7 @@ async fn spawn_and_connect_leader(
         agent_config.login_device_flow,
         agent_config.endpoints.proxy_url(),
         false,
-        Some("No cached credentials found. Run `grok login` first."),
+        Some("No cached credentials found. Run `deepseek-build login` first."),
     )
     .await?;
     let env_urls = LeaderEnvUrls::from(&agent_config.grok_com_config);
@@ -838,7 +840,7 @@ struct StdioReplayState {
     /// Folded into `sessions` when the response carrying the assigned session id arrives.
     /// Never replayed while unconfirmed (the id is unknown; the client's own request died with the old leader and is its to retry).
     pending_new: Option<CachedSession>,
-    /// Most recently created/loaded session id, reported in `x.ai/leader_reconnected` as the primary restored session.
+    /// Most recently created/loaded session id, reported in `deepseek-build/leader_reconnected` as the primary restored session.
     last_session_id: Option<String>,
 }
 impl StdioReplayState {
@@ -895,8 +897,8 @@ const CACHED_METHODS: &[&str] = &[
     "\"session/load\"",
     "\"session/resume\"",
     "\"session/close\"",
-    "\"x.ai/session/close\"",
-    "\"_x.ai/session/close\"",
+    "\"deepseek-build/session/close\"",
+    "\"_deepseek-build/session/close\"",
 ];
 fn cache_outgoing_acp_state(msg: &str, state: &std::sync::Mutex<StdioReplayState>) {
     if !CACHED_METHODS.iter().any(|m| msg.contains(m)) {
@@ -950,7 +952,7 @@ fn cache_outgoing_acp_state(msg: &str, state: &std::sync::Mutex<StdioReplayState
                     .and_then(|m| serde_json::to_string(m).ok()),
             });
         }
-        "session/close" | "x.ai/session/close" | "_x.ai/session/close" => {
+        "session/close" | "deepseek-build/session/close" | "_deepseek-build/session/close" => {
             if let Some(sid) = json
                 .get("params")
                 .and_then(|p| p.get("sessionId").or_else(|| p.get("session_id")))
@@ -981,7 +983,7 @@ fn cache_incoming_session_id(msg: &str, state: &std::sync::Mutex<StdioReplayStat
 }
 /// Synthetic JSON-RPC id for the `session/load` the bridge constructs itself (when the external client only ever sent `session/new`).
 /// A string id can never collide with a numeric id the external client may have in flight.
-const REPLAY_LOAD_REQUEST_ID: &str = "x.ai/leader-replay/session-load";
+const REPLAY_LOAD_REQUEST_ID: &str = "deepseek-build/leader-replay/session-load";
 /// Max silence between two messages from the leader during a replayed request.
 /// A `session/load` streams replay notifications continuously once it starts.
 /// The phase before the replay (MCP resolution, session file reads) can be quiet for a while on large sessions.
@@ -1256,7 +1258,7 @@ async fn run_agent_command(
     let is_leader = matches!(agent_args.mode, Some(AgentCmd::Leader(_)));
     if !is_stdio && !is_leader {
         eprintln!(
-            "Grok Build (pager) - v{}",
+            "deepseek-build (pager) - v{}",
             xai_grok_version::display_version_with_commit(
                 env!("VERSION_WITH_COMMIT"),
                 xai_grok_version::channel_label(),
@@ -1489,7 +1491,7 @@ async fn run_agent_command(
                                             None => "{}".to_string(),
                                         };
                                         let notification = format!(
-                                            r#"{{"jsonrpc":"2.0","method":"x.ai/leader_reconnected","params":{params}}}"#
+                                            r#"{{"jsonrpc":"2.0","method":"deepseek-build/leader_reconnected","params":{params}}}"#
                                         );
                                         let _ = stdout.write_all(notification.as_bytes()).await;
                                         let _ = stdout.write_all(b"\n").await;
@@ -1638,7 +1640,7 @@ fn flag_dashboard_at_startup_if_requested(args: &mut PagerArgs) -> Result<()> {
     if !xai_grok_pager::views::dashboard::dashboard_enabled() {
         anyhow::bail!(
             "the Agent Dashboard is disabled. Enable it by removing \
-             `[dashboard] enabled = false` from ~/.grok/config.toml and \
+             `[dashboard] enabled = false` from ~/.deepseek-build/config.toml and \
              unsetting GROK_AGENT_DASHBOARD=0."
         );
     }
@@ -1873,7 +1875,8 @@ fn jemalloc_dump_to_path(path: &std::path::Path) -> Result<(), String> {
 }
 fn version_text(channel_label: &str) -> String {
     format!(
-        "grok {}\n",
+        "{} {}\n",
+        xai_grok_brand::NAME,
         xai_grok_version::display_version_with_commit(
             xai_grok_version::full_version(),
             channel_label,
@@ -1952,7 +1955,7 @@ fn main() {
         eprintln!("Couldn't start Grok: {e}");
         eprintln!();
         eprintln!(
-            "Update Grok to a version the policy allows, or ask your administrator \
+            "Update deepseek-build to a version the policy allows, or ask your administrator \
              to fix the managed requirements."
         );
         std::process::exit(2);
@@ -1962,7 +1965,7 @@ fn main() {
     if xai_grok_shell::util::config::load_crash_handler_enabled_sync() {
         let crash_dir = crash_dir_for(&args);
         if let Some(report) = xai_crash_handler::check_previous_crash(&crash_dir) {
-            eprintln!("Grok crashed during your last session.");
+            eprintln!("deepseek-build crashed during your last session.");
             eprintln!("  Signal:  {}", report.signal_name);
             eprintln!("  Version: {}", report.app_version);
             eprintln!("  Report:  {}", report.report_path.display());
@@ -2103,7 +2106,7 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
                     };
                     anyhow::bail!(
                         "top-level {flag} applies to the pager TUI, not the agent subcommand. \
-                         Use `grok-pager agent {flag}` instead."
+                         Use `deepseek-build agent {flag}` instead."
                     );
                 }
                 return run_agent_command(
@@ -2803,14 +2806,14 @@ mod tests {
             &state,
         );
         cache_outgoing_acp_state(
-            r#"{"jsonrpc":"2.0","id":3,"method":"_x.ai/session/close","params":{"sessionId":"s1"}}"#,
+            r#"{"jsonrpc":"2.0","id":3,"method":"_deepseek-build/session/close","params":{"sessionId":"s1"}}"#,
             &state,
         );
         let s = state.lock().unwrap();
         assert!(s.sessions.is_empty(), "closed session must not be replayed");
         assert!(s.last_session_id.is_none());
     }
-    /// The standard close spelling must stop the replay exactly like the `x.ai/` extension spelling.
+    /// The standard close spelling must stop the replay exactly like the `deepseek-build/` extension spelling.
     /// Adopting `session/close` without teaching the cache would resurrect closed sessions on every leader reconnect.
     #[test]
     fn cache_standard_session_close_stops_replaying_it() {
@@ -3127,7 +3130,7 @@ mod tests {
             let _init = leader_rx.recv().await.unwrap();
             response_tx
                 .send(
-                    r#"{"jsonrpc":"2.0","method":"x.ai/leader/version_mismatch","params":{}}"#
+                    r#"{"jsonrpc":"2.0","method":"deepseek-build/leader/version_mismatch","params":{}}"#
                         .to_string(),
                 )
                 .unwrap();
@@ -3175,7 +3178,7 @@ mod tests {
         responder.await.unwrap();
     }
     /// A `session/load` rejected by the new leader (error response) must surface as a failed replay (`None`).
-    /// The bridge then emits `x.ai/leader_reconnected` with empty params and the external client knows to re-establish state itself.
+    /// The bridge then emits `deepseek-build/leader_reconnected` with empty params and the external client knows to re-establish state itself.
     #[tokio::test]
     async fn replay_returns_none_when_load_is_rejected() {
         let (leader_tx, mut leader_rx) = tokio::sync::mpsc::unbounded_channel();

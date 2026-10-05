@@ -101,8 +101,8 @@ fn direct_origin_omits_the_model_unless_the_caller_knows_one() {
         "opaque",
         None,
     )
-    .with_known_model("grok-4.6");
-    assert_eq!(known.requested_model(), Some("grok-4.6"));
+    .with_known_model("deepseek-4.6");
+    assert_eq!(known.requested_model(), Some("deepseek-4.6"));
     let blank =
         ToolCallOrigin::model_call("call-3", "session", None, Some(String::new()), "id", None);
     assert!(blank.requested_model().is_none());
