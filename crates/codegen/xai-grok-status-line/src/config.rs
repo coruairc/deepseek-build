@@ -9,6 +9,8 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use strum::VariantArray;
 
+use crate::pricing::{ModelPricing, PricingTable};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResolvedStatusLine<'a> {
     Builtin { items: &'a [StatusLineItem] },
@@ -27,6 +29,9 @@ pub struct StatusLineConfig {
     padding: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     refresh_interval: Option<u64>,
+    /// Per-model USD per 1M tokens, used to estimate a running cost when the provider reports none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pricing: Option<BTreeMap<String, ModelPricing>>,
     #[serde(skip)]
     parse_problem: Option<String>,
     #[serde(skip)]
@@ -42,6 +47,7 @@ impl PartialEq for StatusLineConfig {
             items,
             padding,
             refresh_interval,
+            pricing,
             parse_problem: _,
             unknown_keys: _,
         } = self;
@@ -50,6 +56,7 @@ impl PartialEq for StatusLineConfig {
             && *items == other.items
             && *padding == other.padding
             && *refresh_interval == other.refresh_interval
+            && *pricing == other.pricing
     }
 }
 
@@ -62,6 +69,7 @@ struct RawStatusLineConfig {
     items: Option<Lenient<Vec<Lenient<String>>>>,
     padding: Option<Lenient<u16>>,
     refresh_interval: Option<Lenient<u64>>,
+    pricing: Option<Lenient<BTreeMap<String, ModelPricing>>>,
     /// `#[serde(untagged)]` replays the table through a fresh deserializer, so a typo here is reported through `serde_ignored` rather than dropped.
     #[serde(flatten)]
     unknown: BTreeMap<String, serde::de::IgnoredAny>,
@@ -123,6 +131,7 @@ impl<'de> Deserialize<'de> for StatusLineConfig {
             }),
             padding: lenient("padding", fields.padding, &mut ignored),
             refresh_interval: lenient("refresh_interval", fields.refresh_interval, &mut ignored),
+            pricing: lenient("pricing", fields.pricing, &mut ignored),
             unknown_keys: fields.unknown.into_keys().collect(),
             parse_problem: None,
         };
@@ -186,6 +195,14 @@ impl StatusLineConfig {
         self.padding.unwrap_or(0).min(Self::MAX_PADDING_PER_SIDE)
     }
 
+    /// The resolved price table: DeepSeek defaults with any `[ui.status_line.pricing]` overrides layered on top.
+    pub fn pricing(&self) -> PricingTable {
+        match &self.pricing {
+            Some(overrides) => PricingTable::with_overrides(overrides.clone()),
+            None => PricingTable::default(),
+        }
+    }
+
     pub fn is_default(&self) -> bool {
         *self == Self::default()
     }
@@ -197,6 +214,8 @@ impl StatusLineConfig {
             items,
             padding,
             refresh_interval,
+            // Pricing is a lookup, not a row: on its own it changes nothing and must not demand a `type`.
+            pricing: _,
             parse_problem: _,
             unknown_keys: _,
         } = self;
@@ -329,6 +348,12 @@ pub enum StatusLineItem {
     Cost,
     TurnTimer,
     SessionName,
+    /// Reasoning effort (thinking level) for the active model.
+    Effort,
+    /// Session prompt/completion/reasoning token counts.
+    Tokens,
+    /// Session prompt-cache hit rate.
+    Cache,
 }
 
 impl StatusLineItem {
@@ -336,8 +361,14 @@ impl StatusLineItem {
 
     pub const fn varies_mid_turn(self) -> bool {
         match self {
-            Self::TurnTimer => true,
-            Self::Cwd | Self::Model | Self::Context | Self::Cost | Self::SessionName => false,
+            // Token and cache counts move as tool rounds land, so the row must keep recomputing through a turn.
+            Self::TurnTimer | Self::Tokens | Self::Cache => true,
+            Self::Cwd
+            | Self::Model
+            | Self::Context
+            | Self::Cost
+            | Self::SessionName
+            | Self::Effort => false,
         }
     }
 

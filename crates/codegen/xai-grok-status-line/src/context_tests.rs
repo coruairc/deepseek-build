@@ -60,6 +60,7 @@ fn every_field_survives_a_round_trip_through_the_shared_fixture() {
                 output_tokens: 9_500,
                 cache_creation_input_tokens: 2_000,
                 cache_read_input_tokens: 40_000,
+                reasoning_tokens: 3_000,
             }),
             used_percentage: Some(8),
             remaining_percentage: Some(92),

@@ -137,10 +137,11 @@ impl AppView {
                 self.status_line.stamp(now, ForcePolicy::Clear);
             }
             StatusLineWork::Builtin(items) => {
-                let Some(ctx) = self.shell_status_context() else {
+                let Some(mut ctx) = self.shell_status_context() else {
                     self.status_line.settle_empty();
                     return;
                 };
+                self.fill_estimated_cost(&mut ctx);
                 let segments = compose_builtin(&ctx, self.local_turn_elapsed(), &items);
                 self.status_line.set_segments(segments);
                 self.status_line.stamp(now, ForcePolicy::Clear);
@@ -264,6 +265,28 @@ impl AppView {
         let ClientOwnedFields { session_name } = self.client_owned_fields();
         ctx.session_name = session_name;
         Some(ctx)
+    }
+
+    /// Fill `cost.total_cost_usd` from the configured price table when the provider did not report one.
+    ///
+    /// A reported cost (the ledger's `cost_usd_ticks`) always wins: it is the provider's own number. The table is
+    /// DeepSeek's, whose usage payload carries tokens but no price, so without this the `cost` segment stays empty.
+    /// The estimate uses the model id the row already carries, so a model switch re-prices on the next rebuild.
+    fn fill_estimated_cost(&self, ctx: &mut StatusLineContext) {
+        if ctx.cost.total_cost_usd.is_some() {
+            return;
+        }
+        let Some(usage) = ctx.context_window.session_usage.as_ref() else {
+            return;
+        };
+        let Some(model_id) = ctx.model.id.as_deref() else {
+            return;
+        };
+        ctx.cost.total_cost_usd = self
+            .current_ui
+            .status_line
+            .pricing()
+            .cost_usd(model_id, usage);
     }
 
     /// The pager's suspend-corrected clock, not `ctx.turn.started_at_ms`.

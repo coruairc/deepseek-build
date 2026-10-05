@@ -36,7 +36,8 @@
       "input_tokens": 10000,
       "output_tokens": 9500,
       "cache_creation_input_tokens": 2000,
-      "cache_read_input_tokens": 40000
+      "cache_read_input_tokens": 40000,
+      "reasoning_tokens": 3000
     },
     "used_percentage": 8,
     "remaining_percentage": 92,

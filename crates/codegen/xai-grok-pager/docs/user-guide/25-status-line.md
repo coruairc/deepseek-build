@@ -20,6 +20,9 @@ This renders, for example, `grok-shell-status-line │ Grok 4.5 │ 12% ctx`. It
 | `model` | Model display name |
 | `context` | Context-window percent, amber at the auto-compaction threshold or at 80% when the agent reports none |
 | `cost` | Session cost, hidden below $0.005 so it never shows a misleading `$0.00` |
+| `effort` | Reasoning effort for the active model, e.g. `effort high`. Omitted when the model has no level set |
+| `tokens` | Session token buckets: `in 12.3k · cache 40.0k · out 4.5k · think 1.2k` |
+| `cache` | Session prompt-cache hit rate, e.g. `cache 87%`. Omitted before the first prompt |
 | `turn-timer` | Elapsed time of the running turn, from one second in |
 | `session-name` | Session name, when set |
 
@@ -48,6 +51,27 @@ Field names and nesting follow the common status line convention, so a ported sc
 | `command` | string | none | Script for `type = "command"`. |
 | `padding` | integer | `0` | Horizontal spacing, in characters per side, capped at 16. A padding wide enough to leave no columns reserves the row but paints nothing in it. |
 | `refresh_interval` | integer | unset | `command` rows only, in seconds, 1 to 86,400. Re-runs the script this often even when nothing changed, so an idle session can still surface a change — an incident page, a CI status. Unset keeps the row event-driven. The run it schedules carries `"trigger": "refresh_interval"`, and its failures keep the last output rather than painting an error (see [Refresh runs](#refresh-runs)). A script that calls a network should prefer a longer interval and read a cache on `state` runs. |
+| `pricing` | table | DeepSeek v4 Pro off-peak | Per-model USD per 1,000,000 tokens, used to estimate the `cost` segment when the provider reports none. See [Pricing](#pricing). |
+
+### Pricing
+
+DeepSeek's usage payload carries tokens but no price, so the `cost` segment falls back to this table. It is a
+stand-in, not a contract: prices change without a release, and a cost the provider reports always wins. Rates are USD
+per 1,000,000 tokens. An unspecified rate inherits the DeepSeek v4 Pro off-peak default (`input`/`cache_miss` 0.66,
+`output` 1.98, `cache_hit` 0.022), and a model you do not name also inherits that default, so name a non-DeepSeek model
+before trusting its figure.
+
+```toml
+[ui.status_line]
+type = "builtin"
+items = ["model", "effort", "tokens", "cache", "cost", "context"]
+
+[ui.status_line.pricing.deepseek-v4-pro]
+input = 0.66
+output = 1.98
+cache_hit = 0.022
+cache_miss = 0.66
+```
 
 ## How it works
 
@@ -102,7 +126,7 @@ Nothing outside the table below is sent. A ported script that reads counts of li
 | `context_window.context_tokens` | Tokens the conversation occupies right now, counting input only, so it falls after a compaction. Omitted when the agent cannot read the count, so `0` always means an empty context |
 | `context_window.session_input_tokens`, `.session_output_tokens` | Billed across the whole session, so they only grow. Named for the session because that is what they count: `total_*` is used elsewhere for what is in the window right now, which here is `context_tokens`. Dividing these by `context_window_size` passes 100% and keeps going. Omitted when the usage ledger is unreadable |
 | `context_window.used_percentage`, `.remaining_percentage` | How full the window is right now, whole numbers from 0 to 100. Omitted with `context_window_size` or `context_tokens`, since a percentage of an unknown window is not a number |
-| `context_window.session_usage.{input_tokens,output_tokens,cache_creation_input_tokens,cache_read_input_tokens}` | `input_tokens`, `cache_creation_input_tokens` and `cache_read_input_tokens`, which sum back to `session_input_tokens`, plus `output_tokens`. Cumulative for the session, not one turn's. Absent before the first call |
+| `context_window.session_usage.{input_tokens,output_tokens,cache_creation_input_tokens,cache_read_input_tokens,reasoning_tokens}` | `input_tokens`, `cache_creation_input_tokens` and `cache_read_input_tokens`, which sum back to `session_input_tokens`, plus `output_tokens`. `reasoning_tokens` is the reasoning subset of `output_tokens`, not additional to it. Cumulative for the session, not one turn's. Absent before the first call |
 | `context_window.auto_compact_threshold_percent` | Where the session auto-compacts. Omitted when the agent reported none |
 | `effort.level` | Reasoning effort, when the model supports it |
 | `turn.started_at_ms` | Unix milliseconds the turn in flight began, absent between turns. Subtract it from your own clock for an elapsed time |

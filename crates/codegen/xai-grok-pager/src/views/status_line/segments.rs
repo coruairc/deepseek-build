@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use xai_grok_status_line::{StatusLineContext, StatusLineItem};
+use xai_grok_status_line::{StatusLineContext, StatusLineItem, StatusLineSessionUsage};
 
 use super::fit_columns;
 
@@ -63,6 +63,10 @@ impl StatusSegment {
     }
 }
 
+// TODO(auto-routing): Phase 3 asks the row to show the auto-routing decision (selected route/model) and any manual
+// override. The classifier and its policy live on another branch; no `StatusLineContext` field carries a route yet, so
+// there is nothing to display. When that field lands: add a `route` segment here that renders the route only when the
+// payload names one, and mark the manual override (a pinned model/effort) distinctly from the routed choice.
 #[must_use]
 pub fn compose_builtin(
     ctx: &StatusLineContext,
@@ -102,6 +106,23 @@ pub fn compose_builtin(
                 .total_cost_usd
                 .filter(|usd| *usd >= MIN_DISPLAYED_COST_USD)
                 .map(|usd| StatusSegment::dim(format!("${usd:.2}"))),
+            StatusLineItem::Effort => {
+                let level = ctx.effort.as_ref()?.level.as_str();
+                let level = level.trim();
+                (!level.is_empty()).then(|| StatusSegment::dim(format!("effort {level}")))
+            }
+            StatusLineItem::Tokens => {
+                let usage = ctx.context_window.session_usage.as_ref()?;
+                Some(StatusSegment::dim(format_tokens(usage)))
+            }
+            StatusLineItem::Cache => {
+                let rate = ctx
+                    .context_window
+                    .session_usage
+                    .as_ref()?
+                    .cache_hit_rate()?;
+                Some(StatusSegment::dim(format!("cache {:.0}%", rate * 100.0)))
+            }
             StatusLineItem::TurnTimer => {
                 let secs = turn_elapsed?.as_secs();
                 if secs == 0 {
@@ -115,6 +136,29 @@ pub fn compose_builtin(
             }
         })
         .collect()
+}
+
+/// Session token buckets, compact enough for one row: `in 12.3k · cache 40.0k · out 4.5k · think 1.2k`.
+/// The cache figure is the cache-hit subset of the prompt, shown beside the fresh `in` count rather than summed with it.
+fn format_tokens(usage: &StatusLineSessionUsage) -> String {
+    format!(
+        "in {} \u{00b7} cache {} \u{00b7} out {} \u{00b7} think {}",
+        fmt_tokens(usage.input_tokens),
+        fmt_tokens(usage.cache_read_input_tokens),
+        fmt_tokens(usage.output_tokens),
+        fmt_tokens(usage.reasoning_tokens),
+    )
+}
+
+/// `999`, `1.2k`, `100k`, `1.2m`. Truncates rather than rounds up so the segment never overstates the bill.
+fn fmt_tokens(n: u64) -> String {
+    if n >= 1_000_000 {
+        format!("{:.1}m", n as f64 / 1_000_000.0)
+    } else if n >= 1_000 {
+        format!("{:.1}k", n as f64 / 1_000.0)
+    } else {
+        format!("{n}")
+    }
 }
 
 #[cfg(test)]

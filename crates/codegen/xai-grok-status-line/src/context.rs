@@ -175,6 +175,29 @@ pub struct StatusLineSessionUsage {
     pub output_tokens: u64,
     pub cache_creation_input_tokens: u64,
     pub cache_read_input_tokens: u64,
+    /// The reasoning subset of `output_tokens`, not additional to it.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub reasoning_tokens: u64,
+}
+
+/// Keeps the appended `reasoning_tokens` field absent from payloads that predate it.
+fn is_zero(value: &u64) -> bool {
+    *value == 0
+}
+
+impl StatusLineSessionUsage {
+    /// Prompt tokens across every bucket: fresh input, cache creation, and cache reads.
+    pub fn total_prompt_tokens(&self) -> u64 {
+        self.input_tokens
+            .saturating_add(self.cache_creation_input_tokens)
+            .saturating_add(self.cache_read_input_tokens)
+    }
+
+    /// Share of prompt tokens served from the prefix cache, in `0.0..=1.0`, or `None` before any prompt tokens.
+    pub fn cache_hit_rate(&self) -> Option<f64> {
+        let total = self.total_prompt_tokens();
+        (total > 0).then(|| self.cache_read_input_tokens as f64 / total as f64)
+    }
 }
 
 #[cfg(test)]

@@ -552,11 +552,20 @@ impl BlockContent for ThinkingBlock {
     }
 
     fn default_display_mode(&self) -> DisplayMode {
-        DisplayMode::Truncated
+        // The global default from `[ui].expand_thinking_blocks`; a per-turn fold still overrides it.
+        if crate::appearance::cache::load_expand_thinking_blocks() {
+            DisplayMode::Expanded
+        } else {
+            DisplayMode::Truncated
+        }
     }
 
     fn finished_display_mode(&self) -> Option<DisplayMode> {
-        Some(DisplayMode::Collapsed)
+        Some(if crate::appearance::cache::load_expand_thinking_blocks() {
+            DisplayMode::Expanded
+        } else {
+            DisplayMode::Collapsed
+        })
     }
 
     fn has_bullet(&self, ctx: &BlockContext) -> bool {

@@ -30,6 +30,8 @@ const SIMPLE_MODE_DEFAULT: bool = true;
 /// This matches the previous on-disk default.
 const VIM_MODE_DEFAULT: bool = false;
 const SHOW_THINKING_BLOCKS_DEFAULT: bool = true;
+/// DeepSeek-native: a fresh reasoning block starts as a preview, not expanded.
+const EXPAND_THINKING_BLOCKS_DEFAULT: bool = false;
 const GROUP_TOOL_VERBS_DEFAULT: bool = true;
 /// Rollout flag; while it is off, edit blocks render as the legacy expanded diffs.
 const COLLAPSED_EDIT_BLOCKS_DEFAULT: bool = false;
@@ -288,6 +290,36 @@ pub fn load_show_thinking_blocks() -> bool {
 pub fn set_show_thinking_blocks(enabled: bool) {
     SHOW_THINKING_BLOCKS_CURRENT.with(|c| c.set(enabled));
     SHOW_THINKING_BLOCKS_LOADED.with(|l| l.set(true));
+}
+
+thread_local! {
+    static EXPAND_THINKING_BLOCKS_CURRENT: Cell<bool> =
+        const { Cell::new(EXPAND_THINKING_BLOCKS_DEFAULT) };
+    static EXPAND_THINKING_BLOCKS_LOADED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// The global fold default for reasoning blocks: `true` starts every `ThinkingBlock` Expanded, `false` as a preview.
+/// Seeded from `[ui].expand_thinking_blocks` on first call. This is the default a *new* block is born with; a per-turn
+/// fold (`e`) and the global toggle (`Ctrl+E` / `/think`) still override it for the blocks already on screen.
+pub fn load_expand_thinking_blocks() -> bool {
+    EXPAND_THINKING_BLOCKS_LOADED.with(|loaded| {
+        if !loaded.get() {
+            EXPAND_THINKING_BLOCKS_CURRENT.with(|c| {
+                c.set(load_bool_from_effective_config(
+                    "expand_thinking_blocks",
+                    EXPAND_THINKING_BLOCKS_DEFAULT,
+                ))
+            });
+            loaded.set(true);
+        }
+    });
+    EXPAND_THINKING_BLOCKS_CURRENT.with(|c| c.get())
+}
+
+/// Replace cached `expand_thinking_blocks`.
+pub fn set_expand_thinking_blocks(enabled: bool) {
+    EXPAND_THINKING_BLOCKS_CURRENT.with(|c| c.set(enabled));
+    EXPAND_THINKING_BLOCKS_LOADED.with(|l| l.set(true));
 }
 
 thread_local! {
@@ -608,6 +640,7 @@ pub fn prime(ui: &UiConfig) {
     let _ = load_scroll_lines();
     let _ = load_render_mermaid();
     let _ = load_show_thinking_blocks();
+    let _ = load_expand_thinking_blocks();
     let _ = load_group_tool_verbs();
     let _ = load_collapsed_edit_blocks();
     let _ = load_prompt_suggestions();
