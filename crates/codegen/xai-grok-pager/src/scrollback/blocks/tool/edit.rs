@@ -2247,6 +2247,17 @@ mod tests {
             tag: ChangeTag::Insert,
         }];
 
+        // Unwrapped reference: a width wide enough that the 42-cell token never enters the wrap branch.
+        let wide = render_diff_hunk_highlighted(&hunk, path, &theme, 1000, &config);
+        let reference: Vec<Style> = nth(&wide, 0)
+            .line
+            .spans
+            .get(nth(&wide, 0).gutter_span_count..)
+            .unwrap_or(&[])
+            .iter()
+            .map(|s| s.style)
+            .collect();
+
         let outputs = render_diff_hunk_highlighted(&hunk, path, &theme, 30, &config);
         assert_eq!(outputs.len(), 1, "overlong token must stay one row");
         assert_eq!(nth(&outputs, 0).joiner, None);
@@ -2259,11 +2270,14 @@ mod tests {
             .unwrap_or(&[]);
         let painted: String = content.iter().map(|s| s.content.as_ref()).collect();
         assert_eq!(painted, source);
-        assert!(
-            content
-                .iter()
-                .all(|s| s.style.add_modifier.contains(Modifier::ITALIC)),
-            "comment styles must survive the wrap branch"
+        // The wrap projection must copy each span's style onto its segment. Comparing against the
+        // unwrapped render is theme-agnostic: the overlong comment must not flatten to the insert
+        // fg / `text_primary` (the old assertion hardcoded comment italics, which the Monokai
+        // theme does not use).
+        let wrapped: Vec<Style> = content.iter().map(|s| s.style).collect();
+        assert_eq!(
+            wrapped, reference,
+            "overlong token styles must survive the wrap branch"
         );
     }
 

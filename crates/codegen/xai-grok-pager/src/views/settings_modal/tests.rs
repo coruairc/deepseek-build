@@ -5605,8 +5605,8 @@ fn docs_footer_tip_is_centered() {
         (row, tip_start, trailing_ws)
     };
 
-    // LONG path: width=80 fits the full message.
-    let (row_long, tip_start_long, trailing_long) = render(80);
+    // LONG path: width=90 fits the full message (LONG is 88 cells).
+    let (row_long, tip_start_long, trailing_long) = render(90);
     assert!(
         tip_start_long > 0,
         "LONG tip must be centered (start > col 0); row={row_long:?}",
@@ -5617,15 +5617,15 @@ fn docs_footer_tip_is_centered() {
     );
 
     // SHORT path: width that fits SHORT but not LONG.
-    // SHORT is "Tip · Ask Grok to change a setting" (34 cells); LONG is ~73 cells. width=40 lands in the SHORT band.
-    let (row_short, tip_start_short, trailing_short) = render(40);
+    // SHORT is "Tip · Ask deepseek-build to change a setting" (44 cells); LONG is 88 cells. width=60 lands in the SHORT band.
+    let (row_short, tip_start_short, trailing_short) = render(60);
     assert!(
         row_short.contains("change a setting"),
-        "width=40 must render SHORT path (contains `change a setting`): {row_short:?}",
+        "width=60 must render SHORT path (contains `change a setting`): {row_short:?}",
     );
     assert!(
         !row_short.contains("deepseek-day"),
-        "width=40 must NOT render LONG path (no `deepseek_day`): {row_short:?}",
+        "width=60 must NOT render LONG path (no `deepseek_day`): {row_short:?}",
     );
     assert!(
         tip_start_short.abs_diff(trailing_short) <= 1,
@@ -5665,7 +5665,7 @@ fn tip_line_has_blank_row_above() {
     let mut tip_y: Option<u16> = None;
     for y in 0..area.height {
         let txt = buf_row_text(&buf, y, area.x, area.width);
-        if txt.contains("Tip") && txt.contains("Ask Grok") {
+        if txt.contains("Tip") && txt.contains("Ask deepseek-build") {
             tip_y = Some(y);
             break;
         }
@@ -6271,7 +6271,7 @@ fn consent_chooser_drops_tip_and_reset() {
     let mut consent = enter_picker_for("coding_data_sharing");
     let text = screen(&mut consent);
     assert!(
-        !text.contains("Ask Grok"),
+        !text.contains("Ask deepseek-build"),
         "consent chooser must not render the docs tip:\n{text}"
     );
     assert!(
@@ -6300,7 +6300,7 @@ fn consent_chooser_drops_tip_and_reset() {
     let mut ordinary = enter_picker_for("theme");
     let text = screen(&mut ordinary);
     assert!(
-        text.contains("d reset") && text.contains("Ask Grok"),
+        text.contains("d reset") && text.contains("Ask deepseek-build"),
         "ordinary pickers keep the tip and the reset hint:\n{text}"
     );
     assert!(

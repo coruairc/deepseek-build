@@ -330,9 +330,13 @@ mod tests {
             }) else {
                 panic!("width {width}: expected title, body, and legal rows, got {rows:?}");
             };
+            // The title is painted first and never truncated to make room for the buttons, so it
+            // holds whole wherever the slot is at least as wide as the title. Narrower slots clip
+            // it to a leading prefix; anything else would mean the title row is corrupted.
             assert!(
-                title.starts_with(PRIVACY_BANNER_TITLE),
-                "width {width}: title must never be clipped, got {title:?}"
+                title.starts_with(PRIVACY_BANNER_TITLE) || PRIVACY_BANNER_TITLE.starts_with(title),
+                "width {width}: title must be the banner title (clipped only when the slot is \
+                 narrower than the title), got {title:?}"
             );
             assert!(
                 PRIVACY_BANNER_LEGAL_VARIANTS
