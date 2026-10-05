@@ -115,14 +115,6 @@ pub(super) fn handle_settings_update(notif: &acp::ExtNotification, app: &mut App
     if let Some(v) = update.show_resolved_model {
         app.show_resolved_model = v;
     }
-    // Temporary client kill switch: ignore remote `sharing_enabled` until session share links are restored
-    // Presence is still observed so a later re-enable can go back to `app.sharing_enabled = v`
-    if update.sharing_enabled.is_some() {
-        app.sharing_enabled = false;
-        for agent in app.agents.values_mut() {
-            agent.set_sharing_enabled(false);
-        }
-    }
     // Env overrides win over live updates too, mirroring the startup resolution in event_loop
     // Otherwise the proxy's explicit `false` (sent as a kill switch) clobbers a local test override moments after launch
     if let Some(v) = update.privacy_notice_rollout {
@@ -443,8 +435,6 @@ pub(super) fn handle_sessions_changed(notif: &acp::ExtNotification, app: &mut Ap
 pub(super) struct PagerSettingsUpdate {
     #[serde(default)]
     show_resolved_model: Option<bool>,
-    #[serde(default)]
-    sharing_enabled: Option<bool>,
     #[serde(default)]
     privacy_notice_rollout: Option<bool>,
     #[serde(default)]

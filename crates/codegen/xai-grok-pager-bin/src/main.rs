@@ -68,7 +68,6 @@ fn process_identity(command: Option<&Command>, is_interactive: bool) -> Option<P
             | Command::Sessions(_)
             | Command::Usage(_)
             | Command::Setup { .. }
-            | Command::Share(_)
             | Command::Wrap(_)
             | Command::Export(_)
             | Command::Trace(_)
@@ -107,7 +106,6 @@ fn command_needs_pre_sandbox_policy_heal(command: Option<&Command>) -> bool {
             | Command::Sessions(_)
             | Command::Usage(_)
             | Command::Setup { .. }
-            | Command::Share(_)
             | Command::Wrap(_)
             | Command::Export(_)
             | Command::Trace(_)
@@ -2126,13 +2124,6 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
                 init_tracing_simple("cli");
                 let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
                 return xai_grok_pager::usage_cmd::run(usage_args);
-            }
-            Command::Share(ref share_args) => {
-                init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
-                let agent_config = xai_grok_shell::config::load_agent_config_disk_only()
-                    .map_err(|e| anyhow::anyhow!("Failed to create agent config: {e}"))?;
-                return xai_grok_pager::share_cmd::run(share_args, &agent_config).await;
             }
             Command::Export(export_args) => {
                 init_tracing_simple("cli");

@@ -152,10 +152,7 @@ impl CommandRegistry {
         hidden.insert("auto".to_string());
         // Memory commands follow the shell's own gate: shown once the ACP catalog advertises them.
         hidden.extend(SHELL_GATED_COMMANDS.iter().map(|name| name.to_string()));
-        // `/share` starts menu-hidden (still dispatchable) until `set_share_visible(true)`
-        // Menu-only so a typed `/share` can show a client disable message rather than PassThrough
-        let mut menu_hidden = HashSet::new();
-        menu_hidden.insert("share".to_string());
+        let menu_hidden = HashSet::new();
         let mut reg = Self {
             commands: builtins,
             sources,
@@ -325,19 +322,6 @@ impl CommandRegistry {
 
     fn apply_available_tools(&mut self, tools: HashSet<String>) {
         self.available_tools = Some(tools);
-    }
-
-    /// Show or hide `/share` in the completion menu.
-    /// Menu-only: when not visible the command is absent from dropdown / triggers but still resolves via [`Self::get_for_dispatch`].
-    /// A fully typed `/share` thus reaches the pager handler (e.g. temporary client disable) instead of falling through as an unknown command.
-    pub fn set_share_visible(&mut self, visible: bool) {
-        self.hidden.remove("share");
-        if visible {
-            self.menu_hidden.remove("share");
-        } else {
-            self.menu_hidden.insert("share".to_string());
-        }
-        self.rebuild_triggers();
     }
 
     /// Show or hide the `/dashboard` command (feature-flag gating).

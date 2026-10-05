@@ -3503,66 +3503,6 @@ pub(crate) fn execute(
                     }
                 });
         }
-        Effect::ShareSession { agent_id, session_id } => {
-            use xai_grok_shell::session::{ShareSessionRequest, ShareSessionResponse};
-            let tx = acp_tx.clone();
-            tasks
-                .spawn(async move {
-                    let request = acp::ExtRequest::new(
-                        "deepseek-build/share_session",
-                        serde_json::value::to_raw_value(
-                                &ShareSessionRequest {
-                                    session_id: session_id.0.to_string(),
-                                },
-                            )
-                            .expect("serialize share session params")
-                            .into(),
-                    );
-                    match acp_send(request, &tx).await {
-                        Ok(resp) => {
-                            let wrapper: serde_json::Value = serde_json::from_str(
-                                    resp.0.get(),
-                                )
-                                .unwrap_or_default();
-                            if let Some(err) = wrapper.get("error") {
-                                let msg = err
-                                    .as_str()
-                                    .map(String::from)
-                                    .unwrap_or_else(|| "unknown error".to_string());
-                                return TaskResult::ShareSessionFailed {
-                                    agent_id,
-                                    error: msg,
-                                };
-                            }
-                            let inner = wrapper.get("result").unwrap_or(&wrapper);
-                            match serde_json::from_value::<
-                                ShareSessionResponse,
-                            >(inner.clone()) {
-                                Ok(share_resp) => {
-                                    TaskResult::ShareSessionComplete {
-                                        agent_id,
-                                        share_url: share_resp.share_url,
-                                    }
-                                }
-                                Err(_) => {
-                                    TaskResult::ShareSessionFailed {
-                                        agent_id,
-                                        error: "couldn't share session".to_string(),
-                                    }
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            TaskResult::ShareSessionFailed {
-                                agent_id,
-                                error: sanitize_user_error(
-                                    &format!("couldn't share session: {e}"),
-                                ),
-                            }
-                        }
-                    }
-                });
-        }
         Effect::FetchSessionAgentName { agent_id, session_id } => {
             let tx = acp_tx.clone();
             tasks

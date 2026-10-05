@@ -1405,8 +1405,6 @@ pub struct AgentView {
     /// Hit area for the [✗] close button in the subagent frame title bar.
     pub hit_subagent_frame_close: HitArea,
     /// Whether the `/share` slash command is available (mirrors
-    /// `AppView::sharing_enabled`). Used to gate palette entries.
-    pub sharing_enabled: bool,
     /// Persistent-memory implementation pinned when this session's actor
     /// spawned. Remember-note effects carry this value rather than consulting
     /// mutable disk configuration mid-session.

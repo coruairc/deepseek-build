@@ -373,10 +373,7 @@ pub enum PaletteCommand {
     OpenFeedbackModal,
 }
 /// Build the default set of palette entries with section grouping.
-pub(crate) fn default_palette_entries(
-    sharing_enabled: bool,
-    slash: &crate::slash::SlashController,
-) -> Vec<PaletteEntry> {
+pub(crate) fn default_palette_entries(slash: &crate::slash::SlashController) -> Vec<PaletteEntry> {
     let screen_mode = slash.screen_mode();
     let mut entries = vec![
         PaletteEntry {
@@ -413,11 +410,6 @@ pub(crate) fn default_palette_entries(
             label: "Resume Session".into(),
             shortcut: "/resume".into(),
             command: PaletteCommand::SlashCommand("/resume".into()),
-        },
-        PaletteEntry {
-            label: "Share Session".into(),
-            shortcut: "/share".into(),
-            command: PaletteCommand::SlashCommand("/share".into()),
         },
         PaletteEntry {
             label: "Rename Session".into(),
@@ -577,11 +569,6 @@ pub(crate) fn default_palette_entries(
         },
     ];
     entries.retain(|entry| {
-        if !sharing_enabled
-            && matches!(&entry.command, PaletteCommand::SlashCommand(s) if s.trim() == "/share")
-        {
-            return false;
-        }
         if let PaletteCommand::SlashCommand(text) = &entry.command
             && let Some(invocation) = crate::slash::parse_invocation(text.trim())
             && !slash
@@ -606,10 +593,9 @@ pub(crate) fn default_palette_entries(
 /// Filter palette entries for search, preserving section headers when any item in the section matches.
 pub(crate) fn filter_palette_entries(
     query: &str,
-    sharing_enabled: bool,
     slash: &crate::slash::SlashController,
 ) -> Vec<PaletteEntry> {
-    let all = default_palette_entries(sharing_enabled, slash);
+    let all = default_palette_entries(slash);
     let query_lower = query.to_lowercase();
     if query_lower.is_empty() {
         return all;

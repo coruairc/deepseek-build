@@ -583,9 +583,6 @@ pub struct AppView {
     pub tip: Option<String>,
     /// Whether to show the resolved model ID in /session-info output.
     pub show_resolved_model: bool,
-    /// Whether the `/share` slash command is available.
-    /// Currently forced off while session share links are temporarily disabled in clients.
-    pub sharing_enabled: bool,
     /// Whether the plugin marketplace CTA is enabled.
     /// Env `GROK_PLUGIN_CTA` overrides `RemoteSettings.plugin_cta` (remote settings); defaults to `false`.
     pub plugin_cta_enabled: bool,
@@ -1564,7 +1561,6 @@ impl AppView {
             screen_mode: ScreenMode::Inline,
             pending_screen_mode_switch: None,
             show_resolved_model: true,
-            sharing_enabled: false,
             plugin_cta_enabled: false,
             plugin_cta_marketplace: None,
             workspace_dashboard_enabled: false,

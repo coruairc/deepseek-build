@@ -657,8 +657,6 @@ pub enum Action {
     OpenConsentLink(usize),
     /// A spawned task completed.
     TaskComplete(TaskResult),
-    /// Share the current session via URL.
-    ShareSession,
     /// Show session info (auth, ID, cwd, model, context usage) instantly.
     ShowSessionInfo,
     /// Show release notes in a modal.
@@ -1960,11 +1958,6 @@ pub enum Effect {
         tool_name: String,
         enabled: bool,
     },
-    /// Share the current session via URL.
-    ShareSession {
-        agent_id: AgentId,
-        session_id: acp::SessionId,
-    },
     /// Fetch and display session info via deepseek-build/session/info.
     /// Auth lines are derived in the effect from SessionFlags and env (not Effect fields).
     ShowSessionInfo {
@@ -2852,16 +2845,6 @@ pub enum TaskResult {
     McpToggleDone {
         agent_id: AgentId,
         result: Result<(), String>,
-    },
-    /// Share session completed successfully.
-    ShareSessionComplete {
-        agent_id: AgentId,
-        share_url: String,
-    },
-    /// Share session failed.
-    ShareSessionFailed {
-        agent_id: AgentId,
-        error: String,
     },
     /// Session info fetched successfully.
     SessionInfoComplete {

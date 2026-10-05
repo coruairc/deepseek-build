@@ -25,7 +25,7 @@ pub use chat_models_client::{
     ChatModelsClient, ChatModelsError, ListModesResponse, Mode, ModeAvailability,
 };
 pub(crate) use client::DEFAULT_CONTEXT_WINDOW;
-pub use client::{BackendClient, BackendError, FetchModelsResult, share_url};
+pub use client::{BackendClient, BackendError, FetchModelsResult};
 pub use conversations_client::{
     ConvError, ConvQuery, Conversation, ConversationsClient, ListConversationsPage,
     UpdateConversationBody,

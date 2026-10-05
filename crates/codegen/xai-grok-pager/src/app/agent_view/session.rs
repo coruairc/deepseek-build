@@ -410,7 +410,6 @@ impl AgentView {
             active_subagent: None,
             role: AgentRole::Root,
             hit_subagent_frame_close: Default::default(),
-            sharing_enabled: false,
             memory_mode: None,
             billing_surface_visible: false,
             usage_command_visible: true,
@@ -1322,16 +1321,6 @@ impl AgentView {
             textarea_changed: delta.textarea_changed,
         });
     }
-    /// Set the sharing-enabled flag on this view and propagate it to the slash-command registry.
-    /// The `/share` entry then stays hidden or visible in step with `AgentView::sharing_enabled`.
-    /// Use this instead of mutating `sharing_enabled` directly on agent creation or session load, so the field and registry can't drift.
-    pub fn set_sharing_enabled(&mut self, enabled: bool) {
-        self.sharing_enabled = enabled;
-        self.prompt
-            .slash_controller
-            .registry_mut()
-            .set_share_visible(enabled);
-    }
     /// Set [`Self::billing_surface_visible`] (see the field doc) and mirror it into this agent's slash controller, so the two can't drift.
     pub fn set_billing_surface_visible(&mut self, visible: bool) {
         self.billing_surface_visible = visible;
@@ -1367,7 +1356,6 @@ impl AgentView {
     /// One place for the app-scoped gates a new/adopted session inherits so the session-creation sites cannot drift.
     pub(crate) fn apply_app_scoped_gates(
         &mut self,
-        sharing_enabled: bool,
         billing_surface_visible: bool,
         usage_command_visible: bool,
         chat_mode: bool,
@@ -1375,7 +1363,6 @@ impl AgentView {
         announcements: &[xai_grok_shell::util::config::RemoteAnnouncement],
         restricted_commands: &[String],
     ) {
-        self.set_sharing_enabled(sharing_enabled);
         self.set_billing_surface_visible(billing_surface_visible);
         self.set_usage_command_visible(usage_command_visible);
         self.app_chat_mode = chat_mode;
@@ -2375,10 +2362,7 @@ mod auto_recap_eligibility_tests {
         assert!(!agent.is_eligible_for_auto_recap(), "running turn");
         agent.session.state = AgentState::Idle;
         agent.active_modal = Some(crate::views::modal::ActiveModal::CommandPalette {
-            entries: crate::views::modal::default_palette_entries(
-                agent.sharing_enabled,
-                &agent.prompt.slash_controller,
-            ),
+            entries: crate::views::modal::default_palette_entries(&agent.prompt.slash_controller),
             state: crate::views::picker::PickerState::input_active(),
             window: crate::views::modal_window::ModalWindowState::new(),
         });

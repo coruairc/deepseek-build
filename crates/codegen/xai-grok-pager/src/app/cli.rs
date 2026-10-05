@@ -58,9 +58,6 @@ pub enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Share a session and print the share URL
-    #[command(hide = true)]
-    Share(crate::share_cmd::ShareArgs),
     /// Run any command with local clipboard support (forwards OSC 52 to the system clipboard).
     #[cfg_attr(not(any(unix, windows)), command(hide = true))]
     #[command(long_about = "\
