@@ -571,26 +571,6 @@ pub struct SessionInfoResponse {
     pub data: SessionInfoData,
 }
 
-// ── Feedback context ────────────────────────────────────────────────────
-
-/// Context gathered from a session to enrich feedback notifications.
-///
-/// Uses the shared feedback wire types directly so consumers can assign fields to `FeedbackSubmission` without mapping.
-#[derive(Debug, Clone, Default)]
-pub struct FeedbackContext {
-    pub last_user_message: Option<String>,
-    pub last_assistant_message: Option<String>,
-    pub tool_outcomes: Vec<prod_mc_model_api_types::feedback_types::FeedbackToolOutcome>,
-    pub compaction_count: i64,
-    pub context_window_usage: u8,
-    pub context_tokens_used: u64,
-    pub context_window_tokens: u64,
-    pub session_cwd: String,
-    pub reasoning_effort: Option<crate::sampling::ReasoningEffort>,
-    pub model_id: Option<String>,
-    pub model_fingerprint: Option<String>,
-}
-
 // ── Startup hints ───────────────────────────────────────────────────────
 
 // `pub` (not `pub(crate)`): carried by the public `SessionCommand` enum (`UpdateAttachPolicy`), whose fields are reachable at `pub`

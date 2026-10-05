@@ -892,11 +892,6 @@ pub enum SessionCommand {
         /// "new" for brand new sessions, "load" for sessions loaded from disk.
         source: String,
     },
-    /// Retrieve session context for enriching a feedback Slack notification.
-    GetFeedbackContext {
-        turn_number: Option<i64>,
-        responds_to: oneshot::Sender<FeedbackContext>,
-    },
     /// Returns the name of the `AgentDefinition` that was used to initialize this session (or the most recent one applied via `handle_session_mode`).
     /// Used by `mvp_agent.set_session_model` to check whether a model's `agent_type` is compatible with the current session before switching.
     GetActiveAgent {

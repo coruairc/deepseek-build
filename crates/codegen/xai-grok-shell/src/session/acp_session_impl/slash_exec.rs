@@ -933,11 +933,3 @@ impl SessionActor {
         ok_end_turn(0, None)
     }
 }
-
-pub(super) fn slash_feedback_rated_turn(
-    conversation: &[xai_grok_sampling_types::ConversationItem],
-) -> super::FeedbackTurnLookup {
-    super::slash_feedback_last_turn(conversation)
-        .map(|n| super::turn_texts_for_feedback(conversation, n))
-        .unwrap_or_default()
-}
