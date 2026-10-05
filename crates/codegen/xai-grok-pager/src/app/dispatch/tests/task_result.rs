@@ -1268,7 +1268,7 @@ fn switch_model_complete_success_updates_model_and_pushes_message() {
         .available
         .insert(
             model_id.clone(),
-            acp::ModelInfo::new(model_id.clone(), "Grok 4.5".to_string()),
+            acp::ModelInfo::new(model_id.clone(), "deepseek-build 4.5".to_string()),
         );
     app.agents
         .get_mut(&id)
@@ -1315,7 +1315,7 @@ fn switch_model_complete_skips_message_and_persist_when_unchanged() {
     let agent = app.agents.get_mut(&id).unwrap();
     agent.session.models.available.insert(
         model_id.clone(),
-        acp::ModelInfo::new(model_id.clone(), "Grok 4.5".to_string()),
+        acp::ModelInfo::new(model_id.clone(), "deepseek-build 4.5".to_string()),
     );
     agent.session.models.current = Some(model_id.clone());
     agent.session.models.reasoning_effort = None;

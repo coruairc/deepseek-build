@@ -98,7 +98,7 @@ pub const STT_LANGUAGE_AUTO: &str = "auto";
 /// Default STT language when unset or unrecognized.
 pub const STT_LANGUAGE_DEFAULT: &str = "en";
 
-/// Official Grok STT languages, sorted by English name.
+/// Official deepseek-build STT languages, sorted by English name.
 pub const STT_LANGUAGES: &[SttLanguage] = &[
     SttLanguage {
         code: "ar",

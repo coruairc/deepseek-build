@@ -2410,7 +2410,7 @@ mod tests {
     }
 
     /// Toast paths collapse the home prefix to `~`.
-    /// Grok-home paths go through the shared `abbreviate_path` convention.
+    /// deepseek-build-home paths go through the shared `abbreviate_path` convention.
     /// The `GROK_HOME`-override integration test in `xai-grok-pager` covers that further.
     #[test]
     fn display_copy_path_abbreviates_home() {

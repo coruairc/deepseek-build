@@ -407,7 +407,7 @@
             attempts: 2,
             reason: "API error (status 429 Too Many Requests): \
                      Some resource has been exhausted: You are sending requests too quickly. \
-                     Please slow down, or upgrade to a Grok subscription for higher limits: \
+                     Please slow down, or upgrade to a deepseek-build subscription for higher limits: \
                      https://api.deepseek.com/deepseek"
                 .into(),
             is_rate_limited: true,

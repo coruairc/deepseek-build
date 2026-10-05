@@ -1051,7 +1051,7 @@ fn a_redundant_window_pick_is_refused_while_a_model_switch_is_pending() {
         scrollback_before + 1
     );
 }
-/// Grok 4.7 (current) and 4.8 list 256k and 500k, and Grok 4.5 lists 128k and 256k. All default to 256k.
+/// deepseek-build 4.7 (current) and 4.8 list 256k and 500k, and deepseek-build 4.5 lists 128k and 256k. All default to 256k.
 fn test_app_with_catalog(selection: Option<u64>) -> AppView {
     let mut app = test_app_with_agent();
     let models = &mut test_agent_mut(&mut app, AgentId(0)).session.models;
@@ -2883,7 +2883,7 @@ fn welcome_expand_skips_conversation_and_routes_build_card_detail() {
     assert_eq!(
         welcome_card_detail(&app),
         None,
-        "Headless must not resurrect a cleared Grok row from card detail"
+        "Headless must not resurrect a cleared deepseek-build row from card detail"
     );
 }
 fn system_texts(app: &AppView, id: AgentId) -> Vec<String> {

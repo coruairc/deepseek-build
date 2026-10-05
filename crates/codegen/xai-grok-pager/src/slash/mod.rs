@@ -99,7 +99,7 @@ impl MenuKey {
 /// A single row in the slash suggestion dropdown.
 #[derive(Debug, Clone)]
 pub struct SuggestionRow {
-    /// Display text (e.g., "/model" or "Grok 4 Fast").
+    /// Display text (e.g., "/model" or "deepseek-build 4 Fast").
     pub display: String,
     /// Description text (e.g., "Switch the active model").
     pub description: String,
@@ -3602,14 +3602,14 @@ mod tests {
         let id = acp::ModelId::new(Arc::from("deepseek-4.7"));
         models.available.insert(
             id.clone(),
-            acp::ModelInfo::new(id, "Grok 4.7").meta(
+            acp::ModelInfo::new(id, "deepseek-build 4.7").meta(
                 serde_json::json!({ "supportsReasoningEffort": true, "reasoningEffort": "high" })
                     .as_object()
                     .cloned(),
             ),
         );
 
-        // `deepseek-4.7` is not a subsequence of `Grok 4.7` (the hyphen). Rows must carry the id.
+        // `deepseek-4.7` is not a subsequence of `deepseek-build 4.7` (the hyphen). Rows must carry the id.
         let text = "/model deepseek-4.7 ";
         ctrl.refresh(&state, text, text.len(), &models);
         let snap = state.snapshot();

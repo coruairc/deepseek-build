@@ -89,8 +89,8 @@ pub enum TerminalName {
     /// The Classic and Reworked 2025 engines are indistinguishable, and all capabilities are conservative/Unknown.
     #[strum(to_string = "JetBrains")]
     JetBrains,
-    /// Grok Desktop (Electron app).
-    #[strum(to_string = "Grok Desktop")]
+    /// deepseek-build Desktop (Electron app).
+    #[strum(to_string = "deepseek-build Desktop")]
     GrokDesktop,
     /// VTE-based terminal (GNOME Terminal, kgx/GNOME Console, Tilix, etc.).
     #[strum(to_string = "VTE")]

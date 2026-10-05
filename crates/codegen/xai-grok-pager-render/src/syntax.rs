@@ -19,7 +19,7 @@ use ratatui::text::Span;
 
 use crate::theme::ThemeKind;
 
-static SYNTECT_GROKNIGHT: OnceLock<Syntect> = OnceLock::new();
+static SYNTECT_MONOKAI: OnceLock<Syntect> = OnceLock::new();
 static SYNTECT_TOKYONIGHT: OnceLock<Syntect> = OnceLock::new();
 static SYNTECT_GROKDAY: OnceLock<Syntect> = OnceLock::new();
 
@@ -114,7 +114,7 @@ pub fn highlight_line(
     vec![Span::styled(text.to_string(), fallback)]
 }
 
-/// Terminal-native lock reports nominal `GrokNight`, so this returns the night theme.
+/// Terminal-native lock reports nominal `GrokNight`, so this returns the dark theme.
 /// Colors are remapped later; do not load a day theme from OS/terminal polarity.
 pub fn get_syntect() -> &'static Syntect {
     match crate::theme::Theme::current_kind() {
@@ -124,8 +124,8 @@ pub fn get_syntect() -> &'static Syntect {
         // Terminal remaps every token in `syntect_rgb_to_fg`, so the
         // source palette only has to be a full one — polarity is irrelevant.
         | ThemeKind::Terminal
-        | ThemeKind::Auto => SYNTECT_GROKNIGHT
-            .get_or_init(|| Syntect::new(include_bytes!("../assets/grok-night.tmTheme"))),
+        | ThemeKind::Auto => SYNTECT_MONOKAI
+            .get_or_init(|| Syntect::new(include_bytes!("../assets/monokai.tmTheme"))),
         ThemeKind::TokyoNight => SYNTECT_TOKYONIGHT
             .get_or_init(|| Syntect::new(include_bytes!("../assets/tokyo-night.tmTheme"))),
         ThemeKind::GrokDay => SYNTECT_GROKDAY

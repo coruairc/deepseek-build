@@ -167,7 +167,7 @@ fn test_app() -> AppView {
         bootstrap_acp_commands: Vec::new(),
         auth_methods: vec![acp::AuthMethod::Agent(acp::AuthMethodAgent::new(
             acp::AuthMethodId::new("api.deepseek.com"),
-            "Grok".to_string(),
+            "deepseek-build".to_string(),
         ))],
         auth_state: AuthState::Done,
         logout_pending: false,

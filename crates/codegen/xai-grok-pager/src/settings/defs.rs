@@ -36,12 +36,12 @@ const THEME_CHOICES: &[EnumChoice] = &[
     },
     EnumChoice {
         canonical: "groknight",
-        display: "Grok Night",
+        display: "deepseek-build Night",
         description: "Neutral dark with magenta accent.",
     },
     EnumChoice {
         canonical: "grokday",
-        display: "Grok Day",
+        display: "deepseek-build Day",
         description: "Light theme for bright environments.",
     },
     EnumChoice {
@@ -284,7 +284,7 @@ const VOICE_CAPTURE_MODE_CHOICES: &[EnumChoice] = &[
 ];
 
 // Voice STT language choices for the settings modal. Concrete codes must match `xai_grok_voice::STT_LANGUAGES`,
-// the official Grok STT catalog. `auto` is client-only; the voice crate resolves it to a concrete code before the
+// the official deepseek-build STT catalog. `auto` is client-only; the voice crate resolves it to a concrete code before the
 // STT handshake.
 const VOICE_STT_LANGUAGE_CHOICES: &[EnumChoice] = &[
     EnumChoice {
@@ -424,12 +424,12 @@ const VOICE_STT_LANGUAGE_CHOICES: &[EnumChoice] = &[
 const CONCRETE_THEME_CHOICES: &[EnumChoice] = &[
     EnumChoice {
         canonical: "groknight",
-        display: "Grok Night",
+        display: "deepseek-build Night",
         description: "Neutral dark with magenta accent.",
     },
     EnumChoice {
         canonical: "grokday",
-        display: "Grok Day",
+        display: "deepseek-build Day",
         description: "Light theme for bright environments.",
     },
     EnumChoice {
@@ -867,8 +867,8 @@ pub fn default_settings() -> Vec<SettingMeta> {
             category: SettingCategory::Models,
             owner: SettingOwner::Shell,
             label: "Subagent model inheritance",
-            description: "On: Grok cannot set models for subagents\n\
-                          Off: Grok may choose a different model for a subagent. Takes effect \
+            description: "On: deepseek-build cannot set models for subagents\n\
+                          Off: deepseek-build may choose a different model for a subagent. Takes effect \
                           after restart.\n\
                           NOTE: This setting only applies when all models are xAI \
                           \"model_family\". You likely don't need to configure this setting.",
@@ -1436,14 +1436,14 @@ pub fn default_settings() -> Vec<SettingMeta> {
             hidden_in_minimal: false,
         },
         // SHELL-owned, persisted to `[ui].voice_stt_language`. Applied live to the next voice capture (no restart).
-        // Default English; System (`auto`) follows the process locale when it maps to a Grok STT language
+        // Default English; System (`auto`) follows the process locale when it maps to a deepseek-build STT language
         // The catalog is the official STT languages (see xai_grok_voice::STT_LANGUAGES)
         SettingMeta {
             key: "voice_stt_language",
             category: SettingCategory::Editor,
             owner: SettingOwner::Shell,
             label: "Voice language",
-            description: "Speech-to-text language for voice dictation (Grok STT). \
+            description: "Speech-to-text language for voice dictation (deepseek-build STT). \
                           English by default; System uses your locale when supported. \
                           Sets formatting language for numbers and currencies.",
             keywords: &["voice", "language", "locale", "dictation", "stt", "speech"],

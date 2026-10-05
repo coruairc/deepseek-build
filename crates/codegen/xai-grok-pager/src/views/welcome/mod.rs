@@ -793,7 +793,7 @@ pub fn render_welcome(
 
     let mut result = match params.auth_state {
         AuthState::Pending { error } => {
-            let label = params.login_label.unwrap_or("Grok");
+            let label = params.login_label.unwrap_or("deepseek-build");
             let login_text = format!("Login with {}", label);
             let menu = [("l", login_text.as_str()), ("q", "Quit")];
             let msg = error.as_deref().map(|e| (e, theme.accent_error));
@@ -4495,8 +4495,8 @@ the usual channels. "
     #[test]
     fn short_stacked_terminal_keeps_the_announcement_and_drops_the_logo() {
         let ann = xai_grok_shell::util::config::RemoteAnnouncement {
-            title: Some("Grok 4.6 is here!".into()),
-            message: Some("Select 'Grok 4.6' under /model.".into()),
+            title: Some("deepseek-build 4.6 is here!".into()),
+            message: Some("Select 'deepseek-build 4.6' under /model.".into()),
             ..Default::default()
         };
         // Compact logo 5 + gap 1 + menu 4 + slot gap 1 + slot 2 + tip 2 + flex 1 + prompt 3 + version 2 = 21 > 20
