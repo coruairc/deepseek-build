@@ -17,14 +17,6 @@ pub enum SamplingConsumer {
     ChatCompletionsStream,
     /// `chat_completion`: OpenAI-compatible non-streaming OpenAI Chat Completions API.
     ChatCompletions,
-    /// `create_response_stream`: Responses API streaming.
-    ResponsesStream,
-    /// `create_response`: Responses API non-streaming.
-    Responses,
-    /// `messages_stream`: Anthropic Messages API streaming.
-    MessagesStream,
-    /// `messages`: Anthropic Messages API non-streaming.
-    Messages,
 }
 
 impl SamplingConsumer {
@@ -34,10 +26,6 @@ impl SamplingConsumer {
         match self {
             Self::ChatCompletionsStream => "chat_completions_stream",
             Self::ChatCompletions => "chat_completions",
-            Self::ResponsesStream => "responses_stream",
-            Self::Responses => "responses",
-            Self::MessagesStream => "messages_stream",
-            Self::Messages => "messages",
         }
     }
 }

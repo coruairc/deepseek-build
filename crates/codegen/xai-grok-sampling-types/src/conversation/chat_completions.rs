@@ -252,28 +252,65 @@ pub fn ensure_reasoning_content_for_tool_calls(
     }
 }
 
+/// Convert a non-stream assistant message into the full sequence of conversation
+/// items it represents.
+///
+/// A non-streaming Chat Completions response carries the model's reasoning trace
+/// in `reasoning_content` on the assistant message (there is no separate
+/// channel). To round-trip it, this emits a synthesized sibling `Reasoning`
+/// item, when the trace is non-empty, immediately before the `Assistant` item —
+/// exactly the shape the streaming transform produces. Non-stream callers should
+/// prefer this over `ConversationItem::from`, which cannot represent the sibling.
+pub fn chat_response_message_to_conversation_items(
+    msg: ChatResponseMessage,
+) -> Vec<ConversationItem> {
+    let mut items = Vec::with_capacity(2);
+    if let Some(reasoning) = msg
+        .reasoning_content
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        items.push(ConversationItem::Reasoning(synthesized_reasoning_item(
+            reasoning,
+        )));
+    }
+    items.push(ConversationItem::Assistant(assistant_item_from_response(
+        msg,
+    )));
+    items
+}
+
+fn assistant_item_from_response(msg: ChatResponseMessage) -> AssistantItem {
+    let content = msg.content.unwrap_or_default();
+
+    let tool_calls: Vec<ToolCall> = msg
+        .tool_calls
+        .into_iter()
+        .map(|tc| ToolCall {
+            id: Arc::<str>::from(tc.id),
+            name: tc.function.name,
+            arguments: Arc::<str>::from(tc.function.arguments),
+        })
+        .collect();
+
+    AssistantItem {
+        content: Arc::<str>::from(content),
+        tool_calls,
+        model_id: None,
+        model_fingerprint: None,
+        reasoning_effort: None,
+    }
+}
+
+/// Single-item convenience conversion: the trailing `Assistant` item only.
+///
+/// `reasoning_content` cannot be represented on a single item, so it is dropped
+/// here; call [`chat_response_message_to_conversation_items`] to capture the
+/// sibling `Reasoning` item as well.
 impl From<ChatResponseMessage> for ConversationItem {
     fn from(msg: ChatResponseMessage) -> Self {
-        // Reasoning is dropped: the streaming consumer synthesizes the sibling item instead
-        let content = msg.content.unwrap_or_default();
-
-        let tool_calls: Vec<ToolCall> = msg
-            .tool_calls
-            .into_iter()
-            .map(|tc| ToolCall {
-                id: Arc::<str>::from(tc.id),
-                name: tc.function.name,
-                arguments: Arc::<str>::from(tc.function.arguments),
-            })
-            .collect();
-
-        ConversationItem::Assistant(AssistantItem {
-            content: Arc::<str>::from(content),
-            tool_calls,
-            model_id: None,
-            model_fingerprint: None,
-            reasoning_effort: None,
-        })
+        ConversationItem::Assistant(assistant_item_from_response(msg))
     }
 }
 

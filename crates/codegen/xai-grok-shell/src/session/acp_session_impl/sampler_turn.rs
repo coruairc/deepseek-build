@@ -444,12 +444,9 @@ impl SessionActor {
     /// root-level union (`oneOf`) with HTTP 400, which fails every turn. Checked per request because a model switch
     /// mid-session keeps the finalized toolset.
     pub(crate) async fn mcp_file_forms_hidden(&self) -> bool {
-        self.chat_state_handle
-            .get_sampling_config()
-            .await
-            .is_some_and(|config| {
-                config.api_backend == xai_grok_sampling_types::ApiBackend::Messages
-            })
+        // MCP file forms were hidden only on the Messages backend, which has been removed.
+        let _ = self.chat_state_handle.get_sampling_config().await;
+        false
     }
 
     pub(super) fn model_auth_facts(&self, model_id: &str) -> crate::agent::config::ModelAuthFacts {
@@ -751,6 +748,7 @@ impl SessionActor {
             temperature: cfg.temperature,
             top_p: cfg.top_p,
             api_backend: cfg.api_backend,
+            model_routing: Default::default(),
             auth_scheme,
             request_compression,
             extra_headers,

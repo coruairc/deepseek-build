@@ -3372,10 +3372,6 @@ impl ConfigModelOverride {
         }
         if let Some(v) = self.supports_reasoning_effort {
             entry.info.supports_reasoning_effort = v;
-        } else if !entry.info.supports_reasoning_effort
-            && matches!(entry.info.api_backend, ApiBackend::Messages)
-        {
-            entry.info.supports_reasoning_effort = true;
         }
         if !self.reasoning_efforts.is_empty() {
             entry.info.reasoning_efforts = self.reasoning_efforts.clone();
@@ -4292,7 +4288,7 @@ pub(crate) fn resolve_aux_model_sampling_config(
                 max_completion_tokens: None,
                 temperature: None,
                 top_p: None,
-                api_backend: ApiBackend::Responses,
+                api_backend: ApiBackend::ChatCompletions,
                 auth_scheme: Default::default(),
                 extra_headers: IndexMap::new(),
                 query_params: IndexMap::new(),
@@ -4401,20 +4397,14 @@ pub(crate) fn resolve_chat_state_auth_type(
         .unwrap_or(fallback)
 }
 /// Selects xAI-only Responses extensions for trusted backend-search routes.
-/// Third-party Responses providers reject `no_inline_citations`.
-/// So it must stay on a trusted first-party route and apply only to models with backend search.
+/// DeepSeek Build no longer speaks the Responses API, so no extension is ever selected.
+/// The parameters are retained so existing call sites compile unchanged.
 pub(crate) fn response_include_extensions(
-    supports_backend_search: bool,
-    api_backend: &ApiBackend,
-    base_url: &str,
+    _supports_backend_search: bool,
+    _api_backend: &ApiBackend,
+    _base_url: &str,
 ) -> Vec<String> {
-    let is_trusted_route = crate::util::is_trusted_cli_chat_proxy_url(base_url)
-        || crate::util::is_trusted_xai_https_url(base_url);
-    if supports_backend_search && api_backend == &ApiBackend::Responses && is_trusted_route {
-        vec![NO_INLINE_CITATIONS_RESPONSE_INCLUDE.to_owned()]
-    } else {
-        Vec::new()
-    }
+    Vec::new()
 }
 pub(crate) fn sampling_config_for_model(
     model: &ModelEntry,
@@ -4452,6 +4442,7 @@ pub(crate) fn sampling_config_for_model(
         temperature,
         top_p,
         api_backend,
+        model_routing: Default::default(),
         auth_scheme: credentials.auth_scheme,
         request_compression,
         extra_headers,
@@ -4526,7 +4517,7 @@ fn resolve_hidden_default_web_search_sampling_config(
             max_completion_tokens: None,
             temperature: None,
             top_p: None,
-            api_backend: ApiBackend::Responses,
+            api_backend: ApiBackend::ChatCompletions,
             auth_scheme: Default::default(),
             extra_headers: IndexMap::new(),
             query_params: IndexMap::new(),

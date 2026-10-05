@@ -9,7 +9,6 @@
 pub mod conversation;
 pub mod doom_loop;
 pub mod error;
-pub mod messages;
 pub mod provider_error;
 pub mod serde_helpers;
 pub mod tool_overrides;

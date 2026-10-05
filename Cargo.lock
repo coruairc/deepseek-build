@@ -13432,6 +13432,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+ "wiremock",
  "xai-grok-auth",
  "xai-grok-extra-ca",
  "xai-grok-sampling-types",

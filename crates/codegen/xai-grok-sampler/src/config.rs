@@ -13,6 +13,7 @@ use xai_grok_sampling_types::{
 };
 
 use crate::attribution::SharedAttributionCallback;
+use crate::model_routing::ModelRoutingPolicy;
 use crate::retry::{DEFAULT_MAX_RETRIES, RATE_LIMIT_RETRY_THRESHOLD};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -46,6 +47,9 @@ pub struct SamplerConfig {
     pub temperature: Option<f32>,
     pub top_p: Option<f32>,
     pub api_backend: ApiBackend,
+    /// Automatic model routing policy (off/low/high/auto). `Off` keeps `model`.
+    #[serde(default)]
+    pub model_routing: ModelRoutingPolicy,
     #[serde(default)]
     pub auth_scheme: AuthScheme,
     #[serde(default)]
@@ -136,6 +140,7 @@ impl Default for SamplerConfig {
             temperature: None,
             top_p: None,
             api_backend: ApiBackend::default(),
+            model_routing: ModelRoutingPolicy::default(),
             auth_scheme: AuthScheme::default(),
             request_compression: RequestCompression::default(),
             extra_headers: IndexMap::new(),

@@ -6,7 +6,6 @@ use crate::sampling::{
     ToolDefinition, ToolSpec, conversation_to_chat_messages,
 };
 use agent_client_protocol as acp;
-use async_openai::types::responses::ResponseStreamEvent;
 use futures_util::StreamExt;
 use reqwest::StatusCode;
 use xai_grok_sampler::SamplerConfig as SamplingConfig;
@@ -468,338 +467,108 @@ pub(crate) async fn generate_session_compact(
         crate::util::config::CompactionToolChoice::Auto => ToolChoice::auto(),
         crate::util::config::CompactionToolChoice::None => ToolChoice::none(),
     };
-    let conversation_tool_choice = match tool_choice {
-        crate::util::config::CompactionToolChoice::Auto => ConversationToolChoice::Auto,
-        crate::util::config::CompactionToolChoice::None => ConversationToolChoice::None,
-    };
-
-    let output = match sampling_config.api_backend {
-        ApiBackend::ChatCompletions => {
-            // Fold `Reasoning` siblings into the following assistant via `conversation_to_chat_messages`.
-            let chat_messages: Vec<ChatRequestMessage> =
-                conversation_to_chat_messages(chat_history);
-            let mut message =
-                ChatCompletionRequest::new(sampling_config.model.to_owned(), chat_messages)
-                    .with_temperature(1.0);
-            message.reasoning_effort = sampling_config.reasoning_effort;
-            // Prefix-cache alignment (see doc comment)
-            // `tool_choice` is set only when tools are present; Chat Completions rejects it otherwise
-            if !tools.is_empty() {
-                message = message
-                    .with_tools(
-                        tools
-                            .into_iter()
-                            .map(|t| ToolDefinition::function(t.name, t.description, t.parameters))
-                            .collect(),
-                    )
-                    .with_tool_choice(wire_tool_choice);
-            }
-
-            let sid = session_id.to_string();
-            message.x_grok_conv_id = Some(sid.clone());
-            message.x_grok_req_id = Some(format!("xai-compact-{}", uuid::Uuid::new_v4()));
-            message.x_grok_session_id = Some(sid);
-            message.x_grok_agent_id = Some(xai_grok_telemetry::id::agent_id());
-
-            tracing::info!(
-                compact_model = %sampling_config.model,
-                num_messages = num_messages,
-                "Sending compact request (streaming)"
-            );
-            let stream_result =
-                await_unless_cancelled(cancel, client.chat_completion_stream(message)).await?;
-
-            let mut stream = match stream_result {
-                Ok((s, _metadata)) => s,
-                Err(e) => return Err(classify_sampling_error(e)),
-            };
-            // Collect the streamed response
-            let mut timing = StreamTiming::new();
-            let mut truncated = false;
-            let mut stop_reason: Option<String> = None;
-            let mut content = String::new();
-            let mut last_progress_at = std::time::Instant::now();
-            loop {
-                let idle_remaining = idle_timeout.saturating_sub(last_progress_at.elapsed());
-                let chunk_result = match next_stream_step(&mut stream, idle_remaining, cancel)
-                    .await?
-                {
-                    StreamStep::Item(item) => item,
-                    StreamStep::Ended => break,
-                    StreamStep::IdleTimeout => {
-                        return Err(CompactFailure::Transient(
-                            acp::Error::internal_error().data(format!(
-                                "{COMPACT_FAILED_PREFIX}stream idle timeout after {idle_timeout:?} ({} chars received)",
-                                content.chars().count()
-                            )),
-                        ));
-                    }
-                };
-                // Wall-clock backstop (0 disables it): cut a runaway, including a reasoning spiral that token limits miss, and let it retry
-                if wall_clock_budget_secs > 0 && timing.elapsed_secs() >= wall_clock_budget_secs {
-                    return Err(CompactFailure::Transient(
-                        acp::Error::internal_error().data(format!(
-                            "{COMPACT_FAILED_PREFIX}exceeded wall-clock budget {wall_clock_budget_secs}s (runaway generation)"
-                        )),
-                    ));
-                }
-                match chunk_result {
-                    Ok(chunk) => {
-                        if let Some(choice) = chunk.choices.first() {
-                            let delta = &choice.delta;
-                            if choice.finish_reason.is_some()
-                                || delta.content.as_deref().is_some_and(|s| !s.is_empty())
-                                || delta
-                                    .reasoning_content
-                                    .as_deref()
-                                    .is_some_and(|s| !s.is_empty())
-                                || !delta.tool_calls.is_empty()
-                            {
-                                last_progress_at = std::time::Instant::now();
-                            }
-                            if let Some(delta_content) = &choice.delta.content {
-                                timing.record_delta();
-                                content.push_str(delta_content);
-                            }
-                            if let Some(fr) = choice.finish_reason {
-                                let sr = xai_grok_sampling_types::StopReason::from(fr);
-                                truncated =
-                                    matches!(sr, xai_grok_sampling_types::StopReason::Length);
-                                stop_reason = Some(sr.as_ref().to_string());
-                            }
-                        }
-                    }
-                    Err(e) => return Err(classify_sampling_error(e)),
-                }
-            }
-            CompactOutput {
-                content,
-                stop_reason,
-                truncated,
-                ttft_ms: timing.ttft_ms(),
-                stream_ms: timing.stream_ms(),
-                delta_count: timing.count,
-                itl_max_ms: timing.itl_max_ms(),
-            }
+    let output = {
+        // Fold `Reasoning` siblings into the following assistant via `conversation_to_chat_messages`.
+        let chat_messages: Vec<ChatRequestMessage> = conversation_to_chat_messages(chat_history);
+        let mut message =
+            ChatCompletionRequest::new(sampling_config.model.to_owned(), chat_messages)
+                .with_temperature(1.0);
+        message.reasoning_effort = sampling_config.reasoning_effort;
+        // Prefix-cache alignment (see doc comment)
+        // `tool_choice` is set only when tools are present; Chat Completions rejects it otherwise
+        if !tools.is_empty() {
+            message = message
+                .with_tools(
+                    tools
+                        .into_iter()
+                        .map(|t| ToolDefinition::function(t.name, t.description, t.parameters))
+                        .collect(),
+                )
+                .with_tool_choice(wire_tool_choice);
         }
-        ApiBackend::Responses => {
-            // Send `ConversationItem`s directly; this preserves encrypted reasoning
-            let request = ConversationRequest {
-                items: chat_history,
-                tool_choice: (!tools.is_empty()).then_some(conversation_tool_choice),
-                tools,
-                hosted_tools,
-                model: Some(sampling_config.model.to_owned()),
-                temperature: Some(1.0),
-                reasoning_effort: sampling_config.reasoning_effort,
-                x_grok_conv_id: Some(session_id.to_string()),
-                x_grok_req_id: Some(format!("xai-compact-{}", uuid::Uuid::new_v4())),
-                x_grok_session_id: Some(session_id.to_string()),
-                x_grok_agent_id: Some(xai_grok_telemetry::id::agent_id()),
-                ..Default::default()
-            };
-            let stream_result =
-                await_unless_cancelled(cancel, client.conversation_stream_responses(request))
-                    .await?;
-            let mut stream = match stream_result {
-                Ok((s, _metadata, _doom_loop)) => s,
-                Err(e) => return Err(classify_sampling_error(e)),
-            };
-            let mut timing = StreamTiming::new();
-            let mut truncated = false;
-            let mut stop_reason: Option<String> = None;
-            let mut content = String::new();
-            let mut last_progress_at = std::time::Instant::now();
-            loop {
-                let idle_remaining = idle_timeout.saturating_sub(last_progress_at.elapsed());
-                let chunk_result = match next_stream_step(&mut stream, idle_remaining, cancel)
-                    .await?
-                {
-                    StreamStep::Item(item) => item,
-                    StreamStep::Ended => break,
-                    StreamStep::IdleTimeout => {
-                        return Err(CompactFailure::Transient(
-                            acp::Error::internal_error().data(format!(
-                                "{COMPACT_FAILED_PREFIX}stream idle timeout after {idle_timeout:?} ({} chars received)",
-                                content.chars().count()
-                            )),
-                        ));
-                    }
-                };
-                // Wall-clock backstop (0 disables it): cut a runaway, including a reasoning spiral that token limits miss, and let it retry
-                if wall_clock_budget_secs > 0 && timing.elapsed_secs() >= wall_clock_budget_secs {
+
+        let sid = session_id.to_string();
+        message.x_grok_conv_id = Some(sid.clone());
+        message.x_grok_req_id = Some(format!("xai-compact-{}", uuid::Uuid::new_v4()));
+        message.x_grok_session_id = Some(sid);
+        message.x_grok_agent_id = Some(xai_grok_telemetry::id::agent_id());
+
+        tracing::info!(
+            compact_model = %sampling_config.model,
+            num_messages = num_messages,
+            "Sending compact request (streaming)"
+        );
+        let stream_result =
+            await_unless_cancelled(cancel, client.chat_completion_stream(message)).await?;
+
+        let mut stream = match stream_result {
+            Ok((s, _metadata)) => s,
+            Err(e) => return Err(classify_sampling_error(e)),
+        };
+        // Collect the streamed response
+        let mut timing = StreamTiming::new();
+        let mut truncated = false;
+        let mut stop_reason: Option<String> = None;
+        let mut content = String::new();
+        let mut last_progress_at = std::time::Instant::now();
+        loop {
+            let idle_remaining = idle_timeout.saturating_sub(last_progress_at.elapsed());
+            let chunk_result = match next_stream_step(&mut stream, idle_remaining, cancel).await? {
+                StreamStep::Item(item) => item,
+                StreamStep::Ended => break,
+                StreamStep::IdleTimeout => {
                     return Err(CompactFailure::Transient(
                         acp::Error::internal_error().data(format!(
-                            "{COMPACT_FAILED_PREFIX}exceeded wall-clock budget {wall_clock_budget_secs}s (runaway generation)"
+                            "{COMPACT_FAILED_PREFIX}stream idle timeout after {idle_timeout:?} ({} chars received)",
+                            content.chars().count()
                         )),
                     ));
                 }
-                match chunk_result {
-                    Ok(chunk) => {
-                        if !matches!(
-                            &chunk,
-                            ResponseStreamEvent::ResponseCreated(_)
-                                | ResponseStreamEvent::ResponseInProgress(_)
-                                | ResponseStreamEvent::ResponseQueued(_)
-                        ) {
+            };
+            // Wall-clock backstop (0 disables it): cut a runaway, including a reasoning spiral that token limits miss, and let it retry
+            if wall_clock_budget_secs > 0 && timing.elapsed_secs() >= wall_clock_budget_secs {
+                return Err(CompactFailure::Transient(
+                    acp::Error::internal_error().data(format!(
+                        "{COMPACT_FAILED_PREFIX}exceeded wall-clock budget {wall_clock_budget_secs}s (runaway generation)"
+                    )),
+                ));
+            }
+            match chunk_result {
+                Ok(chunk) => {
+                    if let Some(choice) = chunk.choices.first() {
+                        let delta = &choice.delta;
+                        if choice.finish_reason.is_some()
+                            || delta.content.as_deref().is_some_and(|s| !s.is_empty())
+                            || delta
+                                .reasoning_content
+                                .as_deref()
+                                .is_some_and(|s| !s.is_empty())
+                            || !delta.tool_calls.is_empty()
+                        {
                             last_progress_at = std::time::Instant::now();
                         }
-                        match &chunk {
-                            ResponseStreamEvent::ResponseOutputTextDelta(text_delta_event) => {
-                                timing.record_delta();
-                                content.push_str(&text_delta_event.delta);
-                            }
-                            ResponseStreamEvent::ResponseFailed(failed_event) => {
-                                let event_error = failed_event.response.error.as_ref();
-                                let code = event_error.map(|e| e.code.as_str());
-                                let message = event_error
-                                    .map(|e| e.message.as_str())
-                                    .unwrap_or("unknown error");
-                                tracing::warn!(
-                                    code = code.unwrap_or("none"),
-                                    message = %message,
-                                    status = ?failed_event.response.status,
-                                    "compact: response.failed event"
-                                );
-                                return Err(classify_response_event_error(code, message));
-                            }
-                            ResponseStreamEvent::ResponseError(error_event) => {
-                                let code = error_event.code.as_deref();
-                                tracing::warn!(
-                                    code = code.unwrap_or("none"),
-                                    message = %error_event.message,
-                                    "compact: stream error event"
-                                );
-                                return Err(classify_response_event_error(
-                                    code,
-                                    &error_event.message,
-                                ));
-                            }
-                            ResponseStreamEvent::ResponseIncomplete(incomplete_event) => {
-                                let reason = incomplete_event
-                                    .response
-                                    .incomplete_details
-                                    .as_ref()
-                                    .map(|d| d.reason.clone())
-                                    .unwrap_or_else(|| "unknown".to_string());
-                                tracing::warn!(
-                                    reason = %reason,
-                                    "compact: response.incomplete event"
-                                );
-                                stop_reason = Some(reason);
-                                truncated = true;
-                            }
-                            _ => {}
-                        }
-                    }
-                    Err(e) => return Err(classify_sampling_error(e)),
-                }
-            }
-            CompactOutput {
-                content,
-                // No incomplete event on a normal completion: treat as a clean stop.
-                stop_reason: stop_reason.or_else(|| Some("stop".to_string())),
-                truncated,
-                ttft_ms: timing.ttft_ms(),
-                stream_ms: timing.stream_ms(),
-                delta_count: timing.count,
-                itl_max_ms: timing.itl_max_ms(),
-            }
-        }
-        ApiBackend::Messages => {
-            // Messages API uses similar streaming to Responses.
-            let request = ConversationRequest {
-                items: chat_history,
-                // Prefix-cache alignment (see doc comment).
-                tools,
-                hosted_tools,
-                model: Some(sampling_config.model.to_owned()),
-                temperature: Some(1.0),
-                reasoning_effort: sampling_config.reasoning_effort,
-                x_grok_conv_id: Some(session_id.to_string()),
-                x_grok_req_id: Some(format!("xai-compact-{}", uuid::Uuid::new_v4())),
-                x_grok_session_id: Some(session_id.to_string()),
-                x_grok_agent_id: Some(xai_grok_telemetry::id::agent_id()),
-                ..Default::default()
-            };
-            let stream_result =
-                await_unless_cancelled(cancel, client.conversation_stream_messages(request))
-                    .await?;
-            let mut stream = match stream_result {
-                Ok((s, _metadata)) => s,
-                Err(e) => return Err(classify_sampling_error(e)),
-            };
-            // Collect the streamed response (Messages API event types)
-            let mut timing = StreamTiming::new();
-            let mut truncated = false;
-            let mut stop_reason: Option<String> = None;
-            let mut content = String::new();
-            let mut last_progress_at = std::time::Instant::now();
-            loop {
-                let idle_remaining = idle_timeout.saturating_sub(last_progress_at.elapsed());
-                let chunk_result = match next_stream_step(&mut stream, idle_remaining, cancel)
-                    .await?
-                {
-                    StreamStep::Item(item) => item,
-                    StreamStep::Ended => break,
-                    StreamStep::IdleTimeout => {
-                        return Err(CompactFailure::Transient(
-                            acp::Error::internal_error().data(format!(
-                                "{COMPACT_FAILED_PREFIX}stream idle timeout after {idle_timeout:?} ({} chars received)",
-                                content.chars().count()
-                            )),
-                        ));
-                    }
-                };
-                // Wall-clock backstop (0 disables it): cut a runaway, including a reasoning spiral that token limits miss, and let it retry
-                if wall_clock_budget_secs > 0 && timing.elapsed_secs() >= wall_clock_budget_secs {
-                    return Err(CompactFailure::Transient(
-                        acp::Error::internal_error().data(format!(
-                            "{COMPACT_FAILED_PREFIX}exceeded wall-clock budget {wall_clock_budget_secs}s (runaway generation)"
-                        )),
-                    ));
-                }
-                match chunk_result {
-                    Ok(event) => {
-                        if !matches!(
-                            &event,
-                            xai_grok_sampling_types::messages::MessageStreamEvent::Ping
-                        ) {
-                            last_progress_at = std::time::Instant::now();
-                        }
-                        match event {
-                        xai_grok_sampling_types::messages::MessageStreamEvent::ContentBlockDelta {
-                            delta: xai_grok_sampling_types::messages::StreamDelta::TextDelta { text },
-                            ..
-                        } => {
+                        if let Some(delta_content) = &choice.delta.content {
                             timing.record_delta();
-                            content.push_str(&text);
+                            content.push_str(delta_content);
                         }
-                        xai_grok_sampling_types::messages::MessageStreamEvent::MessageDelta { delta, .. } => {
-                            if let Some(sr) = delta.stop_reason {
-                                truncated = matches!(
-                                    sr,
-                                    xai_grok_sampling_types::messages::StopReason::MaxTokens
-                                        | xai_grok_sampling_types::messages::StopReason::ModelContextWindowExceeded
-                                );
-                                stop_reason = Some(sr.wire_str());
-                            }
-                        }
-                        _ => {}
+                        if let Some(fr) = choice.finish_reason {
+                            let sr = xai_grok_sampling_types::StopReason::from(fr);
+                            truncated = matches!(sr, xai_grok_sampling_types::StopReason::Length);
+                            stop_reason = Some(sr.as_ref().to_string());
                         }
                     }
-                    Err(e) => return Err(classify_sampling_error(e)),
                 }
+                Err(e) => return Err(classify_sampling_error(e)),
             }
-            CompactOutput {
-                content,
-                stop_reason,
-                truncated,
-                ttft_ms: timing.ttft_ms(),
-                stream_ms: timing.stream_ms(),
-                delta_count: timing.count,
-                itl_max_ms: timing.itl_max_ms(),
-            }
+        }
+        CompactOutput {
+            content,
+            stop_reason,
+            truncated,
+            ttft_ms: timing.ttft_ms(),
+            stream_ms: timing.stream_ms(),
+            delta_count: timing.count,
+            itl_max_ms: timing.itl_max_ms(),
         }
     };
 

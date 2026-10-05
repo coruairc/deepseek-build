@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::http::StatusCode;
+use axum::response::IntoResponse;
 use axum::response::sse::{Event, Sse};
 use axum::routing::post;
 use futures_util::stream::{self, StreamExt};
@@ -531,86 +532,6 @@ async fn invalid_image_code_strips_and_retries() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn responses_invalid_image_strips_as_server_rejected() {
-    const IMAGE_URI: &str = "data:image/png;base64,cG9pc29uZWQ=";
-    let bodies = Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
-    let bodies_handler = Arc::clone(&bodies);
-    let app = Router::new().route(
-        "/v1/responses",
-        post(move |body: String| {
-            let bodies = Arc::clone(&bodies_handler);
-            async move {
-                let n = {
-                    let mut b = bodies.lock().unwrap();
-                    b.push(body);
-                    b.len()
-                };
-                if n == 1 {
-                    Err::<Sse<_>, (StatusCode, String)>((
-                        StatusCode::BAD_REQUEST,
-                        json!({
-                            "code": INVALID_IMAGE_ERROR_CODE,
-                            "error": "Invalid PNG image.",
-                        })
-                        .to_string(),
-                    ))
-                } else {
-                    let events = sse_events_to_axum(sse::responses_api_reasoning_and_text_events(
-                        "ok",
-                        "recovered",
-                        "test-model",
-                    ));
-                    Ok(Sse::new(stream::iter(
-                        events.into_iter().map(Ok::<_, std::convert::Infallible>),
-                    )))
-                }
-            }
-        }),
-    );
-    let server = MockServer::spawn(app).await;
-    let (event_tx, mut event_rx) = mpsc::unbounded_channel();
-    let handle = SamplerActor::spawn(
-        responses_config(server.base_url(), None),
-        RetryPolicy::default(),
-        event_tx,
-    );
-
-    let mut request = user_request("what is in this image?");
-    if let Some(ConversationItem::User(u)) = request.items.first_mut() {
-        u.add_image(IMAGE_URI);
-    }
-    handle.submit(RequestId::from("req-responses-invalid-image"), request);
-
-    let events = drain_until_terminal(&mut event_rx, Duration::from_secs(15)).await;
-    server.shutdown();
-
-    assert!(
-        events.iter().any(|e| match e {
-            SamplingEvent::ImagesStripped {
-                stripped_urls,
-                reason: StripReason::ServerRejected,
-                ..
-            } => stripped_urls.len() == 1 && stripped_urls[0].as_ref() == IMAGE_URI,
-            _ => false,
-        }),
-        "Responses invalid_image must strip as ServerRejected, got {events:?}"
-    );
-    assert!(
-        matches!(events.last(), Some(SamplingEvent::Completed { .. })),
-        "expected Completed after strip-retry"
-    );
-    let bodies = bodies.lock().unwrap();
-    assert_eq!(bodies.len(), 2, "one rejection, one strip-retry");
-    assert!(bodies[0].contains(IMAGE_URI), "first attempt sends image");
-    assert!(
-        !bodies[1].contains(IMAGE_URI),
-        "strip-retry must not resend the image"
-    );
-}
-
-/// A legacy-phrase 400 with no code still strips and recovers, but the reason is `PayloadHeuristic`.
-/// Without the deterministic code the server blamed nothing specific, so the strip must stay request-local.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn legacy_phrase_400_strips_as_heuristic() {
     const IMAGE_URI: &str = "data:image/png;base64,cG9pc29uZWQ=";
     let counter = Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -1124,168 +1045,6 @@ async fn auth_401_emits_failed_immediately_no_retry() {
 }
 
 // ---------------------------------------------------------------------------
-// Anthropic Messages API: refusal stop_reason + mid-stream parse failure
-// ---------------------------------------------------------------------------
-
-fn messages_config(base_url: String) -> SamplerConfig {
-    let mut cfg = test_config(base_url, "messages-compatible-model");
-    cfg.api_backend = ApiBackend::Messages;
-    cfg
-}
-
-/// Regression for the refusal-stop_reason incident.
-/// A well-formed stream terminated by `stop_reason: "refusal"` must produce a successful completion from EXACTLY ONE request, no retry storm.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn messages_refusal_stream_completes_with_single_request() {
-    let counter = Arc::new(AtomicU32::new(0));
-    let counter_handler = Arc::clone(&counter);
-    let app = Router::new().route(
-        "/v1/messages",
-        post(move || {
-            let counter = Arc::clone(&counter_handler);
-            async move {
-                counter.fetch_add(1, Ordering::SeqCst);
-                let events = sse::messages_api_events(
-                    "I can't help with that.",
-                    "messages-compatible-model",
-                    "refusal",
-                );
-                Sse::new(stream::iter(
-                    events.into_iter().map(Ok::<_, std::convert::Infallible>),
-                ))
-            }
-        }),
-    );
-    let server = MockServer::spawn(app).await;
-    let (event_tx, _event_rx) = mpsc::unbounded_channel();
-    let handle = SamplerActor::spawn(
-        messages_config(server.base_url()),
-        RetryPolicy::default(),
-        event_tx,
-    );
-
-    let result = handle
-        .submit_and_collect(RequestId::from("req-refusal"), user_request("hi"))
-        .await;
-    server.shutdown();
-
-    let (response, _metrics) = result.expect("refusal-terminated turn must complete");
-    let a = response.assistant().expect("assistant item present");
-    assert_eq!(a.content.as_ref(), "I can't help with that.");
-    assert_eq!(
-        counter.load(Ordering::SeqCst),
-        1,
-        "refusal must not trigger retries"
-    );
-}
-
-/// Empty-bodied refusal: `message_start → message_delta(refusal) → message_stop` with zero content blocks must complete from exactly one request.
-/// The content-less response must not be classified as a retryable EmptyResponse.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn messages_empty_refusal_completes_without_retry() {
-    let counter = Arc::new(AtomicU32::new(0));
-    let counter_handler = Arc::clone(&counter);
-    let app = Router::new().route(
-        "/v1/messages",
-        post(move || {
-            let counter = Arc::clone(&counter_handler);
-            async move {
-                counter.fetch_add(1, Ordering::SeqCst);
-                let mut events =
-                    sse::messages_api_events("", "messages-compatible-model", "refusal");
-                // Drop the content block events; keep start/delta/stop only.
-                events.drain(1..4);
-                Sse::new(stream::iter(
-                    events.into_iter().map(Ok::<_, std::convert::Infallible>),
-                ))
-            }
-        }),
-    );
-    let server = MockServer::spawn(app).await;
-    let (event_tx, mut event_rx) = mpsc::unbounded_channel();
-    let handle = SamplerActor::spawn(
-        messages_config(server.base_url()),
-        RetryPolicy::default(),
-        event_tx,
-    );
-
-    handle.submit(RequestId::from("req-empty-refusal"), user_request("hi"));
-    let events = drain_until_terminal(&mut event_rx, Duration::from_secs(10)).await;
-    server.shutdown();
-
-    assert!(
-        !events
-            .iter()
-            .any(|e| matches!(e, SamplingEvent::Retrying { .. })),
-        "content-less refusal must not be retried"
-    );
-    match events.last().unwrap() {
-        SamplingEvent::Completed { response, .. } => {
-            assert_eq!(
-                response.stop_reason,
-                Some(xai_grok_sampling_types::StopReason::ContentFilter)
-            );
-        }
-        other => panic!("expected Completed, got {other:?}"),
-    }
-    assert_eq!(counter.load(Ordering::SeqCst), 1, "exactly one request");
-}
-
-/// A mid-stream event that fails serde (after a valid `message_start`) is a deterministic response-parse failure.
-/// It is Fatal on the first attempt and surfaces as a non-retryable Serialization error, never a retry storm.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn messages_unparseable_event_is_fatal_without_retry() {
-    let counter = Arc::new(AtomicU32::new(0));
-    let counter_handler = Arc::clone(&counter);
-    let app =
-        Router::new().route(
-            "/v1/messages",
-            post(move || {
-                let counter = Arc::clone(&counter_handler);
-                async move {
-                    counter.fetch_add(1, Ordering::SeqCst);
-                    let mut events =
-                        sse::messages_api_events("hello", "messages-compatible-model", "end_turn");
-                    // Replace the tail with a `message_delta` missing the required `delta` field, which fails MessageStreamEvent serde
-                    events.truncate(4);
-                    events.push(Event::default().data(
-                        json!({"type":"message_delta","usage":{"output_tokens":1}}).to_string(),
-                    ));
-                    Sse::new(stream::iter(
-                        events.into_iter().map(Ok::<_, std::convert::Infallible>),
-                    ))
-                }
-            }),
-        );
-    let server = MockServer::spawn(app).await;
-    let (event_tx, mut event_rx) = mpsc::unbounded_channel();
-    let handle = SamplerActor::spawn(
-        messages_config(server.base_url()),
-        RetryPolicy::default(),
-        event_tx,
-    );
-
-    handle.submit(RequestId::from("req-bad-event"), user_request("hi"));
-    let events = drain_until_terminal(&mut event_rx, Duration::from_secs(10)).await;
-    server.shutdown();
-
-    assert!(
-        !events
-            .iter()
-            .any(|e| matches!(e, SamplingEvent::Retrying { .. })),
-        "serde failures must not be retried"
-    );
-    match events.last().unwrap() {
-        SamplingEvent::Failed { error, .. } => {
-            assert_eq!(error.kind, SamplingErrorKind::Serialization);
-            assert!(!error.is_retryable, "surfaced info must be non-retryable");
-        }
-        other => panic!("expected Failed(Serialization), got {other:?}"),
-    }
-    assert_eq!(counter.load(Ordering::SeqCst), 1, "exactly one attempt");
-}
-
-// ---------------------------------------------------------------------------
 // UpdateConfig invalidates cache + applies to subsequent requests
 // ---------------------------------------------------------------------------
 
@@ -1338,220 +1097,6 @@ async fn update_config_changes_subsequent_request_model() {
     assert_eq!(
         models.as_slice(),
         &["model-A".to_string(), "model-B".to_string()]
-    );
-}
-
-// ---------------------------------------------------------------------------
-// Responses doom-loop check signals
-// ---------------------------------------------------------------------------
-
-fn responses_config(base_url: String, doom_loop: Option<DoomLoopRecoveryPolicy>) -> SamplerConfig {
-    let mut cfg = test_config(base_url, "test-model");
-    cfg.api_backend = ApiBackend::Responses;
-    cfg.doom_loop_recovery = doom_loop;
-    cfg
-}
-
-/// Server-reported doom-loop triggers flow through the actor rung onto the completed response, without retries.
-/// The trigger is non-confident (`@response` channel), so the recovery, which resamples only confident signals, leaves it alone.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn responses_doom_loop_signals_reach_completed_response() {
-    let counter = Arc::new(AtomicU32::new(0));
-    let counter_handler = Arc::clone(&counter);
-    let app = Router::new().route(
-        "/v1/responses",
-        post(move || {
-            let counter = Arc::clone(&counter_handler);
-            async move {
-                counter.fetch_add(1, Ordering::SeqCst);
-                let events = sse_events_to_axum(sse::responses_api_doom_loop_terminal_only_events(
-                    &["tail_repetition:4@response"],
-                    "some thought",
-                    "an answer",
-                    "test-model",
-                ));
-                Sse::new(stream::iter(
-                    events.into_iter().map(Ok::<_, std::convert::Infallible>),
-                ))
-            }
-        }),
-    );
-    let server = MockServer::spawn(app).await;
-    let (event_tx, _event_rx) = mpsc::unbounded_channel();
-    let handle = SamplerActor::spawn(
-        responses_config(server.base_url(), Some(DoomLoopRecoveryPolicy::default())),
-        RetryPolicy::default(),
-        event_tx,
-    );
-
-    let result = handle
-        .submit_and_collect(RequestId::from("req-doom-signal"), user_request("hi"))
-        .await;
-    server.shutdown();
-
-    let (response, _metrics) = result.expect("a signalled turn still completes");
-    assert_eq!(counter.load(Ordering::SeqCst), 1, "warn-only: no resample");
-    assert_eq!(response.doom_loop_signals.len(), 1);
-    assert_eq!(
-        response.doom_loop_signals[0].raw,
-        "tail_repetition:4@response"
-    );
-    assert_eq!(response.assistant_text(), "an answer");
-}
-
-/// Acceptance spec for the recovery rung: a confident tail signal is resampled once while its detector label remains observable.
-/// The clean second response is accepted on its own budget even with transport retries disabled.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn responses_confident_doom_loop_signal_resamples_once() {
-    let counter = Arc::new(AtomicU32::new(0));
-    let counter_handler = Arc::clone(&counter);
-    let bodies = Arc::new(std::sync::Mutex::new(Vec::<serde_json::Value>::new()));
-    let bodies_handler = Arc::clone(&bodies);
-    let app = Router::new().route(
-        "/v1/responses",
-        post(move |body: String| {
-            let counter = Arc::clone(&counter_handler);
-            let bodies = Arc::clone(&bodies_handler);
-            async move {
-                bodies
-                    .lock()
-                    .unwrap()
-                    .push(serde_json::from_str(&body).unwrap());
-                let attempt = counter.fetch_add(1, Ordering::SeqCst);
-                let events = if attempt == 0 {
-                    sse::responses_api_doom_loop_terminal_only_events(
-                        &["tail_repetition:8@thinking"],
-                        "loop loop loop",
-                        "poisoned answer",
-                        "test-model",
-                    )
-                } else {
-                    sse::responses_api_reasoning_and_text_events(
-                        "fresh thought",
-                        "clean answer",
-                        "test-model",
-                    )
-                };
-                let events = sse_events_to_axum(events);
-                Sse::new(stream::iter(
-                    events.into_iter().map(Ok::<_, std::convert::Infallible>),
-                ))
-            }
-        }),
-    );
-    let server = MockServer::spawn(app).await;
-    let (event_tx, mut event_rx) = mpsc::unbounded_channel();
-    let mut config = responses_config(server.base_url(), Some(DoomLoopRecoveryPolicy::default()));
-    config.max_retries = Some(0);
-    let handle = SamplerActor::spawn(config, RetryPolicy::default(), event_tx);
-
-    let collected = handle
-        .submit_and_collect_with_metadata(RequestId::from("req-doom-resample"), user_request("hi"))
-        .await;
-    server.shutdown();
-
-    assert!(collected.terminal_event_queued);
-    assert_eq!(
-        collected.doom_loop_signals,
-        vec!["tail_repetition:8@thinking".to_string()],
-    );
-    assert_eq!(1, collected.doom_loop_recovery_attempts.len());
-    assert_eq!(
-        collected.doom_loop_recovery_attempts[0].triggers,
-        vec!["tail_repetition:8@thinking".to_string()]
-    );
-    let (response, _metrics) = collected
-        .result
-        .expect("recovery accepts the clean resample");
-    assert_eq!(counter.load(Ordering::SeqCst), 2, "exactly one resample");
-    assert_eq!(response.assistant_text(), "clean answer");
-    assert!(
-        response.doom_loop_signals.is_empty(),
-        "the accepted response is the clean resample"
-    );
-
-    let events = drain_until_terminal(&mut event_rx, Duration::from_secs(1)).await;
-    assert!(events.iter().any(|event| matches!(
-        event,
-        SamplingEvent::DoomLoopSignals { triggers, .. }
-            if triggers == &["tail_repetition:8@thinking".to_string()]
-    )));
-    assert!(events.iter().any(|event| matches!(
-        event,
-        SamplingEvent::Retrying {
-            doom_loop_triggers: Some(triggers),
-            ..
-        } if triggers == &["tail_repetition:8@thinking".to_string()]
-    )));
-
-    let bodies = bodies.lock().unwrap();
-    let retry_input = bodies[1]["input"].as_array().unwrap();
-    assert_eq!(retry_input.len(), 4);
-    assert_eq!(retry_input[1]["summary"][0]["text"], "loop loop loop");
-    assert_eq!(retry_input[2]["role"], "assistant");
-    assert_eq!(retry_input[2]["content"], "poisoned answer");
-    assert_eq!(retry_input[3]["role"], "user");
-    let reminder = retry_input[3]["content"]
-        .as_str()
-        .expect("the reminder is a text item");
-    assert!(
-        reminder.starts_with("<system_reminder>") && reminder.ends_with("</system_reminder>"),
-        "the retry closes with a synthetic system-reminder envelope: {reminder}"
-    );
-}
-
-/// A caller that opted into `retry_only_before_output` cannot retract text it already received.
-/// So a doomed turn that streamed output fails instead of resampling over the delivered prefix.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn responses_doom_loop_does_not_resample_after_output_when_retry_only_before_output() {
-    let counter = Arc::new(AtomicU32::new(0));
-    let counter_handler = Arc::clone(&counter);
-    let app = Router::new().route(
-        "/v1/responses",
-        post(move || {
-            let counter = Arc::clone(&counter_handler);
-            async move {
-                counter.fetch_add(1, Ordering::SeqCst);
-                let events = sse_events_to_axum(sse::responses_api_doom_loop_terminal_only_events(
-                    &["tail_repetition:8@thinking"],
-                    "loop loop loop",
-                    "poisoned answer",
-                    "test-model",
-                ));
-                Sse::new(stream::iter(
-                    events.into_iter().map(Ok::<_, std::convert::Infallible>),
-                ))
-            }
-        }),
-    );
-    let server = MockServer::spawn(app).await;
-    let (event_tx, _event_rx) = mpsc::unbounded_channel();
-    let retry_policy = RetryPolicy {
-        retry_only_before_output: true,
-        ..RetryPolicy::default()
-    };
-    let handle = SamplerActor::spawn(
-        responses_config(server.base_url(), Some(DoomLoopRecoveryPolicy::default())),
-        retry_policy,
-        event_tx,
-    );
-
-    let result = handle
-        .submit_and_collect(RequestId::from("req-doom-no-retract"), user_request("hi"))
-        .await;
-    server.shutdown();
-
-    assert_eq!(
-        counter.load(Ordering::SeqCst),
-        1,
-        "no resample after output"
-    );
-    assert!(
-        matches!(
-            result,
-            Err(xai_grok_sampling_types::SamplingError::DoomLoopDetected { .. })
-        ),
-        "the doomed turn is surfaced rather than resampled: {result:?}"
     );
 }
 
@@ -1619,5 +1164,104 @@ async fn await_event_matching(
             Ok(None) => return None,
             Err(_) => return None,
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 429 retry with Retry-After backoff, and 5xx retry exhaustion
+// ---------------------------------------------------------------------------
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn retries_on_429_then_succeeds() {
+    let counter = Arc::new(AtomicU32::new(0));
+    let counter_handler = Arc::clone(&counter);
+    let app = Router::new().route(
+        "/v1/chat/completions",
+        post(move || {
+            let counter = Arc::clone(&counter_handler);
+            async move {
+                let n = counter.fetch_add(1, Ordering::SeqCst);
+                if n == 0 {
+                    // First attempt: rate limited, but `Retry-After: 0` keeps the wait at zero.
+                    let mut resp = axum::response::Response::new(axum::body::Body::from(
+                        json!({ "error": { "message": "rate limited" } }).to_string(),
+                    ));
+                    *resp.status_mut() = StatusCode::TOO_MANY_REQUESTS;
+                    resp.headers_mut()
+                        .insert("retry-after", "0".parse().unwrap());
+                    resp
+                } else {
+                    let events = sse::chat_completion_events("ok", "test-model");
+                    Sse::new(stream::iter(
+                        events.into_iter().map(Ok::<_, std::convert::Infallible>),
+                    ))
+                    .into_response()
+                }
+            }
+        }),
+    );
+    let server = MockServer::spawn(app).await;
+    let (event_tx, mut event_rx) = mpsc::unbounded_channel();
+    let mut cfg = test_config(server.base_url(), "test-model");
+    cfg.rate_limit_retry_threshold = Some(4);
+    let handle = SamplerActor::spawn(cfg, RetryPolicy::default(), event_tx);
+
+    let rid = RequestId::from("req-429");
+    handle.submit(rid.clone(), user_request("hi"));
+
+    let events = drain_until_terminal(&mut event_rx, Duration::from_secs(15)).await;
+    server.shutdown();
+
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e, SamplingEvent::Retrying { .. })),
+        "expected a Retrying event after the 429"
+    );
+    match events.last().unwrap() {
+        SamplingEvent::Completed { response, .. } => {
+            assert_eq!(response.assistant().map(|a| a.content.as_ref()), Some("ok"));
+        }
+        other => panic!("expected Completed after 429 retry, got {other:?}"),
+    }
+    assert!(
+        counter.load(Ordering::SeqCst) >= 2,
+        "server must be hit again after the 429"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn exhausted_5xx_retries_fail_with_clear_error() {
+    let app = Router::new().route(
+        "/v1/chat/completions",
+        post(|| async {
+            Err::<axum::response::Response, (StatusCode, String)>((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                json!({ "error": { "message": "server exploded" } }).to_string(),
+            ))
+        }),
+    );
+    let server = MockServer::spawn(app).await;
+    let (event_tx, mut event_rx) = mpsc::unbounded_channel();
+    let mut cfg = test_config(server.base_url(), "test-model");
+    cfg.max_retries = Some(1);
+    let handle = SamplerActor::spawn(cfg, RetryPolicy::default(), event_tx);
+
+    let rid = RequestId::from("req-500-exhaust");
+    handle.submit(rid.clone(), user_request("hi"));
+
+    let events = drain_until_terminal(&mut event_rx, Duration::from_secs(15)).await;
+    server.shutdown();
+
+    match events.last().unwrap() {
+        SamplingEvent::Failed { error, .. } => {
+            assert_eq!(error.kind, SamplingErrorKind::Api);
+            assert!(
+                error.message.contains("server exploded") || error.message.contains("500"),
+                "failure must carry a clear provider message, got {:?}",
+                error.message
+            );
+        }
+        other => panic!("expected Failed after exhausting retries, got {other:?}"),
     }
 }

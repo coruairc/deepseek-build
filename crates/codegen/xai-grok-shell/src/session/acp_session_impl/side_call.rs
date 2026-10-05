@@ -89,13 +89,11 @@ pub(crate) struct SideCallSetup {
 }
 
 pub(super) fn should_strip_side_call_reasoning(
-    backend: crate::sampling::ApiBackend,
-    reasoning_effort: Option<xai_grok_sampling_types::ReasoningEffort>,
+    _backend: crate::sampling::ApiBackend,
+    _reasoning_effort: Option<xai_grok_sampling_types::ReasoningEffort>,
 ) -> bool {
-    matches!(backend, crate::sampling::ApiBackend::Messages)
-        && reasoning_effort
-            .and_then(|effort| effort.to_messages_api())
-            .is_none()
+    // The Messages backend has been removed; Chat Completions keeps side-call reasoning.
+    false
 }
 
 impl SessionActor {

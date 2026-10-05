@@ -102,12 +102,25 @@ fn test_chat_response_message_to_conversation_item() {
         citations: None,
     };
 
-    let item: ConversationItem = response_with_reasoning.into();
-    let ConversationItem::Assistant(a) = &item else {
-        panic!("Expected Assistant item");
+    // The canonical conversion emits the reasoning trace as a sibling `Reasoning`
+    // item so non-stream turns replay it, matching the streaming path.
+    let items =
+        crate::conversation::chat_response_message_to_conversation_items(response_with_reasoning);
+    let [
+        ConversationItem::Reasoning(reasoning),
+        ConversationItem::Assistant(a),
+    ] = items.as_slice()
+    else {
+        panic!("expected [Reasoning, Assistant], got {items:?}");
     };
     assert_eq!(a.content.as_ref(), "The answer is 42.");
-    // Reasoning content is dropped on the single-item `From` path; see the doc comment on `From<ChatResponseMessage>`
+    assert_eq!(
+        crate::reasoning_item_text(reasoning),
+        "Let me think step by step..."
+    );
+
+    // The single-item `From` path intentionally carries only the Assistant.
+    // Reasoning is unavailable there; see the doc comment on the impl.
 
     // Response with tool calls
     let response_with_tools = ChatResponseMessage {

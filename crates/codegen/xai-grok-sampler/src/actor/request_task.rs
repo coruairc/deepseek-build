@@ -31,8 +31,7 @@ use crate::metrics::InferenceLatencyStats;
 use crate::retry::{
     self as retry_mod, RetryDecision, classify_error, clone_error, resolve_max_retries,
 };
-use crate::stream::responses::stream_responses_tracked;
-use crate::stream::{stream_chat_completions, stream_messages};
+use crate::stream::stream_chat_completions;
 use crate::types::RequestId;
 
 /// Default per-chunk idle timeout when neither config nor caller supplies one.
@@ -535,6 +534,8 @@ async fn run_one_attempt(
     output_observed: Arc<AtomicBool>,
 ) -> AttemptOutcome {
     let length_policy = request.length_policy;
+    // Chat Completions is the only backend. Its transform never emits server-side
+    // doom-loop signals, so the armed-replay capture is always the inert default.
     match client.api_backend() {
         ApiBackend::ChatCompletions => {
             let (raw, metadata) = match client.conversation_stream(request).await {
@@ -549,67 +550,7 @@ async fn run_one_attempt(
                 event_tx,
                 cancel_token,
                 captured,
-                None,
-                FailedResponseCapture::default(),
-                output_observed,
-                length_policy,
-            )
-            .await
-        }
-        ApiBackend::Responses => {
-            let (raw, metadata, doom_loop) =
-                match client.conversation_stream_responses(request).await {
-                    Ok(parts) => parts,
-                    Err(e) => return AttemptOutcome::InitFailed { error: e },
-                };
-            if doom_check.is_none()
-                && let Some(collector) = &doom_loop
-            {
-                collector.disarm_abort();
-            }
-            let (teed, captured) = tee_errors(raw);
-            // Only an armed attempt can replay its failed turn, so only an armed attempt pays for buffering it
-            let failed_response = if doom_check.is_some() {
-                FailedResponseCapture::armed()
-            } else {
-                FailedResponseCapture::default()
-            };
-            let l2 = stream_responses_tracked(
-                teed,
-                metadata,
-                request_id.clone(),
-                idle_timeout,
-                doom_loop,
-                Arc::clone(&output_observed),
-                failed_response.clone(),
-            );
-            drive_l2(
-                l2,
-                request_id,
-                event_tx,
-                cancel_token,
-                captured,
                 doom_check,
-                failed_response,
-                output_observed,
-                length_policy,
-            )
-            .await
-        }
-        ApiBackend::Messages => {
-            let (raw, metadata) = match client.conversation_stream_messages(request).await {
-                Ok(pair) => pair,
-                Err(e) => return AttemptOutcome::InitFailed { error: e },
-            };
-            let (teed, captured) = tee_errors(raw);
-            let l2 = stream_messages(teed, metadata, request_id.clone(), idle_timeout);
-            drive_l2(
-                l2,
-                request_id,
-                event_tx,
-                cancel_token,
-                captured,
-                None,
                 FailedResponseCapture::default(),
                 output_observed,
                 length_policy,

@@ -1,51 +1,5 @@
 use super::*;
 
-pub(super) fn count_cache_control(value: &serde_json::Value) -> usize {
-    match value {
-        serde_json::Value::Object(map) => {
-            usize::from(map.contains_key("cache_control"))
-                + map.values().map(count_cache_control).sum::<usize>()
-        }
-        serde_json::Value::Array(items) => items.iter().map(count_cache_control).sum(),
-        _ => 0,
-    }
-}
-
-pub(super) fn marker_on_last_block(message: &serde_json::Value) -> Option<&str> {
-    message
-        .get("content")?
-        .as_array()?
-        .last()?
-        .pointer("/cache_control/type")?
-        .as_str()
-}
-
-pub(super) fn agent_turn(n: usize) -> Vec<ConversationItem> {
-    let id = format!("call_{n}");
-    vec![
-        ConversationItem::assistant_tool_calls(vec![ToolCall {
-            id: id.as_str().into(),
-            name: "read_file".to_string(),
-            arguments: r#"{"path": "src/main.rs"}"#.into(),
-        }]),
-        ConversationItem::tool_result(id, "fn main() {}"),
-    ]
-}
-
-pub(super) fn agent_request(turns: usize) -> serde_json::Value {
-    let mut items = vec![
-        ConversationItem::system("You are a helpful assistant."),
-        ConversationItem::user("Fix the bug"),
-    ];
-    for n in 0..turns {
-        items.extend(agent_turn(n));
-    }
-    serde_json::to_value(build_messages_request(
-        &ConversationRequest::from_items(items).with_model("messages-compatible-model"),
-    ))
-    .unwrap()
-}
-
 pub(super) fn btw_prepare_items(mut items: Vec<ConversationItem>) -> Vec<ConversationItem> {
     // Strip reasoning (same as strip_reasoning_blocks)
     items.retain(|item| !matches!(item, ConversationItem::Reasoning(_)));
@@ -144,10 +98,6 @@ pub(super) fn make_response(message: ConversationItem) -> ConversationResponse {
     }
 }
 
-// These tests enforce prefix stability and correct turn ordering for the Responses API input construction. Prompt
-// caching (server-side prefix match) requires that request N's serialised input is a strict prefix of request N+1's. The
-// invariant asserted is `&input2[..input1.len()] == input1` for every pair of consecutive turns
-
 pub(super) fn reasoning_sibling(
     id: &str,
     summary_text: &str,
@@ -162,72 +112,4 @@ pub(super) fn reasoning_sibling(
         encrypted_content: encrypted.map(str::to_owned),
         status: None,
     })
-}
-
-pub(super) fn input_items_json(req: &ConversationRequest) -> Vec<serde_json::Value> {
-    let cr: rs::CreateResponse = req.into();
-    let mut body = serde_json::to_value(&cr).unwrap();
-    patch_reasoning_text_types(&mut body);
-    body.get("input")
-        .and_then(|v| v.as_array())
-        .cloned()
-        .unwrap_or_default()
-}
-
-pub(super) fn summarise_input(items: &[serde_json::Value]) -> Vec<String> {
-    items
-        .iter()
-        .map(|v| {
-            let ty = v.get("type").and_then(|t| t.as_str()).unwrap_or("?");
-            if let Some(role) = v.get("role").and_then(|r| r.as_str()) {
-                let text = v
-                    .get("content")
-                    .and_then(|c| c.as_str())
-                    .unwrap_or("<non-text>");
-                format!("{role}:{text}")
-            } else if ty == "reasoning" {
-                let id = v.get("id").and_then(|i| i.as_str()).unwrap_or("?");
-                format!("reasoning:{id}")
-            } else if ty == "function_call" {
-                let cid = v.get("call_id").and_then(|c| c.as_str()).unwrap_or("?");
-                format!("function_call:{cid}")
-            } else {
-                format!("type:{ty}")
-            }
-        })
-        .collect()
-}
-
-pub(super) fn assert_prefix_stable(base: &ConversationRequest, extended: &ConversationRequest) {
-    let base_input = input_items_json(base);
-    let ext_input = input_items_json(extended);
-    assert!(
-        ext_input.len() >= base_input.len(),
-        "extended request has fewer input items ({}) than base ({})",
-        ext_input.len(),
-        base_input.len(),
-    );
-    let Some(prefix) = ext_input.get(..base_input.len()) else {
-        panic!(
-            "extended input shorter than base: base={} ext={}",
-            base_input.len(),
-            ext_input.len()
-        );
-    };
-    assert_eq!(
-        prefix,
-        base_input.as_slice(),
-        "serialized input of request N must be a prefix of request N+1.\n\
-             Base ({} items): {:?}\nExtended ({} items): {:?}\n\
-             First divergence at index {}",
-        base_input.len(),
-        summarise_input(&base_input),
-        ext_input.len(),
-        summarise_input(&ext_input),
-        base_input
-            .iter()
-            .zip(ext_input.iter())
-            .position(|(a, b)| a != b)
-            .unwrap_or(base_input.len()),
-    );
 }

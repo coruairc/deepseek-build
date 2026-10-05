@@ -1139,38 +1139,44 @@ pub fn context_window_meta_value(window: NonZeroU64) -> Value {
     Value::Number(window.get().into())
 }
 
+/// The wire protocol used to talk to the model provider.
+///
+/// DeepSeek Build speaks only the OpenAI-compatible Chat Completions API
+/// (`/v1/chat/completions`). The former Responses and Anthropic Messages
+/// backends have been removed; the enum is retained as a single-variant
+/// marker so call sites that carry `api_backend` keep a stable type.
 #[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ApiBackend {
     /// Use the Chat Completions API (/v1/chat/completions)
     #[default]
     ChatCompletions,
-    /// Use the Responses API (/v1/responses)
-    Responses,
-    /// Use the Anthropic Messages API (/v1/messages)
-    Messages,
 }
 
 impl ApiBackend {
     /// Whether the backend enforces a response JSON schema natively alongside tool calls.
-    /// The Messages API does not (a schema there blocks tool use), so structured output there goes through the StructuredOutput tool.
+    /// Chat Completions does, so structured output can ride `response_format`.
     pub fn supports_native_schema(&self) -> bool {
-        matches!(self, Self::ChatCompletions | Self::Responses)
+        match *self {
+            Self::ChatCompletions => true,
+        }
     }
 
-    /// Whether [`ConversationRequest::prompt_cache_key`] reaches the wire. Only the Responses mapping sends it, so a key set elsewhere is inert.
+    /// Whether [`ConversationRequest::prompt_cache_key`] reaches the wire.
+    /// Chat Completions carries the cache key elsewhere, so this is false.
     ///
     /// [`ConversationRequest::prompt_cache_key`]: crate::conversation::ConversationRequest::prompt_cache_key
     pub fn forwards_prompt_cache_key(&self) -> bool {
-        matches!(self, Self::Responses)
+        match *self {
+            Self::ChatCompletions => false,
+        }
     }
 
-    /// Request-body cap the hosts speaking this protocol enforce; the budget when a model sets no `max_request_bytes`.
-    /// The xAI inference proxy rejects bodies over 50 MiB (nginx `proxy-body-size`); Messages API hosts reject bodies over 30 MB.
+    /// Request-body cap the host speaking this protocol enforces; the budget when a model sets no `max_request_bytes`.
+    /// The DeepSeek gateway rejects bodies over 50 MiB (nginx `proxy-body-size`).
     pub const fn default_max_request_bytes(&self) -> NonZeroU64 {
-        match self {
-            Self::ChatCompletions | Self::Responses => NonZeroU64::new(50 * 1024 * 1024).unwrap(),
-            Self::Messages => NonZeroU64::new(30_000_000).unwrap(),
+        match *self {
+            Self::ChatCompletions => NonZeroU64::new(50 * 1024 * 1024).unwrap(),
         }
     }
 }
@@ -1276,144 +1282,6 @@ impl Default for SamplingConfig {
             reasoning_summary: None,
             stream_tool_calls: None,
         }
-    }
-}
-
-// ============ Responses API wrapper ============
-
-/// Wrapper around `async_openai::types::responses::CreateResponse` that adds custom header fields for xAI request tracking.
-/// It mirrors the header fields on `ChatCompletionRequest`.
-#[derive(Debug, Clone, Default)]
-pub struct CreateResponseWrapper {
-    /// The inner Responses API request.
-    pub inner: crate::rs::CreateResponse,
-
-    /// Custom header: conversation ID for tracking.
-    pub x_grok_conv_id: Option<String>,
-
-    /// Custom header: request ID for tracking.
-    pub x_grok_req_id: Option<String>,
-
-    pub x_grok_session_id: Option<String>,
-    pub x_grok_turn_idx: Option<String>,
-    pub x_grok_transient_retry: Option<String>,
-    pub x_grok_agent_id: Option<String>,
-    pub x_grok_deployment_id: Option<String>,
-    pub x_grok_user_id: Option<String>,
-
-    /// Optional tracing context (e.g., where to persist the finalized request payload).
-    pub trace: Option<Box<dyn TraceContext>>,
-    /// Caller span's W3C `traceparent`; see [`crate::ConversationRequest::traceparent`].
-    pub traceparent: Option<String>,
-
-    /// xAI-specific tool definitions that can't be expressed via `async_openai`'s `rs::Tool` enum (e.g., `x_search`).
-    /// They are injected as raw JSON into the serialized request body's `tools` array.
-    pub extra_tool_entries: Vec<serde_json::Value>,
-}
-
-impl CreateResponseWrapper {
-    pub fn new(inner: crate::rs::CreateResponse) -> Self {
-        Self {
-            inner,
-            x_grok_conv_id: None,
-            x_grok_req_id: None,
-            x_grok_session_id: None,
-            x_grok_turn_idx: None,
-            x_grok_transient_retry: None,
-            x_grok_agent_id: None,
-            x_grok_deployment_id: None,
-            x_grok_user_id: None,
-            trace: None,
-            traceparent: None,
-            extra_tool_entries: vec![],
-        }
-    }
-
-    pub fn with_conv_id(mut self, conv_id: impl Into<String>) -> Self {
-        self.x_grok_conv_id = Some(conv_id.into());
-        self
-    }
-
-    pub fn with_req_id(mut self, req_id: impl Into<String>) -> Self {
-        self.x_grok_req_id = Some(req_id.into());
-        self
-    }
-
-    pub fn with_trace(mut self, trace: impl TraceContext + 'static) -> Self {
-        self.trace = Some(Box::new(trace));
-        self
-    }
-}
-
-impl From<crate::rs::CreateResponse> for CreateResponseWrapper {
-    fn from(inner: crate::rs::CreateResponse) -> Self {
-        Self::new(inner)
-    }
-}
-
-// ============ Messages API wrapper ============
-
-/// Wrapper around `MessagesRequest` that adds custom header fields for xAI request tracking, analogous to `CreateResponseWrapper`.
-#[derive(Debug, Clone, Default)]
-pub struct MessagesRequestWrapper {
-    /// The inner Messages API request.
-    pub inner: crate::messages::MessagesRequest,
-
-    /// Custom header: conversation ID for tracking.
-    pub x_grok_conv_id: Option<String>,
-
-    /// Custom header: request ID for tracking.
-    pub x_grok_req_id: Option<String>,
-
-    pub x_grok_session_id: Option<String>,
-    pub x_grok_turn_idx: Option<String>,
-    pub x_grok_transient_retry: Option<String>,
-    pub x_grok_agent_id: Option<String>,
-    pub x_grok_deployment_id: Option<String>,
-    pub x_grok_user_id: Option<String>,
-
-    /// Optional tracing context (e.g., where to persist the finalized request payload).
-    pub trace: Option<Box<dyn TraceContext>>,
-    /// Caller span's W3C `traceparent`; see [`crate::ConversationRequest::traceparent`].
-    pub traceparent: Option<String>,
-}
-
-impl MessagesRequestWrapper {
-    pub fn new(inner: crate::messages::MessagesRequest) -> Self {
-        Self {
-            inner,
-            x_grok_conv_id: None,
-            x_grok_req_id: None,
-            x_grok_session_id: None,
-            x_grok_turn_idx: None,
-            x_grok_transient_retry: None,
-            x_grok_agent_id: None,
-            x_grok_deployment_id: None,
-            x_grok_user_id: None,
-            trace: None,
-            traceparent: None,
-        }
-    }
-
-    pub fn with_conv_id(mut self, conv_id: impl Into<String>) -> Self {
-        self.x_grok_conv_id = Some(conv_id.into());
-        self
-    }
-
-    pub fn with_req_id(mut self, req_id: impl Into<String>) -> Self {
-        self.x_grok_req_id = Some(req_id.into());
-        self
-    }
-
-    pub fn with_trace(mut self, trace: impl TraceContext + 'static) -> Self {
-        self.trace = Some(Box::new(trace));
-        self
-    }
-}
-
-impl From<crate::messages::MessagesRequest> for MessagesRequestWrapper {
-    fn from(inner: crate::messages::MessagesRequest) -> Self {
-        Self::new(inner)
     }
 }
 

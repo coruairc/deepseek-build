@@ -251,10 +251,8 @@ impl SessionActor {
             return PrefireOutcome::EmptySplit.into();
         }
         let sampling_cfg = self.chat_state_handle.get_sampling_config().await;
-        let strips = sampling_cfg
-            .as_ref()
-            .map(|c| c.api_backend == ApiBackend::Messages)
-            .unwrap_or(false);
+        // Chat Completions is the only backend and it never strips reasoning.
+        let strips = false;
         let model_slug = sampling_cfg
             .as_ref()
             .map(|c| c.model.to_string())
@@ -952,10 +950,8 @@ impl SessionActor {
             );
             span.record("compaction_trigger", trigger_str);
         }
-        let summary_strips_reasoning = sampling_config
-            .as_ref()
-            .map(|c| c.api_backend == ApiBackend::Messages)
-            .unwrap_or(false);
+        // Chat Completions is the only backend and it never strips reasoning.
+        let summary_strips_reasoning = false;
         let model_id = sampling_config.map(|c| c.model).unwrap_or_default();
         let compaction = xai_grok_telemetry::events::CompactionScope::begin(
             xai_grok_telemetry::events::CompactionBeginParams {

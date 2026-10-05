@@ -209,6 +209,7 @@ impl ShellToolsetConfig {
             temperature: None,
             top_p: None,
             api_backend: Default::default(),
+            model_routing: Default::default(),
             auth_scheme: Default::default(),
             request_compression: Default::default(),
             extra_headers: indexmap::IndexMap::new(),

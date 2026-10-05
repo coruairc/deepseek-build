@@ -21,6 +21,7 @@ mod doom_loop_recovery;
 pub mod events;
 pub mod handle;
 pub mod metrics;
+pub mod model_routing;
 mod prewarm;
 mod request_compression;
 pub mod retry;
@@ -48,6 +49,10 @@ pub use events::{
 };
 pub use handle::{CollectedSamplingResult, DoomLoopRecoveryAttempt, SamplerHandle};
 pub use metrics::{InferenceLatencyStats, compute_percentiles};
+pub use model_routing::{
+    ModelRoute, ModelRoutingConfig, ModelRoutingPolicy, TurnComplexity, classify_turn,
+    resolve_route,
+};
 pub use prewarm::{PrewarmOutcome, PrewarmReport, prewarm_transport};
 pub use retry::{
     DEFAULT_MAX_RETRIES, MAX_RETRY_BACKOFF, RATE_LIMIT_RETRY_DISABLED, RATE_LIMIT_RETRY_THRESHOLD,
@@ -55,6 +60,6 @@ pub use retry::{
     retry_after_or_backoff, retry_backoff_with_jitter,
 };
 pub use sampling_log::AuthInfo;
-pub use stream::{collect_response, stream_chat_completions, stream_messages, stream_responses};
+pub use stream::{collect_response, stream_chat_completions};
 pub use types::RequestId;
 pub use xai_grok_sampling_types::ConversationGroupId;

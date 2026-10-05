@@ -468,9 +468,10 @@ pub(crate) fn parse_remote_model_value(
     let api_backend = get_string(obj, "apiBackend")
         .or_else(|| get_string(obj, "api_backend"))
         .and_then(|s| match s.as_str() {
-            "responses" => Some(crate::sampling::ApiBackend::Responses),
-            "chat_completions" => Some(crate::sampling::ApiBackend::ChatCompletions),
-            "messages" => Some(crate::sampling::ApiBackend::Messages),
+            // Legacy "responses"/"messages" values now resolve to the only backend.
+            "responses" | "messages" | "chat_completions" => {
+                Some(crate::sampling::ApiBackend::ChatCompletions)
+            }
             _ => None,
         })
         .unwrap_or_default();

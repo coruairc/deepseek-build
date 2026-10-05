@@ -71,7 +71,7 @@ fn direct_session_title_sampling_config(
         api_key: Some(direct.api_key),
         base_url: direct.base_url,
         model: direct.model,
-        api_backend: ApiBackend::Responses,
+        api_backend: ApiBackend::ChatCompletions,
         context_window: 200_000,
         client_version,
         ..SamplerConfig::default()
