@@ -9,9 +9,9 @@
 
 pub mod cache;
 pub mod color_support;
-pub mod env_appearance;
 mod deepseek_day;
 mod deepseek_monokai;
+pub mod env_appearance;
 pub mod md_style;
 pub mod osc11;
 mod oscura;
@@ -648,7 +648,10 @@ mod tests {
             other => panic!("expected RGB, got {other:?}"),
         };
         let night = Theme::deepseek_monokai();
-        let faint = night.faint().fg.expect("DeepSeekMonokai blends to a hard colour");
+        let faint = night
+            .faint()
+            .fg
+            .expect("DeepSeekMonokai blends to a hard colour");
         assert!(luma(night.bg_base) < luma(faint) && luma(faint) < luma(night.gray_dim));
 
         let terminal = Theme::terminal_default();
@@ -1067,7 +1070,9 @@ mod tests {
 
     #[test]
     fn ansi16_quantize_without_override_collapses_deepseek_monokai_backgrounds() {
-        // Ratchet: naive Basic maps every dark DeepSeekMonokai bg to Black. If a mid-tone level appears, revisit the override.
+        // Ratchet: naive Basic maps the deepest DeepSeekMonokai bg levels to Black. The
+        // elevated hover/visual surface (#49483e) is light enough to land on ANSI 8
+        // (DarkGray); `ansi16_chrome_overrides` pins that same slot explicitly.
         use ratatui::style::Color;
         let q = Theme::deepseek_monokai().quantized(color_support::ColorLevel::Basic);
         for (name, color) in [
@@ -1075,8 +1080,6 @@ mod tests {
             ("bg_light", q.bg_light),
             ("bg_dark", q.bg_dark),
             ("bg_highlight", q.bg_highlight),
-            ("bg_hover", q.bg_hover),
-            ("bg_visual", q.bg_visual),
             ("md_code_bg", q.md_code_bg),
             ("scrollbar_bg", q.scrollbar_bg),
         ] {
@@ -1086,6 +1089,12 @@ mod tests {
                 "{name} should collapse to Black without the override"
             );
         }
+        assert_eq!(q.bg_hover, Color::DarkGray, "bg_hover quantizes to ANSI 8");
+        assert_eq!(
+            q.bg_visual,
+            Color::DarkGray,
+            "bg_visual quantizes to ANSI 8"
+        );
     }
 
     #[test]
@@ -1154,8 +1163,14 @@ mod tests {
             ThemeKind::from_name("deepseek-monokai"),
             Some(ThemeKind::DeepSeekMonokai)
         );
-        assert_eq!(ThemeKind::from_name("dark"), Some(ThemeKind::DeepSeekMonokai));
-        assert_eq!(ThemeKind::from_name("deepseek-day"), Some(ThemeKind::DeepSeekDay));
+        assert_eq!(
+            ThemeKind::from_name("dark"),
+            Some(ThemeKind::DeepSeekMonokai)
+        );
+        assert_eq!(
+            ThemeKind::from_name("deepseek-day"),
+            Some(ThemeKind::DeepSeekDay)
+        );
         assert_eq!(ThemeKind::from_name("light"), Some(ThemeKind::DeepSeekDay));
         assert_eq!(
             ThemeKind::from_name("tokyonight"),
