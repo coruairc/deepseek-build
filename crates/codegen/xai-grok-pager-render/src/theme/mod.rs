@@ -1,5 +1,5 @@
 //! All colors come from the `Theme` struct. No hardcoded colors elsewhere.
-//! The default theme is GrokNight (neutral gray base with TokyoNight accents).
+//! The default theme is `groknight`, a Monokai palette with the DeepSeek blue as the product accent.
 //!
 //! ## Color support
 //!
@@ -130,7 +130,7 @@ impl ThemeKind {
     /// Alternate lowercase spellings accepted by [`from_name`](Self::from_name), excluding [`display_name`](Self::display_name).
     pub fn aliases(self) -> &'static [&'static str] {
         match self {
-            Self::GrokNight => &["grok-night", "dark"],
+            Self::GrokNight => &["grok-night", "dark", "monokai", "deepseek", "deepseek-monokai"],
             Self::TokyoNight => &["tokyo-night", "tokyo"],
             Self::GrokDay => &["grok-day", "light", "day"],
             Self::RosePineMoon => &["rosepine", "rose-pine", "rose-pine-moon"],
@@ -180,13 +180,13 @@ pub fn canonical_name(value: &str) -> Option<&'static str> {
     ThemeKind::from_name(value).map(|k| k.display_name())
 }
 
-/// Human-friendly display name for a canonical theme value (e.g. `"groknight"` becomes `"Grok Night"`).
+/// Human-friendly display name for a canonical theme value (e.g. `"groknight"` becomes `"deepseek-build Night"`).
 /// Falls back to `value` verbatim.
 pub fn display_name_for_canonical(value: &str) -> &str {
     match value {
         "auto" => "Auto",
-        "groknight" => "Grok Night",
-        "grokday" => "Grok Day",
+        "groknight" => "DeepSeek Monokai",
+        "grokday" => "DeepSeek Day",
         "tokyonight" => "Tokyo Night",
         "rosepine-moon" => "Rose Pine Moon",
         "terminal" => "Terminal",
