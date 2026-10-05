@@ -1867,9 +1867,6 @@ fn main() {
     if let Some(code) = xai_grok_pager::app::mermaid_worker::maybe_run_render_subprocess() {
         std::process::exit(code);
     }
-    if let Some(code) = xai_grok_pager::voice::maybe_run_capture_subprocess() {
-        std::process::exit(code);
-    }
     set_release_channel(ReleaseChannel::from_label(
         xai_grok_version::channel_name().unwrap_or_default(),
     ));
