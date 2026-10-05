@@ -27,7 +27,6 @@ use crate::sampling::{
     SyntheticReason, ToolSpec, conversation_truncate_for_prompt,
 };
 use crate::session::ClientFsConfig;
-use crate::session::feedback_manager::{FeedbackManager, FeedbackManagerConfig};
 use crate::session::fs_watch::{self, git_head_dedup_key};
 use crate::session::info::Info as SessionInfo;
 use crate::session::mcp_servers::McpInitStrategy;
@@ -880,12 +879,10 @@ pub(crate) struct SessionActor {
     pub(crate) client_identifier: Option<String>,
     /// Origin client for User-Agent on sampling requests.
     pub(crate) origin_client: Option<crate::http::OriginClientInfo>,
-    /// Feedback manager for signal tracking and feedback request heuristics
-    pub(crate) feedback_manager: Arc<FeedbackManager>,
+    /// Session signals handle for turn-delta snapshots and telemetry.
+    pub(crate) signals_handle: SessionSignalsHandle,
     pub(crate) upload_queue:
         std::sync::Arc<std::sync::OnceLock<crate::file_utils_compat::queue::UploadQueue>>,
-    /// Cancellation token for the feedback sync loop (None if no feedback client)
-    pub(crate) sync_loop_cancel: Option<tokio_util::sync::CancellationToken>,
     /// The fully-built Agent: owns the ToolBridge, system prompt, policies, and the AgentDefinition.
     /// Replaces the old `tool_bridge` and `agent_definition` fields.
     /// Wrapped in `RefCell` for mid-session mutation (skill refresh, prompt regen).
@@ -1186,7 +1183,7 @@ pub(crate) struct TraceConfigTemplate {
 }
 impl SessionActor {
     fn signals_handle(&self) -> SessionSignalsHandle {
-        self.feedback_manager.signals_handle()
+        self.signals_handle.clone()
     }
     fn emit_event(&self, event: crate::session::events::Event) {
         self.events.emit(event);
@@ -1296,7 +1293,7 @@ impl SessionActor {
             goal_slash_and_harness_available(self.goal_enabled, tool_names)
         };
         slash_commands::CommandAvailability {
-            feedback: self.feedback_manager.is_enabled(),
+            feedback: false,
             memory: self.memory.is_enabled() && can_read_memory,
             memory_configured: !self.memory.process_disabled
                 && (self.memory.backend_params.is_some()
@@ -1377,10 +1374,6 @@ impl SessionActor {
         if let Err(e) = crate::session::replay_events::flush_replay_actor(&self.event_tx).await {
             tracing::warn!(?e, "flush_replay_actor failed");
         }
-    }
-    async fn send_feedback_notification(&self, request: crate::session::feedback::FeedbackRequest) {
-        self.send_xai_notification(XaiSessionUpdate::FeedbackRequest(request.into()))
-            .await;
     }
 }
 impl SessionActor {

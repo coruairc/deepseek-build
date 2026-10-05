@@ -511,8 +511,6 @@ pub(crate) mod agent_rebuild;
 pub(crate) mod chat_persistence;
 pub(crate) mod events;
 pub mod export;
-pub mod feedback;
-pub mod feedback_manager;
 pub(crate) mod file_acceleration;
 pub mod file_system;
 pub mod fork;

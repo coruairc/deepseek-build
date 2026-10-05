@@ -110,21 +110,9 @@ pub(super) async fn fire_session_end_hooks(
     let _stop = session_end::timed_child(timer, Phase::HooksStop, span.span());
     session.dispatch_session_end_stop(reason).await;
 }
-/// Cancel the feedback sync loop, drain/sync under exit budgets, persist background-task state, and drop scratch.
-/// Owns the single final signal sync via [`FeedbackManager::shutdown`]; the sync loop cancel arm does not sync.
-/// `FeedbackManager::shutdown` short-circuits force_sync/drain when telemetry is off or the session is empty with nothing pending.
+/// Persist background-task state and drop scratch as the session exits.
 async fn finish_session_exit_feedback(session: &SessionActor, timer: &SharedSessionEndTimer) {
     let span = session_end::span(Phase::Feedback);
-    if let Some(cancel) = &session.sync_loop_cancel {
-        cancel.cancel();
-    }
-    {
-        let _drain = session_end::timed_child(timer, Phase::FeedbackDrain, span.span());
-        session
-            .feedback_manager
-            .shutdown(session.upload_queue.get())
-            .await;
-    }
     if !session.startup_hints.is_subagent {
         let _tasks = session_end::timed_child(timer, Phase::BackgroundTasksSave, span.span());
         session.persist_resume_status().await;
@@ -1865,16 +1853,6 @@ pub(super) async fn run_session(
                         }
                         SessionCommand::RefreshMcpSearchIndex => {
                             session.refresh_mcp_snapshot_and_schedule_reminder().await;
-                        }
-                        SessionCommand::TriggerTestFeedback { tier, mode, respond_to } => {
-                            let s = session.clone();
-                            tokio::task::spawn_local(async move {
-                                let request = s.feedback_manager.force_feedback_request(tier, mode).await;
-                                let notification = crate::extensions::notification::FeedbackRequestNotification::from(request.clone());
-                                s.send_feedback_notification(request).await;
-                                let resp = ExtMethodResult::success(notification).to_ext_response();
-                                let _ = respond_to.send(resp);
-                            });
                         }
                         SessionCommand::PersistFeedback(entry) => {
                             let _ = session

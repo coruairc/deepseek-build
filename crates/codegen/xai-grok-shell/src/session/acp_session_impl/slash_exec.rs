@@ -926,65 +926,9 @@ impl SessionActor {
             return ok_end_turn(0, None);
         }
 
-        let (sampling_config, model_metadata, credentials, conv) = tokio::join!(
-            self.chat_state_handle.get_sampling_config(),
-            self.chat_state_handle.get_last_model_metadata(),
-            self.chat_state_handle.get_credentials(),
-            self.chat_state_handle.get_conversation(),
-        );
-        let live_model_id = sampling_config.map(|c| c.model);
-        let rated = slash_feedback_rated_turn(&conv);
-        let reasoning_effort = rated.reasoning_effort.map(|e| e.to_string());
-        let (model_id, resolved_model_id) = match rated.model_id {
-            Some(rated_id) => {
-                if model_metadata.resolved_model_id.as_ref() == Some(&rated_id) {
-                    (live_model_id, model_metadata.resolved_model_id)
-                } else if live_model_id.as_ref() != Some(&rated_id) {
-                    (Some(rated_id), None)
-                } else {
-                    (live_model_id, model_metadata.resolved_model_id)
-                }
-            }
-            None => (live_model_id, model_metadata.resolved_model_id),
-        };
-        let client_version = credentials.client_version;
-
-        use crate::session::feedback_manager::{SessionFeedbackData, SubmitOutcome};
-        let outcome = self
-            .feedback_manager
-            .submit_text_feedback(
-                text,
-                SessionFeedbackData {
-                    model_id,
-                    resolved_model_id,
-                    reasoning_effort,
-                    client_version,
-                    session_cwd: self.session_info.cwd.clone(),
-                },
-                Some(&self.notifications.persistence_tx),
-                self.telemetry_enabled,
-            )
+        let _ = text;
+        self.send_host_turn_slash_command_output("Feedback is not configured for this session.")
             .await;
-
-        match outcome {
-            SubmitOutcome::Submitted => {
-                self.send_host_turn_slash_command_output("Feedback submitted. Thank you!")
-                    .await;
-            }
-            SubmitOutcome::LocalOnly => {
-                self.send_host_turn_slash_command_output(
-                    "Feedback saved locally; no feedback server is configured for this session.",
-                )
-                .await;
-            }
-            SubmitOutcome::Failed(err) => {
-                tracing::warn!(error = %err, "feedback submission failed");
-                self.send_host_turn_slash_command_output(
-                    "Feedback saved locally; submitting to the server failed (see logs).",
-                )
-                .await;
-            }
-        }
 
         ok_end_turn(0, None)
     }

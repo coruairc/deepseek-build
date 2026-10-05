@@ -2483,13 +2483,7 @@ impl SessionActor {
         self.emit_turn_end_plan_cleanup().await;
         self.signals_handle().record_turn_complete();
         turn_sampling.fold(round);
-        if let Some(request) = self
-            .feedback_manager
-            .maybe_request_feedback(Some(req_id.to_string()))
-            .await
-        {
-            self.send_feedback_notification(request).await;
-        }
+        let _ = req_id;
     }
     /// The completed turn's one turn-end snapshot, stamped with its token sums for the turn
     /// upload; the terminal posts it as the analytics delta. `None` when the signals actor is
@@ -2526,14 +2520,7 @@ impl SessionActor {
                 .persistence_tx
                 .send(PersistenceMsg::Signals(snap.current.clone()));
         }
-        self.feedback_manager
-            .send_turn_delta_with_snapshot(
-                snapshot,
-                Some(req_id.to_string()),
-                turn_duration_ms.map(|ms| i64::try_from(ms).unwrap_or(i64::MAX)),
-                turn_outcome,
-            )
-            .await;
+        let _ = (req_id, turn_duration_ms, turn_outcome);
     }
     /// Emitted whether or not the reminder is armed, so cohorts compare on identical properties.
     /// Runs at turn end and when a cancel aborts the turn task (under the state lock, before a

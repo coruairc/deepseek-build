@@ -1572,7 +1572,6 @@ pub(crate) async fn run_shell_child(
             ctx.memory_config.clone()
         },
         false,
-        Default::default(),
         ctx.managed_mcp_state.clone(),
         ctx.managed_mcp_proxy_base_url.clone(),
         effective_model_id,

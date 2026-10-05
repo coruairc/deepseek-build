@@ -88,9 +88,6 @@ pub struct SessionHandle {
     /// When set, the hunk tracker extension handler rewrites worktree paths in API responses to this path.
     /// The client UI then shows the original project path, not the worktree path.
     pub display_cwd: Option<String>,
-    /// Feedback manager for periodic signal sync.
-    /// Exposed so callers can attach GCS upload queue stats for snapshotting into signals.
-    pub feedback_manager: std::sync::Arc<crate::session::feedback_manager::FeedbackManager>,
     /// Session-scoped upload queue. Lazily initialized on the first turn that enables trace uploads.
     /// `Arc<OnceLock<_>>` ensures all `SessionHandle` clones share the same underlying queue instance.
     pub(crate) upload_queue: std::sync::Arc<std::sync::OnceLock<UploadQueue>>,

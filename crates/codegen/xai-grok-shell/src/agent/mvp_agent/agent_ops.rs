@@ -3565,9 +3565,6 @@ impl MvpAgent {
                     grok_home,
                     Some(queue.clone()),
                 );
-                session_handle
-                    .feedback_manager
-                    .set_upload_queue_stats(queue.stats_arc());
                 queue
             });
         let upload_queue = Some(queue.clone());
@@ -3999,16 +3996,6 @@ impl MvpAgent {
                 || std::env::var("GROK_LOC_TRACKING")
                     .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
                     .unwrap_or(false));
-        let (feedback_resolved, feedback_flags) = {
-            let cfg = self.cfg.borrow();
-            let resolved = cfg.feature(crate::agent::config::Feature::Feedback);
-            let flags = crate::session::feedback_manager::FeedbackFlags {
-                enabled: resolved.value,
-                user: cfg.feedback.user.clone(),
-            };
-            (resolved, flags)
-        };
-        tracing::info!(feedback = %feedback_resolved, "resolved feedback feature flag");
         let loc_aggregate_rx = match hunk_event_rx {
             Some((hunk_event_rx, loc_cancel)) if loc_tracking_enabled => {
                 let (loc_agg_tx, loc_agg_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -4605,7 +4592,6 @@ impl MvpAgent {
                     persisted_announcement_state,
                     self.memory_config_snapshot(),
                     loc_tracking_enabled,
-                    feedback_flags,
                     self.managed_mcp_cache.clone(),
                     managed_mcp_proxy_url,
                     session_model_id,

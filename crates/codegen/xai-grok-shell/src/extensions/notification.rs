@@ -1,8 +1,6 @@
 use agent_client_protocol as acp;
 use xai_grok_tools::types::TaskSnapshot;
 
-use crate::session::feedback::FeedbackRequest as FeedbackRequestData;
-
 pub use crate::extensions::background_task::{BackgroundTaskRow, BackgroundTaskStatus};
 pub use crate::session::goal_tracker::GoalClassifierVerdict;
 
@@ -609,8 +607,6 @@ pub enum SessionUpdate {
         /// Total tokens used after auto-continue
         total_tokens: u64,
     },
-    /// Request for user feedback based on session heuristics
-    FeedbackRequest(FeedbackRequestNotification),
     /// Relay sync status update (connected, disconnected, etc.)
     RelaySyncStatus(RelaySyncStatus),
     /// Auto-recovery is starting after a prompt failure (e.g. remote/workspace recovery)
@@ -1366,46 +1362,6 @@ pub struct DiffContent {
     /// The diff details.
     #[serde(flatten)]
     pub diff: acp::Diff,
-}
-
-/// Notification requesting user feedback based on session heuristics.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub struct FeedbackRequestNotification {
-    /// Unique ID for this feedback request
-    pub request_id: String,
-    /// The tier that triggered this request
-    pub tier: String,
-    /// Human-readable prompt to show the user
-    pub prompt: String,
-    /// Whether this is a non-intrusive/dismissible request
-    pub dismissible: bool,
-    /// Trigger type identifier (e.g., "tier1_engagement", "tier2_complex_recovery")
-    pub trigger_type: String,
-    /// The specific condition that was met (e.g., "turns >= 10 AND tool_calls >= 5 AND ...")
-    pub trigger_condition: String,
-    /// Human-readable explanation of what triggered this request with actual values
-    pub trigger_reason: String,
-    pub stars: bool,
-    pub thumbs: bool,
-    pub text: bool,
-}
-
-impl From<FeedbackRequestData> for FeedbackRequestNotification {
-    fn from(data: FeedbackRequestData) -> Self {
-        Self {
-            request_id: data.request_id,
-            tier: format!("{:?}", data.tier).to_lowercase(),
-            stars: data.stars,
-            thumbs: data.thumbs,
-            text: data.text,
-            prompt: data.prompt,
-            dismissible: data.dismissible,
-            trigger_type: data.trigger_type,
-            trigger_condition: data.trigger_condition.condition.clone(),
-            trigger_reason: data.trigger_condition.trigger_reason(),
-        }
-    }
 }
 
 // ── Compaction checkpoint types ────────────────────────────────────────

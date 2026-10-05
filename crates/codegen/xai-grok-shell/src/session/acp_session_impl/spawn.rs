@@ -275,7 +275,6 @@ pub(crate) async fn spawn_session_actor(
     persisted_announcement_state: Option<crate::session::announcement_state::AnnouncementState>,
     memory_config: Option<crate::config::MemoryConfig>,
     loc_tracking_enabled: bool,
-    feedback_flags: crate::session::feedback_manager::FeedbackFlags,
     managed_mcp_handle: crate::session::managed_mcp::ManagedMcpStateHandle,
     managed_mcp_proxy_base_url: String,
     session_model_id: acp::ModelId,
@@ -1429,44 +1428,7 @@ pub(crate) async fn spawn_session_actor(
         feedback_user_token,
         feedback_alpha_test_key,
     );
-    let feedback_client: Option<()> = None;
-    let has_feedback_client = false;
-    tracing::info!(
-        session_id = %session_info.id.0,
-        has_feedback_client = has_feedback_client,
-        "Creating feedback manager"
-    );
-    let feedback_client_type = match client_type {
-        ClientType::GrokTUI => prod_mc_model_api_types::feedback_types::ClientType::Tui,
-        ClientType::GrokWeb => prod_mc_model_api_types::feedback_types::ClientType::Web,
-        ClientType::Nebula => prod_mc_model_api_types::feedback_types::ClientType::Nebula,
-        ClientType::Extension => prod_mc_model_api_types::feedback_types::ClientType::Extension,
-        ClientType::Generic => prod_mc_model_api_types::feedback_types::ClientType::Agent,
-        ClientType::Desktop => prod_mc_model_api_types::feedback_types::ClientType::Desktop,
-        ClientType::GrokPager => prod_mc_model_api_types::feedback_types::ClientType::Tui,
-    };
-    let user_cfg = feedback_flags.user;
-    let feedback_config = FeedbackManagerConfig {
-        feedback_enabled: feedback_flags.enabled,
-        telemetry_enabled,
-        client_type: feedback_client_type,
-        loc_tracking_enabled,
-        user: user_cfg.clone(),
-        ..Default::default()
-    };
-    if feedback_flags.enabled
-        && let Some(user_cfg) = user_cfg
-    {
-        tokio::spawn(async move {
-            let _ = crate::util::user_identity::cached_identity(Some(&user_cfg)).await;
-        });
-    }
-    let feedback_manager = Arc::new(FeedbackManager::new(
-        session_info.id.0.to_string(),
-        feedback_client,
-        feedback_config,
-    ));
-    let signals_handle = feedback_manager.signals_handle();
+    let signals_handle = crate::session::signals::SessionSignalsHandle::new();
     if let Some(persisted) = persisted_signals {
         signals_handle.restore_signals(persisted);
     } else {
@@ -1480,11 +1442,6 @@ pub(crate) async fn spawn_session_actor(
     }
     signals_handle.set_primary_model(&primary_model_id);
     signals_handle.set_tracing_config(inference_idle_timeout_secs);
-    let sync_loop_cancel = if has_feedback_client {
-        Some(tokio_util::sync::CancellationToken::new())
-    } else {
-        None
-    };
     let force_compact = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let resolved_workspace_root = xai_grok_workspace::session::git::find_git_root_from_path(
         std::path::Path::new(&session_info.cwd),
@@ -1923,9 +1880,8 @@ pub(crate) async fn spawn_session_actor(
         buffering_settings,
         client_identifier: session_client_identifier.clone(),
         origin_client: origin_client.clone(),
-        feedback_manager: feedback_manager.clone(),
+        signals_handle: signals_handle.clone(),
         upload_queue: upload_queue.clone(),
-        sync_loop_cancel: sync_loop_cancel.clone(),
         agent: std::cell::RefCell::new(agent),
         last_reported_branch: Arc::new(Mutex::new(None)),
         git_head_enabled: fs_watch_caps.git_head,
@@ -2239,21 +2195,6 @@ pub(crate) async fn spawn_session_actor(
         });
         *session.memory.init_reindex_handle.borrow_mut() = Some(reindex_handle);
     }
-    if let Some(cancel) = sync_loop_cancel {
-        tracing::info!(
-            session_id = %session_info.id.0,
-            "Spawning feedback sync loop"
-        );
-        let fm = feedback_manager.clone();
-        tokio::spawn(async move {
-            fm.run_sync_loop(cancel).await;
-        });
-    } else {
-        tracing::debug!(
-            session_id = %session_info.id.0,
-            "No feedback client available, skipping sync loop"
-        );
-    }
     {
         use agent_client_protocol::Client as _;
         use xai_grok_tools::implementations::grok_build::ask_user_question::{
@@ -2410,7 +2351,6 @@ pub(crate) async fn spawn_session_actor(
         mcp_servers: admitted_mcp_servers,
         initial_client_mcp_servers,
         display_cwd: None,
-        feedback_manager: feedback_manager.clone(),
         upload_queue: upload_queue.clone(),
         upload_failures_since_success: Arc::new(std::sync::atomic::AtomicU64::new(0)),
         tool_context: tool_context_for_handle,
@@ -2561,7 +2501,6 @@ pub(crate) async fn spawn_session_on_thread(
     persisted_announcement_state: Option<crate::session::announcement_state::AnnouncementState>,
     memory_config: Option<crate::config::MemoryConfig>,
     loc_tracking_enabled: bool,
-    feedback_flags: crate::session::feedback_manager::FeedbackFlags,
     managed_mcp_handle: crate::session::managed_mcp::ManagedMcpStateHandle,
     managed_mcp_proxy_base_url: String,
     session_model_id: acp::ModelId,
@@ -2774,7 +2713,6 @@ pub(crate) async fn spawn_session_on_thread(
                     persisted_announcement_state,
                     memory_config,
                     loc_tracking_enabled,
-                    feedback_flags,
                     managed_mcp_handle,
                     managed_mcp_proxy_base_url,
                     session_model_id,

@@ -873,13 +873,6 @@ pub enum SessionCommand {
     PersistResumeStatus {
         respond_to: oneshot::Sender<()>,
     },
-    /// Force-trigger a feedback request notification for local client testing.
-    /// Bypasses all heuristics, sampling, and cooldown checks.
-    TriggerTestFeedback {
-        tier: crate::session::feedback::FeedbackTier,
-        mode: crate::session::feedback::FeedbackMode,
-        respond_to: oneshot::Sender<anyhow::Result<acp::ExtResponse>>,
-    },
     /// Persist a local feedback entry via the persistence actor.
     /// feedback.jsonl is then written through the same channel as other session files and included in GCS CopyFile snapshots.
     PersistFeedback(Box<crate::session::persistence::LocalFeedbackEntry>),

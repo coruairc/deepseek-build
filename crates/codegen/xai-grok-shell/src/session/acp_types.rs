@@ -185,11 +185,12 @@ impl ClientFeedbackInput {
             (_, _, text) => FeedbackContent::Text(text.unwrap_or_default()),
         };
 
-        let mut s = crate::session::feedback_manager::new_submission(
+        let mut s = prod_mc_model_api_types::feedback_types::FeedbackSubmission::with_content(
             self.session_id.clone(),
             self.client_type,
             content,
         );
+        s.shell_version = Some(xai_grok_version::VERSION.to_string());
         s.turn_number = turn_number;
         s.images = std::mem::take(&mut self.images);
         s.feedback_categories = self.feedback_categories.clone();
