@@ -249,9 +249,6 @@ fn wedged_child_handle() -> (
         mcp_servers: Default::default(),
         initial_client_mcp_servers: Default::default(),
         display_cwd: None,
-        feedback_manager: std::sync::Arc::new(
-            crate::session::feedback_manager::FeedbackManager::local_only("test"),
-        ),
         upload_queue: std::sync::Arc::new(std::sync::OnceLock::new()),
         upload_failures_since_success: std::sync::Arc::new(
             std::sync::atomic::AtomicU64::new(0),

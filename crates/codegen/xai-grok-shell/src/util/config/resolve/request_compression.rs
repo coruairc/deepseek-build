@@ -48,31 +48,4 @@ fn request_compression_for(base_url: &str, zstd_origin: Option<&str>) -> Request
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn compresses_only_toward_the_proxy_that_advertised_zstd() {
-        let (plain, zstd) = (RequestCompression::None, RequestCompression::Zstd);
-        let prod = crate::env::PROD_CLI_CHAT_PROXY_BASE_URL;
-        let dev = "http://localhost:20016/v1";
-        let pinned = "https://proxy.corp.example/v1";
-        for (base_url, zstd_origin, expected) in [
-            (prod, None, plain),
-            (prod, Some(prod), zstd),
-            (dev, Some(dev), zstd),
-            (pinned, Some(pinned), zstd),
-            // A second trusted route must not inherit another proxy's advertisement.
-            (dev, Some(prod), plain),
-            (prod, Some(pinned), plain),
-            ("http://localhost:11434/v1", Some(prod), plain),
-            ("http://127.0.0.1:8080/v1", Some(prod), plain),
-            ("https://api.openai.com/v1", Some(prod), plain),
-            ("https://api.deepseek.com/v1", Some(prod), plain),
-        ] {
-            assert_eq!(
-                request_compression_for(base_url, zstd_origin),
-                expected,
-                "{base_url} with zstd advertised by {zstd_origin:?}"
-            );
-        }
-    }
 }

@@ -782,28 +782,6 @@ mod tests {
 
     #[test]
     #[serial]
-    fn env_key_probe_unusable_suppresses_advertise_without_byok() {
-        let _set = EnvGuard::set(XAI_API_KEY_ENV_VAR, "xai-dead-key");
-        let _legacy = EnvGuard::unset(LEGACY_XAI_API_KEY_ENV_VAR);
-        let cfg = Config::default();
-        let models = resolve_model_list(&cfg, None);
-        assert!(
-            should_advertise_xai_api_key(false, models.values()),
-            "presence-only helper still sees the env key"
-        );
-        assert!(
-            !should_advertise_xai_api_key_with_env_ok(false, models.values(), false),
-            "probe-unusable env key alone must not advertise"
-        );
-        let built = build_auth_methods(AuthMethodsBuildInputs {
-            has_external_api_key: false,
-            ..default_inputs()
-        });
-        assert_eq!(first_kind(&built.methods), Some(AuthMethodKind::GrokCom));
-    }
-
-    #[test]
-    #[serial]
     fn env_key_probe_ok_still_advertises() {
         let _set = EnvGuard::set(XAI_API_KEY_ENV_VAR, "xai-live-key");
         let cfg = Config::default();

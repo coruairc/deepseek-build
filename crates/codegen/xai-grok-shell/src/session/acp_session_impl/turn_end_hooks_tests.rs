@@ -84,16 +84,6 @@ fn classifies_every_completion_kind() {
 }
 
 #[test]
-fn the_drain_budget_leaves_room_for_the_upload_tail() {
-    use crate::session::feedback_manager::{SHUTDOWN_DRAIN_HARD_MAX, SHUTDOWN_SIGNAL_SYNC_TIMEOUT};
-    assert!(
-        // Twice: teardown flushes for ordering, then drains to close.
-        2 * TURN_END_DRAIN_BUDGET + SHUTDOWN_SIGNAL_SYNC_TIMEOUT + SHUTDOWN_DRAIN_HARD_MAX
-            < crate::agent::activity::SESSION_FLUSH_GRACE
-    );
-}
-
-#[test]
 fn cancel_detail_names_the_subject_and_reason() {
     let with = |tool: Option<&str>, hook: Option<&str>, reason: Option<&str>| {
         cancel_details(&PromptCompletionKind::Cancelled {

@@ -83,7 +83,7 @@ fn test_config(base_url: &str) -> SamplerConfig {
         model: "test-model".into(),
         max_completion_tokens: Some(1000),
         temperature: Some(0.7),
-        api_backend: ApiBackend::Responses,
+        api_backend: ApiBackend::ChatCompletions,
         context_window: 256_000,
         ..Default::default()
     }
@@ -133,11 +133,7 @@ async fn responses_large_tool_result_images_fit_transport_limit() {
         ..Default::default()
     };
     let mut unbudgeted_bytes = ByteCounter::default();
-    serde_json::to_writer(
-        &mut unbudgeted_bytes,
-        &rs::CreateResponse::from(&unbudgeted_request),
-    )
-    .unwrap();
+    serde_json::to_writer(&mut unbudgeted_bytes, &unbudgeted_request.items).unwrap();
     assert!(unbudgeted_bytes.0 > TRANSPORT_LIMIT_BYTES);
     drop(unbudgeted_request);
 
@@ -160,7 +156,7 @@ async fn responses_large_tool_result_images_fit_transport_limit() {
     let captured = Arc::new(Mutex::new(None::<(usize, serde_json::Value)>));
     let cap = captured.clone();
     let app = Router::new().route(
-        "/v1/responses",
+        "/v1/chat/completions",
         post(move |body: Bytes| {
             let cap = cap.clone();
             async move {

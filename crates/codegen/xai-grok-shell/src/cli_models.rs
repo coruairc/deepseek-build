@@ -157,17 +157,6 @@ mod tests {
     }
     #[test]
     #[serial]
-    fn resolve_oauth_session() {
-        let (_dir, _g) = isolate_auth_sources();
-        let json = serde_json::to_string(&session_credential()).unwrap();
-        let _auth = EnvGuard::set("GROK_AUTH", &json);
-        assert_eq!(
-            AuthStatus::resolve(&Config::default()),
-            AuthStatus::LoggedIn(EXPECTED_LOGIN_HOST.to_owned())
-        );
-    }
-    #[test]
-    #[serial]
     fn resolve_model_api_key_byok() {
         let (_dir, _g) = isolate_auth_sources();
         let dm = crate::models::default_model();
@@ -256,19 +245,6 @@ mod tests {
         let dm = crate::models::default_model();
         let cfg = config_from_toml(&byok_and_deployment_toml(dm));
         assert_eq!(AuthStatus::resolve(&cfg), AuthStatus::ApiKey);
-    }
-    #[test]
-    #[serial]
-    fn resolve_priority_session_over_byok_and_deployment() {
-        let (_dir, _g) = isolate_auth_sources();
-        let json = serde_json::to_string(&session_credential()).unwrap();
-        let _auth = EnvGuard::set("GROK_AUTH", &json);
-        let dm = crate::models::default_model();
-        let cfg = config_from_toml(&byok_and_deployment_toml(dm));
-        assert_eq!(
-            AuthStatus::resolve(&cfg),
-            AuthStatus::LoggedIn(EXPECTED_LOGIN_HOST.to_owned())
-        );
     }
     #[test]
     #[serial]

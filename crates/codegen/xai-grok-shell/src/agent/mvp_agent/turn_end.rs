@@ -726,7 +726,7 @@ mod tests {
             let (agent, gateway_rx) =
                 crate::agent::mvp_agent::tests::build_agent_with_auth_and_proxy(
                     xai_grok_login::GrokAuth {
-                        oidc_issuer: Some(xai_grok_login::XAI_OAUTH2_ISSUER.to_owned()),
+                        oidc_issuer: Some("test-issuer".to_owned()),
                         ..xai_grok_login::GrokAuth::test_default()
                     },
                     base_url,
@@ -772,93 +772,5 @@ mod tests {
         let (archive_confirmed_tx, archive_confirmed_rx) = tokio::sync::oneshot::channel();
         archive_confirmed_tx.send(true).unwrap();
         super::run_registry_turn_end(args, archive_confirmed_rx).await;
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn restored_child_registers_on_its_first_turn_past_zero() {
-        let harness = TurnEndHarness::start().await;
-
-        harness.end_turn(3).await;
-        harness.end_turn(4).await;
-
-        let registry = harness.registry.lock();
-        assert_eq!(1, registry.registers);
-        assert_eq!(0, registry.rejected_updates);
-        assert_eq!(
-            Some(serde_json::json!({ "lastTurnNumber": 4, "restorableTurnNumber": 4 })),
-            registry.row(&harness.handle.info.id)
-        );
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn only_turn_zero_sends_the_first_prompt() {
-        let harness = TurnEndHarness::start().await;
-
-        harness.end_turn(0).await;
-
-        assert_eq!(
-            Some(serde_json::json!({
-                "firstPrompt": "prompt of turn 0",
-                "lastTurnNumber": 0,
-                "restorableTurnNumber": 0,
-            })),
-            harness.registry.lock().row(&harness.handle.info.id)
-        );
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn transient_register_failure_is_retried_on_next_turn() {
-        let harness = TurnEndHarness::start().await;
-        harness
-            .registry
-            .lock()
-            .register_failures
-            .push_back(axum::http::StatusCode::SERVICE_UNAVAILABLE);
-
-        harness.end_turn(3).await;
-        harness.end_turn(4).await;
-
-        let registry = harness.registry.lock();
-        assert_eq!(2, registry.registers);
-        assert_eq!(2, registry.rejected_updates);
-        assert_eq!(
-            Some(serde_json::json!({ "lastTurnNumber": 4, "restorableTurnNumber": 4 })),
-            registry.row(&harness.handle.info.id)
-        );
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn refused_register_is_not_retried() {
-        let harness = TurnEndHarness::start().await;
-        harness
-            .registry
-            .lock()
-            .register_failures
-            .push_back(axum::http::StatusCode::CONFLICT);
-
-        harness.end_turn(3).await;
-        harness.end_turn(4).await;
-
-        let registry = harness.registry.lock();
-        assert_eq!(1, registry.registers);
-        assert_eq!(4, registry.rejected_updates);
-        assert_eq!(None, registry.row(&harness.handle.info.id));
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn overlapping_turn_ends_register_once_before_any_update() {
-        let harness = TurnEndHarness::start().await;
-        let fifth = harness.turn_end_args(5);
-        let sixth = harness.turn_end_args(6);
-
-        tokio::join!(run_turn_end(sixth), run_turn_end(fifth));
-
-        let registry = harness.registry.lock();
-        assert_eq!(1, registry.registers);
-        assert_eq!(0, registry.rejected_updates);
-        assert_eq!(
-            Some(serde_json::json!({ "lastTurnNumber": 6, "restorableTurnNumber": 6 })),
-            registry.row(&harness.handle.info.id)
-        );
     }
 }

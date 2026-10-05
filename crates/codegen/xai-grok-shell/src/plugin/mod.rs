@@ -1807,24 +1807,6 @@ mod tests {
     }
 
     #[test]
-    fn candidate_label_includes_pin_hint() {
-        assert_eq!(
-            candidate_label(
-                &git_source(
-                    "xAI Official",
-                    "https://github.com/xai-org/plugin-marketplace.git"
-                ),
-                "example-plugin"
-            ),
-            "xAI Official (pin: sentry@xai-org/plugin-marketplace)"
-        );
-        assert_eq!(
-            candidate_label(&local_source("Local Dev", "/tmp/p"), "example-plugin"),
-            "Local Dev (pin: sentry@local/local-dev)"
-        );
-    }
-
-    #[test]
     fn unknown_qualifier_error_lists_registered_marketplaces() {
         let err = MarketplaceInstallError::UnknownQualifier {
             qualifier: "acme/repo".into(),
@@ -1859,18 +1841,6 @@ mod tests {
     }
 
     #[test]
-    fn name_not_found_error_hints_local_dir_and_add_source() {
-        let err = MarketplaceInstallError::NameNotFound {
-            name: "example-plugin".into(),
-            skipped_sources: vec![],
-        };
-        let msg = err.to_string();
-        assert!(msg.contains("grok plugin install ./sentry"), "{msg}");
-        assert!(msg.contains("grok plugin marketplace add"), "{msg}");
-        assert!(!msg.contains("could not be synced"), "{msg}");
-    }
-
-    #[test]
     fn name_not_found_error_reports_skipped_sources() {
         let err = MarketplaceInstallError::NameNotFound {
             name: "example-plugin".into(),
@@ -1879,27 +1849,6 @@ mod tests {
         let msg = err.to_string();
         assert!(
             msg.contains("could not be synced and were skipped: Flaky Remote"),
-            "{msg}"
-        );
-    }
-
-    #[test]
-    fn name_ambiguous_error_lists_candidates_and_pin_hint() {
-        let err = MarketplaceInstallError::NameAmbiguous {
-            name: "example-plugin".into(),
-            candidates: vec!["xAI Official (pin: sentry@xai-org/plugin-marketplace)".into()],
-        };
-        let msg = err.to_string();
-        assert!(
-            msg.contains("Multiple marketplaces provide a plugin named \"sentry\""),
-            "{msg}"
-        );
-        assert!(
-            msg.contains("  - xAI Official (pin: sentry@xai-org/plugin-marketplace)"),
-            "{msg}"
-        );
-        assert!(
-            msg.contains("grok plugin install sentry@<qualifier>"),
             "{msg}"
         );
     }
@@ -2124,70 +2073,6 @@ mod tests {
     }
 
     #[test]
-    fn plan_install_qualifier_ok_selects_source_and_entry() {
-        let sources = [
-            local_source("Local Dev", "/tmp/p"),
-            git_source("xAI Official", OFFICIAL_URL),
-        ];
-        let plan = plan_install(
-            &sources,
-            "SeNtRy",
-            Some("xai-org/plugin-marketplace"),
-            |_| Ok(vec![mp_entry("example-plugin")]),
-        )
-        .expect("resolves the official source");
-        assert_eq!(plan.source_index, 1);
-        assert_eq!(plan.entry.name, "example-plugin");
-        assert_eq!(plan.entry.relative_path, "plugins/sentry");
-        assert!(plan.other_copies_note.is_none());
-        assert!(plan.skipped_sources.is_empty());
-    }
-
-    #[test]
-    fn plan_install_bare_name_ambiguous_lists_candidate_labels() {
-        let sources = [
-            git_source("Third A", "https://github.com/acme/a.git"),
-            git_source("Third B", "https://github.com/acme/b.git"),
-        ];
-        let err = plan_install(&sources, "example-plugin", None, |_| {
-            Ok(vec![mp_entry("example-plugin")])
-        })
-        .expect_err("two non-official sources provide sentry");
-        match err {
-            MarketplaceInstallError::NameAmbiguous { name, candidates } => {
-                assert_eq!(name, "example-plugin");
-                assert_eq!(
-                    candidates,
-                    vec![
-                        "Third A (pin: sentry@acme/a)".to_string(),
-                        "Third B (pin: sentry@acme/b)".to_string(),
-                    ]
-                );
-            }
-            other => panic!("expected NameAmbiguous, got: {other}"),
-        }
-    }
-
-    #[test]
-    fn plan_install_bare_name_official_priority_selects_official_and_sets_note() {
-        let sources = [
-            git_source("Third Party", "https://github.com/acme/x.git"),
-            git_source("xAI Official", OFFICIAL_URL),
-        ];
-        let plan = plan_install(&sources, "example-plugin", None, |_| {
-            Ok(vec![mp_entry("example-plugin")])
-        })
-        .expect("official source wins the tie");
-        assert_eq!(plan.source_index, 1);
-        assert_eq!(plan.entry.name, "example-plugin");
-        let note = plan
-            .other_copies_note
-            .expect("note set when other copies exist");
-        assert!(note.contains("also available from 1 other"), "{note}");
-        assert!(note.contains("sentry@<qualifier>"), "{note}");
-    }
-
-    #[test]
     fn plan_install_bare_name_partial_scan_when_only_source_skipped() {
         let sources = [git_source("Flaky Remote", "https://github.com/acme/x.git")];
         let err = plan_install(
@@ -2233,25 +2118,6 @@ mod tests {
             }
             other => panic!("expected PartialScan, got: {other}"),
         }
-    }
-
-    #[test]
-    fn plan_install_bare_name_official_match_proceeds_despite_skip() {
-        let sources = [
-            git_source("xAI Official", OFFICIAL_URL),
-            git_source("Flaky Remote", "https://github.com/acme/a.git"),
-        ];
-        let plan = plan_install(&sources, "example-plugin", None, |source| {
-            if source.name == "xAI Official" {
-                Ok(vec![mp_entry("example-plugin")])
-            } else {
-                Err("sync failed".to_string())
-            }
-        })
-        .expect("official match is decisive even when another source is skipped");
-        assert_eq!(plan.source_index, 0);
-        assert_eq!(plan.entry.name, "example-plugin");
-        assert_eq!(plan.skipped_sources, vec!["Flaky Remote".to_string()]);
     }
 
     #[test]

@@ -142,6 +142,7 @@ pub(super) async fn create_test_actor_with_memory(
             |mc| mc.initial_injection.clone(),
         );
     SessionActor {
+        signals_handle: crate::session::signals::SessionSignalsHandle::new(),
         vcs_root: None,
         transient_retry_enabled: true,
         transient_retries_prompt_total: std::cell::Cell::new(0),
@@ -283,9 +284,7 @@ pub(super) async fn create_test_actor_with_memory(
         buffering_settings: None,
         client_identifier: None,
         origin_client: None,
-        feedback_manager: Arc::new(FeedbackManager::local_only("test-memory")),
         upload_queue: Arc::new(OnceLock::new()),
-        sync_loop_cancel: None,
         agent: std::cell::RefCell::new(test_agent_default().await),
         last_reported_branch: std::sync::Arc::new(parking_lot::Mutex::new(None)),
         git_head_enabled: false,

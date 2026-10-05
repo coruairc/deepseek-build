@@ -64,7 +64,7 @@ fn sampling_bodies(server: &xai_grok_test_support::MockInferenceServer) -> Vec<S
     server
         .requests()
         .into_iter()
-        .filter(|r| r.path == "/v1/chat/completions" || r.path == "/v1/responses")
+        .filter(|r| r.path == "/v1/chat/completions" || r.path == "/v1/chat/completions")
         .filter(|r| {
             !r.header("x-grok-req-id")
                 .is_some_and(|id| id.starts_with("xai-turn-summary-"))

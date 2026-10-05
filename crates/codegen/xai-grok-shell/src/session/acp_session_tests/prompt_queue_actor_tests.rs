@@ -3054,48 +3054,6 @@ async fn effective_tool_overrides_echoes_and_gates_on_backend_search() {
         .await;
 }
 
-/// Moving `web_search` onto the raw-JSON `extra_tool_entries` channel must not leak it past the backend-search gate.
-/// `hosted_tools_for_turn` is the only thing that populates a request's `hosted_tools`, and `extra_tool_entries` is derived from that.
-/// A model without server-side search therefore sends no hosted tool on either channel, configured domain policy or not.
-#[tokio::test]
-async fn unsupported_backend_search_sends_no_hosted_tool_on_either_channel() {
-    let local = tokio::task::LocalSet::new();
-    local
-        .run_until(async {
-            let (actor, _rx) = build_actor().await;
-            let configured = xai_grok_sampling_types::WebSearchOptions {
-                allowed_domains: None,
-                excluded_domains: Some(vec!["reddit.com".to_string()]),
-            };
-            *actor.agent.borrow_mut() =
-                test_agent_backend_search(vec![xai_grok_sampling_types::HostedTool::WebSearch {
-                    options: Some(configured),
-                }])
-                .await;
-
-            // Model advertises server-side search: the hosted tool rides both channels.
-            actor.supports_backend_search.set(true);
-            assert!(!actor.hosted_tools_for_turn().is_empty());
-            assert_eq!(
-                xai_grok_sampling_types::extra_tool_entries(&actor.hosted_tools_for_turn()).len(),
-                1
-            );
-
-            // Model does not: the gate empties the list before it can reach the wire.
-            actor.supports_backend_search.set(false);
-            assert!(
-                actor.hosted_tools_for_turn().is_empty(),
-                "the backend-search gate must drop the hosted tool"
-            );
-            assert!(
-                xai_grok_sampling_types::extra_tool_entries(&actor.hosted_tools_for_turn())
-                    .is_empty(),
-                "and so no raw-JSON entry is produced to splice"
-            );
-        })
-        .await;
-}
-
 /// The `[toolset.web_search]` policy is folded into the agent's hosted tools at build time (see `agent_rebuild`), and it beats agent frontmatter.
 /// A per-turn `ToolOverridesUpdate` is a deliberate API-level override, so it intentionally still wins on top of the config policy.
 /// That is the one bypass the config does not close.

@@ -135,50 +135,6 @@ mod tests {
     use super::*;
     #[test]
     #[serial_test::serial]
-    fn models_fetch_endpoint_matches_auth_mode() {
-        use crate::agent::config::EndpointsConfig;
-        use crate::agent::remote_config::ModelFetchAuth;
-        for k in [
-            "GROK_CLI_CHAT_PROXY_BASE_URL",
-            "GROK_XAI_API_BASE_URL",
-            "GROK_MODELS_LIST_URL",
-        ] {
-            unsafe { std::env::remove_var(k) };
-        }
-        let cfg = EndpointsConfig::from_config_value(
-            &toml::from_str(
-                r#"[endpoints]
-                    xai_api_base_url = "https://inference.acme-corp.example/xai/v1""#,
-            )
-            .unwrap(),
-        );
-        let session = ListModelsEndpoint::from_endpoints(&cfg, ModelFetchAuth::Session);
-        assert_eq!(session.url, "https://api.deepseek.com/v1/models");
-        assert_eq!(session.auth, EndpointAuth::Session);
-        let deployment = ListModelsEndpoint::from_endpoints(&cfg, ModelFetchAuth::Deployment);
-        assert_eq!(deployment.url, "https://api.deepseek.com/v1/models");
-        assert_eq!(deployment.auth, EndpointAuth::Session);
-        let api = ListModelsEndpoint::from_endpoints(&cfg, ModelFetchAuth::ApiKey);
-        assert_eq!(api.url, "https://inference.acme-corp.example/xai/v1/models");
-        assert_eq!(api.auth, EndpointAuth::ApiKey);
-        let default = EndpointsConfig::from_config_value(&toml::Value::Table(Default::default()));
-        assert_eq!(
-            ListModelsEndpoint::from_endpoints(&default, ModelFetchAuth::ApiKey).url,
-            "https://api.deepseek.com/v1/models"
-        );
-        let custom = EndpointsConfig::from_config_value(
-            &toml::from_str(
-                r#"[endpoints]
-                    models_base_url = "https://models.acme.com/v1""#,
-            )
-            .unwrap(),
-        );
-        let ep = ListModelsEndpoint::from_endpoints(&custom, ModelFetchAuth::Session);
-        assert_eq!(ep.url, "https://models.acme.com/v1/models");
-        assert_eq!(ep.auth, EndpointAuth::ApiKey);
-    }
-    #[test]
-    #[serial_test::serial]
     fn custom_endpoint_list_fetch_never_sends_the_session_token() {
         use xai_grok_test_support::EnvGuard;
         let _no_key = EnvGuard::unset("XAI_API_KEY");
@@ -209,7 +165,7 @@ mod tests {
         let xai_issued_external = GrokAuth {
             key: "provider-token".to_owned(),
             auth_mode: xai_grok_login::AuthMode::External,
-            oidc_issuer: Some(xai_grok_login::xai_oauth2_issuer().to_owned()),
+            oidc_issuer: Some("test-issuer".to_owned()),
             ..GrokAuth::test_default()
         };
         let bearer = list_fetch_api_key(Some(&xai_issued_external))

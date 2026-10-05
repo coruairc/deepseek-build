@@ -1976,9 +1976,6 @@ mod chat_history_integrity_tests;
 #[path = "acp_session_tests/turn/disk_full_tests.rs"]
 mod disk_full_tests;
 #[cfg(test)]
-#[path = "acp_session_tests/feedback_turn_lookup_tests.rs"]
-mod feedback_turn_lookup_tests;
-#[cfg(test)]
 #[path = "acp_session_tests/idle_resume_tests.rs"]
 mod idle_resume_tests;
 #[cfg(test)]
@@ -2014,9 +2011,6 @@ mod mcp_failed_reminder_tests;
 #[cfg(test)]
 #[path = "acp_session_tests/media_gen_auth_retry_tests.rs"]
 mod media_gen_auth_retry_tests;
-#[cfg(test)]
-#[path = "acp_session_tests/media_gen_batch_limit_tests.rs"]
-mod media_gen_batch_limit_tests;
 #[cfg(test)]
 #[path = "acp_session_tests/memory_config_tests.rs"]
 mod memory_config_tests;
@@ -2066,9 +2060,6 @@ mod turn_start_anchor_tests;
 #[cfg(test)]
 #[path = "acp_session_tests/wait_for_mcp_prefix_tests.rs"]
 mod wait_for_mcp_prefix_tests;
-#[cfg(test)]
-#[path = "acp_session_tests/web_search_e2e_tests.rs"]
-mod web_search_e2e_tests;
 #[cfg(test)]
 mod managed_gateway_tool_tests {
     use super::*;
@@ -2274,9 +2265,6 @@ mod goal_planner_e2e_tests;
 #[cfg(test)]
 #[path = "acp_session_tests/interjection_tests.rs"]
 mod interjection_tests;
-#[cfg(test)]
-#[path = "acp_session_tests/recap_display_only_tests.rs"]
-mod recap_display_only_tests;
 #[cfg(test)]
 #[path = "acp_session_tests/reminder_policy_tests.rs"]
 mod reminder_policy_tests;

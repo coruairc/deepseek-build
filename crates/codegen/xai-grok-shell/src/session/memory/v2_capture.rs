@@ -440,39 +440,6 @@ mod tests {
         assert_eq!(observation.created_at, 42);
     }
 
-    #[test]
-    fn extraction_schema_is_a_bare_schema_the_sampler_can_wrap() {
-        use xai_grok_sampling_types::{ConversationItem, ConversationRequest, rs};
-
-        let schema = extraction_schema();
-        assert_eq!(schema.get("type"), Some(&serde_json::json!("object")));
-        assert!(
-            schema
-                .pointer("/properties/outcome")
-                .is_some_and(serde_json::Value::is_object)
-        );
-        assert!(
-            schema.get("schema").is_none(),
-            "must not pre-wrap {{name, strict, schema}}: the sampler adds that envelope"
-        );
-        let request = ConversationRequest::from_items(vec![ConversationItem::user("x")])
-            .with_json_schema(schema.clone());
-        let wire: rs::CreateResponse = (&request).into();
-        let rs::TextResponseFormatConfiguration::JsonSchema(format) = wire.text.unwrap().format
-        else {
-            panic!("expected json_schema text format");
-        };
-        // The schema the model is constrained to must be the outcome object itself.
-        assert_eq!(
-            format
-                .schema
-                .unwrap()
-                .pointer("/properties/outcome/enum/0")
-                .and_then(serde_json::Value::as_str),
-            Some("noop")
-        );
-    }
-
     #[tokio::test(start_paused = true)]
     async fn flush_timeout_uses_paused_time() {
         let wait = tokio::time::timeout(FLUSH_TIMEOUT, std::future::pending::<()>());

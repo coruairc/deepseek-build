@@ -69,10 +69,7 @@ fn spawn_ctx(parent_cwd: PathBuf) -> SubagentSpawnContext {
         session_env: Arc::new(HashMap::new()),
         memory_config: None,
         memory_mode: crate::config::MemoryMode::Legacy,
-        web_search_sampling_config: None,
         web_fetch_config: Default::default(),
-        image_gen_config: Default::default(),
-        video_gen_config: Default::default(),
         app_builder_deployer_config: Default::default(),
         write_file_enabled: true,
         active_agent_messages_enabled: false,
@@ -220,7 +217,7 @@ pub async fn spawn_isolated_subagent_for_e2e(
     ctx.remote_settings = Some(remote);
     ctx.sampling_config.base_url = mock_base_url.to_owned();
     ctx.sampling_config.model = "test-model".into();
-    ctx.sampling_config.api_backend = crate::sampling::ApiBackend::Responses;
+    ctx.sampling_config.api_backend = crate::sampling::ApiBackend::ChatCompletions;
     ctx.model_id = acp::ModelId::new("test-model");
     let (parent_cmd_tx, parent_cmd_rx) = mpsc::unbounded_channel();
     ctx.parent_cmd_tx = Some(parent_cmd_tx);

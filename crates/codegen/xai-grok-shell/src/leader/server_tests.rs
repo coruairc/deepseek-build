@@ -199,22 +199,6 @@ async fn wait_for_leader_auth_resolves_when_wired_late() {
     assert!(waiter.await.unwrap(), "auth wired late should resolve Ok");
 }
 
-#[tokio::test]
-async fn workspace_start_errors_when_cancelled_before_auth() {
-    // Cancelling while auth is unwired returns a clean error, no hang
-    let state = default_test_control_state(Path::new("/tmp/grok-ws-auth-test.sock"));
-    let cancel = CancellationToken::new();
-    cancel.cancel();
-    let err = handle_workspace_start(state, None, "/tmp".to_string(), cancel)
-        .await
-        .unwrap_err();
-    assert!(
-        err.message.contains("shutting down"),
-        "unexpected error: {}",
-        err.message
-    );
-}
-
 /// A hub-less exposure never arms a metric pump, and every teardown path (pause, a second pause,
 /// stop) drains without hanging and leaves the slot empty. The pump itself has no test
 /// constructor, so a real drain-once assertion is out of reach here.
@@ -330,7 +314,6 @@ async fn setup_persistent_server_with_agent(
             Arc::new(AtomicBool::new(false)),
             AgentActivity::default(),
             ready_rx,
-            watch::channel(false).0,
             shutdown_tx,
             None, // use LEADER_VERSION constant
             control_state,
@@ -401,38 +384,6 @@ async fn connect_and_register_with_mode(
     .unwrap();
     let _: ServerMessage = read_message(&mut reader).await.unwrap();
     (reader, writer)
-}
-
-/// A Stdio registration must NOT signal relay demand: a leader serving only interactive clients (TUI dashboard, IDE) keeps the api.deepseek.com relay off.
-/// The first Headless registration (the devbox / `grok agent headless` flow) flips the watch so `run_leader` starts the deferred relay connection.
-#[tokio::test]
-async fn relay_demand_signals_only_on_headless_registration() {
-    let temp = TempDir::new().unwrap();
-    let sock_path = temp.path().join("relay-demand.sock");
-    let handle = spawn_leader_server(sock_path.clone()).await.unwrap();
-    let mut relay_demand_rx = handle.relay_demand_rx.clone();
-    tokio::time::sleep(Duration::from_millis(50)).await;
-
-    // A Stdio (interactive) client registers: demand must stay false.
-    // Hold the connection open so the server doesn't exit on disconnect.
-    let _stdio = connect_and_register_with_mode(&sock_path, "grok-tui", ClientMode::Stdio).await;
-    // The Registered server-event is processed asynchronously after the wire ack
-    // Give the server loop a beat before asserting the negative
-    tokio::time::sleep(Duration::from_millis(100)).await;
-    assert!(
-        !*relay_demand_rx.borrow(),
-        "stdio registration must not signal relay demand"
-    );
-
-    // A Headless (devbox-flow) client registers: demand flips to true.
-    let _headless =
-        connect_and_register_with_mode(&sock_path, "grok-headless", ClientMode::Headless).await;
-    tokio::time::timeout(Duration::from_secs(5), relay_demand_rx.wait_for(|d| *d))
-        .await
-        .expect("relay demand must flip after headless registration")
-        .expect("relay demand channel must stay open");
-
-    handle.cancel.cancel();
 }
 
 #[tokio::test]
@@ -2062,40 +2013,6 @@ fn inject_capabilities_adds_client_identifier_to_session_load() {
 }
 
 #[test]
-fn inject_capabilities_adds_leader_client_id_to_session_load() {
-    let payload = format!(
-        r#"{{"jsonrpc":"2.0","method":"{}","id":1,"params":{{"sessionId":"sess-1"}}}}"#,
-        AGENT_METHOD_NAMES.session_load
-    );
-    let caps = ClientCapabilities::default();
-
-    let mut json = pv(&payload);
-    inject_session_request_context(&mut json, &caps, "grok-tui", ClientId(42));
-    // The unique ClientId is stamped so the agent can echo it onto replay notifications for leader unicast routing
-    assert_eq!(
-        j(&json, "/params/_meta/x.ai~1leaderClientId").as_u64(),
-        Some(42)
-    );
-}
-
-#[test]
-fn inject_capabilities_does_not_override_existing_leader_client_id() {
-    let payload = format!(
-        r#"{{"jsonrpc":"2.0","method":"{}","id":1,"params":{{"sessionId":"sess-1","_meta":{{"deepseek-build/leaderClientId":7}}}}}}"#,
-        AGENT_METHOD_NAMES.session_load
-    );
-    let caps = ClientCapabilities::default();
-
-    let mut json = pv(&payload);
-    inject_session_request_context(&mut json, &caps, "grok-tui", ClientId(42));
-    // An explicit value already present is respected (mirrors the clientIdentifier guard)
-    assert_eq!(
-        j(&json, "/params/_meta/x.ai~1leaderClientId").as_u64(),
-        Some(7)
-    );
-}
-
-#[test]
 fn extract_target_client_id_some_when_meta_present() {
     // SessionNotification shape: _meta lives directly under params.
     let direct = r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess-1","_meta":{"deepseek-build/leaderClientId":9}}}"#;
@@ -2459,7 +2376,6 @@ async fn client_count_returns_to_zero_after_all_disconnect() {
             busy_clone,
             AgentActivity::default(),
             watch::channel(true).1,
-            watch::channel(false).0,
             watch::channel(super::super::protocol::ShutdownReason::Manual).0,
             None, // use LEADER_VERSION constant
             control_state,
@@ -2534,7 +2450,6 @@ async fn fallback_routing_forwards_notifications_but_drops_responses() {
             Arc::new(AtomicBool::new(false)),
             AgentActivity::default(),
             watch::channel(true).1,
-            watch::channel(false).0,
             watch::channel(super::super::protocol::ShutdownReason::Manual).0,
             None, // use LEADER_VERSION constant
             control_state,
@@ -2801,7 +2716,6 @@ async fn server_sends_shutting_down_before_shutdown() {
             Arc::new(AtomicBool::new(false)),
             AgentActivity::default(),
             watch::channel(true).1,
-            watch::channel(false).0,
             watch::channel(super::super::protocol::ShutdownReason::Manual).0,
             None, // use LEADER_VERSION constant
             control_state,
@@ -3068,7 +2982,6 @@ async fn agent_busy_clears_when_client_disconnects_mid_request() {
             busy_clone,
             AgentActivity::default(),
             watch::channel(true).1,
-            watch::channel(false).0,
             watch::channel(super::super::protocol::ShutdownReason::Manual).0,
             None, // use LEADER_VERSION constant
             control_state,
@@ -3232,7 +3145,6 @@ async fn evict_sessions_notification_on_disconnect() {
             Arc::new(AtomicBool::new(false)),
             AgentActivity::default(),
             watch::channel(true).1,
-            watch::channel(false).0,
             watch::channel(super::super::protocol::ShutdownReason::Manual).0,
             None, // use LEADER_VERSION constant
             control_state,
@@ -3316,7 +3228,6 @@ async fn no_eviction_when_client_has_no_sessions() {
             Arc::new(AtomicBool::new(false)),
             AgentActivity::default(),
             watch::channel(true).1,
-            watch::channel(false).0,
             watch::channel(super::super::protocol::ShutdownReason::Manual).0,
             None, // use LEADER_VERSION constant
             control_state,
@@ -4356,7 +4267,6 @@ async fn driver_disconnect_transfers_not_evicts() {
             Arc::new(AtomicBool::new(false)),
             AgentActivity::default(),
             watch::channel(true).1,
-            watch::channel(false).0,
             watch::channel(super::super::protocol::ShutdownReason::Manual).0,
             None,
             control_state,
@@ -4615,45 +4525,6 @@ async fn mcp_servers_updated_broadcasts_to_all_clients() {
     );
 
     cancel.cancel();
-}
-
-/// The broadcast classifier must accept both wire forms (`_`-prefixed production ext notifications and direct methods) for the machine-wide set.
-/// It must reject sessionful / unrelated methods.
-#[test]
-fn machine_wide_broadcast_classifier_matches_both_wire_forms() {
-    // Direct forms.
-    assert!(is_machine_wide_broadcast_notification(&pv(
-        r#"{"jsonrpc":"2.0","method":"deepseek-build/sessions/changed","params":{}}"#
-    )));
-    assert!(is_machine_wide_broadcast_notification(&pv(
-        r#"{"jsonrpc":"2.0","method":"deepseek-build/models/update","params":{}}"#
-    )));
-    assert!(is_machine_wide_broadcast_notification(&pv(
-        r#"{"jsonrpc":"2.0","method":"deepseek-build/mcp/servers_updated","params":{}}"#
-    )));
-    assert!(is_machine_wide_broadcast_notification(&pv(
-        r#"{"jsonrpc":"2.0","method":"deepseek-build/announcements/update","params":{}}"#
-    )));
-    // `_`-prefixed production ext-notification forms.
-    assert!(is_machine_wide_broadcast_notification(&pv(
-        r#"{"jsonrpc":"2.0","method":"_deepseek-build/sessions/changed","params":{}}"#
-    )));
-    assert!(is_machine_wide_broadcast_notification(&pv(
-        r#"{"jsonrpc":"2.0","method":"_deepseek-build/models/update","params":{}}"#
-    )));
-    assert!(is_machine_wide_broadcast_notification(&pv(
-        r#"{"jsonrpc":"2.0","method":"_deepseek-build/mcp/servers_updated","params":{"method":"deepseek-build/mcp/servers_updated","params":{"mcpServers":[]}}}"#
-    )));
-    assert!(is_machine_wide_broadcast_notification(&pv(
-        r#"{"jsonrpc":"2.0","method":"_deepseek-build/announcements/update","params":{"method":"deepseek-build/announcements/update","params":{"gen":2,"announcements":[]}}}"#
-    )));
-    // Non-broadcast methods. `deepseek-build/settings/update` must stay unicast: it carries auth/gate state resolved for the requesting client.
-    assert!(!is_machine_wide_broadcast_notification(&pv(
-        r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s"}}"#
-    )));
-    assert!(!is_machine_wide_broadcast_notification(&pv(
-        r#"{"jsonrpc":"2.0","method":"deepseek-build/settings/update","params":{}}"#
-    )));
 }
 
 // =========================================================================

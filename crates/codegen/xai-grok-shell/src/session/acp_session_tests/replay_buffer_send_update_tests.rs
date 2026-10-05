@@ -88,6 +88,7 @@ pub(super) async fn make_replay_send_update_fixture() -> ReplaySendUpdateFixture
     });
     let (event_tx, event_rx) = mpsc::unbounded_channel::<SessionEvent>();
     let actor = SessionActor {
+        signals_handle: crate::session::signals::SessionSignalsHandle::new(),
         vcs_root: None,
         transient_retry_enabled: true,
         transient_retries_prompt_total: std::cell::Cell::new(0),
@@ -196,9 +197,7 @@ pub(super) async fn make_replay_send_update_fixture() -> ReplaySendUpdateFixture
         }),
         client_identifier: None,
         origin_client: None,
-        feedback_manager: Arc::new(FeedbackManager::local_only("test-session")),
         upload_queue: Arc::new(OnceLock::new()),
-        sync_loop_cancel: None,
         agent: std::cell::RefCell::new(test_agent_default().await),
         last_reported_branch: std::sync::Arc::new(parking_lot::Mutex::new(None)),
         git_head_enabled: false,

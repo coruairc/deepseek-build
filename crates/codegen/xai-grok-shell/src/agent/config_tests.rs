@@ -218,19 +218,6 @@ fn inject_url_derived_headers_adds_proxy_headers_for_cli_chat_proxy_url() {
     );
 }
 #[test]
-fn inject_url_derived_headers_skips_proxy_headers_for_external_url() {
-    let mut headers = IndexMap::new();
-    inject_url_derived_headers(&mut headers, None, "https://api.deepseek.com/v1");
-    assert!(headers.get("X-XAI-Token-Auth").is_none());
-    assert!(headers.get("x-authenticateresponse").is_none());
-    assert_eq!(
-        headers
-            .get(crate::http::CLIENT_MODE_HEADER)
-            .map(String::as_str),
-        Some(crate::http::process_client_mode())
-    );
-}
-#[test]
 fn inject_url_derived_headers_preserves_caller_extra_headers() {
     let mut headers = IndexMap::new();
     headers.insert("x-custom-byok".to_string(), "value".to_string());
@@ -320,33 +307,6 @@ fn parses_toolset_bash_float_timeout() {
     .unwrap();
     let cfg = Config::new_from_toml_cfg(&raw_config).expect("config should parse");
     assert_eq!(cfg.toolset.bash.timeout_secs, Some(30.5));
-}
-#[test]
-fn resolve_runtime_fields_propagates_disable_zdr_incompatible_tools() {
-    fn ctx(raw: &toml::Value) -> RuntimeResolutionContext<'_> {
-        RuntimeResolutionContext {
-            raw_config: raw,
-            remote_settings: None,
-            is_headless: false,
-            cli_subagents: None,
-            cli_web_search_model: None,
-            cli_session_summary_model: None,
-            memory_enabled_override: None,
-            disable_web_search: false,
-            todo_gate: false,
-            laziness_debug_log: None,
-            storage_mode: None,
-        }
-    }
-    let empty: toml::Value = toml::Value::Table(toml::map::Map::new());
-    let mut cfg = Config::new_from_toml_cfg(&empty).unwrap();
-    cfg.resolve_runtime_fields(&ctx(&empty));
-    assert!(!cfg.disable_zdr_incompatible_tools);
-    let zdr: toml::Value =
-        toml::from_str("[tools]\ndisable_zdr_incompatible_tools = true").unwrap();
-    let mut cfg = Config::new_from_toml_cfg(&zdr).unwrap();
-    cfg.resolve_runtime_fields(&ctx(&zdr));
-    assert!(cfg.disable_zdr_incompatible_tools);
 }
 #[test]
 fn re_resolve_runtime_fields_refreshes_typed_memory_from_raw_config() {
@@ -442,28 +402,6 @@ fn new_from_toml_cfg_restores_web_search_and_session_summary_models() {
     assert_eq!(
         cfg2.image_description_model,
         Some("custom-id-model".to_owned())
-    );
-}
-#[test]
-fn hidden_default_web_search_resolution_is_explicit_and_responses_only() {
-    let endpoints = EndpointsConfig::default();
-    let resolved = resolve_web_search_sampling_config(
-        crate::models::default_web_search_model(),
-        &IndexMap::new(),
-        Some("session-token"),
-        false,
-        None,
-        None,
-        &endpoints,
-    )
-    .expect("hidden default web search model should resolve");
-    assert_eq!(resolved.model, crate::models::default_web_search_model());
-    assert_eq!(resolved.base_url, endpoints.proxy_url());
-    assert_eq!(resolved.api_backend, ApiBackend::Responses);
-    assert_eq!(
-        resolved.api_key.as_deref(),
-        Some("session-token"),
-        "hidden default should still use normal credential resolution"
     );
 }
 #[test]
@@ -1201,65 +1139,6 @@ fn sampling_config_uses_fallback_when_no_model_api_key() {
     assert_eq!(sampling_config.api_key, Some("fallback-key".to_string()));
 }
 #[test]
-fn sampling_config_scopes_no_inline_citations_include() {
-    for (supports_search, backend, base_url, expected) in [
-        (
-            true,
-            ApiBackend::Responses,
-            crate::env::PROD_CLI_CHAT_PROXY_BASE_URL,
-            true,
-        ),
-        (
-            true,
-            ApiBackend::Responses,
-            "https://api.deepseek.com/v1",
-            true,
-        ),
-        (
-            false,
-            ApiBackend::Responses,
-            "https://api.deepseek.com/v1",
-            false,
-        ),
-        (
-            true,
-            ApiBackend::ChatCompletions,
-            "https://api.deepseek.com/v1",
-            false,
-        ),
-        (
-            true,
-            ApiBackend::Responses,
-            "https://api.openai.com/v1",
-            false,
-        ),
-        (
-            true,
-            ApiBackend::Responses,
-            "http://localhost:11434/v1",
-            false,
-        ),
-    ] {
-        let mut model = test_model_entry("test-model", base_url, None, None, None);
-        model.info.supports_backend_search = supports_search;
-        model.info.api_backend = backend;
-        let config = sampling_config_for_model(
-            &model,
-            resolve_credentials(&model, None),
-            None,
-            None,
-            None,
-            None,
-        );
-        assert_eq!(
-            expected,
-            config.extra_response_includes == [NO_INLINE_CITATIONS_RESPONSE_INCLUDE],
-            "{base_url} using {:?} with supports_search={supports_search}",
-            model.info.api_backend,
-        );
-    }
-}
-#[test]
 fn default_models_dual_endpoint_routing() {
     let endpoints = EndpointsConfig::default();
     for (model_id, entry) in default_model_entries(&endpoints) {
@@ -1520,36 +1399,6 @@ fn resolve_credentials_env_key_byok_keeps_api_key_auth_with_session() {
         std::env::remove_var(env_var);
     }
 }
-#[test]
-fn proxy_messages_models_use_bearer_auth_scheme() {
-    let mut model = test_model_entry(
-        "deepseek-4.5",
-        crate::env::PROD_CLI_CHAT_PROXY_BASE_URL,
-        None,
-        None,
-        None,
-    );
-    model.info.api_backend = ApiBackend::Messages;
-    let config = sampling_config_for_model(
-        &model,
-        resolve_credentials(&model, Some("tok")),
-        None,
-        None,
-        None,
-        None,
-    );
-    assert_eq!(config.api_backend, ApiBackend::Messages);
-    assert_eq!(config.auth_scheme, AuthScheme::Bearer);
-    assert_eq!(config.api_key, Some("tok".to_string()));
-    assert_eq!(config.base_url, crate::env::PROD_CLI_CHAT_PROXY_BASE_URL);
-    assert_eq!(
-        config
-            .extra_headers
-            .get("X-XAI-Token-Auth")
-            .map(String::as_str),
-        Some("xai-grok-cli")
-    );
-}
 /// Regression: without a session key, `resolve_credentials` falls through to ApiKey.
 /// Session-based callers must override auth_type to SessionToken when their auth manager has only a buffered/expired token.
 #[test]
@@ -1641,7 +1490,7 @@ fn x_api_key_auth_scheme_flows_from_config_to_sampler() {
         None,
         None,
     );
-    model.info.api_backend = ApiBackend::Messages;
+    model.info.api_backend = ApiBackend::ChatCompletions;
     model.info.auth_scheme = AuthScheme::XApiKey;
     let creds = resolve_credentials(&model, None);
     assert_eq!(creds.auth_scheme, AuthScheme::XApiKey);
@@ -1649,7 +1498,7 @@ fn x_api_key_auth_scheme_flows_from_config_to_sampler() {
     assert_eq!(creds.api_key, Some("sk-ant-test-key".to_string()));
     let config = sampling_config_for_model(&model, creds, None, None, None, None);
     assert_eq!(config.auth_scheme, AuthScheme::XApiKey);
-    assert_eq!(config.api_backend, ApiBackend::Messages);
+    assert_eq!(config.api_backend, ApiBackend::ChatCompletions);
     let client = xai_grok_sampler::SamplingClient::new(config).expect("client should build");
     let info = client.auth_info();
     assert_eq!(info.auth_type, "x-api-key");
@@ -2032,89 +1881,6 @@ fn sampling_config_context_window_from_entry_or_default() {
     assert_eq!(config.context_window, 256_000);
 }
 #[test]
-fn unset_max_request_bytes_defaults_from_api_backend() {
-    let raw_config: toml::Value = toml::from_str(
-        r#"
-            [model.capped-messages]
-            model = "claude"
-            base_url = "https://api.example.com/v1"
-            api_backend = "messages"
-            context_window = 1000000
-            max_request_bytes = 20000000
-
-            [model.uncapped-messages]
-            model = "claude"
-            base_url = "https://api.example.com/v1"
-            api_backend = "messages"
-            context_window = 1000000
-
-            [model.uncapped-chat]
-            model = "m"
-            base_url = "https://api.example.com/v1"
-            api_backend = "chat_completions"
-            context_window = 1000000
-
-            [model.uncapped-responses]
-            model = "m"
-            base_url = "https://api.example.com/v1"
-            api_backend = "responses"
-            context_window = 1000000
-            "#,
-    )
-    .unwrap();
-    let cfg = Config::new_from_toml_cfg(&raw_config).expect("config should parse");
-    let resolved = resolve_model_list(&cfg, None);
-    let max_request_bytes = |key: &str| {
-        let model = resolved.get(key).expect("model should exist");
-        sampling_config_for_model(
-            model,
-            resolve_credentials(model, None),
-            None,
-            None,
-            None,
-            None,
-        )
-        .max_request_bytes
-    };
-    assert_eq!(
-        NonZeroU64::new(20_000_000),
-        max_request_bytes("capped-messages"),
-        "an explicit cap overrides the backend default"
-    );
-    assert_eq!(
-        NonZeroU64::new(30_000_000),
-        max_request_bytes("uncapped-messages"),
-        "a messages model budgets to the 30 MB Messages host cap"
-    );
-    assert_eq!(
-        NonZeroU64::new(50 * 1024 * 1024),
-        max_request_bytes("uncapped-chat")
-    );
-    assert_eq!(
-        NonZeroU64::new(50 * 1024 * 1024),
-        max_request_bytes("uncapped-responses")
-    );
-}
-#[test]
-fn parses_model_api_backend_responses() {
-    let raw_config: toml::Value = toml::from_str(
-        r#"
-            [model.my-responses-model]
-            model = "deepseek-4.5"
-            base_url = "https://api.example.com/v1"
-            context_window = 200000
-            api_backend = "responses"
-            "#,
-    )
-    .unwrap();
-    let cfg = Config::new_from_toml_cfg(&raw_config).expect("config should parse");
-    let resolved = resolve_model_list(&cfg, None);
-    let model = resolved
-        .get("my-responses-model")
-        .expect("model should exist");
-    assert_eq!(model.info.api_backend, ApiBackend::Responses);
-}
-#[test]
 fn parses_model_api_backend_chat_completions() {
     let raw_config: toml::Value = toml::from_str(
         r#"
@@ -2130,52 +1896,6 @@ fn parses_model_api_backend_chat_completions() {
     let resolved = resolve_model_list(&cfg, None);
     let model = resolved.get("my-chat-model").expect("model should exist");
     assert_eq!(model.info.api_backend, ApiBackend::ChatCompletions);
-}
-/// Messages backend auto-defaults supports_reasoning_effort=true.
-/// Without this, `--reasoning-effort` is silently dropped by
-/// `model_offers_reasoning_effort` in agent/remote_config/resolution.rs for any
-/// BYOK Claude config.
-#[test]
-fn model_messages_backend_auto_defaults_supports_reasoning_effort() {
-    let raw_config: toml::Value = toml::from_str(
-        r#"
-            [model.my-claude]
-            model = "deepseek-4.5"
-            base_url = "https://messages.example.com"
-            context_window = 200000
-            api_backend = "messages"
-            "#,
-    )
-    .unwrap();
-    let cfg = Config::new_from_toml_cfg(&raw_config).expect("config should parse");
-    let resolved = resolve_model_list(&cfg, None);
-    let model = resolved.get("my-claude").expect("model should exist");
-    assert!(
-        model.info.supports_reasoning_effort,
-        "Messages backend should auto-default supports_reasoning_effort=true",
-    );
-}
-/// An explicit `supports_reasoning_effort = false` in config must override the Messages auto-default; config wins.
-#[test]
-fn model_messages_backend_respects_explicit_supports_reasoning_effort_false() {
-    let raw_config: toml::Value = toml::from_str(
-        r#"
-            [model.my-claude]
-            model = "deepseek-4.5"
-            base_url = "https://messages.example.com"
-            context_window = 200000
-            api_backend = "messages"
-            supports_reasoning_effort = false
-            "#,
-    )
-    .unwrap();
-    let cfg = Config::new_from_toml_cfg(&raw_config).expect("config should parse");
-    let resolved = resolve_model_list(&cfg, None);
-    let model = resolved.get("my-claude").expect("model should exist");
-    assert!(
-        !model.info.supports_reasoning_effort,
-        "explicit supports_reasoning_effort=false in config must override the Messages auto-default",
-    );
 }
 /// Non-Messages backends keep their existing default (false).
 /// Adaptive thinking is specific to the Messages backend, and other providers vary per upstream model.
@@ -2215,20 +1935,6 @@ fn model_api_backend_defaults_to_chat_completions() {
     let resolved = resolve_model_list(&cfg, None);
     let model = resolved.get("my-model").expect("model should exist");
     assert_eq!(model.info.api_backend, ApiBackend::ChatCompletions);
-}
-#[test]
-fn sampling_config_uses_model_api_backend() {
-    let mut model = test_model_entry("test-model", "https://api.example.com/v1", None, None, None);
-    model.info.api_backend = ApiBackend::Responses;
-    let sampling_config = sampling_config_for_model(
-        &model,
-        resolve_credentials(&model, None),
-        None,
-        None,
-        None,
-        None,
-    );
-    assert_eq!(sampling_config.api_backend, ApiBackend::Responses);
 }
 #[test]
 fn parses_model_use_concise_true() {
@@ -3358,36 +3064,6 @@ fn e2e_config_toml_model_overrides_default() {
     assert_eq!(sampling.base_url, "https://inference.example.com/v1");
 }
 #[test]
-fn e2e_user_overrides_default_model_with_api_key() {
-    let dm = crate::models::default_model();
-    let (_, models) = resolve_models_from_toml(
-        &format!(
-            r#"
-            [model."{dm}"]
-            model = "{dm}"
-            base_url = "https://my-proxy.example.com/v1"
-            context_window = 200000
-            api_key = "my-custom-api-key"
-            "#,
-        ),
-        None,
-    );
-    let model = models.get(dm).expect("model should exist");
-    assert_eq!(model.info.base_url, "https://my-proxy.example.com/v1");
-    assert_eq!(model.api_key.as_deref(), Some("my-custom-api-key"));
-    assert!(model.env_key.is_none());
-    let sampling = resolve_sampling(model, Some("session-token"));
-    assert_eq!(
-        sampling.api_key.as_deref(),
-        Some("my-custom-api-key"),
-        "model's own api_key must beat session token"
-    );
-    assert_eq!(
-        sampling.base_url, "https://my-proxy.example.com/v1",
-        "should route to user's custom endpoint"
-    );
-}
-#[test]
 fn parsed_config_has_models_config() {
     let raw: toml::Value = toml::from_str(
         r#"
@@ -3442,35 +3118,6 @@ fn config_models_default_custom_model_is_in_resolved_model_list() {
     assert_eq!(model.info.base_url, "https://inference.example.com/v1");
 }
 #[test]
-fn e2e_default_model_with_session_routes_to_proxy() {
-    let (_, models) = resolve_models_from_toml("", None);
-    let model = models
-        .get(crate::models::default_model())
-        .expect("default model should exist");
-    let sampling = resolve_sampling(model, Some("session-token-123"));
-    assert_eq!(sampling.api_key.as_deref(), Some("session-token-123"));
-    assert_eq!(
-        sampling.base_url, "https://api.deepseek.com/v1",
-        "session auth should route to api.deepseek.com"
-    );
-}
-#[test]
-#[serial]
-fn e2e_default_model_with_external_api_key_routes_to_api_xai() {
-    let (_, models) = resolve_models_from_toml("", None);
-    let model = models
-        .get(crate::models::default_model())
-        .expect("default model should exist");
-    unsafe { std::env::set_var("XAI_API_KEY", "xai-external-key") };
-    let sampling = resolve_sampling(model, None);
-    assert_eq!(sampling.api_key.as_deref(), Some("xai-external-key"));
-    assert_eq!(
-        sampling.base_url, "https://api.deepseek.com/v1",
-        "external API key should route to api.deepseek.com via api_base_url"
-    );
-    unsafe { std::env::remove_var("XAI_API_KEY") };
-}
-#[test]
 fn e2e_user_config_overrides_prefetched_model() {
     let dm = crate::models::default_model();
     let mut prefetched = IndexMap::new();
@@ -3502,95 +3149,6 @@ fn e2e_user_config_overrides_prefetched_model() {
         "model's own api_key should win over session token"
     );
     assert_eq!(sampling.base_url, "https://my-proxy.example.com/v1");
-}
-#[test]
-#[serial]
-fn e2e_credential_priority_model_key_beats_session_beats_env() {
-    let model_with_key = test_model_entry(
-        "test",
-        "https://custom.api/v1",
-        Some("model-key"),
-        None,
-        None,
-    );
-    unsafe { std::env::set_var("XAI_API_KEY", "env-key") };
-    let sampling = resolve_sampling(&model_with_key, Some("session-key"));
-    assert_eq!(
-        sampling.api_key.as_deref(),
-        Some("model-key"),
-        "model's own api_key must beat session and env key"
-    );
-    assert_eq!(
-        sampling.base_url, "https://custom.api/v1",
-        "model's own base_url must be used"
-    );
-    let model_no_key = test_model_entry(
-        "test",
-        "https://proxy.api/v1",
-        None,
-        None,
-        Some("https://api.deepseek.com/v1"),
-    );
-    let sampling = resolve_sampling(&model_no_key, Some("session-key"));
-    assert_eq!(
-        sampling.api_key.as_deref(),
-        Some("session-key"),
-        "session token should beat env key when model has no own credentials"
-    );
-    assert_eq!(
-        sampling.base_url, "https://proxy.api/v1",
-        "session auth should use base_url, not api_base_url"
-    );
-    let sampling = resolve_sampling(&model_no_key, None);
-    assert_eq!(
-        sampling.api_key.as_deref(),
-        Some("env-key"),
-        "env key should be used when no session and no model credentials"
-    );
-    assert_eq!(
-        sampling.base_url, "https://api.deepseek.com/v1",
-        "env key should route to api_base_url"
-    );
-    unsafe { std::env::remove_var("XAI_API_KEY") };
-    let sampling = resolve_sampling(&model_no_key, None);
-    assert!(
-        sampling.api_key.is_none(),
-        "no credentials available → api_key should be None"
-    );
-}
-#[test]
-fn e2e_duplicate_model_field_both_entries_survive() {
-    let dm = crate::models::default_model();
-    let (_, models) = resolve_models_from_toml(
-        &format!(
-            r#"
-            [model.acme-grok]
-            model = "{dm}"
-            base_url = "https://inference.example.com/v1"
-            context_window = 200000
-            api_key = "enterprise-key"
-            "#,
-        ),
-        None,
-    );
-    assert!(models.contains_key(dm), "default entry should still exist");
-    assert!(
-        models.contains_key("acme-grok"),
-        "user entry with different key should also exist"
-    );
-    let default = models.get(dm).unwrap();
-    let user = models.get("acme-grok").unwrap();
-    assert_eq!(default.info.model, user.info.model, "same model field");
-    assert_ne!(
-        default.info.base_url, user.info.base_url,
-        "different base_urls"
-    );
-    let sampling = resolve_sampling(user, None);
-    assert_eq!(sampling.api_key.as_deref(), Some("enterprise-key"));
-    assert_eq!(sampling.base_url, "https://inference.example.com/v1");
-    let sampling = resolve_sampling(default, Some("session-key"));
-    assert_eq!(sampling.api_key.as_deref(), Some("session-key"));
-    assert_eq!(sampling.base_url, "https://api.deepseek.com/v1",);
 }
 #[test]
 fn e2e_enterprise_custom_endpoint_skips_xai_defaults() {
@@ -3663,66 +3221,6 @@ fn e2e_acp_model_info_no_dedup_on_model_field() {
     assert!(
         acp_models.contains_key(&acp::ModelId::new("acme-grok")),
         "user entry should be addressable by map key"
-    );
-}
-#[test]
-fn e2e_enterprise_endpoints_plus_partial_model_override() {
-    let dm = crate::models::default_model();
-    let (_, models) = resolve_models_from_toml(
-        &format!(
-            r#"
-            [endpoints]
-            cli_chat_proxy_base_url = "https://enterprise-proxy.acme.com/v1"
-            xai_api_base_url = "https://enterprise-api.acme.com/v1"
-
-            [model."{dm}"]
-            api_key = "acme-api-key"
-            "#,
-        ),
-        None,
-    );
-    let model = models.get(dm).expect("model should exist");
-    assert_eq!(
-        model.info.base_url, "https://enterprise-proxy.acme.com/v1",
-        "base_url must inherit from [endpoints], not stale default"
-    );
-    assert_eq!(model.api_key.as_deref(), Some("acme-api-key"));
-    assert_eq!(
-        model.api_base_url.as_deref(),
-        Some("https://enterprise-api.acme.com/v1"),
-    );
-    let sampling = resolve_sampling(model, Some("session-token"));
-    assert_eq!(
-        sampling.api_key.as_deref(),
-        Some("acme-api-key"),
-        "model's own api_key must beat session token"
-    );
-    assert_eq!(
-        sampling.base_url, "https://enterprise-proxy.acme.com/v1",
-        "sampling must route to enterprise proxy"
-    );
-}
-#[test]
-fn e2e_enterprise_endpoints_only_no_model_override() {
-    let (_, models) = resolve_models_from_toml(
-        r#"
-            [endpoints]
-            cli_chat_proxy_base_url = "https://enterprise-proxy.acme.com/v1"
-            xai_api_base_url = "https://enterprise-api.acme.com/v1"
-            "#,
-        None,
-    );
-    let model = models
-        .get(crate::models::default_model())
-        .expect("model should exist");
-    assert_eq!(
-        model.info.base_url, "https://enterprise-proxy.acme.com/v1",
-        "default model should use enterprise cli_chat_proxy_base_url"
-    );
-    assert_eq!(
-        model.api_base_url.as_deref(),
-        Some("https://enterprise-api.acme.com/v1"),
-        "default model should use enterprise xai_api_base_url"
     );
 }
 /// Unset every env var that `EndpointsConfig::default()` reads for endpoints.
@@ -4804,164 +4302,6 @@ fn resolve_workflows_env_wins() {
         "env must be able to kill the default-on workflows"
     );
     unsafe { std::env::remove_var("GROK_WORKFLOWS") };
-}
-#[test]
-#[serial]
-fn resolve_image_gen_model_override_remote_settings_or_config() {
-    unsafe { std::env::remove_var("GROK_IMAGE_GEN_MODEL_OVERRIDE") };
-    let with = |config: Option<&str>, gb: Option<&str>| Config {
-        features: Features {
-            image_gen_model_override: config.map(String::from),
-            ..Default::default()
-        },
-        remote_settings: Some(crate::util::config::RemoteSettings {
-            image_gen_model_override: gb.map(String::from),
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    assert_eq!(Config::default().resolve_image_gen_model_override(), None);
-    assert_eq!(
-        with(None, Some("grok-imagine-image")).resolve_image_gen_model_override(),
-        Some("grok-imagine-image".to_owned())
-    );
-    assert_eq!(
-        with(Some("grok-imagine-image-pro"), Some("grok-imagine-image"))
-            .resolve_image_gen_model_override(),
-        Some("grok-imagine-image-pro".to_owned())
-    );
-}
-#[test]
-#[serial]
-fn resolve_image_edit_model_override_remote_settings_or_config() {
-    unsafe { std::env::remove_var("GROK_IMAGE_EDIT_MODEL_OVERRIDE") };
-    let with = |config: Option<&str>, gb: Option<&str>| Config {
-        features: Features {
-            image_edit_model_override: config.map(String::from),
-            ..Default::default()
-        },
-        remote_settings: Some(crate::util::config::RemoteSettings {
-            image_edit_model_override: gb.map(String::from),
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    assert_eq!(Config::default().resolve_image_edit_model_override(), None);
-    assert_eq!(
-        with(None, Some("grok-imagine-image")).resolve_image_edit_model_override(),
-        Some("grok-imagine-image".to_owned())
-    );
-    assert_eq!(
-        with(Some("grok-imagine-image-pro"), Some("grok-imagine-image"))
-            .resolve_image_edit_model_override(),
-        Some("grok-imagine-image-pro".to_owned())
-    );
-    let gen_only = Config {
-        remote_settings: Some(crate::util::config::RemoteSettings {
-            image_gen_model_override: Some("grok-imagine-image".to_owned()),
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    assert_eq!(gen_only.resolve_image_edit_model_override(), None);
-}
-#[test]
-#[serial]
-fn imagine_tools_disabled_gates_image_edit() {
-    unsafe { std::env::remove_var("GROK_IMAGE_EDIT") };
-    let with_list = |tools: Vec<&str>| Config {
-        remote_settings: Some(crate::util::config::RemoteSettings {
-            imagine_tools_disabled: Some(tools.into_iter().map(String::from).collect()),
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    unsafe { std::env::set_var("GROK_IMAGE_EDIT", "1") };
-    let off = with_list(vec!["image_edit"]).resolve_image_edit();
-    assert!(!off.value);
-    assert_eq!(off.source, ConfigSource::Remote);
-    unsafe { std::env::remove_var("GROK_IMAGE_EDIT") };
-    assert!(with_list(vec!["image_to_video"]).resolve_image_edit().value);
-    assert!(Config::default().resolve_image_edit().value);
-}
-#[test]
-#[serial]
-fn resolve_image_gen_gates() {
-    unsafe { std::env::remove_var("GROK_IMAGE_GEN") };
-    assert!(Config::default().resolve_image_gen().value);
-    assert!(
-        !Config {
-            features: Features {
-                image_gen: Some(false),
-                ..Default::default()
-            },
-            ..Default::default()
-        }
-        .resolve_image_gen()
-        .value
-    );
-    assert!(
-        !Config {
-            remote_settings: Some(crate::util::config::RemoteSettings {
-                image_gen_enabled: Some(false),
-                ..Default::default()
-            }),
-            ..Default::default()
-        }
-        .resolve_image_gen()
-        .value
-    );
-    unsafe { std::env::set_var("GROK_IMAGE_GEN", "1") };
-    let denied = Config {
-        remote_settings: Some(crate::util::config::RemoteSettings {
-            imagine_tools_disabled: Some(vec!["image_gen".into()]),
-            ..Default::default()
-        }),
-        ..Default::default()
-    }
-    .resolve_image_gen();
-    assert!(!denied.value);
-    assert_eq!(denied.source, ConfigSource::Remote);
-    unsafe { std::env::remove_var("GROK_IMAGE_GEN") };
-}
-#[test]
-#[serial]
-fn resolve_video_gen_gates() {
-    unsafe { std::env::remove_var("GROK_VIDEO_GEN") };
-    assert!(Config::default().resolve_video_gen().value);
-    assert!(
-        !Config {
-            features: Features {
-                video_gen: Some(false),
-                ..Default::default()
-            },
-            ..Default::default()
-        }
-        .resolve_video_gen()
-        .value
-    );
-    assert!(
-        !Config {
-            remote_settings: Some(crate::util::config::RemoteSettings {
-                video_gen_enabled: Some(false),
-                ..Default::default()
-            }),
-            ..Default::default()
-        }
-        .resolve_video_gen()
-        .value
-    );
-    assert!(
-        !Config {
-            remote_settings: Some(crate::util::config::RemoteSettings {
-                imagine_tools_disabled: Some(vec!["image_to_video".into()]),
-                ..Default::default()
-            }),
-            ..Default::default()
-        }
-        .resolve_video_gen()
-        .value
-    );
 }
 /// Clear every env var the goal/companion resolvers read so tests start from a known baseline regardless of run order.
 fn clear_goal_envs() {
@@ -6054,619 +5394,6 @@ fn resolve_upload_method_accepts_deployment_key_without_oauth() {
         other => panic!("expected Proxy upload method, got {other:?}"),
     }
 }
-fn ext_env(pairs: &[(&str, &str)]) -> impl Fn(&str) -> Option<String> + use<> {
-    let map: std::collections::HashMap<String, String> = pairs
-        .iter()
-        .map(|(k, v)| (k.to_string(), v.to_string()))
-        .collect();
-    move |name: &str| map.get(name).cloned()
-}
-fn ext_client() -> xai_grok_telemetry::external::config::ExternalClientInfo {
-    xai_grok_telemetry::external::config::ExternalClientInfo::default()
-}
-#[test]
-fn external_otel_default_off_and_double_opt_in() {
-    assert!(
-        resolve_external_otel_config_with(None, None, ext_env(&[]), ext_client(), false).is_none()
-    );
-    assert!(
-        resolve_external_otel_config_with(
-            None,
-            None,
-            ext_env(&[("GROK_EXTERNAL_OTEL", "1")]),
-            ext_client(),
-            false,
-        )
-        .is_none()
-    );
-    assert!(
-        resolve_external_otel_config_with(
-            None,
-            None,
-            ext_env(&[
-                ("GROK_EXTERNAL_OTEL", "1"),
-                ("OTEL_METRICS_EXPORTER", "otlp"),
-            ]),
-            ext_client(),
-            false,
-        )
-        .is_some()
-    );
-}
-#[test]
-fn external_otel_file_table_layered_under_env() {
-    let effective: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_endpoint = "https://collector.corp.example:4318"
-            otel_protocol = "grpc"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        Some(&effective),
-        None,
-        ext_env(&[]),
-        ext_client(),
-        false,
-    )
-    .expect("file table must activate");
-    assert_eq!(cfg.logs_transport.as_protocol_str(), "grpc");
-    assert_eq!(cfg.metrics_transport.as_protocol_str(), "grpc");
-    assert_eq!(cfg.logs_endpoint, "https://collector.corp.example:4318");
-    let cfg = resolve_external_otel_config_with(
-        Some(&effective),
-        None,
-        ext_env(&[("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")]),
-        ext_client(),
-        false,
-    )
-    .expect("env protocol must override file protocol");
-    assert_eq!(cfg.logs_transport.as_protocol_str(), "http/protobuf");
-    assert_eq!(cfg.metrics_transport.as_protocol_str(), "http/protobuf");
-    assert_eq!(
-        cfg.logs_endpoint,
-        "https://collector.corp.example:4318/v1/logs"
-    );
-    assert!(
-        resolve_external_otel_config_with(
-            Some(&effective),
-            None,
-            ext_env(&[("GROK_EXTERNAL_OTEL", "0")]),
-            ext_client(),
-            false,
-        )
-        .is_none()
-    );
-}
-#[test]
-fn external_otel_file_table_carries_mtls_paths() {
-    let effective: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_metrics_exporter = "otlp"
-            otel_endpoint = "https://collector.corp.example:4318"
-            otel_protocol = "grpc"
-            otel_certificate = "/etc/ssl/corp-ca.pem"
-            otel_client_certificate = "/etc/ssl/client.crt"
-            otel_client_key = "/etc/ssl/client.key"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        Some(&effective),
-        None,
-        ext_env(&[]),
-        ext_client(),
-        false,
-    )
-    .expect("managed paths alone must activate");
-    assert_eq!(
-        cfg.logs_ca_certificate.as_deref(),
-        Some("/etc/ssl/corp-ca.pem")
-    );
-    assert_eq!(
-        cfg.logs_client_certificate.as_deref(),
-        Some("/etc/ssl/client.crt")
-    );
-    assert_eq!(cfg.logs_client_key.as_deref(), Some("/etc/ssl/client.key"));
-    assert_eq!(
-        cfg.metrics_client_certificate.as_deref(),
-        Some("/etc/ssl/client.crt")
-    );
-    let cfg = resolve_external_otel_config_with(
-        Some(&effective),
-        None,
-        ext_env(&[
-            ("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", "/env/client.crt"),
-            ("OTEL_EXPORTER_OTLP_CLIENT_KEY", "/env/client.key"),
-        ]),
-        ext_client(),
-        false,
-    )
-    .expect("env override must resolve");
-    assert_eq!(
-        cfg.logs_client_certificate.as_deref(),
-        Some("/env/client.crt")
-    );
-    assert_eq!(cfg.logs_client_key.as_deref(), Some("/env/client.key"));
-}
-#[test]
-fn external_otel_requirements_pin_wins_over_env() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = false
-            "#,
-    )
-    .unwrap();
-    assert!(
-        resolve_external_otel_config_with(
-            None,
-            Some(&req),
-            ext_env(&[("GROK_EXTERNAL_OTEL", "1"), ("OTEL_LOGS_EXPORTER", "otlp"),]),
-            ext_client(),
-            false,
-        )
-        .is_none()
-    );
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_log_user_prompts = false
-            otel_log_tool_details = false
-            otel_log_tool_content = false
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        None,
-        Some(&req),
-        ext_env(&[
-            ("GROK_EXTERNAL_OTEL", "1"),
-            ("OTEL_LOGS_EXPORTER", "otlp"),
-            ("OTEL_LOG_USER_PROMPTS", "1"),
-            ("OTEL_LOG_TOOL_DETAILS", "1"),
-            ("OTEL_LOG_TOOL_CONTENT", "1"),
-        ]),
-        ext_client(),
-        false,
-    )
-    .expect("stream still active; only gates pinned");
-    assert!(!cfg.gates.log_user_prompts, "requirement pin must win");
-    assert!(!cfg.gates.log_tool_details, "requirement pin must win");
-    assert!(!cfg.gates.log_tool_content, "requirement pin must win");
-}
-#[test]
-fn external_otel_requirements_pin_endpoint_beats_env() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_endpoint = "http://corp:4318"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        None,
-        Some(&req),
-        ext_env(&[("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:9")]),
-        ext_client(),
-        false,
-    )
-    .expect("pin must keep the stream active");
-    assert!(
-        cfg.logs_endpoint.starts_with("http://corp:4318"),
-        "listed endpoint must beat env: {}",
-        cfg.logs_endpoint
-    );
-}
-#[test]
-fn external_otel_unset_endpoint_still_env_overridable() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        None,
-        Some(&req),
-        ext_env(&[("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318")]),
-        ext_client(),
-        false,
-    )
-    .expect("unset endpoint stays developer-settable");
-    assert!(
-        cfg.logs_endpoint.contains("127.0.0.1:4318"),
-        "{}",
-        cfg.logs_endpoint
-    );
-}
-#[test]
-fn external_otel_pin_endpoint_strips_per_signal_env() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_endpoint = "http://corp:4318"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        None,
-        Some(&req),
-        ext_env(&[(
-            "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
-            "http://127.0.0.1:9/v1/logs",
-        )]),
-        ext_client(),
-        false,
-    )
-    .expect("stream active");
-    assert!(
-        !cfg.logs_endpoint.contains("127.0.0.1:9"),
-        "unlisted per-signal endpoint env must not win: {}",
-        cfg.logs_endpoint
-    );
-    assert!(cfg.logs_endpoint.contains("corp:4318"));
-}
-#[test]
-fn external_otel_pin_endpoint_hides_unlisted_file_siblings() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_endpoint = "http://corp:4318"
-            "#,
-    )
-    .unwrap();
-    let effective: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_logs_endpoint = "http://127.0.0.1:9/v1/logs"
-            otel_metrics_endpoint = "http://127.0.0.1:9/v1/metrics"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        Some(&effective),
-        Some(&req),
-        ext_env(&[]),
-        ext_client(),
-        false,
-    )
-    .expect("stream active");
-    assert!(
-        !cfg.logs_endpoint.contains("127.0.0.1:9"),
-        "unlisted file sibling must not retarget: {}",
-        cfg.logs_endpoint
-    );
-    assert!(
-        cfg.logs_endpoint.contains("corp:4318"),
-        "{}",
-        cfg.logs_endpoint
-    );
-}
-#[test]
-fn external_otel_pin_protocol_hides_unlisted_file_siblings() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_endpoint = "http://corp:4318"
-            otel_protocol = "http/protobuf"
-            "#,
-    )
-    .unwrap();
-    let effective: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_logs_protocol = "grpc"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        Some(&effective),
-        Some(&req),
-        ext_env(&[]),
-        ext_client(),
-        false,
-    )
-    .expect("stream active");
-    assert_eq!(
-        cfg.logs_transport,
-        xai_grok_telemetry::external::config::OtlpTransport::HttpProtobuf,
-        "unlisted file protocol sibling must not win"
-    );
-}
-#[test]
-fn external_otel_pin_ca_keeps_file_endpoint() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_certificate = "/etc/ssl/corp-ca.pem"
-            "#,
-    )
-    .unwrap();
-    let effective: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_logs_endpoint = "http://logs:4318/v1/logs"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        Some(&effective),
-        Some(&req),
-        ext_env(&[]),
-        ext_client(),
-        false,
-    )
-    .expect("stream active");
-    assert_eq!(
-        cfg.logs_endpoint, "http://logs:4318/v1/logs",
-        "CA pin must not lock destination"
-    );
-}
-#[test]
-fn external_otel_pin_client_cert_hides_file_endpoints() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_client_certificate = "/etc/ssl/client.crt"
-            otel_client_key = "/etc/ssl/client.key"
-            "#,
-    )
-    .unwrap();
-    let effective: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_logs_endpoint = "http://127.0.0.1:9/v1/logs"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        Some(&effective),
-        Some(&req),
-        ext_env(&[]),
-        ext_client(),
-        false,
-    )
-    .expect("stream active");
-    assert!(
-        !cfg.logs_endpoint.contains("127.0.0.1:9"),
-        "client-identity pin must hide unlisted file endpoints: {}",
-        cfg.logs_endpoint
-    );
-}
-#[test]
-fn external_otel_pin_logs_endpoint_keeps_that_signal() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_endpoint = "http://corp:4318"
-            otel_logs_endpoint = "http://logs:4318/v1/logs"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        None,
-        Some(&req),
-        ext_env(&[(
-            "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
-            "http://127.0.0.1:9/v1/logs",
-        )]),
-        ext_client(),
-        false,
-    )
-    .expect("stream active");
-    assert_eq!(cfg.logs_endpoint, "http://logs:4318/v1/logs");
-}
-#[test]
-fn external_otel_pin_exporter_beats_none() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_endpoint = "http://corp:4318"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        None,
-        Some(&req),
-        ext_env(&[("OTEL_LOGS_EXPORTER", "none")]),
-        ext_client(),
-        false,
-    )
-    .expect("pinned exporter must beat OTEL_LOGS_EXPORTER=none");
-    assert_eq!(
-        cfg.logs_exporter,
-        xai_grok_telemetry::external::config::ExporterSelection::Otlp
-    );
-}
-#[test]
-fn external_otel_omit_exporter_still_allows_none() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_endpoint = "http://corp:4318"
-            "#,
-    )
-    .unwrap();
-    assert!(
-        resolve_external_otel_config_with(
-            None,
-            Some(&req),
-            ext_env(&[
-                ("OTEL_LOGS_EXPORTER", "none"),
-                ("OTEL_METRICS_EXPORTER", "none")
-            ]),
-            ext_client(),
-            false,
-        )
-        .is_none(),
-        "omitted exporter stays env-overridable to none"
-    );
-}
-#[test]
-fn external_otel_pin_client_cert_strips_developer_endpoints() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_endpoint = "http://corp:4318"
-            otel_client_certificate = "/etc/ssl/client.crt"
-            otel_client_key = "/etc/ssl/client.key"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        None,
-        Some(&req),
-        ext_env(&[("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:9")]),
-        ext_client(),
-        false,
-    )
-    .expect("stream active");
-    assert!(
-        cfg.logs_endpoint.starts_with("http://corp:4318"),
-        "{}",
-        cfg.logs_endpoint
-    );
-}
-#[test]
-fn external_otel_pin_ca_does_not_strip_endpoints() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_certificate = "/etc/ssl/corp-ca.pem"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        None,
-        Some(&req),
-        ext_env(&[("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318")]),
-        ext_client(),
-        false,
-    )
-    .expect("CA-only pin must not lock destination");
-    assert!(
-        cfg.logs_endpoint.contains("127.0.0.1:4318"),
-        "{}",
-        cfg.logs_endpoint
-    );
-}
-#[test]
-fn external_otel_pin_ca_hides_unlisted_per_signal_cert_env() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_endpoint = "http://corp:4318"
-            otel_certificate = "/etc/ssl/corp-ca.pem"
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        None,
-        Some(&req),
-        ext_env(&[(
-            "OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE",
-            "/tmp/decoy-logs-ca.pem",
-        )]),
-        ext_client(),
-        false,
-    )
-    .expect("stream active");
-    assert_eq!(
-        cfg.logs_ca_certificate.as_deref(),
-        Some("/etc/ssl/corp-ca.pem"),
-        "generic CA pin must hide OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE"
-    );
-}
-#[test]
-fn external_otel_pin_assistant_beats_env() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_log_assistant_responses = false
-            "#,
-    )
-    .unwrap();
-    let cfg = resolve_external_otel_config_with(
-        None,
-        Some(&req),
-        ext_env(&[("OTEL_LOG_ASSISTANT_RESPONSES", "1")]),
-        ext_client(),
-        false,
-    )
-    .expect("stream active");
-    assert!(!cfg.gates.log_assistant_responses);
-}
-#[test]
-fn external_otel_pin_prompts_true_omitted_assistant_stays_off() {
-    let req: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_enabled = true
-            otel_logs_exporter = "otlp"
-            otel_log_user_prompts = true
-            "#,
-    )
-    .unwrap();
-    let cfg =
-        resolve_external_otel_config_with(None, Some(&req), ext_env(&[]), ext_client(), false)
-            .expect("stream active");
-    assert!(cfg.gates.log_user_prompts);
-    assert!(
-        !cfg.gates.log_assistant_responses,
-        "omitted sibling gate must default off across the requirements boundary"
-    );
-    assert!(!cfg.gates.log_tool_details);
-    assert!(
-        !cfg.gates.log_tool_content,
-        "omitted CONTENT sibling must default off across the requirements boundary"
-    );
-}
-#[test]
-fn external_otel_carries_internal_consumed_flag() {
-    let cfg = resolve_external_otel_config_with(
-        None,
-        None,
-        ext_env(&[("GROK_EXTERNAL_OTEL", "1"), ("OTEL_LOGS_EXPORTER", "otlp")]),
-        ext_client(),
-        true,
-    )
-    .expect("resolution itself still succeeds");
-    assert!(cfg.internal_pipeline_consumed_otel_vars);
-}
 fn empty_config() -> toml::Value {
     toml::Value::Table(toml::map::Map::new())
 }
@@ -7180,7 +5907,7 @@ fn slug_propagation_inherits_api_backend_but_not_agent_type() {
             model = "deepseek-4.5"
             context_window = 500000
             base_url = "https://test.example.com/v1"
-            api_backend = "responses"
+            api_backend = "chat_completions"
             agent_type = "grok-build"
             "#,
     )
@@ -7207,7 +5934,7 @@ fn slug_propagation_inherits_api_backend_but_not_agent_type() {
     );
     assert_eq!(
         latest.info.api_backend,
-        ApiBackend::Responses,
+        ApiBackend::ChatCompletions,
         "api_backend should be inherited from sibling"
     );
 }
@@ -7251,7 +5978,7 @@ fn resolve_custom_model_with_alias_donor(extra_toml: &str) -> ModelEntry {
             model = "custom-model"
             context_window = 500000
             base_url = "https://test.example.com/v1"
-            api_backend = "responses"
+            api_backend = "chat_completions"
 
             {extra_toml}
             "#
@@ -7317,7 +6044,7 @@ fn slug_propagation_inherits_api_backend_into_config_entry_without_one() {
     );
     assert_eq!(
         (entry.info.api_backend, entry.info.context_window.get()),
-        (ApiBackend::Responses, 500_000)
+        (ApiBackend::ChatCompletions, 500_000)
     );
 }
 /// When no sibling has a real context_window, slug propagation is a no-op.
@@ -8010,7 +6737,7 @@ fn resolve_model_list_prefetch_replaces_bundled_entirely() {
     let cfg = Config::default();
     let dm = crate::models::default_model();
     let mut p = IndexMap::new();
-    let e = prefetch_model_entry("other-model", 500_000, ApiBackend::Responses);
+    let e = prefetch_model_entry("other-model", 500_000, ApiBackend::ChatCompletions);
     p.insert("other-model".to_string(), e);
     let resolved = resolve_model_list(&cfg, Some(p));
     assert!(resolved.contains_key("other-model"));

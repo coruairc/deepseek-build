@@ -115,8 +115,8 @@ fn transient_5xx_resubmits_until_success() {
             let server = MockInferenceServer::start_with_models(vec![MockModelEntry::new("test")])
                 .await
                 .expect("mock inference server");
-            server.enqueue_response("/v1/responses", overloaded_503());
-            server.enqueue_response("/v1/responses", overloaded_503());
+            server.enqueue_response("/v1/chat/completions", overloaded_503());
+            server.enqueue_response("/v1/chat/completions", overloaded_503());
             // Once the queue drains, the mock serves its default success response
 
             let (outcome, retries, elapsed, submissions) = run_turn(&server, true).await;
@@ -153,7 +153,7 @@ fn transient_5xx_exhausts_to_the_original_terminal() {
                 .await
                 .expect("mock inference server");
             for _ in 0..4 {
-                server.enqueue_response("/v1/responses", overloaded_503());
+                server.enqueue_response("/v1/chat/completions", overloaded_503());
             }
 
             let (outcome, retries, elapsed, submissions) = run_turn(&server, true).await;
@@ -192,7 +192,7 @@ fn kill_switch_off_fails_on_first_transient() {
             let server = MockInferenceServer::start_with_models(vec![MockModelEntry::new("test")])
                 .await
                 .expect("mock inference server");
-            server.enqueue_response("/v1/responses", overloaded_503());
+            server.enqueue_response("/v1/chat/completions", overloaded_503());
 
             let (outcome, retries, elapsed, submissions) = run_turn(&server, false).await;
 
@@ -215,7 +215,7 @@ fn headless_root_session_resubmits() {
             let server = MockInferenceServer::start_with_models(vec![MockModelEntry::new("test")])
                 .await
                 .expect("mock inference server");
-            server.enqueue_response("/v1/responses", overloaded_503());
+            server.enqueue_response("/v1/chat/completions", overloaded_503());
 
             let (outcome, retries, _elapsed, submissions) =
                 run_turn_attached(&server, true, true).await;
@@ -242,7 +242,7 @@ fn headless_kill_switch_off_fails_on_first_transient() {
             let server = MockInferenceServer::start_with_models(vec![MockModelEntry::new("test")])
                 .await
                 .expect("mock inference server");
-            server.enqueue_response("/v1/responses", overloaded_503());
+            server.enqueue_response("/v1/chat/completions", overloaded_503());
 
             let (outcome, retries, _elapsed, submissions) =
                 run_turn_attached(&server, false, true).await;
@@ -265,7 +265,7 @@ fn headless_exhausts_to_the_original_terminal() {
                 .await
                 .expect("mock inference server");
             for _ in 0..4 {
-                server.enqueue_response("/v1/responses", overloaded_503());
+                server.enqueue_response("/v1/chat/completions", overloaded_503());
             }
 
             let (outcome, retries, _elapsed, submissions) =
@@ -296,7 +296,7 @@ fn prompt_budget_spans_turn_loop_reentries() {
                 .await
                 .expect("mock inference server");
             for _ in 0..20 {
-                server.enqueue_response("/v1/responses", overloaded_503());
+                server.enqueue_response("/v1/chat/completions", overloaded_503());
             }
 
             let (actor, _retries) =
@@ -337,10 +337,10 @@ fn turn_phase_prompt_latency_invariants() {
             let server = MockInferenceServer::start_with_models(vec![MockModelEntry::new("test")])
                 .await
                 .expect("mock inference server");
-            server.enqueue_response("/v1/responses", overloaded_503());
+            server.enqueue_response("/v1/chat/completions", overloaded_503());
             server.enqueue_response(
-                "/v1/responses",
-                ScriptedResponse::sse(xai_grok_test_support::sse::responses_api_script_exact(
+                "/v1/chat/completions",
+                ScriptedResponse::sse(xai_grok_test_support::sse::chat_completion_script_exact(
                     "final answer",
                     "test",
                 )),

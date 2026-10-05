@@ -513,30 +513,19 @@ mod tests {
     }
 
     #[test]
-    fn planner_template_default_render_names_the_web_tools() {
+    fn planner_template_default_render_names_the_web_fetch_tool() {
         // The research mandate is inert if the planner can't see the tool
         let rendered = RoleToolNames::inherit_defaults().apply(GOAL_PLANNER_PROMPT_TEMPLATE);
-        assert!(
-            rendered.contains("web_search"),
-            "default render must name the web-search tool",
-        );
         assert!(rendered.contains("web_fetch"));
         assert_no_tool_placeholders(&rendered);
     }
 
     #[test]
-    fn planner_template_cursor_render_names_the_web_search_tool() {
-        // The previously-broken case: on the alternate toolset the web tool is named "WebSearch", so the planner prompt must render THAT
-        // Otherwise the weak model never reaches for it and plans from memory
-        let rendered = RoleToolNames::from_summary(&summary_with(&[
-            (ToolKind::WebSearch, "WebSearch"),
-            (ToolKind::WebFetch, "WebFetch"),
-        ]))
-        .apply(GOAL_PLANNER_PROMPT_TEMPLATE);
-        assert!(
-            rendered.contains("WebSearch"),
-            "cursor render must name the cursor web-search tool",
-        );
+    fn planner_template_cursor_render_names_the_web_fetch_tool() {
+        // On the alternate toolset the web-fetch tool is named "WebFetch", so the planner prompt must render THAT.
+        let rendered =
+            RoleToolNames::from_summary(&summary_with(&[(ToolKind::WebFetch, "WebFetch")]))
+                .apply(GOAL_PLANNER_PROMPT_TEMPLATE);
         assert!(rendered.contains("WebFetch"));
         assert_no_tool_placeholders(&rendered);
     }

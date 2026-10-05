@@ -16,7 +16,7 @@ fn getter_does_not_fetch_while_policy_repair_is_pending() {
             scope: {
                 "key": "team-session-token",
                 "auth_mode": "oidc",
-                "oidc_issuer": xai_grok_login::xai_oauth2_issuer(),
+                "oidc_issuer": "test-issuer",
                 "create_time": "2026-01-01T00:00:00Z",
                 "expires_at": "2099-01-01T00:00:00Z",
                 "user_id": "test-user",

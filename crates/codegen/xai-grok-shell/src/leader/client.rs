@@ -1217,8 +1217,7 @@ mod tests {
                 cc,
                 std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)), // agent_busy
                 crate::agent::activity::AgentActivity::default(),
-                tokio::sync::watch::channel(true).1,  // ready_rx
-                tokio::sync::watch::channel(false).0, // relay_demand_tx
+                tokio::sync::watch::channel(true).1, // ready_rx
                 tokio::sync::watch::channel(crate::leader::protocol::ShutdownReason::Manual).0, // shutdown_tx
                 None, // use LEADER_VERSION constant
                 control_state,

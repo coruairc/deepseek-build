@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use xai_grok_test_support::sse::{
-    responses_api_reasoning_then_tool_call_events, responses_api_script_exact,
+    chat_completion_script_exact, chat_completions_reasoning_then_tool_call_events,
 };
 use xai_grok_test_support::{MockInferenceServer, ScriptedResponse};
 
@@ -41,7 +41,7 @@ const CANCEL_MARKER: &str = "cancelled by the user";
 const STATIONARITY_NUDGE_MARKER: &str = "stuck in a polling loop";
 
 fn tool_call_sse(call_id: &str) -> ScriptedResponse {
-    ScriptedResponse::sse(responses_api_reasoning_then_tool_call_events(
+    ScriptedResponse::sse(chat_completions_reasoning_then_tool_call_events(
         "poll",
         call_id,
         "todo_write",
@@ -76,20 +76,20 @@ async fn mid_turn_user_injection_must_not_duplicate_tool_results_for_one_tool_us
             let server = MockInferenceServer::start().await.expect("mock inference server");
             for i in 1..=SCRIPTED_IDENTICAL_CALLS {
                 server.enqueue_response(
-                    "/v1/responses",
+                    "/v1/chat/completions",
                     tool_call_sse(&format!("stat-call-{i}")),
                 );
             }
             server.enqueue_response(
-                "/v1/responses",
-                ScriptedResponse::sse(responses_api_script_exact("done", "test")),
+                "/v1/chat/completions",
+                ScriptedResponse::sse(chat_completion_script_exact("done", "test")),
             );
 
             let sampling_cfg = xai_grok_sampler::SamplerConfig {
                 api_key: Some("test-key".to_string()),
                 base_url: server.url(),
                 model: "test".to_string(),
-                api_backend: xai_grok_sampler::ApiBackend::Responses,
+                api_backend: xai_grok_sampler::ApiBackend::ChatCompletions,
                 context_window: 256_000,
                 max_retries: Some(0),
                 idle_timeout_secs: Some(30),
@@ -124,7 +124,7 @@ async fn mid_turn_user_injection_must_not_duplicate_tool_results_for_one_tool_us
                 .await
                 .expect("test actor has sampling config");
             cfg.base_url = server.url();
-            cfg.api_backend = xai_grok_sampling_types::ApiBackend::Responses;
+            cfg.api_backend = xai_grok_sampling_types::ApiBackend::ChatCompletions;
             cfg.model = "test".to_string();
             actor.chat_state_handle.update_sampling_config(cfg);
             let mut creds = actor.chat_state_handle.get_credentials().await;

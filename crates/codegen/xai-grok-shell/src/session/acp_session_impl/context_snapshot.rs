@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn tokenize_uses_baked_product_default_model() {
-        assert_eq!(crate::models::default_model(), "deepseek-4.6");
+        assert_eq!(crate::models::default_model(), "deepseek-v4-pro");
     }
 
     #[test]

@@ -161,11 +161,8 @@ async fn test_agent_from_config(
         skills: vec![],
         state_path: std::path::PathBuf::from("/tmp/tool_state.json"),
         memory_backend: None,
-        web_search_config: Default::default(),
         web_fetch_config: Default::default(),
         lsp: None,
-        image_gen_config: Default::default(),
-        video_gen_config: Default::default(),
         app_builder_deployer_config: Default::default(),
         api_key_provider: None,
         auth_provider: None,
@@ -332,6 +329,7 @@ async fn create_test_actor_inner(
     );
     chat_state_handle.record_token_usage(total_tokens);
     let actor = SessionActor {
+        signals_handle: crate::session::signals::SessionSignalsHandle::new(),
         vcs_root: None,
         transient_retry_enabled: true,
         transient_retries_prompt_total: std::cell::Cell::new(0),
@@ -433,9 +431,7 @@ async fn create_test_actor_inner(
         buffering_settings: None,
         client_identifier: None,
         origin_client: None,
-        feedback_manager: Arc::new(FeedbackManager::local_only("test-session")),
         upload_queue: Arc::new(OnceLock::new()),
-        sync_loop_cancel: None,
         agent: std::cell::RefCell::new(test_agent_default().await),
         last_reported_branch: std::sync::Arc::new(parking_lot::Mutex::new(None)),
         git_head_enabled: false,

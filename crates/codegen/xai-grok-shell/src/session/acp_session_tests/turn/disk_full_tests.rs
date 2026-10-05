@@ -4,7 +4,7 @@ use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 use xai_grok_test_support::sse::{
-    responses_api_reasoning_then_tool_call_events, responses_api_script_exact,
+    chat_completion_script_exact, chat_completions_reasoning_then_tool_call_events,
 };
 use xai_grok_test_support::{MockInferenceServer, ScriptedResponse};
 
@@ -89,7 +89,7 @@ pub(super) async fn actor_with_mock_sampler_configured(
         api_key: Some("test-key".to_string()),
         base_url: server.url(),
         model: "test".to_string(),
-        api_backend: xai_grok_sampler::ApiBackend::Responses,
+        api_backend: xai_grok_sampler::ApiBackend::ChatCompletions,
         context_window: 256_000,
         max_retries: Some(0),
         idle_timeout_secs: Some(30),
@@ -118,7 +118,7 @@ pub(super) async fn actor_with_mock_sampler_configured(
         .await
         .expect("test actor has sampling config");
     cfg.base_url = server.url();
-    cfg.api_backend = xai_grok_sampling_types::ApiBackend::Responses;
+    cfg.api_backend = xai_grok_sampling_types::ApiBackend::ChatCompletions;
     cfg.model = "test".to_string();
     actor.chat_state_handle.update_sampling_config(cfg);
     let mut creds = actor.chat_state_handle.get_credentials().await;
@@ -187,8 +187,8 @@ fn completed_turn_flush_enospc_returns_error_and_reports_stop_failure() {
                 .await
                 .expect("mock inference server");
             server.enqueue_response(
-                "/v1/responses",
-                ScriptedResponse::sse(responses_api_script_exact("done", "test")),
+                "/v1/chat/completions",
+                ScriptedResponse::sse(chat_completion_script_exact("done", "test")),
             );
 
             let (gateway_tx, gateway_rx) =
@@ -238,8 +238,8 @@ fn cancelled_turn_flush_enospc_still_reports_cancellation() {
                 .await
                 .expect("mock inference server");
             server.enqueue_response(
-                "/v1/responses",
-                ScriptedResponse::sse(responses_api_reasoning_then_tool_call_events(
+                "/v1/chat/completions",
+                ScriptedResponse::sse(chat_completions_reasoning_then_tool_call_events(
                     "poll",
                     "disk-full-cancel-call",
                     "todo_write",

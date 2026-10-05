@@ -32,63 +32,13 @@ fn chat_completions_stream() -> Vec<Event> {
     ]
 }
 
-fn responses_stream() -> Vec<Event> {
-    let response = |status: &str| {
-        json!({
-            "id": "resp_test", "object": "response", "created_at": 1234567890,
-            "model": "test-model", "status": status, "output": []
-        })
-    };
-    [
-        json!({ "type": "response.created", "sequence_number": 0, "response": response("in_progress") }),
-        json!({
-            "type": "response.output_text.delta", "sequence_number": 1,
-            "item_id": "msg_test", "output_index": 0, "content_index": 0, "delta": SUMMARY
-        }),
-        json!({ "type": "response.completed", "sequence_number": 2, "response": response("completed") }),
-    ]
-    .into_iter()
-    .map(|event| Event::default().data(event.to_string()))
-    .collect()
-}
-
-fn messages_stream() -> Vec<Event> {
-    [
-        json!({
-            "type": "message_start",
-            "message": {
-                "id": "msg_test", "type": "message", "role": "assistant",
-                "content": [], "model": "test-model", "stop_reason": null,
-                "usage": {
-                    "input_tokens": 10, "output_tokens": 0,
-                    "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0
-                }
-            }
-        }),
-        json!({ "type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""} }),
-        json!({ "type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": SUMMARY} }),
-        json!({ "type": "content_block_stop", "index": 0 }),
-        json!({
-            "type": "message_delta",
-            "delta": {"stop_reason": "end_turn"},
-            "usage": {"output_tokens": 5, "input_tokens": 10}
-        }),
-        json!({ "type": "message_stop" }),
-    ]
-    .into_iter()
-    .map(|event| Event::default().data(event.to_string()))
-    .collect()
-}
-
-/// Runs one compaction against a mock server for `backend` and returns the parsed request body.
+/// Runs one ChatCompletions compaction against a mock server and returns the parsed request body.
 async fn compaction_request_body(
     backend: ApiBackend,
     reasoning_effort: Option<ReasoningEffort>,
 ) -> serde_json::Value {
     let (path, events): (&str, fn() -> Vec<Event>) = match backend {
         ApiBackend::ChatCompletions => ("/v1/chat/completions", chat_completions_stream),
-        ApiBackend::Responses => ("/v1/responses", responses_stream),
-        ApiBackend::Messages => ("/v1/messages", messages_stream),
     };
     let captured = Arc::new(Mutex::new(None::<serde_json::Value>));
     let cap = captured.clone();
@@ -181,42 +131,4 @@ async fn chat_completions_compaction_sends_session_reasoning_effort() {
 async fn chat_completions_compaction_omits_unset_reasoning_effort() {
     let body = compaction_request_body(ApiBackend::ChatCompletions, None).await;
     assert!(absent(&body, "/reasoning_effort"), "{body:#}");
-}
-
-#[tokio::test]
-async fn responses_compaction_sends_session_reasoning_effort() {
-    let body = compaction_request_body(ApiBackend::Responses, Some(ReasoningEffort::Xhigh)).await;
-    assert_eq!(
-        body.pointer("/reasoning/effort"),
-        Some(&json!("xhigh")),
-        "{body:#}"
-    );
-}
-
-#[tokio::test]
-async fn responses_compaction_omits_unset_reasoning_effort() {
-    let body = compaction_request_body(ApiBackend::Responses, None).await;
-    assert!(absent(&body, "/reasoning/effort"), "{body:#}");
-}
-
-#[tokio::test]
-async fn messages_compaction_sends_session_reasoning_effort() {
-    let body = compaction_request_body(ApiBackend::Messages, Some(ReasoningEffort::Xhigh)).await;
-    assert_eq!(
-        body.pointer("/output_config/effort"),
-        Some(&json!("xhigh")),
-        "{body:#}"
-    );
-    assert_eq!(
-        body.pointer("/thinking/type"),
-        Some(&json!("adaptive")),
-        "{body:#}"
-    );
-}
-
-#[tokio::test]
-async fn messages_compaction_omits_unset_reasoning_effort() {
-    let body = compaction_request_body(ApiBackend::Messages, None).await;
-    assert!(absent(&body, "/output_config/effort"), "{body:#}");
-    assert!(absent(&body, "/thinking"), "{body:#}");
 }

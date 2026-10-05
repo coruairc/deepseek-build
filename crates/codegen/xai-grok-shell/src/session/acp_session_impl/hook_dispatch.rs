@@ -513,9 +513,7 @@ impl SessionActor {
 #[cfg(test)]
 mod notification_hook_filter_tests {
     use super::*;
-    use crate::extensions::notification::{
-        FeedbackRequestNotification, HookRunEntryDto, HookRunStatusDto, RetryState,
-    };
+    use crate::extensions::notification::{HookRunEntryDto, HookRunStatusDto, RetryState};
 
     #[test]
     fn hook_updates_do_not_fire_notification_hook() {
@@ -553,23 +551,6 @@ mod notification_hook_filter_tests {
             max_retries: 3,
             reason: "timeout".into(),
             error_type: None,
-        });
-        assert!(notification_hook_for_update(&update).is_none());
-    }
-
-    #[test]
-    fn feedback_request_does_not_fire_notification_hook() {
-        let update = XaiSessionUpdate::FeedbackRequest(FeedbackRequestNotification {
-            request_id: "req-1".into(),
-            tier: "tier1".into(),
-            prompt: "How was this session?".into(),
-            dismissible: true,
-            trigger_type: "tier1_engagement".into(),
-            trigger_condition: "turns >= 10".into(),
-            trigger_reason: "long session".into(),
-            stars: true,
-            thumbs: false,
-            text: false,
         });
         assert!(notification_hook_for_update(&update).is_none());
     }

@@ -292,7 +292,7 @@ fn configure_completion_harness(
     ctx.parent_session_id = "setup-parent".into();
     ctx.sampling_config.base_url = server.url();
     ctx.sampling_config.model = "test-model".into();
-    ctx.sampling_config.api_backend = crate::sampling::ApiBackend::Responses;
+    ctx.sampling_config.api_backend = crate::sampling::ApiBackend::ChatCompletions;
     ctx.model_id = acp::ModelId::new("test-model");
 }
 

@@ -121,6 +121,7 @@ async fn test_e2e_idle_resume_refreshes_model_metadata() {
             });
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             let actor = SessionActor {
+                signals_handle: crate::session::signals::SessionSignalsHandle::new(),
                 vcs_root: None,
                 transient_retry_enabled: true,
                 transient_retries_prompt_total: std::cell::Cell::new(0),
@@ -243,9 +244,7 @@ async fn test_e2e_idle_resume_refreshes_model_metadata() {
                 buffering_settings: None,
                 client_identifier: None,
                 origin_client: None,
-                feedback_manager: Arc::new(FeedbackManager::local_only("test-session")),
                 upload_queue: Arc::new(OnceLock::new()),
-                sync_loop_cancel: None,
                 agent: std::cell::RefCell::new(test_agent_default().await),
                 last_reported_branch: std::sync::Arc::new(parking_lot::Mutex::new(None)),
                 git_head_enabled: false,

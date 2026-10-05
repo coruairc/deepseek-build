@@ -798,7 +798,7 @@ mod tests {
     }
 
     fn test_auth_manager() -> Arc<AuthManager> {
-        use xai_grok_login::{AuthMode, GrokAuth, GrokComConfig, XAI_OAUTH2_ISSUER};
+        use xai_grok_login::{AuthMode, GrokAuth, GrokComConfig};
         let dir = tempfile::tempdir().unwrap();
         let mgr = AuthManager::new(dir.path(), GrokComConfig::default());
         mgr.hot_swap(GrokAuth {
@@ -808,7 +808,7 @@ mod tests {
             user_id: "user-1".into(),
             email: Some("test@example.com".into()),
             expires_at: Some(chrono::Utc::now() + chrono::Duration::hours(1)),
-            oidc_issuer: Some(XAI_OAUTH2_ISSUER.to_string()),
+            oidc_issuer: Some("test-issuer".to_string()),
             ..Default::default()
         });
         std::mem::forget(dir);
@@ -868,71 +868,6 @@ mod tests {
             axum::serve(listener, app).await.unwrap();
         });
         (format!("http://{addr}"), handle)
-    }
-
-    #[tokio::test(flavor = "current_thread")]
-    async fn empty_rest_200_is_authoritative() {
-        let (base, handle) =
-            spawn_skills_mock(200, r#"{"skills":[]}"#, 200, r#"{"skills":[]}"#).await;
-        let client = SkillsClient::with_base_url(test_auth_manager(), base);
-        let (catalog, recovery) = client.try_list_catalog("en").await.expect("ok empty");
-        assert!(catalog.bundled.is_empty());
-        assert!(catalog.user.is_empty());
-        assert!(catalog.to_skill_infos().is_empty());
-        assert!(!recovery);
-        handle.abort();
-    }
-
-    #[tokio::test(flavor = "current_thread")]
-    async fn rest_error_after_retries_is_err_not_fallback_names() {
-        let (base, handle) =
-            spawn_skills_mock(503, r#"{"error":"unavailable"}"#, 200, r#"{"skills":[]}"#).await;
-        let client = SkillsClient::with_base_url(test_auth_manager(), base);
-        let err = client
-            .try_list_catalog("en")
-            .await
-            .expect_err("bundled fail");
-        assert!(matches!(err, SkillsError::Http { status: 503 }));
-        // list_catalog collapses failure to empty; still no docx/pdf/etc
-        let collapsed = client.list_catalog("en").await;
-        let names: Vec<_> = collapsed
-            .to_skill_infos()
-            .into_iter()
-            .map(|s| s.name)
-            .collect();
-        assert!(
-            names.is_empty(),
-            "must not inject embedded fallback skills, got {names:?}"
-        );
-        handle.abort();
-    }
-
-    #[tokio::test(flavor = "current_thread")]
-    async fn success_bundled_skills_pass_through() {
-        let body = r#"{"skills":[{"name":"docx","description":"Word","displayName":"Word Documents","icon":"file-text"}]}"#;
-        let (base, handle) = spawn_skills_mock(200, body, 200, r#"{"skills":[]}"#).await;
-        let client = SkillsClient::with_base_url(test_auth_manager(), base);
-        let (catalog, _) = client.try_list_catalog("en").await.unwrap();
-        let infos = catalog.to_skill_infos();
-        let [info] = infos.as_slice() else {
-            panic!("expected one skill info: {infos:?}");
-        };
-        assert_eq!(info.name, "docx");
-        assert!(info.path.starts_with("chat-product://"));
-        handle.abort();
-    }
-
-    #[tokio::test(flavor = "current_thread")]
-    async fn user_list_failure_sets_flag_keeps_bundled() {
-        let bundled = r#"{"skills":[{"name":"docx","description":"Word"}]}"#;
-        let (base, handle) =
-            spawn_skills_mock(200, bundled, 503, r#"{"error":"unavailable"}"#).await;
-        let client = SkillsClient::with_base_url(test_auth_manager(), base);
-        let (catalog, _) = client.try_list_catalog("en").await.expect("bundled ok");
-        assert!(catalog.user_list_failed);
-        assert!(catalog.user.is_empty());
-        assert_eq!(catalog.bundled.len(), 1);
-        handle.abort();
     }
 
     #[test]

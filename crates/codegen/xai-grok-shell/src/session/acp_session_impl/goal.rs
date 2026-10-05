@@ -2362,7 +2362,6 @@ mod role_tool_names_tests {
             None,
             None,
             None,
-            None,
         )
     }
 

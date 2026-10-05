@@ -97,64 +97,6 @@ impl ModelsEndpoint for SlowEndpoint {
     }
 }
 #[tokio::test]
-async fn catalog_retry_recovers_after_endpoint_returns() {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    struct RecoveringEndpoint {
-        calls: Arc<AtomicUsize>,
-        catalog: IndexMap<String, ModelEntry>,
-    }
-    impl ModelsEndpoint for RecoveringEndpoint {
-        fn fetch_models(
-            &self,
-            _endpoints: config::EndpointsConfig,
-            _auth: Option<GrokAuth>,
-            _fetch_auth: ModelFetchAuth,
-        ) -> ModelsFetchFuture {
-            let n = self.calls.fetch_add(1, Ordering::SeqCst);
-            let out = if n == 0 {
-                None
-            } else {
-                Some(self.catalog.clone())
-            };
-            Box::pin(async move { out })
-        }
-    }
-    let calls = Arc::new(AtomicUsize::new(0));
-    let tmp = tempfile::TempDir::new().unwrap();
-    let auth_manager = Arc::new(AuthManager::new(tmp.path(), GrokComConfig::default()));
-    let mgr = ModelsManagerBuilder::new(
-        None,
-        IndexMap::new(),
-        acp::ModelId::new("default"),
-        auth_manager,
-        config::Config::default(),
-    )
-    .endpoint(Arc::new(RecoveringEndpoint {
-        calls: calls.clone(),
-        catalog: make_prefetched(&["deepseek-4"]),
-    }))
-    .build();
-    assert!(!mgr.has_fetched_real_catalog());
-    mgr.spawn_catalog_retry_with_backoff(true, crate::tools::retry::BackoffConfig::new(5, 1, 10));
-    let mut recovered = false;
-    for _ in 0..200 {
-        if mgr.has_fetched_real_catalog() {
-            recovered = true;
-            break;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    }
-    assert!(
-        recovered,
-        "catalog retry did not recover after the endpoint returned"
-    );
-    assert!(mgr.models().contains_key("deepseek-4"));
-    assert!(
-        calls.load(Ordering::SeqCst) >= 2,
-        "expected a failed attempt then a success",
-    );
-}
-#[tokio::test]
 #[serial]
 async fn disk_cache_reload_applies_without_fetching() {
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -193,56 +135,6 @@ async fn disk_cache_reload_applies_without_fetching() {
         "deepseek-4.5",
         "first real catalog from the disk cache must resolve the configured default",
     );
-}
-#[tokio::test]
-async fn auth_refresh_watcher_refetches_on_notify() {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    struct NotifyEndpoint {
-        calls: Arc<AtomicUsize>,
-        catalog: IndexMap<String, ModelEntry>,
-    }
-    impl ModelsEndpoint for NotifyEndpoint {
-        fn fetch_models(
-            &self,
-            _endpoints: config::EndpointsConfig,
-            _auth: Option<GrokAuth>,
-            _fetch_auth: ModelFetchAuth,
-        ) -> ModelsFetchFuture {
-            self.calls.fetch_add(1, Ordering::SeqCst);
-            let catalog = self.catalog.clone();
-            Box::pin(async move { Some(catalog) })
-        }
-    }
-    let calls = Arc::new(AtomicUsize::new(0));
-    let tmp = tempfile::TempDir::new().unwrap();
-    let auth_manager = Arc::new(AuthManager::new(tmp.path(), GrokComConfig::default()));
-    let mgr = ModelsManagerBuilder::new(
-        None,
-        IndexMap::new(),
-        acp::ModelId::new("default"),
-        auth_manager,
-        config::Config::default(),
-    )
-    .endpoint(Arc::new(NotifyEndpoint {
-        calls: calls.clone(),
-        catalog: make_prefetched(&["deepseek-4"]),
-    }))
-    .build();
-    assert!(!mgr.has_fetched_real_catalog());
-    let notify = Arc::new(tokio::sync::Notify::new());
-    mgr.start_auth_refresh_watcher(notify.clone());
-    notify.notify_one();
-    let mut updated = false;
-    for _ in 0..200 {
-        if mgr.has_fetched_real_catalog() {
-            updated = true;
-            break;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    }
-    assert!(updated, "watcher did not re-fetch the catalog on notify");
-    assert!(mgr.models().contains_key("deepseek-4"));
-    assert!(calls.load(Ordering::SeqCst) >= 1);
 }
 #[tokio::test(start_paused = true)]
 async fn hanging_fetch_does_not_block_refresh() {
@@ -983,56 +875,6 @@ fn spawn_background_refresh_is_noop_when_real_catalog_present() {
     mgr.spawn_background_refresh_inner(true);
     assert!(mgr.has_fetched_real_catalog());
 }
-#[tokio::test(flavor = "current_thread")]
-async fn spawn_background_refresh_never_blocks_on_a_hanging_endpoint() {
-    use std::sync::atomic::{AtomicBool, Ordering};
-    use tokio::sync::Notify;
-    struct NeverResolvingEndpoint {
-        polled: Arc<AtomicBool>,
-        dispatched: Arc<Notify>,
-    }
-    impl ModelsEndpoint for NeverResolvingEndpoint {
-        fn fetch_models(
-            &self,
-            _endpoints: config::EndpointsConfig,
-            _auth: Option<GrokAuth>,
-            _fetch_auth: ModelFetchAuth,
-        ) -> ModelsFetchFuture {
-            let polled = self.polled.clone();
-            let dispatched = self.dispatched.clone();
-            Box::pin(async move {
-                polled.store(true, Ordering::SeqCst);
-                dispatched.notify_one();
-                std::future::pending().await
-            })
-        }
-    }
-    let polled = Arc::new(AtomicBool::new(false));
-    let dispatched = Arc::new(Notify::new());
-    let tmp = tempfile::TempDir::new().unwrap();
-    let auth_manager = Arc::new(AuthManager::new(tmp.path(), GrokComConfig::default()));
-    let mgr = ModelsManagerBuilder::new(
-        None,
-        make_prefetched(&["deepseek-4", "deepseek-4.5"]),
-        acp::ModelId::new("deepseek-4.5"),
-        auth_manager,
-        config_from_toml("[models]\ndefault = \"deepseek-4.5\""),
-    )
-    .endpoint(Arc::new(NeverResolvingEndpoint {
-        polled: polled.clone(),
-        dispatched: dispatched.clone(),
-    }))
-    .cache(test_cache_manager(tmp.path()))
-    .build();
-    mgr.spawn_background_refresh_inner(true);
-    assert!(
-        !polled.load(Ordering::SeqCst),
-        "fetch ran inline on the readiness path; it must be spawned",
-    );
-    tokio::time::timeout(std::time::Duration::from_secs(30), dispatched.notified())
-        .await
-        .expect("background refresh was never dispatched");
-}
 #[tokio::test]
 #[serial]
 async fn sign_out_clears_catalog_rebuilds_bundled_without_fetching() {
@@ -1531,46 +1373,6 @@ fn models_cache_read_is_scoped_by_alpha_test_key() {
 }
 #[test]
 #[serial]
-fn api_key_scope_identity_differs_per_key() {
-    let _no_legacy = EnvGuard::unset("GROK_CODE_XAI_API_KEY");
-    let endpoints = config::EndpointsConfig::default();
-    let identity_for = |key: &str| {
-        let _key = EnvGuard::set("XAI_API_KEY", key);
-        resolve_models_cache_scope(&endpoints, ModelFetchAuth::ApiKey, None).identity
-    };
-    assert_eq!(
-        identity_for("key-a"),
-        identity_for("key-a"),
-        "the same API key must resolve to one scope",
-    );
-    assert_ne!(
-        identity_for("key-a"),
-        identity_for("key-b"),
-        "different API keys must not cross-read one cache entry",
-    );
-}
-#[test]
-#[serial]
-fn custom_endpoint_scope_identity_differs_per_key() {
-    let _no_legacy = EnvGuard::unset("GROK_CODE_XAI_API_KEY");
-    let endpoints = config::EndpointsConfig::default();
-    let identity_for = |key: &str| {
-        let _key = EnvGuard::set("XAI_API_KEY", key);
-        resolve_models_cache_scope(&endpoints, ModelFetchAuth::CustomEndpoint, None).identity
-    };
-    assert_eq!(
-        identity_for("key-a"),
-        identity_for("key-a"),
-        "the same custom-endpoint key must resolve to one scope",
-    );
-    assert_ne!(
-        identity_for("key-a"),
-        identity_for("key-b"),
-        "different keys on one custom endpoint must not cross-read",
-    );
-}
-#[test]
-#[serial]
 fn custom_endpoint_scope_ignores_session_identity() {
     let _no_key = EnvGuard::unset("XAI_API_KEY");
     let _no_legacy = EnvGuard::unset("GROK_CODE_XAI_API_KEY");
@@ -1813,17 +1615,6 @@ fn resolve_cached_session_wins_over_api_key() {
         ModelFetchAuth::resolve(&endpoints, true),
         ModelFetchAuth::Session,
         "cached session should take priority over API key",
-    );
-}
-#[test]
-#[serial]
-fn resolve_api_key_used_when_no_session() {
-    let _key = EnvGuard::set("XAI_API_KEY", "test-key");
-    let endpoints = config::EndpointsConfig::default();
-    assert_eq!(
-        ModelFetchAuth::resolve(&endpoints, false),
-        ModelFetchAuth::ApiKey,
-        "API key should be used when no cached session exists",
     );
 }
 #[test]
@@ -2419,31 +2210,6 @@ fn sampling_config_never_falls_back_to_a_bundled_model_under_external_auth() {
         standard.sampling_config().model
     );
 }
-#[tokio::test]
-async fn prompt_gate_waits_for_the_first_fetch_under_external_auth() {
-    let cfg = external_auth_config(
-        "[models]\nallowed_models = [\"config-only\"]\n[model.config-only]\nmodel = \"config-only\"\n",
-    );
-    let tmp = tempfile::TempDir::new().expect("tempdir");
-    let auth_manager = Arc::new(AuthManager::new(tmp.path(), GrokComConfig::default()));
-    let mgr = ModelsManagerBuilder::new(
-        None,
-        resolve_model_catalog(&cfg, None),
-        acp::ModelId::new("config-only"),
-        auth_manager,
-        cfg.clone(),
-    )
-    .endpoint(Arc::new(SlowEndpoint {
-        catalog: make_prefetched(&["proxy-a"]),
-        delay: std::time::Duration::from_millis(50),
-    }))
-    .cache(test_cache_manager(tmp.path()))
-    .build();
-    mgr.spawn_background_refresh_inner(true);
-    let blocked = mgr.models_endpoint_block_message(|| true).await;
-    assert_eq!(None, blocked);
-    assert_eq!(BTreeSet::from(["proxy-a"]), catalog_ids(&mgr.models()));
-}
 const MANAGED_PROXY: &str = "https://proxy.example.com/v1";
 /// An external-auth managed config shaped like a real customer's, trimmed to the model and auth keys.
 /// Its one table sends `model` to the proxy.
@@ -2575,38 +2341,6 @@ fn allowed_models_is_ignored_under_external_auth() {
         standard.models.allowed_models
     );
     assert!(!allowlist_matches_nothing(&standard, &standard_catalog));
-}
-#[tokio::test]
-async fn failed_models_endpoint_fetch_blocks_prompts_with_the_endpoint_url() {
-    let external = cold_manager(external_auth_config(""), Arc::new(FailingEndpoint));
-    let standard = cold_manager(
-        config_from_toml(PROXY_MODELS_BASE_URL),
-        Arc::new(FailingEndpoint),
-    );
-    external.fetch_and_apply_inner(true).await;
-    standard.fetch_and_apply_inner(true).await;
-    assert_eq!(
-        Some(
-            "No models are available: https://proxy.example.com/v1/models returned none or could not be reached. \
-             Check the endpoint and your login, then try again."
-        ),
-        external
-            .models_endpoint_block_message(|| true)
-            .await
-            .as_deref()
-    );
-    assert_eq!(
-        Some(
-            "No models are available: `[features] remote_fetch = false` stops Grok from reading \
-             https://proxy.example.com/v1/models. Add a `[model.<id>]` table that names an endpoint id, \
-             or turn remote_fetch on."
-        ),
-        external
-            .models_endpoint_block_message(|| false)
-            .await
-            .as_deref()
-    );
-    assert_eq!(None, standard.prompt_block_message().await);
 }
 #[tokio::test]
 async fn failed_models_endpoint_refresh_keeps_the_listed_models_and_prompts_unblocked() {

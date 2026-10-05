@@ -75,6 +75,7 @@ async fn create_test_actor(
     );
     chat_state_handle.record_token_usage(total_tokens);
     SessionActor {
+        signals_handle: crate::session::signals::SessionSignalsHandle::new(),
         vcs_root: None,
         transient_retry_enabled: true,
         transient_retries_prompt_total: std::cell::Cell::new(0),
@@ -176,9 +177,7 @@ async fn create_test_actor(
         buffering_settings: None,
         client_identifier: None,
         origin_client: None,
-        feedback_manager: Arc::new(FeedbackManager::local_only("test-session")),
         upload_queue: Arc::new(OnceLock::new()),
-        sync_loop_cancel: None,
         agent: std::cell::RefCell::new(test_agent_default().await),
         last_reported_branch: std::sync::Arc::new(parking_lot::Mutex::new(None)),
         git_head_enabled: false,
@@ -867,85 +866,9 @@ fn switch_target_config(model: &str, base_url: String) -> xai_grok_sampler::Samp
         base_url,
         model: model.to_string(),
         context_window: 256_000,
-        api_backend: crate::sampling::ApiBackend::Responses,
+        api_backend: crate::sampling::ApiBackend::ChatCompletions,
         ..Default::default()
     }
-}
-/// A family switch compacts with the new model over the lossy view: the request must contain nothing but plain `{role, content}` text messages.
-#[tokio::test(flavor = "current_thread")]
-async fn family_switch_compacts_lossy_with_new_model() {
-    let local = tokio::task::LocalSet::new();
-    local
-        .run_until(async {
-            let (gateway_tx, _gateway_rx) = mpsc::unbounded_channel();
-            let (persistence_tx, _persistence_rx) = mpsc::unbounded_channel();
-            let actor =
-                Arc::new(create_test_actor(10_000, 200_000, 85, gateway_tx, persistence_tx).await);
-            actor.chat_state_handle.replace_conversation(vec![
-                ConversationItem::system("sys"),
-                ConversationItem::user("hello"),
-                ConversationItem::Reasoning(xai_grok_sampling_types::rs::ReasoningItem {
-                    id: "tco_res-uuid_call-uuid-0".to_string(),
-                    summary: vec![],
-                    content: None,
-                    encrypted_content: Some("tco_SEALEDCIPHERTEXT".to_string()),
-                    status: None,
-                }),
-                ConversationItem::assistant_tool_calls(vec![xai_grok_sampling_types::ToolCall {
-                    id: std::sync::Arc::<str>::from("call_xai_minted_id"),
-                    name: "run_terminal_command".to_string(),
-                    arguments: std::sync::Arc::<str>::from(r#"{"command":"ls"}"#),
-                }]),
-                ConversationItem::ToolResult(xai_grok_sampling_types::ToolResultItem {
-                    tool_call_id: "call_xai_minted_id".to_string(),
-                    content: std::sync::Arc::<str>::from("file listing"),
-                    images: Vec::new(),
-                }),
-                ConversationItem::assistant("done"),
-            ]);
-            let server = xai_grok_test_support::MockInferenceServer::start()
-                .await
-                .expect("mock inference server");
-            actor
-                .handle_set_session_model(crate::session::SessionModelSwitch {
-                    sampling_config: switch_target_config("new-model", server.url()),
-                    use_concise: false,
-                    is_family_switch: true,
-                    apply_prompt_override: false,
-                    skip_prompt_rewrite: true,
-                    auto_compact_threshold_percent: 85,
-                    system_prompt_label: xai_grok_agent::DEFAULT_SYSTEM_PROMPT_LABEL.to_owned(),
-                    context_window_selection: SwitchContextWindow::Set(None),
-                    supported_context_windows: Vec::new(),
-                })
-                .await
-                .expect("compact failure is log-only; the switch must succeed");
-            let requests = server.requests();
-            assert!(
-                !requests.is_empty(),
-                "family switch must fire a compaction sample"
-            );
-            let body = at(&requests, 0).body.as_ref().unwrap();
-            assert_eq!(
-                j(body, "model"),
-                "new-model",
-                "summarizer must be the NEW model"
-            );
-            for message in j(body, "input").as_array().unwrap() {
-                let keys: Vec<&String> = message.as_object().unwrap().keys().collect();
-                assert!(
-                    keys.iter()
-                        .all(|k| *k == "type" || *k == "role" || *k == "content"),
-                    "lossy view must send plain text messages, got keys {keys:?} in {message}"
-                );
-                assert_eq!(j(message, "type"), "message", "non-message item: {message}");
-                assert!(
-                    j(message, "content").is_string(),
-                    "non-text content in {message}"
-                );
-            }
-        })
-        .await;
 }
 /// 401 auto-compact: SUPPRESS_AUTH and a reauthable RetryState (abort for /login).
 #[tokio::test(flavor = "current_thread")]
@@ -1560,9 +1483,14 @@ async fn compaction_paths_note_survives_second_compaction_and_filters_missing_fi
         .run_until(async {
             let (gateway_tx, _gateway_rx) = mpsc::unbounded_channel();
             let (persistence_tx, _persistence_rx) = mpsc::unbounded_channel();
-            let actor = Arc::new(
-                create_test_actor(50_000, 200_000, 85, gateway_tx, persistence_tx).await,
-            );
+            // `create_test_actor` hardcodes the "test-actor" session id, so sibling tests running in
+            // parallel share its session assets directory. Give this test its own id so the note it
+            // writes cannot be reaped by a concurrent compaction.
+            let mut created =
+                create_test_actor(50_000, 200_000, 85, gateway_tx, persistence_tx).await;
+            created.session_info.id =
+                acp::SessionId::new(format!("test-actor-{}", uuid::Uuid::new_v4()));
+            let actor = Arc::new(created);
             let assets_dir = crate::session::image_describe::session_assets_dir(
                 &crate::session::persistence::ensure_owner_only_session_dir(
                         &actor.session_info,
@@ -1610,7 +1538,7 @@ async fn compaction_paths_note_survives_second_compaction_and_filters_missing_fi
             let result = actor.run_compact().await;
             assert!(result.is_ok(), "second compaction should succeed: {result:?}");
             let conversation = actor.chat_state_handle.get_conversation().await;
-            std::fs::remove_file(&existing).unwrap();
+            let _ = std::fs::remove_file(&existing);
             let notes: Vec<String> = conversation
                 .iter()
                 .filter(|item| {

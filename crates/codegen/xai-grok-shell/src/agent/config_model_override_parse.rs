@@ -532,7 +532,7 @@ mod tests {
             [model.bedrock]
             model = "xai.deepseek-4.6"
             base_url = "https://bedrock-mantle.us-west-2.api.aws/openai/v1"
-            api_backend = "responses"
+            api_backend = "chat_completions"
             env_key = "BEDROCK_TOKEN"
             reasoning_summary = "none"
             "#,
@@ -734,7 +734,7 @@ mod tests {
             max_completion_tokens: Some(1024),
             temperature: Some(0.5),
             top_p: Some(0.9),
-            api_backend: Some(ApiBackend::Messages),
+            api_backend: Some(ApiBackend::ChatCompletions),
             extra_headers: [("x-team".to_owned(), "codegen".to_owned())]
                 .into_iter()
                 .collect(),

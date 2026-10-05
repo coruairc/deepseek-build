@@ -4,7 +4,7 @@ use crate::extensions::prompt_meta::PromptBlockMeta;
 use crate::session::{InputAuthority, InputPolicy};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
-use xai_grok_test_support::sse::responses_api_script_exact;
+use xai_grok_test_support::sse::chat_completion_script_exact;
 use xai_grok_test_support::{MockInferenceServer, ScriptedResponse};
 
 #[derive(Default)]
@@ -183,7 +183,7 @@ async fn actor_with_sampler_configured(
         api_key: Some("test-key".into()),
         base_url: server.url(),
         model: "test".into(),
-        api_backend: xai_grok_sampler::ApiBackend::Responses,
+        api_backend: xai_grok_sampler::ApiBackend::ChatCompletions,
         context_window: 256_000,
         max_retries: Some(0),
         idle_timeout_secs: Some(30),
@@ -224,7 +224,7 @@ async fn actor_with_sampler_configured(
         .await
         .expect("test actor sampling config");
     config.base_url = server.url();
-    config.api_backend = xai_grok_sampling_types::ApiBackend::Responses;
+    config.api_backend = xai_grok_sampling_types::ApiBackend::ChatCompletions;
     actor.chat_state_handle.update_sampling_config(config);
     let mut credentials = actor.chat_state_handle.get_credentials().await;
     credentials.api_key = Some("test-key".into());
@@ -256,8 +256,8 @@ async fn human_non_slash_runs_dynamic_preparation_but_model_non_slash_does_not()
                 .expect("mock inference server");
             for _ in 0..2 {
                 server.enqueue_response(
-                    "/v1/responses",
-                    ScriptedResponse::sse(responses_api_script_exact("handled", "test")),
+                    "/v1/chat/completions",
+                    ScriptedResponse::sse(chat_completion_script_exact("handled", "test")),
                 );
             }
             let (actor, _hook_rx, _user_chunk_rx, _policy_recorder) = actor_with_sampler(
@@ -311,8 +311,8 @@ async fn runtime_control_slash_stays_inert_without_dynamic_catalogs() {
                 .await
                 .expect("mock inference server");
             server.enqueue_response(
-                "/v1/responses",
-                ScriptedResponse::sse(responses_api_script_exact("handled", "test")),
+                "/v1/chat/completions",
+                ScriptedResponse::sse(chat_completion_script_exact("handled", "test")),
             );
             let (actor, mut hook_rx, _user_chunk_rx, policy_recorder) = actor_with_sampler(
                 &server,
@@ -403,7 +403,7 @@ async fn parent_compact_and_available_skill_execute_but_other_slashes_stay_inert
             let response_count_after_compact = server
                 .requests()
                 .iter()
-                .filter(|entry| entry.path == "/v1/responses")
+                .filter(|entry| entry.path == "/v1/chat/completions")
                 .count();
 
             let skill_dir = tempfile::tempdir().unwrap();
@@ -427,8 +427,8 @@ async fn parent_compact_and_available_skill_execute_but_other_slashes_stay_inert
                 )
                 .await;
             server.enqueue_response(
-                "/v1/responses",
-                ScriptedResponse::sse(responses_api_script_exact("handled", "test")),
+                "/v1/chat/completions",
+                ScriptedResponse::sse(chat_completion_script_exact("handled", "test")),
             );
             let calls_before_unavailable =
                 crate::session::slash_authority::dynamic_resolution_calls();
@@ -455,7 +455,7 @@ async fn parent_compact_and_available_skill_execute_but_other_slashes_stay_inert
                 .requests()
                 .into_iter()
                 .rev()
-                .find(|request| request.path == "/v1/responses")
+                .find(|request| request.path == "/v1/chat/completions")
                 .and_then(|request| request.body)
                 .expect("unavailable skill request body")
                 .to_string();
@@ -487,8 +487,8 @@ async fn parent_compact_and_available_skill_execute_but_other_slashes_stay_inert
                 .await;
 
             server.enqueue_response(
-                "/v1/responses",
-                ScriptedResponse::sse(responses_api_script_exact("handled", "test")),
+                "/v1/chat/completions",
+                ScriptedResponse::sse(chat_completion_script_exact("handled", "test")),
             );
             let calls_before_skill = crate::session::slash_authority::dynamic_resolution_calls();
             run_parent_turn(
@@ -510,7 +510,7 @@ async fn parent_compact_and_available_skill_execute_but_other_slashes_stay_inert
                 .requests()
                 .into_iter()
                 .rev()
-                .find(|request| request.path == "/v1/responses")
+                .find(|request| request.path == "/v1/chat/completions")
                 .and_then(|request| request.body)
                 .expect("skill request body")
                 .to_string();
@@ -569,8 +569,8 @@ async fn parent_compact_and_available_skill_execute_but_other_slashes_stay_inert
             let inert_slash_count = inert_slashes.len();
             for text in inert_slashes {
                 server.enqueue_response(
-                    "/v1/responses",
-                    ScriptedResponse::sse(responses_api_script_exact("handled", "test")),
+                    "/v1/chat/completions",
+                    ScriptedResponse::sse(chat_completion_script_exact("handled", "test")),
                 );
                 run_parent_turn(&actor, parent_request(text, Vec::new()))
                     .await
@@ -600,7 +600,7 @@ async fn parent_compact_and_available_skill_execute_but_other_slashes_stay_inert
                 server
                     .requests()
                     .iter()
-                    .filter(|entry| entry.path == "/v1/responses")
+                    .filter(|entry| entry.path == "/v1/chat/completions")
                     .count(),
                 response_count_after_compact + 2 + inert_slash_count
             );
@@ -646,8 +646,8 @@ async fn parent_skill_lookup_matches_advertised_gated_collision_and_skill_only_l
                 .expect("mock inference server");
             for _ in 0..2 {
                 server.enqueue_response(
-                    "/v1/responses",
-                    ScriptedResponse::sse(responses_api_script_exact("handled", "test")),
+                    "/v1/chat/completions",
+                    ScriptedResponse::sse(chat_completion_script_exact("handled", "test")),
                 );
             }
             let (actor, _hook_rx, _user_chunk_rx, _policy_recorder) = actor_with_sampler(
@@ -706,7 +706,7 @@ async fn parent_skill_lookup_matches_advertised_gated_collision_and_skill_only_l
                 .requests()
                 .into_iter()
                 .rev()
-                .find(|request| request.path == "/v1/responses")
+                .find(|request| request.path == "/v1/chat/completions")
                 .and_then(|request| request.body)
                 .expect("goal skill request body")
                 .to_string();
@@ -723,7 +723,7 @@ async fn parent_skill_lookup_matches_advertised_gated_collision_and_skill_only_l
                 .requests()
                 .into_iter()
                 .rev()
-                .find(|request| request.path == "/v1/responses")
+                .find(|request| request.path == "/v1/chat/completions")
                 .and_then(|request| request.body)
                 .expect("qualified goal request body")
                 .to_string();
@@ -811,7 +811,7 @@ async fn goal_set_with_failed_planner_makes_no_inference_request() {
                 server
                     .requests()
                     .iter()
-                    .filter(|entry| entry.path == "/v1/responses")
+                    .filter(|entry| entry.path == "/v1/chat/completions")
                     .count(),
                 0
             );
@@ -833,8 +833,8 @@ async fn parent_bash_metadata_and_placeholder_path_cannot_reach_host_routes() {
                 .expect("mock inference server");
             for _ in 0..2 {
                 server.enqueue_response(
-                    "/v1/responses",
-                    ScriptedResponse::sse(responses_api_script_exact("handled", "test")),
+                    "/v1/chat/completions",
+                    ScriptedResponse::sse(chat_completion_script_exact("handled", "test")),
                 );
             }
             let terminal_calls = Arc::new(AtomicUsize::new(0));
@@ -888,7 +888,7 @@ async fn parent_bash_metadata_and_placeholder_path_cannot_reach_host_routes() {
                 server
                     .requests()
                     .iter()
-                    .filter(|entry| entry.path == "/v1/responses")
+                    .filter(|entry| entry.path == "/v1/chat/completions")
                     .count(),
                 2
             );
@@ -911,8 +911,8 @@ async fn human_parent_message_keeps_compact_and_file_refs_literal() {
                 .await
                 .expect("mock inference server");
             server.enqueue_response(
-                "/v1/responses",
-                ScriptedResponse::sse(responses_api_script_exact("handled", "test")),
+                "/v1/chat/completions",
+                ScriptedResponse::sse(chat_completion_script_exact("handled", "test")),
             );
             let (actor, mut hook_rx, _user_chunk_rx, policy_recorder) = actor_with_sampler(
                 &server,

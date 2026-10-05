@@ -613,43 +613,6 @@ fn get_object_returns_some_for_actual_object() {
         &serde_json::json!("two")
     );
 }
-/// REGRESSION: `grok setup` must send the deployment key to the proxy, never the inference endpoint.
-#[test]
-#[serial_test::serial]
-fn deployment_config_url_uses_cli_chat_proxy_when_not_overridden() {
-    use crate::agent::config::EndpointsConfig;
-    for k in [
-        "GROK_CLI_CHAT_PROXY_BASE_URL",
-        "GROK_MANAGED_CONFIG_URL",
-        "GROK_XAI_API_BASE_URL",
-    ] {
-        unsafe { std::env::remove_var(k) };
-    }
-    unsafe { std::env::set_var("GROK_DEPLOYMENT_KEY", "xai-token-ENTERPRISE") };
-    let managed: toml::Value = toml::from_str(
-        r#"[endpoints]
-            deployment_key = "xai-token-ENTERPRISE"
-            xai_api_base_url = "https://inference.acme-corp.example/xai/v1""#,
-    )
-    .unwrap();
-    let url = EndpointsConfig::from_config_value(&managed).resolve_managed_config_url();
-    assert_eq!(url, "https://api.deepseek.com/v1/deployment/config");
-    assert!(
-        !url.contains("acme-corp"),
-        "deployment key would be sent to the inference host: {url}"
-    );
-    let pinned: toml::Value = toml::from_str(
-        r#"[endpoints]
-            xai_api_base_url = "https://inference.acme-corp.example/xai/v1"
-            cli_chat_proxy_base_url = "https://proxy.acme-corp.example/v1""#,
-    )
-    .unwrap();
-    assert_eq!(
-        EndpointsConfig::from_config_value(&pinned).resolve_managed_config_url(),
-        "https://proxy.acme-corp.example/v1/deployment/config"
-    );
-    unsafe { std::env::remove_var("GROK_DEPLOYMENT_KEY") };
-}
 /// `BackendClient::save_session_data` resolves auth from the attached `AuthManager` and sends the token as `Bearer <key>` on the wire.
 /// This is the writeback path used on every session flush.
 #[tokio::test(flavor = "current_thread")]

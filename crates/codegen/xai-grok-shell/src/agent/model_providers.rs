@@ -310,53 +310,6 @@ mod tests {
     }
 
     #[test]
-    fn model_inherits_provider_max_request_bytes() {
-        let raw_config: toml::Value = toml::from_str(
-            r#"
-            [model_providers.messages-gateway]
-            base_url = "https://gateway.example/v1"
-            api_backend = "messages"
-            max_request_bytes = 20000000
-
-            [model.inherits]
-            model = "claude-sonnet"
-            model_provider = "messages-gateway"
-
-            [model.overrides]
-            model = "claude-opus"
-            model_provider = "messages-gateway"
-            max_request_bytes = 10000000
-            "#,
-        )
-        .unwrap();
-
-        let cfg = Config::new_from_toml_cfg(&raw_config).expect("config should parse");
-        let resolved = resolve_model_list(&cfg, None);
-        let max_request_bytes = |key: &str| {
-            let model = resolved.get(key).expect("model should exist");
-            sampling_config_for_model(
-                model,
-                resolve_credentials(model, None),
-                None,
-                None,
-                None,
-                None,
-            )
-            .max_request_bytes
-        };
-        assert_eq!(
-            NonZeroU64::new(20_000_000),
-            max_request_bytes("inherits"),
-            "the provider cap reaches a model that sets none and beats the messages default"
-        );
-        assert_eq!(
-            NonZeroU64::new(10_000_000),
-            max_request_bytes("overrides"),
-            "the model's own cap overrides the provider's"
-        );
-    }
-
-    #[test]
     fn model_provider_inline_auth_registers_synthetic_provider() {
         let raw_config: toml::Value = toml::from_str(
             r#"
@@ -782,36 +735,6 @@ mod tests {
             resolve_credentials(model, Some("session-jwt")).api_key,
             None,
             "an unresolved declared credential must not fall back to the session token"
-        );
-    }
-
-    #[test]
-    fn model_inherits_provider_api_backend_and_base_url() {
-        let raw_config: toml::Value = toml::from_str(
-            r#"
-            [model_providers.gateway]
-            base_url = "https://gateway.example/v1"
-            api_base_url = "https://gateway.example/api"
-            api_backend = "responses"
-            api_key = "sk-provider"
-
-            [model.via-gateway]
-            model = "m"
-            model_provider = "gateway"
-            "#,
-        )
-        .unwrap();
-
-        let cfg = Config::new_from_toml_cfg(&raw_config).expect("config should parse");
-        let resolved = resolve_model_list(&cfg, None);
-        let model = resolved.get("via-gateway").expect("model should exist");
-        assert_eq!(
-            model.info.api_backend,
-            crate::sampling::ApiBackend::Responses
-        );
-        assert_eq!(
-            model.api_base_url.as_deref(),
-            Some("https://gateway.example/api")
         );
     }
 

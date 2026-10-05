@@ -16,7 +16,6 @@ fn startup_completed_carries_bootstrap_subphase_fields() {
         cfg.remote_settings = Some(xai_grok_shell::util::config::RemoteSettings::default());
         let auth_manager = std::sync::Arc::new(cfg.create_auth_manager());
         xai_grok_shell::agent::init::bootstrap(&cfg, &auth_manager, None).expect("bootstrap");
-        drop(xai_grok_shell::managed_config::take_refresh_supervisor());
     });
 
     xai_grok_telemetry::startup::PendingStartup::new()

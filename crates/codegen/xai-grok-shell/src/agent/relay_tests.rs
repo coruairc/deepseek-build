@@ -301,19 +301,18 @@ fn test_auth(key: &str) -> GrokAuth {
 }
 #[test]
 fn for_session_builds_only_for_xai_issuer() {
-    use xai_grok_login::XAI_OAUTH2_ISSUER;
     let cfg = GrokComConfig::default();
     let builds = |a: &GrokAuth| RelayConfig::for_session(a, &cfg, None, None).is_some();
     let xai = GrokAuth {
         auth_mode: AuthMode::Oidc,
-        oidc_issuer: Some(XAI_OAUTH2_ISSUER.to_string()),
+        oidc_issuer: Some("test-issuer".to_string()),
         ..test_auth("xai-bearer")
     };
     assert!(xai.is_xai_auth(), "precondition: is_xai_auth");
     assert!(builds(&xai));
     let external_xai = GrokAuth {
         auth_mode: AuthMode::External,
-        oidc_issuer: Some(XAI_OAUTH2_ISSUER.to_string()),
+        oidc_issuer: Some("test-issuer".to_string()),
         ..test_auth("ext-bearer")
     };
     assert!(external_xai.is_xai_auth(), "precondition: is_xai_auth");
@@ -359,7 +358,7 @@ fn write_test_auth_to_disk(dir: &std::path::Path, scope: &str, auth: &GrokAuth) 
 #[tokio::test]
 async fn auth_recovery_refreshes_and_heals_missing_auth_json() {
     use std::sync::atomic::AtomicU32;
-    use xai_grok_login::XAI_OAUTH2_ISSUER;
+
     use xai_grok_login::refresh::{RefreshOutcome, TokenRefresher};
     struct CountingRefresher {
         calls: Arc<AtomicU32>,
@@ -371,7 +370,7 @@ async fn auth_recovery_refreshes_and_heals_missing_auth_json() {
             RefreshOutcome::Success(Box::new(GrokAuth {
                 key: "fresh-from-authority".into(),
                 auth_mode: AuthMode::Oidc,
-                oidc_issuer: Some(XAI_OAUTH2_ISSUER.to_string()),
+                oidc_issuer: Some("test-issuer".to_string()),
                 refresh_token: Some("rt-rotated".into()),
                 expires_at: Some(chrono::Utc::now() + chrono::Duration::hours(1)),
                 ..GrokAuth::test_default()
@@ -386,7 +385,7 @@ async fn auth_recovery_refreshes_and_heals_missing_auth_json() {
     );
     let expired_session = GrokAuth {
         auth_mode: AuthMode::Oidc,
-        oidc_issuer: Some(XAI_OAUTH2_ISSUER.to_string()),
+        oidc_issuer: Some("test-issuer".to_string()),
         refresh_token: Some("rt-valid-unconsumed".into()),
         expires_at: Some(chrono::Utc::now() - chrono::Duration::hours(14)),
         ..test_auth("expired-overnight")
@@ -418,7 +417,6 @@ async fn auth_recovery_refreshes_and_heals_missing_auth_json() {
 /// The caller then backs off before reconnecting instead of tight-looping.
 #[tokio::test]
 async fn attempt_auth_recovery_same_key_backs_off_without_cancel() {
-    use xai_grok_login::XAI_OAUTH2_ISSUER;
     use xai_grok_login::refresh::{RefreshOutcome, TokenRefresher};
     struct PanicRefresher;
     #[async_trait::async_trait]
@@ -432,7 +430,7 @@ async fn attempt_auth_recovery_same_key_backs_off_without_cancel() {
     let am = Arc::new(AuthManager::new(dir.path(), cfg.clone()));
     let fresh_session = GrokAuth {
         auth_mode: AuthMode::Oidc,
-        oidc_issuer: Some(XAI_OAUTH2_ISSUER.to_string()),
+        oidc_issuer: Some("test-issuer".to_string()),
         refresh_token: Some("rt-valid".into()),
         expires_at: Some(chrono::Utc::now() + chrono::Duration::hours(1)),
         ..test_auth("fresh-key")

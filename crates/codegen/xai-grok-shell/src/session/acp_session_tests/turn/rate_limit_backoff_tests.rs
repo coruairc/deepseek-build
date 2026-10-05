@@ -89,7 +89,7 @@ pub(super) async fn actor_under_test(
     let sampling_cfg = xai_grok_sampler::SamplerConfig {
         base_url: server.url(),
         model: "test".to_string(),
-        api_backend: xai_grok_sampler::ApiBackend::Responses,
+        api_backend: xai_grok_sampler::ApiBackend::ChatCompletions,
         context_window: 256_000,
         max_retries: Some(sampler_max_retries),
         idle_timeout_secs: Some(30),
@@ -118,7 +118,7 @@ pub(super) async fn actor_under_test(
         .await
         .expect("test actor has sampling config");
     cfg.base_url = server.url();
-    cfg.api_backend = xai_grok_sampling_types::ApiBackend::Responses;
+    cfg.api_backend = xai_grok_sampling_types::ApiBackend::ChatCompletions;
     cfg.model = "test".to_string();
     actor.chat_state_handle.update_sampling_config(cfg);
 
@@ -211,7 +211,7 @@ async fn subagent_429_wait_is_owned_and_capped_by_the_pacer() {
             let server = MockInferenceServer::start_with_models(vec![MockModelEntry::new("test")])
                 .await
                 .expect("mock inference server");
-            server.enqueue_response("/v1/responses", rate_limited_reply(90));
+            server.enqueue_response("/v1/chat/completions", rate_limited_reply(90));
 
             let (actor, _retries) =
                 actor_under_test(&server, SessionKind::Subagent, sampler_surfaces_429(), true)
@@ -267,7 +267,7 @@ async fn paced_wait_notifies_the_client_with_a_retrying_state() {
             let server = MockInferenceServer::start_with_models(vec![MockModelEntry::new("test")])
                 .await
                 .expect("mock inference server");
-            server.enqueue_response("/v1/responses", rate_limited_reply(1));
+            server.enqueue_response("/v1/chat/completions", rate_limited_reply(1));
 
             let (actor, retries) =
                 actor_under_test(&server, SessionKind::Subagent, sampler_surfaces_429(), true)
@@ -331,7 +331,7 @@ async fn exhausted_subagent_budget_notifies_exhausted_with_the_attempts_taken() 
                 .await
                 .expect("mock inference server");
             for _ in 0..=RateLimitWaitConfig::DEFAULT_MAX_ATTEMPTS {
-                server.enqueue_response("/v1/responses", rate_limited_reply(1));
+                server.enqueue_response("/v1/chat/completions", rate_limited_reply(1));
             }
 
             let (actor, retries) =
@@ -402,7 +402,7 @@ async fn main_session_429_is_owned_by_the_sampler_never_the_pacer() {
                         .await
                         .expect("mock inference server");
                 for _ in 0..enqueued {
-                    server.enqueue_response("/v1/responses", rate_limited_reply(1));
+                    server.enqueue_response("/v1/chat/completions", rate_limited_reply(1));
                 }
 
                 let (actor, _retries) =

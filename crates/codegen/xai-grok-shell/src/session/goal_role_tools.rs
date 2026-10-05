@@ -245,7 +245,6 @@ pub(crate) mod tests {
         assert_eq!(tn.search, "grep");
         assert_eq!(tn.write, "write");
         assert_eq!(tn.execute, "run_terminal_command");
-        assert_eq!(tn.web_search, "web_search");
         assert_eq!(tn.web_fetch, "web_fetch");
         assert_eq!(tn.toolset_tools, "", "inherit path omits the toolset block");
     }
@@ -282,43 +281,25 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn from_summary_resolves_cursor_web_search_name() {
-        // The alternate planner toolset exposes WebSearch/WebFetch under the client names "WebSearch"/"WebFetch"
-        // This is the case that left the alternate planner blind to the web tool and over-scoping from memory alone
-        let tn = RoleToolNames::from_summary(&summary_with(&[
-            (ToolKind::WebSearch, "WebSearch"),
-            (ToolKind::WebFetch, "WebFetch"),
-        ]));
-        assert_eq!(tn.web_search, "WebSearch");
+    fn from_summary_resolves_cursor_web_fetch_name() {
+        // The alternate planner toolset exposes WebFetch under the client name "WebFetch".
+        let tn = RoleToolNames::from_summary(&summary_with(&[(ToolKind::WebFetch, "WebFetch")]));
         assert_eq!(tn.web_fetch, "WebFetch");
     }
 
     #[test]
-    fn from_parent_maps_web_search_and_fetch_to_distinct_fields() {
-        // Distinct values catch a web_search/web_fetch field swap that the all-None fallback cases cannot
-        let tn = RoleToolNames::from_parent(
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            Some("WS".into()),
-            Some("WF".into()),
-        );
-        assert_eq!(tn.web_search, "WS");
+    fn from_parent_maps_fetch_to_its_field() {
+        let tn = RoleToolNames::from_parent(None, None, None, None, None, None, Some("WF".into()));
         assert_eq!(tn.web_fetch, "WF");
     }
 
     #[test]
-    fn web_tools_fall_back_when_absent_from_the_toolset() {
-        // Without WebSearch/WebFetch in a summary / parent bridge, both resolve to the stock client names
-        // So the planner prompt still names a real tool on the default grok-build host (the stock `web_search`/`web_fetch`)
+    fn web_fetch_falls_back_when_absent_from_the_toolset() {
+        // Without WebFetch in a summary / parent bridge it resolves to the stock client name,
+        // so the planner prompt still names a real tool on the default grok-build host.
         let summary = RoleToolNames::from_summary(&summary_with(&[(ToolKind::Read, "rd")]));
-        assert_eq!(summary.web_search, "web_search");
         assert_eq!(summary.web_fetch, "web_fetch");
-        let parent = RoleToolNames::from_parent(None, None, None, None, None, None, None, None);
-        assert_eq!(parent.web_search, "web_search");
+        let parent = RoleToolNames::from_parent(None, None, None, None, None, None, None);
         assert_eq!(parent.web_fetch, "web_fetch");
     }
 
@@ -355,7 +336,6 @@ pub(crate) mod tests {
             Some("search_replace".into()),
             Some("run_terminal_command".into()),
             None,
-            None,
         );
         assert_eq!(tn.write, "search_replace");
     }
@@ -370,14 +350,13 @@ pub(crate) mod tests {
             Some("search_replace".into()),
             None,
             None,
-            None,
         );
         assert_eq!(tn.write, "write");
     }
 
     #[test]
     fn from_parent_write_falls_back_to_default_when_neither_present() {
-        let tn = RoleToolNames::from_parent(None, None, None, None, None, None, None, None);
+        let tn = RoleToolNames::from_parent(None, None, None, None, None, None, None);
         assert_eq!(tn.write, "write");
     }
 
@@ -403,7 +382,6 @@ pub(crate) mod tests {
             Some("search_replace".into()),
             None,
             None,
-            None,
         );
         assert_eq!(tn.write, "search_replace");
     }
@@ -421,7 +399,6 @@ pub(crate) mod tests {
             None,
             Some("bad write".into()),
             Some("bad`edit".into()),
-            None,
             None,
             None,
         );
@@ -445,7 +422,6 @@ pub(crate) mod tests {
             None,
             Some("search_replace".into()),
             Some("run_terminal_command".into()),
-            None,
             None,
         );
         assert_eq!(primary.write, "search_replace");
@@ -489,13 +465,12 @@ pub(crate) mod tests {
             (ToolKind::Search, "gr"),
             (ToolKind::Write, "wr"),
             (ToolKind::Execute, "ex"),
-            (ToolKind::WebSearch, "ws"),
             (ToolKind::WebFetch, "wf"),
         ]));
         let template = "{READ_TOOL} {LIST_TOOL} {SEARCH_TOOL} {WRITE_TOOL} {EXECUTE_TOOL} \
-             {WEB_SEARCH_TOOL} {WEB_FETCH_TOOL}{TOOLSET_TOOLS}";
+             {WEB_FETCH_TOOL}{TOOLSET_TOOLS}";
         let out = tn.apply(template);
-        assert!(out.starts_with("rd ls gr wr ex ws wf"));
+        assert!(out.starts_with("rd ls gr wr ex wf"));
         assert!(out.contains("`rd`") && out.contains("`wf`"));
         assert_no_tool_placeholders(&out);
     }

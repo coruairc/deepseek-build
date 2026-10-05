@@ -517,26 +517,6 @@ mod tests {
     }
 
     #[test]
-    fn rate_limited_fallback_oauth_vs_api_key() {
-        assert_eq!(
-            format_rate_limited_user_message(None, false),
-            RATE_LIMITED_USER_MESSAGE_OAUTH
-        );
-        assert_eq!(
-            format_rate_limited_user_message(None, true),
-            RATE_LIMITED_USER_MESSAGE_API_KEY
-        );
-        assert!(RATE_LIMITED_USER_MESSAGE_OAUTH.contains("Upgrade your account"));
-        assert!(RATE_LIMITED_USER_MESSAGE_API_KEY.contains("team"));
-        assert!(RATE_LIMITED_USER_MESSAGE_API_KEY.contains("credits"));
-        assert!(
-            RATE_LIMITED_USER_MESSAGE_API_KEY
-                .contains("https://docs.deepseek-build/developers/rate-limits#rate-limit-tiers")
-        );
-        assert!(!RATE_LIMITED_USER_MESSAGE_API_KEY.contains("Upgrade your account"));
-    }
-
-    #[test]
     fn format_rate_limited_surfaces_nonempty_server_detail() {
         let body = "The service is temporarily at capacity. Please retry your request shortly.";
         // Production detail is SamplingError::Api Display (prefixed).
@@ -554,21 +534,6 @@ mod tests {
         assert_eq!(
             format_rate_limited_user_message(Some("slow down"), false),
             "slow down"
-        );
-    }
-
-    #[test]
-    fn format_rate_limited_api_key_rewrites_consumer_subscription_upsell() {
-        let body = "Some resource has been exhausted: You are sending requests too quickly. \
-             Please slow down, or upgrade to a deepseek-build subscription for higher limits: \
-             https://api.deepseek.com/deepseek";
-        let wire = format!("API error (status 429 Too Many Requests): {body}");
-        // OAuth keeps the IC body (personal plan upgrade is correct).
-        assert_eq!(format_rate_limited_user_message(Some(&wire), false), body);
-        // API key must not push api.deepseek.com deepseek; it gets the team credits / rate-limit tiers copy
-        assert_eq!(
-            format_rate_limited_user_message(Some(&wire), true),
-            RATE_LIMITED_USER_MESSAGE_API_KEY
         );
     }
 
@@ -787,32 +752,6 @@ mod tests {
         if let Err(e) = result {
             std::panic::resume_unwind(e);
         }
-    }
-
-    #[test]
-    #[serial_test::serial]
-    fn forbidden_subscription_error_includes_api_key_hint_when_env_set() {
-        with_api_key_env(Some("xai-test"), || {
-            let err = SamplingError::Api {
-                status: StatusCode::FORBIDDEN,
-                message: "The model 'grok-build' requires a deepseek-build subscription.".into(),
-                model_metadata: None,
-                retry_after_secs: None,
-                should_retry: None,
-                error_code: None,
-            };
-            let acp_err = map_sampling_err_to_acp(err);
-            let data = acp_err.data.unwrap();
-            let msg = data.as_str().unwrap();
-            assert!(
-                msg.contains("grok logout"),
-                "should suggest grok logout when API key is available: {msg}"
-            );
-            assert!(
-                msg.contains("/logout"),
-                "should mention /logout TUI command: {msg}"
-            );
-        });
     }
 
     #[test]

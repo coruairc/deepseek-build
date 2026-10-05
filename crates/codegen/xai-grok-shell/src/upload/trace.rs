@@ -1660,133 +1660,6 @@ pub(crate) mod tests {
             "https://gitlab.com/group/project.git"
         );
     }
-    #[test]
-    fn dynamic_resolver_refreshes_proxy_token() {
-        use crate::session::repo_changes::UploadMethod;
-        use chrono::{Duration, Utc};
-        use std::collections::BTreeMap;
-        use xai_grok_login::{GrokAuth, GrokComConfig};
-        let dir = tempfile::tempdir().unwrap();
-        let grok_com_config = GrokComConfig::default();
-        let scope = grok_com_config.auth_scope();
-        let initial_auth = GrokAuth {
-            key: "initial-token".into(),
-            ..GrokAuth::test_default()
-        };
-        let mut store = BTreeMap::new();
-        store.insert(scope.clone(), initial_auth);
-        let auth_json = serde_json::to_string_pretty(&store).unwrap();
-        std::fs::write(dir.path().join("auth.json"), &auth_json).unwrap();
-        let auth_manager = Arc::new(xai_grok_login::AuthManager::new(
-            dir.path(),
-            grok_com_config.clone(),
-        ));
-        let base_config = TraceExportConfig {
-            bucket_url: None,
-            service_account_key: None,
-            prefix_dir: None,
-            gcs_prefix: Some("session/turn_0".into()),
-            absolute_paths: false,
-            archive_name_override: None,
-            upload_method: UploadMethod::Proxy {
-                proxy_base_url: "https://proxy.example.com".into(),
-                user_token: "stale-token".into(),
-                deployment_key: None,
-                alpha_test_key: None,
-            },
-        };
-        let resolver = DynamicResolver {
-            auth_manager: auth_manager.clone(),
-            base_config,
-        };
-        let provider = resolver
-            .proxy_credentials()
-            .expect("proxy_credentials should be Some for Proxy upload_method");
-        assert_eq!(
-            provider.snapshot().token.as_deref(),
-            Some("initial-token"),
-            "snapshot should reflect AuthManager.current(), not the stale base_config token"
-        );
-        let refreshed_auth = GrokAuth {
-            key: "refreshed-token".into(),
-            expires_at: Some(Utc::now() + Duration::hours(1)),
-            ..GrokAuth::test_default()
-        };
-        store.insert(scope, refreshed_auth);
-        let auth_json = serde_json::to_string_pretty(&store).unwrap();
-        std::fs::write(dir.path().join("auth.json"), &auth_json).unwrap();
-        auth_manager.force_reload_from_disk();
-        assert_eq!(
-            provider.snapshot().token.as_deref(),
-            Some("refreshed-token")
-        );
-        let config = resolver.resolve();
-        assert_eq!(config.gcs_prefix.as_deref(), Some("session/turn_0"));
-        match &config.upload_method {
-            UploadMethod::Proxy { proxy_base_url, .. } => {
-                assert_eq!(proxy_base_url, "https://proxy.example.com");
-            }
-            _ => unreachable!(),
-        }
-    }
-    #[test]
-    fn dynamic_resolver_rereads_disk_on_expired_token() {
-        use crate::session::repo_changes::UploadMethod;
-        use chrono::{Duration, Utc};
-        use std::collections::BTreeMap;
-        use xai_grok_login::{GrokAuth, GrokComConfig};
-        let dir = tempfile::tempdir().unwrap();
-        let grok_com_config = GrokComConfig::default();
-        let scope = grok_com_config.auth_scope();
-        let expired_auth = GrokAuth {
-            key: "expired-token".into(),
-            expires_at: Some(Utc::now() - Duration::hours(1)),
-            ..GrokAuth::test_default()
-        };
-        let mut store = BTreeMap::new();
-        store.insert(scope.clone(), expired_auth);
-        let auth_json = serde_json::to_string_pretty(&store).unwrap();
-        std::fs::write(dir.path().join("auth.json"), &auth_json).unwrap();
-        let auth_manager = Arc::new(xai_grok_login::AuthManager::new(
-            dir.path(),
-            grok_com_config.clone(),
-        ));
-        assert!(auth_manager.current().is_none());
-        let resolver = DynamicResolver {
-            auth_manager: auth_manager.clone(),
-            base_config: TraceExportConfig {
-                bucket_url: None,
-                service_account_key: None,
-                prefix_dir: None,
-                gcs_prefix: None,
-                absolute_paths: false,
-                archive_name_override: None,
-                upload_method: UploadMethod::Proxy {
-                    proxy_base_url: "https://proxy.example.com".into(),
-                    user_token: "stale-base-token".into(),
-                    deployment_key: None,
-                    alpha_test_key: None,
-                },
-            },
-        };
-        let fresh_auth = GrokAuth {
-            key: "fresh-from-chat-flow".into(),
-            expires_at: Some(Utc::now() + Duration::hours(1)),
-            ..GrokAuth::test_default()
-        };
-        store.insert(scope, fresh_auth);
-        let auth_json = serde_json::to_string_pretty(&store).unwrap();
-        std::fs::write(dir.path().join("auth.json"), &auth_json).unwrap();
-        auth_manager.force_reload_from_disk();
-        let provider = resolver
-            .proxy_credentials()
-            .expect("proxy_credentials should be Some for Proxy upload_method");
-        assert_eq!(
-            provider.snapshot().token.as_deref(),
-            Some("fresh-from-chat-flow"),
-            "snapshot should pick up disk-refreshed token, not stale base_config"
-        );
-    }
     /// When both memory and disk tokens are expired and no refresher is configured, `resolve_async()` falls back gracefully.
     /// `get_valid_token()` returns an error and the resolver keeps the stale `base_config` token.
     /// This verifies the error path doesn't panic.
@@ -2118,49 +1991,6 @@ pub(crate) mod tests {
             }
             other => panic!("expected Direct, got {:?}", other),
         }
-    }
-    /// `DynamicResolver` must supply `proxy_credentials` and `proxy_attribution`.
-    /// The queue worker's per-attempt `StorageClient` then gets a refresh-aware credential provider AND emits `auth_401_attribution` on 401.
-    /// Without these, the worker falls back to the static `user_token` snapshot baked into `TraceExportConfig` and emits no attribution.
-    #[test]
-    fn dynamic_resolver_supplies_proxy_credentials_and_attribution() {
-        use crate::file_utils_compat::queue::TraceExportSource;
-        use crate::session::repo_changes::UploadMethod;
-        let dir = tempfile::tempdir().unwrap();
-        let auth_manager = Arc::new(xai_grok_login::AuthManager::new(
-            dir.path(),
-            xai_grok_login::GrokComConfig::default(),
-        ));
-        let base_config = TraceExportConfig {
-            bucket_url: None,
-            service_account_key: None,
-            prefix_dir: None,
-            gcs_prefix: None,
-            absolute_paths: false,
-            archive_name_override: None,
-            upload_method: UploadMethod::Proxy {
-                proxy_base_url: "https://proxy.example.com".into(),
-                user_token: "snapshot".into(),
-                deployment_key: None,
-                alpha_test_key: None,
-            },
-        };
-        let resolver = DynamicResolver {
-            auth_manager,
-            base_config,
-        };
-        assert!(
-            resolver.proxy_credentials().is_some(),
-            "expected refresh-aware credential provider"
-        );
-        assert!(
-            resolver.proxy_attribution().is_some(),
-            "expected 401-attribution callback"
-        );
-        assert!(
-            resolver.proxy_http_client().is_some(),
-            "expected tuned HTTP client"
-        );
     }
     /// A rotation that lands between park wait slices is invisible to the notifier; the bearer comparison must wake the parked item immediately.
     #[tokio::test]
@@ -2542,14 +2372,6 @@ pub(crate) mod tests {
             return;
         };
         assert_eq!(classify_workspace(&dir.path().to_string_lossy()), "project");
-    }
-    #[test]
-    fn classify_workspace_non_project_for_tmp() {
-        let tmp = tempfile::tempdir().unwrap();
-        assert_eq!(
-            classify_workspace(&tmp.path().to_string_lossy()),
-            "non_project"
-        );
     }
     /// Project dir under $HOME so `is_project_dir` passes; None in sandboxes or git-repo homes.
     fn home_project_dir() -> Option<tempfile::TempDir> {

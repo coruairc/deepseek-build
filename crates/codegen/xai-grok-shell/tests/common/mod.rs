@@ -320,7 +320,7 @@ pub async fn start_seeded_mock(
         scope: {
             "key": "test-session-token",
             "auth_mode": "oidc",
-            "oidc_issuer": xai_grok_login::xai_oauth2_issuer(),
+            "oidc_issuer": "test-issuer",
             "create_time": "2026-01-01T00:00:00Z",
             "expires_at": "2099-01-01T00:00:00Z",
             "user_id": "test-user",

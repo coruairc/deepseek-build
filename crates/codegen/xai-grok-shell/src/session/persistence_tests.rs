@@ -52,7 +52,6 @@ fn test_actor_inner(
             remote_sync,
             // These tests run the actor as resumed; the backfill on writeback upgrade only runs for a fresh session
             created_fresh: false,
-            relay_sync: None,
             summary,
             registry_title_sync: None,
             gateway: None,

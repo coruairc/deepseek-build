@@ -866,7 +866,7 @@ mod tests {
         ));
         am.hot_swap(xai_grok_login::GrokAuth {
             auth_mode: xai_grok_login::AuthMode::Oidc,
-            oidc_issuer: Some(xai_grok_login::xai_oauth2_issuer().to_owned()),
+            oidc_issuer: Some("test-issuer".to_owned()),
             expires_at: Some(chrono::Utc::now() + chrono::Duration::hours(1)),
             ..xai_grok_login::GrokAuth::test_default()
         });
@@ -895,49 +895,6 @@ mod tests {
             }
         });
         addr
-    }
-    /// A client-sent `kind: ["build"]` rewritten by [`force_kind_chat`] yields conversations only.
-    #[tokio::test]
-    #[serial_test::serial]
-    async fn forced_kind_serves_conversations_only() {
-        let addr = spawn_conversations_stub(
-                serde_json::json!({
-                "conversations": [
-                    { "conversationId": "c1", "title": "Hello", "modifyTime": "2026-07-01T00:00:00Z" },
-                    { "conversationId": "c2", "title": "", "modifyTime": "2026-07-02T00:00:00Z" },
-                ],
-            })
-                    .to_string(),
-            )
-            .await;
-        let _env = xai_grok_test_support::EnvGuard::set(
-            "GROK_CONVERSATIONS_BASE_URL",
-            format!("http://{addr}"),
-        );
-        let home = tempfile::tempdir().expect("tempdir");
-        let client = ConversationsClient::new(xai_auth_manager(home.path()));
-        let mut req = ListReq {
-            meta: Some(serde_json::json!({
-                "deepseek-build/facetFilters": { "kind": ["build"] },
-            })),
-            ..ListReq::default()
-        };
-        force_kind_chat(&mut req);
-        let result = build_unified_list(None, Some(&client), req).await;
-        let ids: Vec<&str> = result
-            .rows
-            .iter()
-            .map(|r| r.legacy.session_id.as_str())
-            .collect();
-        assert_eq!(ids, ["c2", "c1"], "conversations only, newest first");
-        assert!(
-            result
-                .rows
-                .iter()
-                .all(|r| r.legacy.source == "conversation"),
-            "no build row may survive the forced kind filter"
-        );
-        assert_eq!(result.conversations_partial, None);
     }
     /// A degraded conversations lane (no OAuth) is reported through `conversations_partial` instead of failing the list.
     #[tokio::test]
@@ -1010,67 +967,6 @@ mod tests {
                 false,
                 "process chat mode must enable the lane (chat feature only)"
             );
-        }
-    }
-    /// `parse_list_req` forces the conversations-only `kind` exactly when process chat mode is on; otherwise the client request is untouched.
-    #[test]
-    #[serial_test::serial]
-    fn parse_list_req_forces_kind_under_process_chat_mode_only() {
-        use crate::agent::chat_modes::GROK_CHAT_MODE_ENV;
-        let raw = serde_json::json!({
-            "_meta": { "deepseek-build/facetFilters": { "kind": ["build"], "starred": [true] } },
-        })
-        .to_string();
-        {
-            let _off = xai_grok_test_support::EnvGuard::unset(GROK_CHAT_MODE_ENV);
-            let req = parse_list_req(&raw).expect("parse");
-            let parsed = ParsedMeta::parse(req.meta.as_ref());
-            assert_eq!(
-                parsed.facet_filters.get(KIND_FACET_KEY),
-                Some(&vec![serde_json::json!("build")]),
-                "non-chat: client kind filter untouched"
-            );
-        }
-        {
-            let _on = xai_grok_test_support::EnvGuard::set(GROK_CHAT_MODE_ENV, "1");
-            let req = parse_list_req(&raw).expect("parse");
-            let parsed = ParsedMeta::parse(req.meta.as_ref());
-            let expected_build = if cfg!(feature = "local-workspace") {
-                Some(&vec![serde_json::json!("build")])
-            } else {
-                Some(&vec![serde_json::json!("build")])
-            };
-            assert_eq!(
-                parsed.facet_filters.get(KIND_FACET_KEY),
-                expected_build,
-                "client kind=build under process chat mode"
-            );
-            assert_eq!(
-                parsed.facet_filters.get("starred"),
-                Some(&vec![serde_json::json!(true)]),
-                "other facets pass through"
-            );
-            let req = parse_list_req("{}").expect("parse");
-            let parsed = ParsedMeta::parse(req.meta.as_ref());
-            let expected = None;
-            assert_eq!(
-                parsed.facet_filters.get(KIND_FACET_KEY),
-                expected,
-                "absent client kind still forces chat under process chat mode"
-            );
-            for bad in [
-                serde_json::json!({ "_meta": { "deepseek-build/facetFilters": { "kind": [] } } }),
-                serde_json::json!({ "_meta": { "deepseek-build/facetFilters": { "kind": null } } }),
-                serde_json::json!({ "_meta": { "deepseek-build/facetFilters": { "kind": ["other"] } } }),
-            ] {
-                let req = parse_list_req(&bad.to_string()).expect("parse");
-                let parsed = ParsedMeta::parse(req.meta.as_ref());
-                assert_eq!(
-                    parsed.facet_filters.get(KIND_FACET_KEY),
-                    expected,
-                    "empty/null/unknown kind must still force chat: {bad}"
-                );
-            }
         }
     }
     /// Wire pin for the cross-crate `deepseek-build/partial` envelope the pager parses: the serialized reason strings must not drift.

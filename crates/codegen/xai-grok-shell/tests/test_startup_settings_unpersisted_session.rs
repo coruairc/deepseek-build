@@ -23,7 +23,7 @@ fn live_fetch_with_unpersisted_session_is_served() {
         let fresh: xai_grok_login::GrokAuth = serde_json::from_value(serde_json::json!({
             "key": "fresh-session-token",
             "auth_mode": "oidc",
-            "oidc_issuer": xai_grok_login::xai_oauth2_issuer(),
+            "oidc_issuer": "test-issuer",
             "create_time": "2026-01-01T00:00:00Z",
             "expires_at": "2099-01-01T00:00:00Z",
             "user_id": "fresh-user",

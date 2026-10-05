@@ -1084,54 +1084,6 @@ mod tests {
     }
 
     #[test]
-    fn test_media_gen_acp_update_emits_prose_and_raw_output() {
-        // Dual channel: prompt-format JSON in content, typed variant in raw_output.
-        let output = ToolOutput::ImageToVideo(MediaGenOutput::new(PathBuf::from(
-            "/tmp/session/videos/3.mp4",
-        )));
-        let update = acp_tool_update(&output, "tc-1", None, None).expect("update");
-        let content = update.fields.content.expect("content");
-        let [first] = content.as_slice() else {
-            panic!("expected one content block: {content:?}");
-        };
-        let text = match first {
-            acp::ToolCallContent::Content(acp::Content {
-                content: acp::ContentBlock::Text(t),
-                ..
-            }) => t.text.clone(),
-            other => panic!("expected text content, got {other:?}"),
-        };
-        let prompt_json: serde_json::Value = serde_json::from_str(&text).expect("prompt json");
-        assert_eq!(
-            prompt_json.get("path").and_then(|v| v.as_str()),
-            Some("/tmp/session/videos/3.mp4")
-        );
-        assert_eq!(
-            prompt_json.get("filename").and_then(|v| v.as_str()),
-            Some("3.mp4")
-        );
-        assert_eq!(
-            prompt_json.get("session_folder").and_then(|v| v.as_str()),
-            Some("videos")
-        );
-        assert_eq!(
-            prompt_json.get("message").and_then(|v| v.as_str()),
-            Some(
-                "Video generated and saved to /tmp/session/videos/3.mp4. Do not read or re-display it, and do not describe how it appears to the user."
-            )
-        );
-        let raw = update.fields.raw_output.expect("raw_output");
-        assert_eq!(
-            raw.get("type").and_then(|v| v.as_str()),
-            Some("ImageToVideo")
-        );
-        assert_eq!(
-            raw.get("path").and_then(|v| v.as_str()),
-            Some("/tmp/session/videos/3.mp4")
-        );
-    }
-
-    #[test]
     fn test_path_rewriter_rewrites_list_dir_raw_output() {
         let rw = PathRewriter::new(
             "/root/.grok/worktrees/myproject/ab-123",

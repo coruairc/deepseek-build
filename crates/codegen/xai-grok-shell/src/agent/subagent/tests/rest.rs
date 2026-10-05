@@ -2165,39 +2165,6 @@ async fn read_parent_sampling_config_keeps_catalog_threshold_when_routing_slug_i
     assert_eq!(config.rate_limit_retry_threshold, Some(6));
     assert_eq!(config.conversation_group_id, Some(expected_group));
 }
-/// Also pins the per-route fields the inherit path derives from the parent's base URL
-/// (`extra_response_includes`, `request_compression`), which a `Default::default()` would silently drop.
-#[tokio::test]
-#[serial_test::serial]
-#[serial_test::serial(remote_sig_disarm)]
-async fn read_parent_sampling_config_keeps_auto_when_catalog_has_slug_key_only() {
-    let _env = crate::env::EnvVarGuard::remove("GROK_REQUEST_COMPRESSION");
-    let parent_base_url = "https://api.deepseek.com/v1";
-    let mut models = indexmap::IndexMap::new();
-    let mut entry = test_model_entry("deepseek-4.5");
-    entry.info.supports_backend_search = true;
-    models.insert("deepseek-4.5".to_string(), entry);
-    let ctx = ctx_with_parent_chat_state("auto", "deepseek-4.5", "auto", models);
-    ctx.parent_chat_state
-        .as_ref()
-        .unwrap()
-        .update_sampling_config(xai_grok_sampling_types::SamplingConfig {
-            api_backend: crate::sampling::ApiBackend::Responses,
-            base_url: parent_base_url.to_string(),
-            ..test_sampling_config("deepseek-4.5")
-        });
-    crate::util::config::cache_remote_accept_request_encodings(
-        parent_base_url,
-        &[xai_grok_config_types::RemoteRequestEncoding::Zstd],
-    );
-    let (config, model_id) = read_parent_sampling_config(&ctx).await;
-    crate::util::config::cache_remote_accept_request_encodings(parent_base_url, &[]);
-    assert_eq!(config.model, "deepseek-4.5");
-    assert_eq!(model_id.0.as_ref(), "auto");
-    assert!(config.supports_backend_search);
-    assert_eq!(config.extra_response_includes, ["no_inline_citations"]);
-    assert_eq!(config.request_compression, xai_grok_sampler::RequestCompression::Zstd);
-}
 #[tokio::test]
 async fn read_parent_sampling_config_fallback_uses_session_model_id() {
     let mut models = indexmap::IndexMap::new();
@@ -2377,31 +2344,6 @@ async fn read_parent_sampling_config_resolves_backend_search_from_catalog() {
             config.supports_backend_search,
             "subagent should inherit backend-tools capability from the live model catalog"
         );
-}
-#[tokio::test]
-async fn read_parent_sampling_config_fallback_resolves_backend_search_from_catalog() {
-    let mut entry = test_model_entry("deepseek-4.5");
-    entry.info.supports_backend_search = true;
-    let mut models = indexmap::IndexMap::new();
-    models.insert("deepseek-4.5".to_string(), entry);
-    let mut ctx = ctx_with_toggle(HashMap::new());
-    ctx.model_id = acp::ModelId::new("auto");
-    ctx.parent_chat_state = None;
-    ctx.sampling_config.model = "deepseek-4.5".to_string();
-    ctx.sampling_config.api_backend = crate::sampling::ApiBackend::Responses;
-    ctx.sampling_config.base_url = "https://api.deepseek.com/v1".to_string();
-    ctx.sampling_config.supports_backend_search = false;
-    ctx.models_manager = crate::agent::remote_config::ModelsManager::new(
-        None,
-        models,
-        acp::ModelId::new("auto"),
-        ctx.auth_manager.clone(),
-        crate::agent::config::Config::default(),
-    );
-    let (config, model_id) = read_parent_sampling_config(&ctx).await;
-    assert_eq!(model_id.0.as_ref(), "auto");
-    assert!(config.supports_backend_search);
-    assert_eq!(config.extra_response_includes, ["no_inline_citations"]);
 }
 #[tokio::test]
 async fn read_parent_sampling_config_resolves_compactions_remaining_from_catalog() {
