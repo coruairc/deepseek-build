@@ -2,28 +2,23 @@
 
 Honest list of what is incomplete or broken at this revision. Nothing here is
 hidden behind a "temporary" flag; where code remains it is called out. Claims are
-against the tree on branch `dsb/docs` (based on `dsb/integration` at `d7b6f00a`).
+against the tree on `dsb/integration` at `bd468965` (= `main`).
 
 ## Build & tests
 
-- **`cargo test --workspace` does not compile.** Verified on this branch with
-  `cargo test --workspace --no-run` (Rust 1.94.0): it stops with
-  `xai-grok-agent (lib test)` (11 errors) and `xai-grok-workspace (lib)` +
-  `(lib test)` (71 errors between them). The failures are stale test / test-support
-  references to Phase 1 deletions, for example `xai_file_utils`, `upload`,
-  `implementations::web_search`, `grok_build::{image_gen,video_gen}`,
-  `SendFeedbackTool`, `persist_and_enqueue_tool_state`, and
-  `SessionContext::{web_search_config,image_gen_config,video_gen_config}` (the
-  `test-support` factory still sets those fields). The pager's `#[cfg(test)]`
-  modules also still `use crate::xai_grok_voice`, but the voice module was
-  deleted, so `xai-grok-pager` tests will fail once the build reaches them.
-- **Non-test `cargo check` compiles.** `cargo check -p xai-grok-pager-bin`
-  succeeds (verified on this branch); only test / `test-support`-gated targets hit
-  the errors above. `cargo build --release` was reported green by the earlier
-  handoff and was not rebuilt during this docs pass. Repairing the test suite is
-  a dedicated pass.
-- **`cargo clippy` was only run on the crates touched per slice**, not across the
-  whole workspace, after the large deletions.
+- **The workspace test suite compiles.** `cargo test --workspace --no-run`
+  (Rust 1.94.0) exits 0. Per-crate suites have been run green where checked:
+  `xai-grok-shell` (6638), `xai-grok-workspace` (2018), `xai-grok-tools` (3310),
+  `xai-grok-pager` (9976), `xai-grok-pager-render` (1209), `xai-grok-sampling-types`,
+  `xai-grok-sampler`, `xai-grok-agent` (576), `xai-chat-state` (391),
+  `xai-grok-status-line` (22), `xai-grok-telemetry` (164), `xai-fast-worktree` (333), etc.
+- **A full `cargo test --workspace` run is not yet clean end-to-end.** It compiles,
+  but four upstream Grove/NFS tests in `xai-fast-worktree` flake under whole-workspace
+  parallelism (they pass in isolation and under CPU load; two were serialized against
+  the env lock). A single full green run has not been confirmed because the run is
+  long and was interrupted.
+- **`cargo clippy` / `cargo fmt` were only run on crates touched per slice**, not
+  workspace-wide, after the large deletions.
 
 ## Network / egress
 
@@ -47,8 +42,8 @@ These contain **no network egress** but were not fully deleted:
 - `xai-grok-shell/src/upload/**` — restored inert, routed to
   `file_utils_compat` (no storage HTTP).
 - `xai-grok-shell/src/session/repo_changes/mod.rs` — pure serde types only.
-- `xai-grok-shell/src/session/feedback_manager.rs` — inert; local-only. The
-  `/feedback` command and modal remain, but sending performs no upload.
+- The pager feedback modal UI remains, but the shell feedback manager was deleted;
+  `/feedback` is inert (no upload).
 - `xai-grok-shell/src/cloud_config/**` — the former `xai-grok-cloud-config`
   crate, vendored inert into the shell.
 - `xai-grok-telemetry/src/{external.rs,otel_layer.rs,trace_context.rs}` — no-op

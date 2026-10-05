@@ -11,21 +11,24 @@ decisions; wins on conflict), [`PLAN.md`](PLAN.md) (audit + phased plan),
 - **Remote:** `origin git@github.com:coruairc/deepseek-build.git`.
 - **Toolchain:** Rust **1.94.0** via rustup (pinned in `rust-toolchain.toml`). Do not bump.
   `protoc` on PATH (`/usr/bin/protoc`); `dotslash` not needed.
-- **Binary:** `target/release/deepseek-build` (package `xai-grok-pager-bin`, D2 keeps the
-  internal package name). **Rebrand done**: config dir `~/.deepseek-build`, ACP namespace
-  `deepseek-build/*`, brand constants in `crates/codegen/xai-grok-brand/`.
+- **Binary:** `target/release/deepseek-build` (~192 MB) — package `xai-grok-pager-bin`
+  (D2 keeps the internal package name). **Rebrand done**: config dir `~/.deepseek-build`,
+  ACP namespace `deepseek-build/*`, Monokai theme + DeepSeek whale logo, brand constants
+  in `crates/codegen/xai-grok-brand/`.
 - **Egress gate:** `scripts/check-egress.sh --strict` → **exit 0** (HARD OK, SOFT zero).
 - **Build:** `cargo check -p xai-grok-pager-bin` and `cargo build --release` are green.
-  `cargo test --workspace` currently **fails to compile** (see `KNOWN-ISSUES.md`).
-- **Release build:** DONE — `target/release/deepseek-build` (~197 MB).
+  `cargo test --workspace --no-run` **compiles**; per-crate suites pass (shell 6638,
+  workspace 2018, tools 3310, pager 9976, pager-render 1209, agent 576, chat-state 391,
+  telemetry 164, fast-worktree 333, …). A single full `cargo test --workspace` green run
+  was not confirmed (4 upstream Grove/NFS tests flake under whole-workspace parallelism).
 - **Runtime egress (observed):** single-turn prompt contacts only
   `api.deepseek.com:443` + one local AF_UNIX socket; `--version`/`--help` make no
   outbound connects. Measured with an `LD_PRELOAD` connect-logger (`strace`/netns
   unavailable in this environment).
-- **Status:** ready to test with a real `DEEPSEEK_API_KEY`. See `TESTING.md`,
-  `scripts/sandbox-run.sh`, `KNOWN-ISSUES.md`. Remaining: backend removal,
-  wiremock suite, TUI (Phase 3), hardening (Phase 4), test-suite repair, and the
-  stubs/undeleted crates listed in `KNOWN-ISSUES.md`.
+- **Status:** usable now with a real `DEEPSEEK_API_KEY` (on `main`). See `TESTING.md`,
+  `scripts/sandbox-run.sh`, `KNOWN-ISSUES.md`. Remaining: full deletion of the inert
+  stubs listed in `KNOWN-ISSUES.md` (upload/cloud_config/computer-hub/announcements/
+  remote/telemetry stubs), workspace-wide clippy/fmt, and the live smoke test.
 
 ## 1. How to resume (another machine)
 
