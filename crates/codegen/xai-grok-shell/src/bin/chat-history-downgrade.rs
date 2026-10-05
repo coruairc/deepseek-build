@@ -252,7 +252,10 @@ mod tests {
             v.get("reasoning_content").and_then(|x| x.as_str()),
             Some("Let me think...")
         );
-        assert_eq!(v.get("model_id").and_then(|x| x.as_str()), Some("deepseek-3"));
+        assert_eq!(
+            v.get("model_id").and_then(|x| x.as_str()),
+            Some("deepseek-3")
+        );
     }
 
     /// Current shape: reasoning is a sibling line before the assistant.

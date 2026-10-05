@@ -195,20 +195,6 @@ fn resolve_agent_profile_path(path: &std::path::Path) -> std::path::PathBuf {
         }
     }
 }
-/// Print startup information for the serve command.
-fn print_serve_startup_info(bind_addr: SocketAddr, secret: &str) {
-    eprintln!();
-    eprintln!("   deepseek-build agent server starting...");
-    eprintln!();
-    eprintln!("   Address:  {}:{}", bind_addr.ip(), bind_addr.port());
-    eprintln!("   Secret:   {}", secret);
-    eprintln!();
-    eprintln!(
-        "   WebSocket URL: ws://{}/ws?server-key={}",
-        bind_addr, secret
-    );
-    eprintln!();
-}
 /// Entrypoint tag for `grok -p`; keys the quiet stderr default in `init_tracing_simple`.
 const HEADLESS_ENTRYPOINT: &str = "headless";
 /// Initialize simple tracing for non-TUI agent modes.
@@ -1222,7 +1208,7 @@ async fn run_agent_command(
     let signal_flush = agent_command::spawn_signal_flush();
     if matches!(
         agent_args.mode,
-        Some(AgentCmd::Leader(_) | AgentCmd::Stdio | AgentCmd::Headless(_) | AgentCmd::Serve(_))
+        Some(AgentCmd::Leader(_) | AgentCmd::Stdio | AgentCmd::Headless(_))
     ) {
         xai_grok_shell::agent::app::suppress_otel();
     }
@@ -1353,7 +1339,6 @@ async fn run_agent_command(
         entrypoint: match &agent_args.mode {
             Some(AgentCmd::Stdio) => Entrypoint::Embedded,
             Some(AgentCmd::Leader(_)) => Entrypoint::Leader,
-            Some(AgentCmd::Serve(_)) => Entrypoint::Workspace,
             Some(AgentCmd::Headless(_)) | None => Entrypoint::Headless,
         },
         leader: if use_leader || matches!(agent_args.mode, Some(AgentCmd::Leader(_))) {
@@ -1559,17 +1544,6 @@ async fn run_agent_command(
                 agent_memory_config,
             )
             .await
-        }
-        Some(AgentCmd::Serve(a)) => {
-            let mut agent_config = agent_config.clone();
-            apply_headless_args_to_config(&a.headless, &mut agent_config);
-            let secret = a.get_secret();
-            let server_config = xai_grok_shell::agent::ServerConfig {
-                bind_addr: a.bind,
-                secret: secret.clone(),
-            };
-            print_serve_startup_info(a.bind, &secret);
-            xai_grok_shell::agent::run_agent_server(server_config, agent_config).await
         }
         Some(AgentCmd::Leader(a)) => {
             let mut agent_config = agent_config.clone();

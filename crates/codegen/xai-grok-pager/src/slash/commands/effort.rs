@@ -422,7 +422,9 @@ mod tests {
             }
             other => panic!("expected SwitchModel, got {other:?}"),
         }
-        match crate::slash::commands::model::ModelCommand.run(&mut ctx, "deepseek-build 4.7 Extra High") {
+        match crate::slash::commands::model::ModelCommand
+            .run(&mut ctx, "deepseek-build 4.7 Extra High")
+        {
             CommandResult::Action(Action::SwitchModel(ModelChoice {
                 model_id, effort, ..
             })) => {

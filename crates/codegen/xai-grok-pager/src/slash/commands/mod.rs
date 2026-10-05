@@ -447,7 +447,8 @@ mod tests {
         assert!(
             items
                 .iter()
-                .any(|i| i.display.starts_with("deepseek-build 4.5") && i.insert_text == "deepseek-build 4.5")
+                .any(|i| i.display.starts_with("deepseek-build 4.5")
+                    && i.insert_text == "deepseek-build 4.5")
         );
         assert!(
             items

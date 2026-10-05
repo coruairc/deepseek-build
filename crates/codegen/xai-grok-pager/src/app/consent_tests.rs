@@ -105,7 +105,9 @@ fn an_answer_from_this_run_suppresses() {
 #[test]
 fn two_links_are_indexed_in_order() {
     let mut gate = gate();
-    gate.body = Some("Read [Terms](https://deepseek-build/a) and [Policy](https://deepseek-build/b).".to_owned());
+    gate.body = Some(
+        "Read [Terms](https://deepseek-build/a) and [Policy](https://deepseek-build/b).".to_owned(),
+    );
 
     let notice = ConsentNotice::try_from_remote(&gate).expect("valid");
 
@@ -125,7 +127,10 @@ fn two_links_are_indexed_in_order() {
             ConsentSegment::Text(".".to_owned()),
         ]
     );
-    assert_eq!(notice.links, vec!["https://deepseek-build/a", "https://deepseek-build/b"]);
+    assert_eq!(
+        notice.links,
+        vec!["https://deepseek-build/a", "https://deepseek-build/b"]
+    );
 }
 
 /// A url we would not open costs a hyperlink, not the whole notice: the sentence still reads.
@@ -160,7 +165,9 @@ fn a_url_we_will_not_open_degrades_to_plain_text() {
 #[test]
 fn a_link_with_nothing_to_paint_is_dropped() {
     let mut gate = gate();
-    gate.body = Some("Read [ ](https://deepseek-build/a) and [Terms](https://deepseek-build/b).".to_owned());
+    gate.body = Some(
+        "Read [ ](https://deepseek-build/a) and [Terms](https://deepseek-build/b).".to_owned(),
+    );
 
     let notice = ConsentNotice::try_from_remote(&gate).expect("valid");
 
@@ -355,7 +362,8 @@ fn unpairable_markup_refuses() {
 #[test]
 fn a_url_outside_a_link_refuses() {
     let mut gate = gate();
-    gate.body = Some("Review the terms at https://deepseek-build/legal/tos before continuing.".to_owned());
+    gate.body =
+        Some("Review the terms at https://deepseek-build/legal/tos before continuing.".to_owned());
 
     assert_eq!(
         ConsentNotice::try_from_remote(&gate),

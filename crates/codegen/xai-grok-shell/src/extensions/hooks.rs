@@ -208,7 +208,9 @@ fn parse_hook_group(event: HookEventName, value: &serde_json::Value) -> Option<C
     }
 
     let group = WireGroup::deserialize(value)
-        .inspect_err(|err| tracing::warn!(%event, %err, "ignoring malformed deepseek-build/hooks group"))
+        .inspect_err(
+            |err| tracing::warn!(%event, %err, "ignoring malformed deepseek-build/hooks group"),
+        )
         .ok()?;
     if group.hook_callback_ids.is_empty() {
         tracing::warn!(%event, "ignoring deepseek-build/hooks group with no hookCallbackIds");
@@ -524,7 +526,8 @@ mod tests {
         assert!(reconnect_client_hooks(None).is_none());
         assert!(reconnect_client_hooks(serde_json::json!({ "other": true }).as_object()).is_none());
 
-        let cleared = reconnect_client_hooks(serde_json::json!({ "deepseek-build/hooks": {} }).as_object());
+        let cleared =
+            reconnect_client_hooks(serde_json::json!({ "deepseek-build/hooks": {} }).as_object());
         assert!(cleared.is_some_and(|h| h.is_empty()));
 
         let set = reconnect_client_hooks(

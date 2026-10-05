@@ -21,7 +21,9 @@ use crate::session::{
 #[tracing::instrument(skip_all, fields(method = %args.method))]
 pub async fn handle(agent: &MvpAgent, args: &acp::ExtRequest) -> ExtResult {
     match args.method.as_ref() {
-        m if m.starts_with("deepseek-build/compact_conversation") => handle_compact(agent, args).await,
+        m if m.starts_with("deepseek-build/compact_conversation") => {
+            handle_compact(agent, args).await
+        }
         MEMORY_FLUSH_METHOD => handle_flush(agent, args).await,
         MEMORY_DREAM_METHOD => handle_dream(agent, args).await,
         MEMORY_REWRITE_METHOD => handle_rewrite(agent, args).await,

@@ -281,7 +281,10 @@ fn slash_model_valid_dispatches_set_default_model_with_switch_and_persist() {
             model_id.clone(),
             acp::ModelInfo::new(model_id.clone(), "deepseek-build 4.5".to_string()),
         );
-    let effects = dispatch(Action::SendPrompt("/model deepseek-build 4.5".into()), &mut app);
+    let effects = dispatch(
+        Action::SendPrompt("/model deepseek-build 4.5".into()),
+        &mut app,
+    );
     assert_eq!(
         effects.len(),
         2,
@@ -3228,7 +3231,10 @@ fn set_auto_dark_theme_emits_persist_setting_with_correct_payload() {
             }
             other => panic!("expected PersistSetting, got {other:?}"),
         }
-        assert_eq!(app.current_ui.auto_dark_theme.as_deref(), Some("deepseek-day"));
+        assert_eq!(
+            app.current_ui.auto_dark_theme.as_deref(),
+            Some("deepseek-day")
+        );
     });
 }
 #[test]
@@ -3236,7 +3242,10 @@ fn set_auto_light_theme_emits_persist_setting_with_correct_payload() {
     use crate::settings::SettingValue;
     with_theme_test_env(|| {
         let mut app = test_app_with_agent();
-        let effects = dispatch(Action::SetAutoLightTheme("deepseek-monokai".into()), &mut app);
+        let effects = dispatch(
+            Action::SetAutoLightTheme("deepseek-monokai".into()),
+            &mut app,
+        );
         assert_eq!(effects.len(), 1);
         match effects.first() {
             Some(Effect::PersistSetting {
@@ -3322,7 +3331,10 @@ fn set_auto_dark_theme_does_not_apply_when_theme_is_not_auto() {
             crate::theme::ThemeKind::DeepSeekMonokai,
             "auto_dark_theme commit must NOT change live display when theme is not auto",
         );
-        assert_eq!(app.current_ui.auto_dark_theme.as_deref(), Some("deepseek-day"));
+        assert_eq!(
+            app.current_ui.auto_dark_theme.as_deref(),
+            Some("deepseek-day")
+        );
     });
 }
 /// Auto-theme commit DOES apply the live theme when both (a) the parent theme is auto AND (b) the system matches.
@@ -3364,13 +3376,19 @@ fn set_auto_dark_theme_does_not_apply_when_system_is_light() {
             crate::theme::cache::current_kind(),
             crate::theme::ThemeKind::DeepSeekDay,
         );
-        let _ = dispatch(Action::SetAutoDarkTheme("deepseek-monokai".into()), &mut app);
+        let _ = dispatch(
+            Action::SetAutoDarkTheme("deepseek-monokai".into()),
+            &mut app,
+        );
         assert_eq!(
             crate::theme::cache::current_kind(),
             crate::theme::ThemeKind::DeepSeekDay,
             "auto_dark_theme commit must NOT change live display when system=Light",
         );
-        assert_eq!(app.current_ui.auto_dark_theme.as_deref(), Some("deepseek-monokai"),);
+        assert_eq!(
+            app.current_ui.auto_dark_theme.as_deref(),
+            Some("deepseek-monokai"),
+        );
     });
 }
 /// Symmetric to the dark test: `set_auto_light_theme` applies only when the theme is auto and the system is Light.
@@ -3387,7 +3405,10 @@ fn set_auto_light_theme_applies_when_theme_is_auto_and_system_is_light() {
             crate::theme::cache::current_kind(),
             crate::theme::ThemeKind::DeepSeekDay,
         );
-        let _ = dispatch(Action::SetAutoLightTheme("deepseek-monokai".into()), &mut app);
+        let _ = dispatch(
+            Action::SetAutoLightTheme("deepseek-monokai".into()),
+            &mut app,
+        );
         assert_eq!(
             crate::theme::cache::current_kind(),
             crate::theme::ThemeKind::DeepSeekMonokai,
@@ -3488,7 +3509,10 @@ fn set_auto_dark_theme_toast_format_uses_display_name() {
 fn set_auto_light_theme_toast_format_uses_display_name() {
     with_theme_test_env(|| {
         let mut app = test_app_with_agent();
-        let _ = dispatch(Action::SetAutoLightTheme("deepseek-monokai".into()), &mut app);
+        let _ = dispatch(
+            Action::SetAutoLightTheme("deepseek-monokai".into()),
+            &mut app,
+        );
         let toast = read_toast(&app);
         assert!(toast.contains("Auto light theme"));
         assert!(toast.contains("deepseek-build Night"));
@@ -3534,7 +3558,10 @@ fn rollback_auto_dark_theme_reverts_current_ui() {
     with_theme_test_env(|| {
         let mut app = test_app_with_agent();
         let _ = dispatch(Action::SetAutoDarkTheme("deepseek-day".into()), &mut app);
-        assert_eq!(app.current_ui.auto_dark_theme.as_deref(), Some("deepseek-day"));
+        assert_eq!(
+            app.current_ui.auto_dark_theme.as_deref(),
+            Some("deepseek-day")
+        );
         let _ = dispatch(
             Action::TaskComplete(TaskResult::SettingPersistFailed {
                 key: "auto_dark_theme",
@@ -3543,7 +3570,10 @@ fn rollback_auto_dark_theme_reverts_current_ui() {
             }),
             &mut app,
         );
-        assert_eq!(app.current_ui.auto_dark_theme.as_deref(), Some("deepseek-monokai"),);
+        assert_eq!(
+            app.current_ui.auto_dark_theme.as_deref(),
+            Some("deepseek-monokai"),
+        );
     });
 }
 #[test]
@@ -3551,7 +3581,10 @@ fn rollback_auto_light_theme_reverts_current_ui() {
     use crate::settings::SettingValue;
     with_theme_test_env(|| {
         let mut app = test_app_with_agent();
-        let _ = dispatch(Action::SetAutoLightTheme("deepseek-monokai".into()), &mut app);
+        let _ = dispatch(
+            Action::SetAutoLightTheme("deepseek-monokai".into()),
+            &mut app,
+        );
         assert_eq!(
             app.current_ui.auto_light_theme.as_deref(),
             Some("deepseek-monokai"),
@@ -3564,7 +3597,10 @@ fn rollback_auto_light_theme_reverts_current_ui() {
             }),
             &mut app,
         );
-        assert_eq!(app.current_ui.auto_light_theme.as_deref(), Some("deepseek-day"));
+        assert_eq!(
+            app.current_ui.auto_light_theme.as_deref(),
+            Some("deepseek-day")
+        );
     });
 }
 /// Edge case: if the rollback value is `"auto"` (corrupted hand-edit), `apply_setting_rollback` clears `app.current_ui.auto_dark_theme` to `None`.
@@ -3576,7 +3612,10 @@ fn rollback_auto_dark_theme_with_auto_value_clears_to_none() {
     with_theme_test_env(|| {
         let mut app = test_app_with_agent();
         let _ = dispatch(Action::SetAutoDarkTheme("deepseek-day".into()), &mut app);
-        assert_eq!(app.current_ui.auto_dark_theme.as_deref(), Some("deepseek-day"));
+        assert_eq!(
+            app.current_ui.auto_dark_theme.as_deref(),
+            Some("deepseek-day")
+        );
         let _ = dispatch(
             Action::TaskComplete(TaskResult::SettingPersistFailed {
                 key: "auto_dark_theme",
@@ -3597,7 +3636,10 @@ fn rollback_auto_light_theme_with_auto_value_clears_to_none() {
     use crate::settings::SettingValue;
     with_theme_test_env(|| {
         let mut app = test_app_with_agent();
-        let _ = dispatch(Action::SetAutoLightTheme("deepseek-monokai".into()), &mut app);
+        let _ = dispatch(
+            Action::SetAutoLightTheme("deepseek-monokai".into()),
+            &mut app,
+        );
         assert_eq!(
             app.current_ui.auto_light_theme.as_deref(),
             Some("deepseek-monokai"),

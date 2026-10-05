@@ -519,7 +519,10 @@ async fn open_session(
                     let mut m = acp::Meta::new();
                     m.insert("noReplay".into(), serde_json::Value::Bool(true));
                     if let Some(rc) = restore_code {
-                        m.insert("deepseek-build/restore_code".into(), serde_json::Value::Bool(rc));
+                        m.insert(
+                            "deepseek-build/restore_code".into(),
+                            serde_json::Value::Bool(rc),
+                        );
                     }
                     Some(m)
                 }),

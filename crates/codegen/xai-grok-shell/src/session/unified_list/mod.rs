@@ -513,7 +513,10 @@ pub(crate) struct ExtListResponseMeta {
     #[serde(rename = "deepseek-build/partial")]
     pub partial: PartialInfo,
     /// Present only when the listing relaxed beyond the cwd.
-    #[serde(rename = "deepseek-build/listScope", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "deepseek-build/listScope",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub list_scope: Option<&'static str>,
 }
 #[derive(Debug, Clone, Serialize)]
@@ -1088,7 +1091,9 @@ mod tests {
             }))
             .expect("serialize");
             assert_eq!(
-                value.get("_meta").and_then(|m| m.get("deepseek-build/partial")),
+                value
+                    .get("_meta")
+                    .and_then(|m| m.get("deepseek-build/partial")),
                 Some(&serde_json::json!({ "conversations": true, "reason": wire }))
             );
         }
@@ -1101,7 +1106,9 @@ mod tests {
         }))
         .expect("serialize");
         assert_eq!(
-            healthy.get("_meta").and_then(|m| m.get("deepseek-build/partial")),
+            healthy
+                .get("_meta")
+                .and_then(|m| m.get("deepseek-build/partial")),
             Some(&serde_json::json!({ "conversations": false }))
         );
     }
@@ -1300,7 +1307,8 @@ mod tests {
         let with =
             serde_json::to_value(ext_list_response(result(ListScope::Repo))).expect("serialize");
         assert_eq!(
-            with.get("_meta").and_then(|m| m.get("deepseek-build/listScope")),
+            with.get("_meta")
+                .and_then(|m| m.get("deepseek-build/listScope")),
             Some(&serde_json::json!("repo"))
         );
         let without =

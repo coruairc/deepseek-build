@@ -354,7 +354,10 @@ async fn worktree_create_opens_session_at_worktree_subdirectory() {
     let Some((method, params)) = log.ext.first() else {
         panic!("expected an ext call: {:?}", log.ext);
     };
-    assert_eq!(method, "deepseek-build/git/worktree/create_from_worktree_sync");
+    assert_eq!(
+        method,
+        "deepseek-build/git/worktree/create_from_worktree_sync"
+    );
     assert_eq!(
         params.get("sourceWorktreePath").and_then(|v| v.as_str()),
         Some(launch_cwd.to_string_lossy().as_ref())

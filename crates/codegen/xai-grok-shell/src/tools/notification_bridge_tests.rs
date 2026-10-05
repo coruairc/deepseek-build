@@ -865,7 +865,8 @@ async fn scheduled_task_created_is_persisted() {
                 Some("generation-a")
             );
             assert_eq!(
-                meta.get("deepseek-build/schedulerRevision").and_then(|v| v.as_u64()),
+                meta.get("deepseek-build/schedulerRevision")
+                    .and_then(|v| v.as_u64()),
                 Some(1)
             );
             assert!(
@@ -1035,7 +1036,8 @@ async fn scheduled_task_removed_is_persisted() {
                 Some("generation-a")
             );
             assert_eq!(
-                meta.get("deepseek-build/schedulerRevision").and_then(|v| v.as_u64()),
+                meta.get("deepseek-build/schedulerRevision")
+                    .and_then(|v| v.as_u64()),
                 Some(2)
             );
         }

@@ -168,7 +168,10 @@ fn plugins_action_install_and_update_respect_marketplace_lockdown() {
         .expect("serialize mcp/toggle params");
         let err = tokio::time::timeout(
             RPC_TIMEOUT,
-            conn.ext_method(acp::ExtRequest::new("deepseek-build/mcp/toggle", Arc::from(params))),
+            conn.ext_method(acp::ExtRequest::new(
+                "deepseek-build/mcp/toggle",
+                Arc::from(params),
+            )),
         )
         .await
         .expect("mcp/toggle timed out")

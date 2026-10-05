@@ -503,7 +503,9 @@ mod tests {
             .suggest_args(&ctx, "deepseek-build 4.7 hi")
             .expect("effort rows for a typed effort filter");
         assert!(
-            items.iter().any(|item| item.insert_text == "deepseek-build 4.7 high"),
+            items
+                .iter()
+                .any(|item| item.insert_text == "deepseek-build 4.7 high"),
             "typed effort must keep the effort rows up: {items:?}"
         );
 
@@ -521,7 +523,10 @@ mod tests {
         state.available.insert(id, info);
 
         assert_eq!(picker_title(&state, ""), "Pick model");
-        assert_eq!(picker_title(&state, "deepseek-build 4.7 "), "Pick context window");
+        assert_eq!(
+            picker_title(&state, "deepseek-build 4.7 "),
+            "Pick context window"
+        );
         assert_eq!(
             picker_title(&state, "deepseek-build 4.7 500k "),
             "Pick reasoning effort"
@@ -636,8 +641,10 @@ mod tests {
     #[test]
     fn picker_preselects_the_window_the_switch_uses() {
         let mut state = ModelState::default();
-        let (current, current_info) = model_with_windows_and_reasoning("deepseek-4.7", "deepseek-build 4.7");
-        let (listed, listed_info) = model_with_windows_and_reasoning("deepseek-4.8", "deepseek-build 4.8");
+        let (current, current_info) =
+            model_with_windows_and_reasoning("deepseek-4.7", "deepseek-build 4.7");
+        let (listed, listed_info) =
+            model_with_windows_and_reasoning("deepseek-4.8", "deepseek-build 4.8");
         let unlisted_info = acp_fixtures::model_info_with_meta(
             "deepseek-4.5",
             "deepseek-build 4.5",
@@ -696,7 +703,10 @@ mod tests {
         assert_eq!(reasoning.insert_text, "Reasoning X ");
 
         // A plain model has no trailing space, so Enter commits immediately
-        let plain = items.iter().find(|i| i.match_text == "deepseek-build 4.5").unwrap();
+        let plain = items
+            .iter()
+            .find(|i| i.match_text == "deepseek-build 4.5")
+            .unwrap();
         assert_eq!(plain.insert_text, "deepseek-build 4.5");
     }
 

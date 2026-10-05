@@ -695,7 +695,11 @@ fn first_catalog_reselect_bumps_model_switch_watch() {
     let mgr = test_manager();
     let start = mgr.model_switch_generation();
     let cfg = config_from_toml("[models]\ndefault = \"deepseek-4.5\"");
-    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["deepseek-4.5", "deepseek-4"])), None);
+    mgr.apply_refresh_result(
+        &cfg,
+        Some(make_prefetched(&["deepseek-4.5", "deepseek-4"])),
+        None,
+    );
     assert_eq!(mgr.current_model_id().0.as_ref(), "deepseek-4.5");
     assert!(
         mgr.model_switch_generation() > start,
@@ -706,7 +710,11 @@ fn first_catalog_reselect_bumps_model_switch_watch() {
 fn reselect_missing_current_model_bumps_watch() {
     let mgr = test_manager();
     let cfg = config::Config::default();
-    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["deepseek-4", "deepseek-3"])), None);
+    mgr.apply_refresh_result(
+        &cfg,
+        Some(make_prefetched(&["deepseek-4", "deepseek-3"])),
+        None,
+    );
     mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     let start = mgr.model_switch_generation();
     mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["deepseek-3"])), None);
@@ -2084,7 +2092,10 @@ fn resolve_catalog_key_last_slug_match_wins() {
         "default-grok-build".to_string(),
         make_model_entry("deepseek-4.5"),
     );
-    models.insert("user-grok-build".to_string(), make_model_entry("deepseek-4.5"));
+    models.insert(
+        "user-grok-build".to_string(),
+        make_model_entry("deepseek-4.5"),
+    );
     let persisted = acp::ModelId::new("deepseek-4.5");
     let key = resolve_catalog_key(&models, &persisted).expect("slug must resolve");
     assert_eq!(key.0.as_ref(), "user-grok-build");
@@ -2180,7 +2191,11 @@ async fn explicit_model_pick_survives_first_real_catalog() {
     let mgr = test_manager();
     let cfg = config_from_toml("[models]\ndefault = \"deepseek-4.5\"");
     mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
-    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["deepseek-4.5", "deepseek-4"])), None);
+    mgr.apply_refresh_result(
+        &cfg,
+        Some(make_prefetched(&["deepseek-4.5", "deepseek-4"])),
+        None,
+    );
     assert_eq!(
         mgr.current_model_id().0.as_ref(),
         "deepseek-4",
@@ -2193,7 +2208,11 @@ async fn identity_switch_clears_user_pick_latch() {
     let cfg = config_from_toml("[models]\ndefault = \"deepseek-4.5\"");
     mgr.set_current_model_id(acp::ModelId::new("deepseek-4"));
     mgr.clear();
-    mgr.apply_refresh_result(&cfg, Some(make_prefetched(&["deepseek-4.5", "deepseek-4"])), None);
+    mgr.apply_refresh_result(
+        &cfg,
+        Some(make_prefetched(&["deepseek-4.5", "deepseek-4"])),
+        None,
+    );
     assert_eq!(
         mgr.current_model_id().0.as_ref(),
         "deepseek-4.5",

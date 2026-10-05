@@ -467,7 +467,11 @@ fn event_seq_of(json: &serde_json::Value) -> Option<u64> {
 fn is_machine_wide_broadcast_notification(json: &serde_json::Value) -> bool {
     matches!(
         method_of(json),
-        Some("deepseek-build/sessions/changed" | "deepseek-build/models/update" | "deepseek-build/mcp/servers_updated")
+        Some(
+            "deepseek-build/sessions/changed"
+                | "deepseek-build/models/update"
+                | "deepseek-build/mcp/servers_updated"
+        )
     )
 }
 /// The namespaced method a leader payload carries, normalizing the two ext wire forms the gateway produces: direct: `{"method":"deepseek-build/foo", ...}` -> `deepseek-build/foo` wrapped: `{"method":"_deepseek-build/foo","params":{"method":"deepseek-build/foo",...}}` -> `deepseek-build/foo`

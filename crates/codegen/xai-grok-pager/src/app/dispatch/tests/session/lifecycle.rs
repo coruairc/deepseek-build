@@ -1494,7 +1494,9 @@ fn a_consent_link_opens_the_url_its_label_stands_for() {
     }
     dispatch(Action::OpenConsentLink(1), &mut app);
     assert!(
-        opened().lines().any(|l| l == "https://deepseek-build/legal/aup"),
+        opened()
+            .lines()
+            .any(|l| l == "https://deepseek-build/legal/aup"),
         "the second link must open the second url; got {:?}",
         opened(),
     );

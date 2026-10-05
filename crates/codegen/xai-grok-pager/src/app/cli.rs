@@ -302,8 +302,6 @@ pub enum AgentCmd {
     Stdio,
     /// Run the agent headlessly over the deepseek-build WebSocket relay
     Headless(HeadlessArgs),
-    /// Run the agent as a WebSocket server
-    Serve(ServeArgs),
     /// Run as the shared leader process for other clients
     Leader(LeaderArgs),
 }
@@ -314,35 +312,6 @@ pub struct HeadlessArgs {
     pub grok_ws_origin: Option<String>,
     #[arg(long = "grok-ws-url")]
     pub grok_ws_url: Option<String>,
-}
-/// Arguments for the `agent serve` subcommand.
-#[derive(Debug, clap::Args, Clone)]
-pub struct ServeArgs {
-    /// Address for the server to listen on
-    #[arg(long, default_value = "127.0.0.1:2419")]
-    pub bind: SocketAddr,
-    /// Secret token for client authentication (auto-generated if not provided)
-    #[arg(long, env = "GROK_AGENT_SECRET")]
-    pub secret: Option<String>,
-    /// Remote agent URL for proxy mode
-    #[arg(long)]
-    pub remote: Option<String>,
-    /// Authentication and WebSocket URL overrides
-    #[command(flatten)]
-    pub headless: HeadlessArgs,
-}
-impl ServeArgs {
-    /// Get the secret, generating a random one if not provided.
-    pub fn get_secret(&self) -> String {
-        self.secret
-            .clone()
-            .unwrap_or_else(|| generate_random_key(12))
-    }
-}
-/// Generate a random alphanumeric key of the given length.
-fn generate_random_key(len: usize) -> String {
-    let raw = uuid::Uuid::new_v4().to_string().replace('-', "");
-    raw.chars().cycle().take(len).collect()
 }
 /// Arguments for the `agent leader` subcommand.
 #[derive(Debug, clap::Args, Clone)]

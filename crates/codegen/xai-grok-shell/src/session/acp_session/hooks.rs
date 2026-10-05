@@ -95,7 +95,9 @@ fn decision_label(decision: ClientHookDecision) -> ClientHookGateOutcome {
             ClientHookGateOutcome::UnknownDecision
         }
         ClientHookDecision::Other => {
-            tracing::warn!("deepseek-build/hooks/run returned an unknown decision value; failing open");
+            tracing::warn!(
+                "deepseek-build/hooks/run returned an unknown decision value; failing open"
+            );
             ClientHookGateOutcome::UnknownDecision
         }
     }

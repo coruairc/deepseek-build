@@ -18,12 +18,16 @@ pub(crate) async fn try_handle(
         "deepseek-build/git/status" => Some(to_ext_response(jj::status(git_root).await)),
         "deepseek-build/git/info" => Some(to_ext_response(jj::info(git_root).await)),
         // git HEAD points at `@-` in a colocated repo; route to jj so we report the working-copy commit (`@`), consistent with `status`/`info`
-        "deepseek-build/git/current_commit" => Some(to_ext_response(jj::current_commit(git_root).await)),
+        "deepseek-build/git/current_commit" => {
+            Some(to_ext_response(jj::current_commit(git_root).await))
+        }
         "deepseek-build/git/branches" => Some(to_ext_response(jj::list_bookmarks(git_root).await)),
 
         // jj has no staging area: stage/unstage are no-ops
         "deepseek-build/git/stage" => Some(to_ext_response(Ok(StageData { paths: Vec::new() }))),
-        "deepseek-build/git/stage/content" | "deepseek-build/git/unstage" => Some(to_ext_response(Ok(Empty {}))),
+        "deepseek-build/git/stage/content" | "deepseek-build/git/unstage" => {
+            Some(to_ext_response(Ok(Empty {})))
+        }
 
         "deepseek-build/git/discard" => {
             #[derive(serde::Deserialize)]

@@ -810,7 +810,10 @@ fn models_config_serializes_only_some_fields() {
         assert!(!t.contains_key("disabled_models"));
         assert!(!t.contains_key("allowed_models"));
         assert!(!t.contains_key("agent_type"));
-        assert_eq!(t.get("default").and_then(|x| x.as_str()), Some("deepseek-3"));
+        assert_eq!(
+            t.get("default").and_then(|x| x.as_str()),
+            Some("deepseek-3")
+        );
     } else {
         panic!("expected table from serialization");
     }

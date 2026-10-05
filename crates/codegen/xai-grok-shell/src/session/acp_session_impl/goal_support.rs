@@ -904,7 +904,10 @@ mod fold_active_tokens_by_model_tests {
         let out = fold_active_tokens_by_model(&records, "g1", "cur");
         assert_eq!(
             out,
-            vec![("deepseek-4".to_owned(), 400), ("deepseek-3".to_owned(), 150)]
+            vec![
+                ("deepseek-4".to_owned(), 400),
+                ("deepseek-3".to_owned(), 150)
+            ]
         );
     }
 
