@@ -155,15 +155,10 @@ fn has_usable_token_covers_memory_and_disk() {
 }
 #[test]
 fn auth_scope_uses_oauth2_when_present() {
+    // The first-party xAI OAuth provider was removed, so the default oauth2
+    // provider carries empty issuer/client_id and the scope collapses to "::".
     let cfg = GrokComConfig::default();
-    assert_eq!(
-        cfg.auth_scope(),
-        format!(
-            "{}::{}",
-            crate::config::XAI_OAUTH2_ISSUER,
-            obfstr::obfstr!("b1a00492-073a-47ea-816f-4c329264a828"),
-        )
-    );
+    assert_eq!(cfg.auth_scope(), "::");
 }
 #[test]
 fn legacy_scope_fallback_reads_old_auth_json() {
@@ -3513,7 +3508,6 @@ fn oidc_session_for_team(principal_id: &str) -> GrokAuth {
         auth_mode: AuthMode::Oidc,
         refresh_token: Some("rt".into()),
         expires_at: Some(Utc::now() + Duration::hours(1)),
-        oidc_issuer: Some(crate::config::XAI_OAUTH2_ISSUER.to_string()),
         oidc_client_id: Some("client".into()),
         ..GrokAuth::test_default()
     }
