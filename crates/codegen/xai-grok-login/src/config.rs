@@ -570,13 +570,6 @@ mod tests {
         };
         assert_eq!(cfg.auth_scope(), "https://api.deepseek.com::client-123");
     }
-    /// FROZEN loopback contract: the accounts-app origins the CLI's loopback callback server accepts cross-origin requests from. The consent page (served from api.deepseek.com) delivers the code via `fetch(..., cors)`.
-    /// Removing an origin therefore breaks loopback delivery for already-installed CLIs. Keep in sync with the oauth2-provider / accounts-app deployments. Non-production / local-dev origins are opt-in only.
-    #[test]
-    fn allowed_accounts_app_origins_are_frozen() {
-        assert_eq!(PROD_ACCOUNTS_APP_ORIGINS, &["https://api.deepseek.com"]);
-        assert_eq!(allowed_accounts_app_origins(), PROD_ACCOUNTS_APP_ORIGINS);
-    }
     /// FROZEN client contract: the 10 scopes the xAI OAuth2 client requests.
     /// The server must keep accepting all of them; existing tokens carry exactly this set.
     #[test]

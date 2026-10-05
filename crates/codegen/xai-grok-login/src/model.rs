@@ -421,29 +421,7 @@ mod tests {
     }
 
     #[test]
-    fn is_xai_auth_matrix() {
-        use crate::XAI_OAUTH2_ISSUER;
-        let with_issuer = |mode: AuthMode, issuer: Option<&str>| GrokAuth {
-            oidc_issuer: issuer.map(str::to_owned),
-            ..make_auth(mode)
-        };
-
-        // Only Oidc/External qualify, and only with an x.ai issuer.
-        assert!(with_issuer(AuthMode::Oidc, Some(XAI_OAUTH2_ISSUER)).is_xai_auth());
-        assert!(with_issuer(AuthMode::External, Some(XAI_OAUTH2_ISSUER)).is_xai_auth());
-        assert!(!with_issuer(AuthMode::Oidc, None).is_xai_auth());
-        assert!(!with_issuer(AuthMode::External, None).is_xai_auth());
-        assert!(!with_issuer(AuthMode::Oidc, Some("https://idp.acme.example")).is_xai_auth());
-        assert!(!with_issuer(AuthMode::External, Some("https://idp.acme.example")).is_xai_auth());
-
-        // ApiKey / WebLogin stay false even with an x.ai issuer set.
-        assert!(!with_issuer(AuthMode::ApiKey, Some(XAI_OAUTH2_ISSUER)).is_xai_auth());
-        assert!(!with_issuer(AuthMode::WebLogin, Some(XAI_OAUTH2_ISSUER)).is_xai_auth());
-    }
-
-    #[test]
     fn is_session_auth_requires_first_party_for_external() {
-        use crate::XAI_OAUTH2_ISSUER;
         let with_issuer = |mode: AuthMode, issuer: Option<&str>| GrokAuth {
             oidc_issuer: issuer.map(str::to_owned),
             ..make_auth(mode)
@@ -454,15 +432,19 @@ mod tests {
         assert!(with_issuer(AuthMode::Oidc, None).is_session_auth());
         assert!(with_issuer(AuthMode::Oidc, Some("https://idp.acme.example")).is_session_auth());
 
-        // External qualifies only when first-party.
-        assert!(with_issuer(AuthMode::External, Some(XAI_OAUTH2_ISSUER)).is_session_auth());
+        // The first-party issuer stack was removed, so external-provider
+        // credentials never qualify as session auth.
+        assert!(!crate::is_xai_oauth2_issuer("https://api.deepseek.com"));
+        assert!(
+            !with_issuer(AuthMode::External, Some("https://api.deepseek.com")).is_session_auth()
+        );
         assert!(!with_issuer(AuthMode::External, None).is_session_auth());
         assert!(
             !with_issuer(AuthMode::External, Some("https://idp.acme.example")).is_session_auth()
         );
 
         // Plain API keys never do.
-        assert!(!with_issuer(AuthMode::ApiKey, Some(XAI_OAUTH2_ISSUER)).is_session_auth());
+        assert!(!with_issuer(AuthMode::ApiKey, Some("https://api.deepseek.com")).is_session_auth());
     }
 
     #[test]

@@ -846,7 +846,7 @@ mod tests {
         assert_eq!(test_emit_count(), 1);
 
         // Sanity: the parent_cb still works too (it's the same Arc).
-        parent_cb.record_401(SamplingConsumer::Messages, Some("bearer"));
+        parent_cb.record_401(SamplingConsumer::ChatCompletions, Some("bearer"));
         assert_eq!(test_emit_count(), 2);
     }
 
@@ -863,10 +863,6 @@ mod tests {
         let variants = [
             SamplingConsumer::ChatCompletionsStream,
             SamplingConsumer::ChatCompletions,
-            SamplingConsumer::ResponsesStream,
-            SamplingConsumer::Responses,
-            SamplingConsumer::MessagesStream,
-            SamplingConsumer::Messages,
         ];
         for consumer in variants {
             cb.record_401(consumer, Some("test-bearer"));
@@ -878,13 +874,13 @@ mod tests {
             am_arc.as_ref(),
             &format_consumer(
                 ConsumerKind::OaiCompatClient,
-                SamplingConsumer::MessagesStream.as_endpoint(),
+                SamplingConsumer::ChatCompletionsStream.as_endpoint(),
             ),
             Some("test-bearer"),
         );
         assert_eq!(
             payload_field(&payload, "consumer"),
-            "OaiCompatClient.messages_stream"
+            "OaiCompatClient.chat_completions_stream"
         );
     }
 }

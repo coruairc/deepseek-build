@@ -979,7 +979,9 @@ async fn fetch_login_device_flow(_cli_chat_proxy_base_url: &str) -> Option<bool>
 mod tests {
     use super::*;
     use crate::AuthMode;
-    use crate::config::XAI_OAUTH2_ISSUER;
+    /// `GrokComConfig::default()` no longer names a first-party issuer: with the
+    /// xAI OAuth stack removed its default oauth2 issuer is the empty string.
+    const DEFAULT_ISSUER: &str = "";
     use chrono::Utc;
     use std::path::Path;
     use xai_grok_shell_base::env::EnvVarGuard;
@@ -1036,7 +1038,7 @@ mod tests {
         GrokAuth {
             key: key.into(),
             auth_mode: AuthMode::Oidc,
-            oidc_issuer: Some(XAI_OAUTH2_ISSUER.to_string()),
+            oidc_issuer: Some(DEFAULT_ISSUER.to_string()),
             refresh_token: refresh.map(str::to_string),
             ..GrokAuth::test_default()
         }
@@ -1517,7 +1519,7 @@ mod tests {
     fn oidc_cred_with_matching_issuer_is_compatible() {
         let cfg = GrokComConfig::default();
         assert!(is_cached_credential_compatible(
-            &oidc_auth(XAI_OAUTH2_ISSUER),
+            &oidc_auth(DEFAULT_ISSUER),
             &cfg,
         ));
     }
@@ -1527,7 +1529,7 @@ mod tests {
         assert!(is_cached_credential_compatible(
             &GrokAuth {
                 auth_mode: AuthMode::External,
-                ..oidc_auth(XAI_OAUTH2_ISSUER)
+                ..oidc_auth(DEFAULT_ISSUER)
             },
             &cfg,
         ));
@@ -1568,7 +1570,7 @@ mod tests {
     fn cached_cred_with_wrong_team_is_incompatible() {
         let auth = GrokAuth {
             key: team_jwt("team-wrong"),
-            ..oidc_auth(XAI_OAUTH2_ISSUER)
+            ..oidc_auth(DEFAULT_ISSUER)
         };
         assert!(!is_cached_credential_compatible(
             &auth,
@@ -1580,7 +1582,7 @@ mod tests {
     fn cached_cred_with_matching_team_is_compatible() {
         let auth = GrokAuth {
             key: team_jwt("team-good"),
-            ..oidc_auth(XAI_OAUTH2_ISSUER)
+            ..oidc_auth(DEFAULT_ISSUER)
         };
         assert!(is_cached_credential_compatible(
             &auth,
@@ -1600,7 +1602,7 @@ mod tests {
             auth_mode: AuthMode::Oidc,
             expires_at: Some(Utc::now() + chrono::Duration::hours(1)),
             refresh_token: Some("new-rt".into()),
-            oidc_issuer: Some(XAI_OAUTH2_ISSUER.into()),
+            oidc_issuer: Some(DEFAULT_ISSUER.into()),
             oidc_client_id: Some("client-1".into()),
             ..GrokAuth::test_default()
         };
@@ -1611,7 +1613,7 @@ mod tests {
             auth_mode: AuthMode::Oidc,
             expires_at: Some(Utc::now() - chrono::Duration::hours(1)),
             refresh_token: Some("old-rt".into()),
-            oidc_issuer: Some(XAI_OAUTH2_ISSUER.into()),
+            oidc_issuer: Some(DEFAULT_ISSUER.into()),
             oidc_client_id: Some("client-1".into()),
             ..GrokAuth::test_default()
         };
@@ -1643,7 +1645,7 @@ mod tests {
             key: "still-valid".into(),
             auth_mode: AuthMode::Oidc,
             expires_at: Some(Utc::now() + chrono::Duration::hours(1)),
-            oidc_issuer: Some(XAI_OAUTH2_ISSUER.into()),
+            oidc_issuer: Some(DEFAULT_ISSUER.into()),
             oidc_client_id: Some("client-1".into()),
             ..GrokAuth::test_default()
         };
@@ -1675,7 +1677,7 @@ mod tests {
             auth_mode: AuthMode::Oidc,
             expires_at: Some(Utc::now() - chrono::Duration::hours(1)),
             refresh_token: Some("valid-refresh-token".into()),
-            oidc_issuer: Some(XAI_OAUTH2_ISSUER.into()),
+            oidc_issuer: Some(DEFAULT_ISSUER.into()),
             oidc_client_id: Some("client-1".into()),
             ..GrokAuth::test_default()
         };
