@@ -430,6 +430,55 @@ mod tests {
         );
     }
 
+    /// The system prompt and tool definitions must be byte-identical and in a stable order across
+    /// turns so the provider's prompt cache keeps hitting; only the conversational tail may change.
+    #[test]
+    fn system_and_tools_prefix_is_stable_across_turns() {
+        fn tool(name: &str) -> ToolSpec {
+            ToolSpec {
+                name: name.to_owned(),
+                description: Some(format!("{name} tool")),
+                parameters: serde_json::json!({"type": "object"}),
+            }
+        }
+        let tools = vec![tool("read_file"), tool("bash")];
+        let build = |tail: &str| {
+            ConversationRequest::from_items(vec![
+                ConversationItem::system("SYSTEM PROMPT"),
+                ConversationItem::user("first"),
+                ConversationItem::assistant_with_model("ok", "deepseek-v4-pro"),
+                ConversationItem::user(tail),
+            ])
+            .with_tools(tools.clone())
+        };
+
+        let a: ChatCompletionRequest = build("turn two").into();
+        let b: ChatCompletionRequest = build("a completely different later turn").into();
+
+        // System prompt is identical byte-for-byte.
+        assert_eq!(a.messages[0].text_content(), "SYSTEM PROMPT");
+        assert_eq!(
+            serde_json::to_string(&a.messages[0]).unwrap(),
+            serde_json::to_string(&b.messages[0]).unwrap()
+        );
+
+        // Tools are present and in the same order for both turns.
+        let names = |r: &ChatCompletionRequest| {
+            r.tools
+                .as_ref()
+                .unwrap()
+                .iter()
+                .map(|t| t.function.name.clone())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(names(&a), vec!["read_file", "bash"]);
+        assert_eq!(names(&b), vec!["read_file", "bash"]);
+        assert_eq!(
+            serde_json::to_string(a.tools.as_ref().unwrap()).unwrap(),
+            serde_json::to_string(b.tools.as_ref().unwrap()).unwrap()
+        );
+    }
+
     #[test]
     fn thinking_config_serializes_as_deepseek_expects() {
         assert_eq!(
