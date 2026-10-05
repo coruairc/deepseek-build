@@ -3574,8 +3574,10 @@ mod tests {
 
     #[test]
     fn hero_box_moves_up_only_once_the_flex_gap_is_gone() {
-        // 90x26: an 11-row box, a one-row flex gap and an 11-row prompt fit exactly (min_content_height 25)
-        let area = Rect::new(0, 0, 90, 26);
+        // 90x31: a 16-row box (the 12-row whale logo dominates), a one-row flex gap and an 11-row
+        // prompt fit (min_content_height is 30), leaving enough slack to center the one-line box
+        // and only two rows of clamp slack for the tall draft.
+        let area = Rect::new(0, 0, 90, 31);
         let input = |prompt_height| WelcomeLayoutInput {
             content_area: area,
             menu_height: 4,
@@ -3593,8 +3595,8 @@ mod tests {
 
     #[test]
     fn hero_box_yields_to_stacked_when_the_draft_needs_its_rows() {
-        // 26 rows fit the 11-row box beside a one-line prompt, not beside a 13-row draft
-        let area = Rect::new(0, 0, 90, 26);
+        // 32 rows fit the 16-row box beside a one-line prompt, not beside the 16-row draft cap
+        let area = Rect::new(0, 0, 90, 32);
         let input = |prompt_height| WelcomeLayoutInput {
             content_area: area,
             menu_height: 4,
@@ -3603,10 +3605,10 @@ mod tests {
         };
         assert!(WelcomeLayout::compute(input(None)).has_hero_box());
         let max = prompt_max_height(&input(None));
-        assert_eq!(max, 13);
+        assert_eq!(max, 16);
         let tall = WelcomeLayout::compute(input(Some(max)));
         assert!(!tall.has_hero_box());
-        // Compact logo 5 + gap 1 + menu 4 + flex 1 + prompt 13 + version 2 = 26 fits exactly
+        // Compact logo 8 + gap 1 + menu 4 + flex 1 + prompt 16 + version 2 = 32 fits exactly
         assert_eq!(tall.logo_tier, LogoTier::Compact);
         assert_places_every_row(&tall, &input(Some(max)));
     }
@@ -3623,12 +3625,14 @@ mod tests {
         };
         let one_line = WelcomeLayout::compute(input(None));
         assert_eq!(one_line.logo_tier, LogoTier::Compact);
-        // Compact logo 5 + gap 1 + menu 4 + flex 1 + prompt + version 2 = 13 + prompt: fits up to a 9-row draft
-        // The one-line layout has a 5-row flex gap, so the first 4 extra rows move nothing; the next two shift the column up
-        for extra in 1..=6u16 {
+        assert_eq!(one_line.logo.height, logo::compact_logo_line_count());
+        // Compact logo 8 + gap 1 + menu 4 + flex 1 + prompt + version 2 = 16 + prompt: fits up to a 6-row draft.
+        // The one-line layout has a 3-row flex gap; the top pad (1) absorbs the first two extra rows
+        // before the column shifts up. A 7-row draft overflows the compact column and forces the logo out.
+        for extra in 1..=3u16 {
             let layout = WelcomeLayout::compute(input(Some(PROMPT_HEIGHT + extra)));
             assert_eq!(layout.logo_tier, LogoTier::Compact, "{extra} extra rows");
-            if extra <= 4 {
+            if extra <= 2 {
                 assert_eq!(
                     layout.logo, one_line.logo,
                     "{extra} extra rows: the logo holds still"
@@ -3638,14 +3642,13 @@ mod tests {
                     "{extra} extra rows: the menu holds still"
                 );
             } else {
-                assert_eq!(
-                    layout.logo.y,
-                    one_line.logo.y - (extra - 4),
-                    "{extra} extra rows"
-                );
+                assert_eq!(layout.logo.y, one_line.logo.y - 1, "{extra} extra rows");
             }
             assert_places_every_row(&layout, &input(Some(PROMPT_HEIGHT + extra)));
         }
+        let overflowing = WelcomeLayout::compute(input(Some(PROMPT_HEIGHT + 4)));
+        assert_eq!(overflowing.logo_tier, LogoTier::Hidden);
+        assert_places_every_row(&overflowing, &input(Some(PROMPT_HEIGHT + 4)));
         let max = prompt_max_height(&input(None));
         assert_eq!(max, 11);
         let tall = WelcomeLayout::compute(input(Some(max)));
@@ -3653,10 +3656,10 @@ mod tests {
         assert_places_every_row(&tall, &input(Some(max)));
     }
 
-    /// 80x33: the full logo fits beside every draft up to the cap, so it never steps down.
+    /// 80x40: the full logo fits beside every draft up to the cap, so it never steps down.
     #[test]
     fn stacked_full_logo_survives_the_whole_draft_range_when_it_fits() {
-        let area = Rect::new(0, 0, 80, 33);
+        let area = Rect::new(0, 0, 80, 40);
         let input = |prompt_height| WelcomeLayoutInput {
             content_area: area,
             menu_height: 4,
@@ -3713,8 +3716,9 @@ mod tests {
     /// A draft that no longer fits beside the full logo steps the reserved rows AND the painted art down together.
     #[test]
     fn stacked_logo_art_matches_the_rows_reserved_for_a_tall_draft() {
-        // Full logo 7 + gap 1 + menu 4 + flex 1 + prompt + version 2 = 15 + prompt: 26 rows fit an 11-row draft under the full logo; 13 rows need the compact one
-        let area = Rect::new(0, 0, 60, 26);
+        // Full logo 12 + gap 1 + menu 4 + flex 1 + prompt + version 2 = 20 + prompt: 29 rows fit a
+        // 9-row draft under the full logo; a 13-row draft needs the compact one.
+        let area = Rect::new(0, 0, 60, 29);
         let input = |prompt_height| WelcomeLayoutInput {
             content_area: area,
             menu_height: 4,
@@ -3752,9 +3756,9 @@ mod tests {
     /// The consent screen passes 0 prompt rows and must sit exactly where it did before the composer could grow.
     #[test]
     fn zero_row_prompt_is_not_charged_for_a_one_line_box_when_centering() {
-        // 80x28, a 9-row body, a 2-row menu: full logo 7 + gap 1 + gap 1 + body 9 leaves 10 rows
-        // (10 - 4 - 2) / 3 = 1 with the zero-row box; a phantom 3-row box would give (10 - 4 - 5) / 3 = 0
-        let area = Rect::new(0, 0, 80, 28);
+        // 80x36, a 9-row body, a 2-row menu: full logo 12 + gap 1 + gap 1 + body 9 leaves 13 rows
+        // (13 - 4 - 0 - 2) / 3 = 2 with the zero-row box; a phantom 3-row box would give (13 - 4 - 5) / 3 = 1
+        let area = Rect::new(0, 0, 80, 36);
         let layout = WelcomeLayout::compute_stacked(WelcomeLayoutInput {
             content_area: area,
             error_height: 9,
@@ -3763,7 +3767,7 @@ mod tests {
             ..Default::default()
         });
         assert_eq!(layout.logo_tier, LogoTier::Full);
-        assert_eq!(layout.logo.y, 1);
+        assert_eq!(layout.logo.y, 2);
         assert_eq!(layout.prompt.height, 0);
     }
 
@@ -3835,9 +3839,9 @@ mod tests {
         let auth = AuthState::Done;
         let trust = TrustState::Done;
         let params = render_params(&auth, &trust, None);
-        // 60 cols keeps the stacked layout; the top bar and margins take 3 rows, so 29 rows give the 26-row content area
-        // whose full logo fits beside an 11-row draft but not the 13-row cap
-        let area = Rect::new(0, 0, 60, 29);
+        // 60 cols keeps the stacked layout; the top bar and margins take 3 rows, so 35 rows give the 32-row content area
+        // whose full logo fits beside a one-line draft but not the 16-row cap, where the compact art takes over
+        let area = Rect::new(0, 0, 60, 35);
         let mut picker = PickerState::default();
         let mut prompt = PromptWidget::new();
 
@@ -3848,7 +3852,7 @@ mod tests {
         prompt.set_text(&["line"; 30].join("\n"));
         let mut buf = Buffer::empty(area);
         let tall = render_welcome(area, &mut buf, &params, &mut prompt, &mut picker);
-        assert_eq!(tall.prompt_rect.map(|r| r.height), Some(13));
+        assert_eq!(tall.prompt_rect.map(|r| r.height), Some(16));
         assert_eq!(painted_logo_rows(&buf), logo::compact_logo_line_count());
     }
 
@@ -3928,10 +3932,10 @@ mod tests {
 
     #[test]
     fn hero_box_inactive_when_warning_would_overflow() {
-        // Regression: the box is forced to the full 7-row logo, so even a 3-item menu needs 11 box rows
-        // A startup warning (error_height = 2) pushes the total past height 19
+        // Regression: the box is forced to the full 12-row logo, so even a 3-item menu needs 16 box rows
+        // A startup warning (error_height = 2) pushes the total past height 22
         // The gate must therefore fall back to the stacked layout instead of overflowing by a row
-        let area = Rect::new(0, 0, 90, 19);
+        let area = Rect::new(0, 0, 90, 22);
         let with_warning = WelcomeLayout::compute(WelcomeLayoutInput {
             content_area: area,
             error_height: 2,
@@ -3981,13 +3985,13 @@ mod tests {
 
     #[test]
     fn hero_box_does_not_overflow_with_tall_menu() {
-        // A 6-item menu makes the box 2 rows taller than the default-4 box. The centering pad (derived
-        // from the default box) must be clamped. Otherwise the box gets pushed down and the version row
-        // clips at exactly min_content_height.
-        let area = Rect::new(0, 0, 100, 19);
+        // A 12-item menu makes the right column (and so the box) taller than the default-4 box. The
+        // centering pad (derived from the default box) must be clamped. Otherwise the box gets pushed
+        // down and the version row clips at exactly min_content_height.
+        let area = Rect::new(0, 0, 100, 25);
         let layout = WelcomeLayout::compute(WelcomeLayoutInput {
             content_area: area,
-            menu_height: 6,
+            menu_height: 12,
             ..Default::default()
         });
         assert!(
@@ -4010,9 +4014,9 @@ mod tests {
 
     #[test]
     fn hero_box_height_accounts_for_borders_and_padding() {
-        // At h >= 26, logo07 is used (7 lines). With menu_height=3:
-        // right_col = 2 + 0 + 0 + 1 + 3 = 6, inner = max(7, 6) = 7.
-        // hero_box_height = 2 (borders) + 2 (v_pad) + 7 = 11.
+        // The box always shows the full logo (12 lines). With menu_height=3:
+        // right_col = 1 + 1 + 0 + 0 + 1 + 3 = 6, inner = max(12, 6) = 12.
+        // hero_box_height = 2 (borders) + 2 (v_pad) + 12 = 16.
         let area = Rect::new(0, 0, 100, 50);
         let layout = WelcomeLayout::compute(WelcomeLayoutInput {
             content_area: area,
@@ -4020,7 +4024,8 @@ mod tests {
             ..Default::default()
         });
         assert!(layout.has_hero_box());
-        assert_eq!(layout.hero_box.height, 11);
+        let expected = 4 + logo::full_logo_line_count().max(6);
+        assert_eq!(layout.hero_box.height, expected);
     }
 
     #[test]
@@ -4095,10 +4100,9 @@ mod tests {
 
     #[test]
     fn hero_box_keeps_one_bottom_pad_below_actions() {
-        // With a changelog/announcement the subtitle is hidden, but there's still exactly one padding row between the actions and the bottom border
-        // (menu=4 + info=3 fills the inner, so the menu reaches the pad.)
+        // With a changelog the subtitle is hidden, but there's still exactly one padding row between the actions and the bottom border
+        // (menu=4 + info=5 fills the inner right column up to the full-logo height, so the menu reaches the pad.)
         let area = Rect::new(0, 0, 100, 50);
-        let a = long_ann();
         let no_info = WelcomeLayout::compute(WelcomeLayoutInput {
             content_area: area,
             menu_height: 4,
@@ -4107,7 +4111,7 @@ mod tests {
         let with_info = WelcomeLayout::compute(WelcomeLayoutInput {
             content_area: area,
             menu_height: 4,
-            announcement: Some(&a),
+            changelog_height: 5,
             ..Default::default()
         });
         assert_eq!(no_info.hero_subtitle.height, 1);

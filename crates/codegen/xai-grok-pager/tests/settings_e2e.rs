@@ -3666,16 +3666,18 @@ fn reset_overlay_dims_all_rows_except_target() {
     }
 }
 
-/// The settings modal renders a 1-line "Ask Grok" tip footer at the bottom of the content area. It shows in Browse,
+/// The settings modal renders a 1-line "Ask deepseek-build" tip footer at the bottom of the content area. It shows in Browse,
 /// FilterFocused, and PickingEnum modes (always-on tip). The footer is suppressed in `EditingValue` because the
 /// editor needs every line for input and validation.
 #[test]
 fn docs_footer_renders_for_browse_and_picker() {
     use ratatui::buffer::Buffer;
+    // Wide enough that the modal reaches its 110-col cap and the 88-cell LONG tip fits whole
+    // (the 70% width share would otherwise drop to the SHORT tip and hide the example phrasing).
     let area = Rect {
         x: 0,
         y: 0,
-        width: 120,
+        width: 160,
         height: 30,
     };
     for fixture_label in ["browse", "picker"] {
@@ -3700,8 +3702,8 @@ fn docs_footer_renders_for_browse_and_picker() {
             all_text.push('\n');
         }
         assert!(
-            all_text.contains("Ask Grok"),
-            "[{fixture_label}] docs footer (`Ask Grok`) must appear in the rendered modal:\n\
+            all_text.contains("Ask deepseek-build"),
+            "[{fixture_label}] docs footer (`Ask deepseek-build`) must appear in the rendered modal:\n\
              {all_text}"
         );
         assert!(
