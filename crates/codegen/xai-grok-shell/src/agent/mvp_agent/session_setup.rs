@@ -252,21 +252,6 @@ impl MvpAgent {
             trust_scan,
         })
     }
-    /// Start the relay mirror for a session and forward its connection state to the client.
-    /// Returns `None` when relay is not configured.
-    fn start_relay_sync(
-        &self,
-        session_id: &acp::SessionId,
-        session_info: &crate::session::info::Info,
-    ) -> Option<crate::relay::RelaySync> {
-        let sync = self.create_relay_sync(&session_id.0, session_info)?;
-        Self::spawn_relay_state_forwarder(
-            sync.subscribe_state(),
-            sync.session_id().to_owned(),
-            self.gateway.clone(),
-        );
-        Some(sync)
-    }
     /// Where generated titles are pushed, suppressed for ZDR teams.
     fn registry_title_sync(
         &self,
@@ -609,7 +594,6 @@ impl MvpAgent {
         );
         spawn_sampler_transport_prewarm(&session_sampling.base_url);
         let (summary_client, summary_model) = self.build_summary_client(&session_sampling)?;
-        let relay_sync = self.start_relay_sync(&session_id, &session_info);
         let model_id = match &session_initial_model {
             Some(chat_model) => acp::ModelId::new(chat_model.clone()),
             None => resolved_custom_model
@@ -630,7 +614,6 @@ impl MvpAgent {
                     sampling_client: summary_client,
                     storage_mode: self.storage_mode.get(),
                     auth_manager: Some(self.auth_manager.clone()),
-                    relay_sync,
                     gateway: Some(self.gateway.clone()),
                     session_summary_model: summary_model,
                     registry_title_sync,
@@ -1024,7 +1007,6 @@ impl MvpAgent {
             crate::sampling::derive_conversation_group_id(session_id.0.as_ref()),
         );
         let (summary_client, summary_model) = self.build_summary_client(&load_session_sampling)?;
-        let relay_sync = self.start_relay_sync(&session_id, &session_info);
         let mut persistence_timer = crate::instrumentation_timer!("session.load");
         persistence_timer.with_field("session_id", session_id.0.as_ref());
         persistence_timer.with_subphase(xai_grok_telemetry::startup::Subphase::SessionLoad);
@@ -1042,7 +1024,6 @@ impl MvpAgent {
                 sampling_client: summary_client,
                 storage_mode: self.storage_mode.get(),
                 auth_manager: Some(self.auth_manager.clone()),
-                relay_sync,
                 gateway: Some(self.gateway.clone()),
                 session_summary_model: summary_model,
                 registry_title_sync,

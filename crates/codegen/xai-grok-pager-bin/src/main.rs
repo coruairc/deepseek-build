@@ -32,12 +32,12 @@ use std::num::NonZeroUsize;
 use tokio_util::sync::CancellationToken;
 use xai_grok_pager::agent_runtime::AgentRuntime;
 use xai_grok_pager::app::{
-    AgentCmd, Command, EARLY_PREFETCH_WAIT, HeadlessArgs, LeaderMgmtArgs, LeaderMgmtCommand,
-    LeaderMode, LeaderTargetArgs, PagerArgs, resolve_use_leader, warn_leader_disabled_by_sandbox,
+    AgentCmd, Command, EARLY_PREFETCH_WAIT, LeaderMgmtArgs, LeaderMgmtCommand, LeaderMode,
+    LeaderTargetArgs, PagerArgs, resolve_use_leader, warn_leader_disabled_by_sandbox,
 };
 use xai_grok_pager::app::{WorkspaceMgmtArgs, WorkspaceMgmtCommand, WorkspaceStartArgs};
 use xai_grok_pager::client_identity::PAGER_CLIENT_VERSION;
-use xai_grok_shell::agent::app::{run_headless, run_leader};
+use xai_grok_shell::agent::app::run_leader;
 use xai_grok_shell::agent::config::Config as AgentConfig;
 use xai_grok_shell::leader::{
     ClientCapabilities, ClientMode, ControlCommand, LeaderCapabilities, LeaderDescriptor,
@@ -154,16 +154,6 @@ mod test_seam {
             return;
         }
         xai_grok_config::signed_policy::test_seam::set_embedded_keys(Some(&[(key_id, public_key)]));
-    }
-}
-/// Apply headless args to an existing config, only overriding values that are explicitly set.
-/// Unset args leave the environment defaults in place.
-fn apply_headless_args_to_config(args: &HeadlessArgs, config: &mut AgentConfig) {
-    if let Some(v) = &args.grok_ws_origin {
-        config.grok_com_config.grok_ws_origin = v.clone();
-    }
-    if let Some(v) = &args.grok_ws_url {
-        config.grok_com_config.grok_ws_url = v.clone();
     }
 }
 /// Apply global endpoint CLI args to an existing config.
@@ -1208,7 +1198,7 @@ async fn run_agent_command(
     let signal_flush = agent_command::spawn_signal_flush();
     if matches!(
         agent_args.mode,
-        Some(AgentCmd::Leader(_) | AgentCmd::Stdio | AgentCmd::Headless(_))
+        Some(AgentCmd::Leader(_) | AgentCmd::Stdio) | None
     ) {
         xai_grok_shell::agent::app::suppress_otel();
     }
@@ -1337,9 +1327,8 @@ async fn run_agent_command(
     use xai_grok_telemetry::process_info::LeaderMode::{Attached, Standalone};
     set_identity(ProcessIdentity {
         entrypoint: match &agent_args.mode {
-            Some(AgentCmd::Stdio) => Entrypoint::Embedded,
+            Some(AgentCmd::Stdio) | None => Entrypoint::Embedded,
             Some(AgentCmd::Leader(_)) => Entrypoint::Leader,
-            Some(AgentCmd::Headless(_)) | None => Entrypoint::Headless,
         },
         leader: if use_leader || matches!(agent_args.mode, Some(AgentCmd::Leader(_))) {
             Attached
@@ -1360,7 +1349,6 @@ async fn run_agent_command(
         };
         let mode = match &agent_args.mode {
             Some(AgentCmd::Stdio) => ClientMode::Stdio,
-            Some(AgentCmd::Headless(_)) | None => ClientMode::Headless,
             _ => ClientMode::Stdio,
         };
         let env_urls = xai_grok_shell::leader::LeaderEnvUrls::from(&agent_config.grok_com_config);
@@ -1535,19 +1523,8 @@ async fn run_agent_command(
         Some(AgentCmd::Stdio) => {
             agent_command::run_stdio(&runtime, &agent_config, signal_flush).await
         }
-        Some(AgentCmd::Headless(a)) => {
-            let mut agent_config = agent_config.clone();
-            apply_headless_args_to_config(&a, &mut agent_config);
-            run_headless(
-                &agent_config,
-                agent_args.reauthenticate,
-                agent_memory_config,
-            )
-            .await
-        }
         Some(AgentCmd::Leader(a)) => {
-            let mut agent_config = agent_config.clone();
-            apply_headless_args_to_config(&a.headless, &mut agent_config);
+            let agent_config = agent_config.clone();
             let leader_auto_update: Option<xai_grok_shell::agent::app::LeaderAutoUpdateConfig> =
                 None;
             let cursor_worker = None;
@@ -1555,7 +1532,6 @@ async fn run_agent_command(
                 &agent_config,
                 xai_grok_shell::agent::app::LeaderRunOptions {
                     no_exit_on_disconnect: a.no_exit_on_disconnect,
-                    relay_on_demand: a.relay_on_demand,
                     auto_update_check: leader_auto_update,
                     memory_config: agent_memory_config,
                     cursor_worker,
@@ -1564,14 +1540,8 @@ async fn run_agent_command(
             .await
         }
         None => {
-            let mut agent_config = agent_config.clone();
-            apply_headless_args_to_config(&agent_args.headless, &mut agent_config);
-            run_headless(
-                &agent_config,
-                agent_args.reauthenticate,
-                agent_memory_config,
-            )
-            .await
+            eprintln!("error: specify an agent subcommand: `agent stdio` or `agent leader`");
+            std::process::exit(2);
         }
     }
 }

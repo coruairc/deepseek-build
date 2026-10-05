@@ -42,10 +42,7 @@ impl Backend {
                 args.no_leader,
                 raw_config,
                 config.remote_settings.as_ref(),
-                matches!(
-                    &args.mode,
-                    None | Some(AgentCmd::Stdio) | Some(AgentCmd::Headless(_))
-                ),
+                matches!(&args.mode, None | Some(AgentCmd::Stdio)),
                 xai_grok_sandbox::requested_confinement_profile(),
             ),
         };
@@ -57,7 +54,7 @@ impl Backend {
     fn for_command(self, command: Option<&AgentCmd>) -> Backend {
         match command {
             Some(AgentCmd::Stdio) => self,
-            None | Some(AgentCmd::Headless(_) | AgentCmd::Leader(_)) => Backend::Shell,
+            None | Some(AgentCmd::Leader(_)) => Backend::Shell,
         }
     }
 }

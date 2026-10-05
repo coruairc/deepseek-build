@@ -14,7 +14,6 @@ pub mod mvp_agent;
 pub(crate) mod otel_gate;
 pub(crate) mod proxy;
 pub(crate) mod proxy_headers;
-pub mod relay;
 pub mod remote_config;
 pub(crate) mod restore_code;
 pub mod roster;
@@ -29,7 +28,6 @@ pub(crate) mod update_chunk_merge;
 
 pub use mvp_agent::MvpAgent;
 pub use mvp_agent::SessionSetupPhase;
-pub use relay::{RelayConfig, RelayHandle, spawn_relay_connection};
 
 #[cfg(test)]
 mod storage_client_tests;

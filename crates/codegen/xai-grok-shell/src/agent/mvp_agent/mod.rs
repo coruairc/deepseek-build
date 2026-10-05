@@ -693,7 +693,6 @@ pub struct MvpAgent {
     pub(crate) config_watcher_path_tx: Option<
         tokio::sync::mpsc::UnboundedSender<std::path::PathBuf>,
     >,
-    relay_sync_enabled: bool,
     /// LEADER-SAFE(init-once): set once per connection during initialize from client capabilities, read when spawning sessions.
     /// In leader mode, the last client to initialize overwrites previous settings.
     /// Same caveat as client_type; acceptable for non-safety-critical config.

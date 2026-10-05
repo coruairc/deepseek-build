@@ -2124,12 +2124,6 @@ impl MvpAgent {
         let storage_mode = cfg.storage_mode;
         let default_yolo_mode = cfg.default_yolo_mode;
         let default_auto_mode = cfg.default_auto_mode;
-        let tui_mode = cfg.mode == crate::agent::config::AgentMode::Tui;
-        let relay_config_enabled = crate::util::config::load_relay_sync_enabled_sync();
-        let has_xai_auth = auth_manager
-            .current_or_expired()
-            .is_some_and(|a| a.is_xai_auth());
-        let relay_sync_enabled = tui_mode && relay_config_enabled && has_xai_auth;
         let config_root = crate::config::load_effective_config().ok();
         let empty_config = toml::Value::Table(toml::map::Map::new());
         let raw = config_root.as_ref().unwrap_or(&empty_config);
@@ -2149,15 +2143,6 @@ impl MvpAgent {
             source = wt_source,
             "WORKTREE_CONFIG_SHELL: resolved worktree type at agent startup"
         );
-        if relay_sync_enabled {
-            tracing::info!("[grok] Relay sync: ENABLED");
-        } else if tui_mode && relay_config_enabled && !has_xai_auth {
-            tracing::info!("[grok] Relay sync: DISABLED (no auth - run 'grok login' first)");
-        } else if tui_mode && !relay_config_enabled {
-            tracing::debug!("Relay sync: DISABLED (not configured in config.toml or env)");
-        } else {
-            tracing::debug!("Relay sync: DISABLED (not in TUI mode)");
-        }
         if cfg.telemetry.trace_upload == Some(false) {
             tracing::info!(
                 enabled = false,
@@ -2215,7 +2200,6 @@ impl MvpAgent {
             feedback_trace_upload_grants: RefCell::new(VecDeque::new()),
             memory_config: RefCell::new(None),
             config_watcher_path_tx: None,
-            relay_sync_enabled,
             buffering_settings: RefCell::new(None),
             background_copy_context: BackgroundCopyContext::new(),
             codebase_indexes: Arc::new(
@@ -2738,84 +2722,6 @@ impl MvpAgent {
             Ok(Err(_)) => Err("channel closed"),
             Err(_) => Err("timeout"),
         }
-    }
-    /// RelaySync is only enabled when: Running in TUI interactive mode (cfg.enable_relay_sync)
-    /// Config file/env enables it ([relay] enabled or GROK_RELAY_SYNC_ENABLED)
-    /// User is authenticated
-    pub(super) fn create_relay_sync(
-        &self,
-        session_id: &str,
-        session_info: &crate::session::info::Info,
-    ) -> Option<crate::relay::RelaySync> {
-        if !self.relay_sync_enabled {
-            return None;
-        }
-        let auth = self.auth_manager.current_or_expired()?;
-        if auth.is_zdr_team() {
-            tracing::debug!("ZDR team: skipping relay sync");
-            return None;
-        }
-        let cfg = self.cfg.borrow();
-        let relay_config = crate::agent::relay::RelayConfig::for_session(
-            &auth,
-            &cfg.grok_com_config,
-            cfg.endpoints.alpha_test_key.clone(),
-            None,
-        )?;
-        let session_dir = crate::session::persistence::session_dir(session_info);
-        Some(
-            crate::relay::RelaySync::new(
-                session_id.to_string(),
-                relay_config,
-                crate::relay::AgentType::Tui,
-                Some(session_dir),
-                None,
-            ),
-        )
-    }
-    /// Spawn a local task that watches `ConnectionState` changes and forwards them to the TUI as `ExtNotification`s containing `RelaySyncStatus`.
-    pub(super) fn spawn_relay_state_forwarder(
-        mut state_rx: tokio::sync::watch::Receiver<crate::relay::ConnectionState>,
-        session_id: String,
-        gateway: GatewaySender,
-    ) {
-        use crate::extensions::notification::RelaySyncStatus;
-        let session_id = acp::SessionId::new(session_id);
-        tokio::task::spawn_local(async move {
-            while state_rx.changed().await.is_ok() {
-                let state = *state_rx.borrow_and_update();
-                let status = match state {
-                    crate::relay::ConnectionState::Connected => {
-                        let share_url = crate::relay::sync::build_share_url(
-                            &session_id.0,
-                        );
-                        RelaySyncStatus::Connected {
-                            share_url,
-                        }
-                    }
-                    crate::relay::ConnectionState::Disconnected => {
-                        RelaySyncStatus::Disconnected
-                    }
-                    crate::relay::ConnectionState::Connecting => {
-                        RelaySyncStatus::Reconnecting {
-                            attempt: 0,
-                        }
-                    }
-                };
-                let notification = SessionNotification {
-                    session_id: session_id.clone(),
-                    update: SessionUpdate::RelaySyncStatus(status),
-                    meta: None,
-                };
-                if let Ok(params) = serde_json::value::to_raw_value(&notification) {
-                    let ext_notification = acp::ExtNotification::new(
-                        "deepseek-build/session_notification",
-                        params.into(),
-                    );
-                    let _ = gateway.ext_notification(ext_notification).await;
-                }
-            }
-        });
     }
     /// Returns None if the session is not found.
     pub(crate) fn get_session_cwd(
