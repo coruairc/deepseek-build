@@ -2,7 +2,6 @@
 //!
 //! See the module-level docs in `mod.rs` for the architectural rationale.
 
-use crate::xai_grok_voice;
 use agent_client_protocol as acp;
 use xai_grok_shell::agent::config::{
     ConfigSource, Feature, FeatureConfigLayers, FeatureSources, Resolved, UiConfig,
@@ -369,9 +368,6 @@ pub struct PagerLocalSnapshot {
     /// `[toolset.ask_user_question].timeout_enabled` mirror (effective TOML merge, like `show_tips`).
     /// `None` means unset in TOML, so the default `true` applies.
     pub ask_user_question_timeout_enabled: Option<bool>,
-    /// Live `voice_config.language` at snapshot time.
-    /// Lets the modal show the language actually in effect when `[ui].voice_stt_language` is unset but an explicit `[voice].language` applies.
-    pub voice_stt_language: String,
     /// Mirrors `AppView::subagent_model_inheritance` at snapshot time.
     pub subagent_model_inheritance: FeatureOverrideState,
 }
@@ -396,7 +392,6 @@ impl Default for PagerLocalSnapshot {
             respect_manual_folds: crate::appearance::ScrollConfig::default().respect_manual_folds,
             auto_mode_gate: false,
             ask_user_question_timeout_enabled: None,
-            voice_stt_language: xai_grok_voice::STT_LANGUAGE_DEFAULT.to_string(),
             subagent_model_inheritance: FeatureOverrideState::new(
                 Feature::SubagentModelInheritance,
             ),
@@ -413,13 +408,6 @@ pub fn canonical_voice_capture_mode(value: Option<&str>) -> &'static str {
     } else {
         "hold"
     }
-}
-
-/// Canonicalize a raw voice STT language to a settings choice. Delegates to
-/// [`xai_grok_voice::canonicalize_stt_language`] so the pager and the STT client share one catalog. The catalog is
-/// the official deepseek-build STT languages plus the client-only `auto`.
-pub fn canonical_voice_stt_language(value: Option<&str>) -> &'static str {
-    xai_grok_voice::canonicalize_stt_language(value)
 }
 
 /// Canonicalize a raw hunk-tracker mode to a registry choice.
@@ -658,22 +646,6 @@ pub fn current_value_for(
         "screen_mode" => Some(SettingValue::Enum(canonical_screen_mode(
             ui.screen_mode.as_deref(),
         ))),
-        // SHELL: whether the Ctrl+Space or F8 chord is active; None means true
-        "voice_keybind_enabled" => {
-            Some(SettingValue::Bool(ui.voice_keybind_enabled.unwrap_or(true)))
-        }
-        // SHELL: canonicalized from `[ui].voice_capture_mode`; None falls back to "hold"
-        "voice_capture_mode" => Some(SettingValue::Enum(canonical_voice_capture_mode(
-            ui.voice_capture_mode.as_deref(),
-        ))),
-        // SHELL: canonicalized from `[ui].voice_stt_language`
-        // When unset, fall back to the live `voice_config.language` (snapshot mirror)
-        // That way an explicit `[voice].language` shows as the current choice instead of the registry default
-        "voice_stt_language" => Some(SettingValue::Enum(canonical_voice_stt_language(Some(
-            ui.voice_stt_language
-                .as_deref()
-                .unwrap_or(&pager.voice_stt_language),
-        )))),
         // Theme: unknown disk values fall through to the canonical default
         // auto_dark_theme and auto_light_theme additionally filter out "auto" (a circular reference)
         "theme" => Some(SettingValue::Enum(

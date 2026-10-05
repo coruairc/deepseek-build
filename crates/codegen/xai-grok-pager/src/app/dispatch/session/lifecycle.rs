@@ -786,7 +786,6 @@ fn configure_agent_composer(app: &mut AppView, agent_id: AgentId) {
     let undo = app.contextual_hints.undo;
     let plan_mode = app.contextual_hints.plan_mode;
     let recap = app.session_recap_available;
-    let voice = app.voice_mode_enabled;
     let usage_visible = app.usage_visible;
     let usage_command_visible = !app.has_external_auth_provider;
     let chat_mode = app.chat_mode;
@@ -802,7 +801,6 @@ fn configure_agent_composer(app: &mut AppView, agent_id: AgentId) {
     agent.prompt.adopt_command_tags(command_tags);
     agent.prompt.set_contextual_hints(undo, plan_mode);
     agent.set_session_recap_available(recap);
-    agent.set_voice_mode_available(voice);
     agent.apply_app_scoped_gates(
         usage_visible,
         usage_command_visible,
@@ -1266,7 +1264,6 @@ pub(in crate::app::dispatch) fn dispatch_new_worktree_session(
             .prompt
             .set_contextual_hints(app.contextual_hints.undo, app.contextual_hints.plan_mode);
         agent.set_session_recap_available(app.session_recap_available);
-        agent.set_voice_mode_available(app.voice_mode_enabled);
         agent.apply_app_scoped_gates(
             app.usage_visible,
             !app.has_external_auth_provider,

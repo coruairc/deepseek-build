@@ -2,7 +2,6 @@
 //!
 //! Warnings are data-only; the engine returns `Vec<TerminalWarning>` for downstream banner rendering.
 
-use crate::xai_grok_voice;
 use std::path::Path;
 
 use crate::notifications::protocol::NotificationProtocol;
@@ -44,50 +43,6 @@ pub use model::{
     VoiceFacts,
 };
 pub use view::{DiagnosticSnapshot, view};
-
-/// Passive input-device probe for `grok doctor` / `/doctor`. The TUI passes true only while voice mode is enabled.
-pub fn apply_voice_probe(report: &mut DiagnosticReport, emit_missing_issue: bool) {
-    if !xai_grok_voice::AUDIO_SUPPORTED {
-        return;
-    }
-    match xai_grok_voice::input_device_info() {
-        Ok(device) => {
-            report.facts.voice = Some(VoiceFacts::Device {
-                name: device.name,
-                detail: device.detail,
-            });
-        }
-        Err(err) => {
-            let error = match err {
-                xai_grok_voice::VoiceError::Config(message) => message,
-                other => other.to_string(),
-            };
-            report.facts.voice = Some(VoiceFacts::Missing {
-                error: error.clone(),
-            });
-            if emit_missing_issue {
-                report.findings.push(voice_missing_finding(error));
-            }
-        }
-    }
-}
-
-fn voice_missing_finding(error: String) -> DiagnosticFinding {
-    DiagnosticFinding {
-        id: VOICE_NO_INPUT_DEVICE_ID,
-        disposition: FindingDisposition::Issue,
-        message: format!("Voice dictation is unavailable: {error}"),
-        remediation: None,
-        automatic_remediation: None,
-        note: Some(
-            "Connect or select a microphone in your system sound settings. On Linux, install a \
-             supported audio recorder if none was found on PATH. Then run `/doctor` or `grok \
-             doctor` again. Doctor can't detect denied macOS microphone access when the system \
-             returns silence; follow the message shown when dictation fails."
-                .to_owned(),
-        ),
-    }
-}
 
 /// Broad classification of a startup warning.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

@@ -132,27 +132,12 @@ pub(super) fn handle_settings_update(notif: &acp::ExtNotification, app: &mut App
     // Tier before voice: the same payload may set "API Key" and voice_mode_enabled=false
     // Always recompute is_api_key_auth from the tier so a later free/paid stamp does not leave the API-key bypass or a hidden billing surface stuck
     if let Some(v) = update.subscription_tier_display {
-        let was_api_key = app.is_api_key_auth;
         let is_key = super::super::app_view::is_api_key_label(&v);
         app.is_api_key_auth = is_key;
         app.usage_visible = app.team_name.is_none() && app.consumer_account();
         app.sync_billing_surface_to_agents();
         app.subscription_tier = Some(v);
         app.apply_tier_restrictions();
-        // Leaving API Key for free/X Basic without a voice field drops the forced-on voice
-        // Paid tiers keep voice; remote settings may send voice_mode_enabled later.
-        if was_api_key
-            && !is_key
-            && update.voice_mode_enabled.is_none()
-            && app
-                .subscription_tier
-                .as_deref()
-                .is_some_and(xai_grok_shell::tier::is_restricted_tier_name)
-        {
-            app.voice_reset();
-            app.voice_ui_active = false;
-            app.apply_voice_mode_enabled(false);
-        }
     }
     if let Some(remote_v) = update.dock_enabled {
         crate::views::dock::set_enabled(crate::app::resolve_dock_enabled(Some(remote_v)));
@@ -177,16 +162,6 @@ pub(super) fn handle_settings_update(notif: &acp::ExtNotification, app: &mut App
                 crate::theme::Theme::apply_kind(fallback);
             }
         }
-    }
-    if let Some(remote_v) = update.voice_mode_enabled {
-        let v = crate::app::resolve_voice_mode_live(Some(remote_v), app.is_api_key_auth);
-        if !v {
-            app.voice_reset();
-            app.voice_ui_active = false;
-        }
-        app.apply_voice_mode_enabled(v);
-    } else {
-        app.ensure_voice_for_api_key();
     }
     // TODO: extract resolve_session_picker_grouped helper (duplicates event_loop.rs:143-160)
     // The env var beats config, which beats remote (mirrors event_loop.rs startup)

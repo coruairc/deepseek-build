@@ -4,7 +4,6 @@ use super::ui::{refresh_open_settings_modals, save_success_toast};
 use crate::app::actions::{Effect, ModelChoice};
 use crate::app::app_view::{ActiveView, AppView};
 use crate::settings::PendingWrite;
-use crate::xai_grok_voice;
 use agent_client_protocol as acp;
 
 /// Set multiline input mode: swap Enter and Shift+Enter behavior.
@@ -156,125 +155,6 @@ pub(in crate::app::dispatch) fn set_hunk_tracker_mode(
     }]
 }
 
-/// Mirror the canonical voice-capture mode into `app.current_ui` so `current_value_for` stays in sync.
-/// Called by the commit path AND by [`apply_setting_rollback`](super::ui::apply_setting_rollback).
-pub(super) fn set_voice_capture_mode_inner(app: &mut AppView, canonical: &str) {
-    app.current_ui.voice_capture_mode = Some(canonical.to_string());
-}
-
-/// Set the voice-capture mode (`toggle` | `hold`).
-/// SHELL-owned; persists to `[ui].voice_capture_mode` via `Effect::PersistSetting`.
-/// The event loop reads the live value, so it takes effect on the next Ctrl+Space press (no restart).
-pub(in crate::app::dispatch) fn set_voice_capture_mode(
-    app: &mut AppView,
-    value: String,
-) -> Vec<Effect> {
-    let canonical = crate::settings::canonical_voice_capture_mode(Some(&value));
-    let prev =
-        crate::settings::canonical_voice_capture_mode(app.current_ui.voice_capture_mode.as_deref());
-    if prev == canonical {
-        return vec![];
-    }
-    set_voice_capture_mode_inner(app, canonical);
-    refresh_open_settings_modals(app);
-    tracing::info!(target: "settings", key = "voice_capture_mode", value = canonical, "setting changed");
-    app.show_toast(&format!("\u{2713} Voice capture: {canonical}"));
-    vec![Effect::PersistSetting {
-        key: "voice_capture_mode",
-        value: crate::settings::SettingValue::Enum(canonical),
-        rollback_value: crate::settings::SettingValue::Enum(prev),
-    }]
-}
-
-/// Mirror the voice-shortcut gate into `app.current_ui` and the process-global mirror.
-/// The event-loop chord intercept reads the former live; key routing and view code without an `AppView` read the latter.
-/// Called by the commit path AND by [`apply_setting_rollback`](super::ui::apply_setting_rollback).
-pub(super) fn set_voice_keybind_enabled_inner(app: &mut AppView, new: bool) {
-    app.current_ui.voice_keybind_enabled = Some(new);
-    crate::app::VOICE_KEYBIND_ENABLED.store(new, std::sync::atomic::Ordering::Release);
-}
-
-/// Enable/disable the Ctrl+Space / F8 voice shortcut.
-/// SHELL-owned; persists to `[ui].voice_keybind_enabled` via `Effect::PersistSetting`.
-/// Only the chord is gated: `/voice`, Esc while listening, and the recording-row `[stop]` keep working.
-pub(in crate::app::dispatch) fn set_voice_keybind_enabled(
-    app: &mut AppView,
-    new: bool,
-) -> Vec<Effect> {
-    let prev_state = app.current_ui.voice_keybind_enabled;
-    let prev_effective = prev_state.unwrap_or(true);
-    if prev_effective == new && prev_state.is_some() {
-        return vec![];
-    }
-    set_voice_keybind_enabled_inner(app, new);
-    refresh_open_settings_modals(app);
-    tracing::info!(target: "settings", key = "voice_keybind_enabled", value = new, "setting changed");
-    app.show_toast(&save_success_toast("Voice shortcut", new));
-    vec![Effect::PersistSetting {
-        key: "voice_keybind_enabled",
-        value: crate::settings::SettingValue::Bool(new),
-        rollback_value: crate::settings::SettingValue::Bool(prev_effective),
-    }]
-}
-
-/// Mirror the STT language preference into `app.current_ui` and `app.voice_config.language`.
-/// The value may be the client-only `"auto"` sentinel; the voice crate resolves it at connect time.
-/// Called by the commit path AND by [`apply_setting_rollback`].
-pub(super) fn set_voice_stt_language_inner(app: &mut AppView, canonical: &str) {
-    // Whether the effective language actually changes
-    // Re-pinning an unset or non-canonical `[ui]` mirror to the language already in effect must not recycle the pipeline
-    // That would cut off active dictation for nothing
-    let language_changed =
-        crate::settings::canonical_voice_stt_language(Some(&app.voice_config.language))
-            != canonical;
-    app.current_ui.voice_stt_language = Some(canonical.to_string());
-    // Store the preference, not the resolved wire code, so `auto` re-resolves from the locale on each STT connect
-    app.voice_config.language = canonical.to_string();
-    // A running pipeline holds the VoiceConfig it was spawned with Shut it down so the next capture starts one with the new language (the event loop respawns lazily whenever `voice_cmd_tx` is None)
-    // Shut it down so the next capture starts one with the new language (the event loop respawns lazily whenever `voice_cmd_tx` is None)
-    // Tear down any in-flight session first so the mic indicator clears immediately and the pipeline's channel-close is not misreported as "pipeline ended"
-    if language_changed && let Some(tx) = app.voice_cmd_tx.take() {
-        app.voice_reset();
-        let _ = tx.try_send(xai_grok_voice::VoiceCommand::Shutdown);
-    }
-}
-
-/// Set the voice STT language.
-/// SHELL-owned; persists to `[ui].voice_stt_language` via `Effect::PersistSetting`.
-/// Live-applied to `voice_config` so the next capture picks it up (no restart).
-pub(in crate::app::dispatch) fn set_voice_stt_language(
-    app: &mut AppView,
-    value: String,
-) -> Vec<Effect> {
-    let canonical = crate::settings::canonical_voice_stt_language(Some(&value));
-    // `prev` is the live effective language so a failed persist rolls back to what's actually in effect
-    let prev = crate::settings::canonical_voice_stt_language(Some(&app.voice_config.language));
-    if prev == canonical && app.current_ui.voice_stt_language.as_deref() == Some(canonical) {
-        return vec![];
-    }
-    set_voice_stt_language_inner(app, canonical);
-    refresh_open_settings_modals(app);
-    let effective = xai_grok_voice::language_for_api(canonical);
-    tracing::info!(
-        target: "settings",
-        key = "voice_stt_language",
-        value = canonical,
-        effective,
-        "setting changed"
-    );
-    let toast = if canonical == xai_grok_voice::STT_LANGUAGE_AUTO {
-        format!("\u{2713} Voice language: System ({effective})")
-    } else {
-        let name = xai_grok_voice::stt_language_by_code(canonical).map_or(canonical, |l| l.name);
-        format!("\u{2713} Voice language: {name}")
-    };
-    app.show_toast(&toast);
-    vec![Effect::PersistSetting {
-        key: "voice_stt_language",
-        value: crate::settings::SettingValue::Enum(canonical),
-        rollback_value: crate::settings::SettingValue::Enum(prev),
-    }]
-}
 
 /// State-only mutation for `vim_mode`.
 /// Propagates to every in-process agent so background subagents and side panes pick up the change without restart.

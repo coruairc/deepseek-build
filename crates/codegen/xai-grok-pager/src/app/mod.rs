@@ -47,7 +47,6 @@ pub(crate) mod status_line;
 mod status_line_policy;
 pub mod subagent;
 pub mod subscription;
-pub(crate) mod voice_state;
 pub(crate) mod worktree_session;
 pub(crate) use dispatch::dashboard_stop_readiness;
 /// Display-refresh probe + motion cadence + terminal telemetry at startup.
@@ -193,9 +192,6 @@ pub(crate) static MOUSE_REPORTING_TOGGLE_ENABLED: AtomicBool = AtomicBool::new(f
 pub(crate) fn mouse_reporting_toggle_enabled() -> bool {
     MOUSE_REPORTING_TOGGLE_ENABLED.load(Ordering::Acquire)
 }
-/// Process-global voice gate for view code without an `AppView`.
-/// Written only by [`crate::app::app_view::AppView::apply_voice_mode_enabled`].
-pub(crate) static VOICE_MODE_ENABLED: AtomicBool = AtomicBool::new(false);
 fn dock_flag_in(layer: &toml::Value) -> Option<bool> {
     layer
         .get("features")?
@@ -244,130 +240,6 @@ pub(crate) fn resolve_terminal_theme_enabled(remote: Option<bool>) -> bool {
     sources.config = terminal_theme_config_value();
     sources.remote = remote;
     Feature::TerminalTheme.resolve(sources).value
-}
-pub(crate) fn voice_mode_enabled() -> bool {
-    VOICE_MODE_ENABLED.load(Ordering::Acquire)
-}
-/// Test helper for the process-global voice gate.
-pub fn set_voice_mode_enabled_for_test(on: bool) {
-    VOICE_MODE_ENABLED.store(on, Ordering::Release);
-}
-/// Process-global gate for the Ctrl+Space / F8 voice chord, for key-routing and view code without an `AppView` (`resolve_action`, the cheatsheet).
-/// Defaults ON; seeded at startup from `[ui].voice_keybind_enabled` and updated live by the settings setter.
-/// Unlike [`VOICE_MODE_ENABLED`] it only silences the keybinding; `/voice` and the other voice entry points stay up.
-pub(crate) static VOICE_KEYBIND_ENABLED: AtomicBool = AtomicBool::new(true);
-pub(crate) fn voice_keybind_enabled() -> bool {
-    VOICE_KEYBIND_ENABLED.load(Ordering::Acquire)
-}
-/// Test helper for the process-global voice-keybind gate.
-pub fn set_voice_keybind_enabled_for_test(on: bool) {
-    VOICE_KEYBIND_ENABLED.store(on, Ordering::Release);
-}
-fn voice_mode_in(layer: &toml::Value) -> Option<bool> {
-    layer
-        .get("features")?
-        .get(xai_grok_shell::agent::config::Feature::VoiceMode.key())?
-        .as_bool()
-}
-/// `[features] voice_mode` from merged `requirements.toml`.
-pub(crate) fn voice_mode_requirement_pin() -> Option<bool> {
-    voice_mode_in(&xai_grok_config::load_merged_requirements()?)
-}
-/// `[features] voice_mode` from effective config (user + managed).
-pub(crate) fn voice_mode_config_value() -> Option<bool> {
-    voice_mode_in(&xai_grok_shell::config::load_effective_config().ok()?)
-}
-/// The registry owns the precedence and the default.
-/// One rule has no row there: with `is_api_key`, a remote-only off is forced back on.
-/// A requirement, env, or config `false` still wins, and so does a distribution without voice.
-pub(crate) fn resolve_voice_mode_enabled(
-    requirement: Option<bool>,
-    config: Option<bool>,
-    remote: Option<bool>,
-    is_api_key: bool,
-) -> bool {
-    resolve_voice_mode_enabled_as(
-        xai_grok_config::Distribution::current(),
-        requirement,
-        config,
-        remote,
-        is_api_key,
-    )
-}
-fn resolve_voice_mode_enabled_as(
-    distribution: xai_grok_config::Distribution,
-    requirement: Option<bool>,
-    config: Option<bool>,
-    remote: Option<bool>,
-    is_api_key: bool,
-) -> bool {
-    use xai_grok_shell::agent::config::{ConfigSource, Feature, FeatureSources};
-    if !distribution.allows(xai_grok_config::Capability::Voice) {
-        return false;
-    }
-    let resolved = Feature::VoiceMode.resolve(FeatureSources {
-        pin: requirement,
-        config,
-        remote,
-        ..FeatureSources::from_process_env(Feature::VoiceMode)
-    });
-    if resolved.value {
-        return true;
-    }
-    is_api_key && resolved.source == ConfigSource::Remote
-}
-/// Resolve from live policy, env, remote, and API-key state.
-pub(crate) fn resolve_voice_mode_live(remote: Option<bool>, is_api_key: bool) -> bool {
-    resolve_voice_mode_enabled(
-        voice_mode_requirement_pin(),
-        voice_mode_config_value(),
-        remote,
-        is_api_key,
-    )
-}
-#[cfg(test)]
-mod voice_gate_tests {
-    use super::{resolve_voice_mode_enabled, resolve_voice_mode_enabled_as};
-    use xai_grok_config::Distribution;
-    #[test]
-    fn a_distribution_without_voice_outranks_every_tier_and_the_api_key_force_on() {
-        for remote in [None, Some(false), Some(true)] {
-            assert!(!resolve_voice_mode_enabled_as(
-                Distribution::withholding(&[xai_grok_config::Capability::Voice]),
-                Some(true),
-                Some(true),
-                remote,
-                true
-            ));
-        }
-        assert!(resolve_voice_mode_enabled_as(
-            Distribution::STOCK,
-            None,
-            None,
-            Some(false),
-            true
-        ));
-    }
-    #[test]
-    fn api_key_force_on_over_remote_kill_only() {
-        assert!(resolve_voice_mode_enabled(None, None, Some(false), true));
-        assert!(!resolve_voice_mode_enabled(None, None, Some(false), false));
-    }
-    #[test]
-    fn policy_false_outranks_api_key_force_on() {
-        assert!(!resolve_voice_mode_enabled(
-            Some(false),
-            Some(true),
-            Some(true),
-            true
-        ));
-        assert!(!resolve_voice_mode_enabled(
-            None,
-            Some(false),
-            Some(false),
-            true
-        ));
-    }
 }
 /// Sticky banner shown while mouse reporting is off, telling the user how to turn it back on.
 /// `Ctrl+R` only works from scrollback, so the prompt-focused variant points at `/toggle-mouse-reporting` (which toggles from any pane).

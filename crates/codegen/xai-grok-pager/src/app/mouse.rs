@@ -216,9 +216,6 @@ impl AgentView {
                 {
                     return InputOutcome::Action(Action::SubmitFollowUp(text));
                 }
-                if self.hit_voice_stop_button.contains(mouse.column, mouse.row) {
-                    return InputOutcome::Action(Action::VoiceToggle);
-                }
                 if self.hit_upgrade_cta.contains(mouse.column, mouse.row)
                     && !self.pos_occluded(mouse.column, mouse.row)
                 {

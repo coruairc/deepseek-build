@@ -4,7 +4,7 @@
 //! The event loop only handles IO: terminal events, the ACP channel, spawned task results, animation ticks, and hot-reloadable config changes.
 use super::actions::{Action, Effect, TaskResult};
 use super::app_view::{
-    ActiveView, AppView, AuthState, InputOutcome, PasteProvenance, TrustState, VoiceState,
+    ActiveView, AppView, AuthState, InputOutcome, PasteProvenance, TrustState,
 };
 use super::session_load_barrier::{
     AcpDrainArm, SessionLoadAcpTick, SessionLoadBarrier, session_load_agent_id,
@@ -16,7 +16,6 @@ use crate::client_identity::{PAGER_CLIENT_TYPE, PAGER_CLIENT_VERSION};
 use crate::render::draw::{EscapeWriter, WriterDrain, WriterEvent};
 use crate::theme::system_appearance::{self, SystemAppearanceWatcher};
 use crate::theme::{Theme, ThemeKind, cache as theme_cache};
-use crate::xai_grok_voice;
 use agent_client_protocol as acp;
 use anyhow::Context as _;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -1308,15 +1307,6 @@ pub(crate) async fn run(
             app.sync_billing_surface_to_agents();
         }
     }
-    let voice_mode_enabled = crate::app::resolve_voice_mode_live(
-        remote_settings.as_ref().and_then(|s| s.voice_mode_enabled),
-        app.is_api_key_auth,
-    );
-    if !voice_mode_enabled {
-        app.voice_reset();
-        app.voice_ui_active = false;
-    }
-    app.apply_voice_mode_enabled(voice_mode_enabled);
     crate::views::dock::set_enabled(crate::app::resolve_dock_enabled(
         remote_settings.as_ref().and_then(|s| s.dock_enabled),
     ));
@@ -1355,16 +1345,7 @@ pub(crate) async fn run(
             crate::notifications::load_notification_config(raw),
             app.escape_writer.clone(),
         );
-        if let Some(table) = raw.as_table() {
-            let endpoints_base =
-                xai_grok_shell::agent::config::EndpointsConfig::from_config_value(raw)
-                    .xai_api_base_url;
-            app.voice_config =
-                xai_grok_voice::VoiceConfig::from_config_table(table, Some(&endpoints_base));
-        }
     }
-    app.voice_config.client_identifier = crate::client_identity::HEADLESS_CLIENT_TYPE.to_string();
-    app.voice_config.user_agent = crate::client_identity::client_user_agent();
     app.zdr_access_enabled = xai_grok_shell::util::config::resolve_zdr_access_enabled(
         requirements.as_ref(),
         user_config.as_ref(),
@@ -1539,14 +1520,6 @@ pub(crate) async fn run(
     app.current_ui.permission_mode = Some(display_mode.to_string());
     super::dispatch::downgrade_displayed_auto_if_gated(&mut app);
     app.sync_permission_mode_slash_gate();
-    if let Some(ref pref) = app.current_ui.voice_stt_language {
-        app.voice_config.language =
-            crate::settings::canonical_voice_stt_language(Some(pref)).to_string();
-    }
-    crate::app::VOICE_KEYBIND_ENABLED.store(
-        app.current_ui.voice_keybind_enabled.unwrap_or(true),
-        std::sync::atomic::Ordering::Release,
-    );
     let resolved_hints = xai_grok_shell::util::config::resolve_contextual_hints(
         &app.current_ui.contextual_hints,
         app.remote_contextual_hints.as_ref(),
@@ -1624,8 +1597,6 @@ pub(crate) async fn run(
     let mut acp_peek: Option<AcpClientMessage> = None;
     let (progress_tx, mut progress_rx) =
         tokio::sync::mpsc::unbounded_channel::<effects::RestoreProgressMsg>();
-    let mut voice_rx = None::<tokio::sync::mpsc::Receiver<xai_grok_voice::TaggedVoiceEvent>>;
-    let voice_auth_factory = connection.auth_manager.clone();
     let mut tick_interval = tick_interval;
     let mut animation_tick_at: Option<Instant> = None;
     let ack_deadlines = crate::app::prompt_ack::PromptAckDeadlines::from_process_env();
@@ -1913,42 +1884,6 @@ pub(crate) async fn run(
         ) {
             break;
         }
-        if let VoiceState::ColdStart { hold, target } = app.voice_state {
-            if app.voice_cmd_tx.is_none() && app.voice_can_start_pipeline() {
-                let stt_routes = crate::voice::build_stt_routes(voice_auth_factory.clone());
-                app.voice_auth = Some(stt_routes.auth.clone());
-                let (cmd_tx, cmd_rx) = tokio::sync::mpsc::channel(32);
-                let (event_tx, event_rx) = tokio::sync::mpsc::channel(128);
-                let voice_config = app.voice_config.clone();
-                tokio::spawn(xai_grok_voice::run_voice_pipeline(
-                    voice_config,
-                    stt_routes,
-                    cmd_rx,
-                    event_tx,
-                ));
-                app.voice_cmd_tx = Some(cmd_tx);
-                voice_rx = Some(event_rx);
-                tracing::info!("voice pipeline started (/voice or Ctrl+Space)");
-                if matches!(
-                    app.active_view,
-                    ActiveView::Agent(_) | ActiveView::AgentDashboard
-                ) {
-                    app.voice_begin_recording(target, hold);
-                } else {
-                    app.voice_reset();
-                    app.voice_ui_active = false;
-                }
-            } else if app.voice_cmd_tx.is_none() {
-                app.voice_reset();
-                app.voice_ui_active = false;
-                app.show_toast("Voice could not start. Restart deepseek-build.");
-            } else {
-                app.voice_reset();
-            }
-            presenter.request_presentation(&mut app, terminal, false);
-        }
-        app.enforce_voice_session_bound();
-        app.voice_expire_outstanding_clip(std::time::Instant::now());
         let want_gboom_keyboard = app.gboom_active();
         if want_gboom_keyboard {
             if !gboom_keyboard_pushed {
@@ -2851,46 +2786,6 @@ pub(crate) async fn run(
                 presenter.request(false);
             }
 
-            // A burst can backlog the 128-slot channel, so `voice_rx` is effectively always-ready
-            // Kept last, it can never starve cancellation, ACP, task/progress completions, keyboard input, or the render/animation/poll timers
-            // Voice is only serviced when nothing else is pending
-            ev = async {
-                match voice_rx.as_mut() {
-                    Some(rx) => rx.recv().await,
-                    None => std::future::pending().await,
-                }
-            } => {
-                match ev {
-                    Some(ev) => {
-                        let needs_draw = crate::voice::handle_tagged_voice_event(&mut app, ev);
-                        if needs_draw {
-                            schedule_tick(&mut animation_tick_at, &app, tick_interval);
-                            let now = Instant::now();
-                            if presenter.request_throttled(now, min_draw_interval) {
-                                app.update_notifications();
-                            }
-                        }
-                        if !app.pending_effects.is_empty() {
-                            let effs = std::mem::take(&mut app.pending_effects);
-                            if process_effects(effs, &mut tasks, &mut app, &progress_tx) {
-                                break;
-                            }
-                        }
-                    }
-                    // Closed channel: revert to pending() (avoid hot-loop on None).
-                    None => {
-                        voice_rx = None;
-                        let was_listening = app.voice_listening();
-                        app.voice_cmd_tx = None;
-                        // Pipeline is gone: drop any session/interim entirely.
-                        app.voice_reset();
-                        if was_listening {
-                            app.show_toast("Voice stopped unexpectedly. Try again.");
-                        }
-                        presenter.request(false);
-                    }
-                }
-            }
         }
         if let Some(window) = stall_rollup.take_if_elapsed(std::time::Instant::now()) {
             emit_event_loop_stall(window);
@@ -3261,45 +3156,6 @@ async fn drain_and_process(
             }
             _ => {}
         }
-        if let Event::Key(ke) = ev
-            && is_voice_chord(ke)
-            && !app.voice_hold_owned()
-            && !app.voice_listening()
-            && !app.voice_state.is_pending_cold_start()
-            && active_feedback_modal_open(app)
-        {
-            return false;
-        }
-        if let Event::Key(ke) = ev
-            && app.voice_mode_enabled
-            && xai_grok_voice::AUDIO_SUPPORTED
-            && is_voice_chord(ke)
-            && voice_chord_claims_event(
-                ke.kind,
-                app.current_ui.voice_keybind_enabled.unwrap_or(true),
-                app.voice_hold_owned(),
-            )
-        {
-            let hold_mode = crate::settings::canonical_voice_capture_mode(
-                app.current_ui.voice_capture_mode.as_deref(),
-            ) == "hold";
-            let action = voice_chord_action(
-                hold_mode,
-                crate::app::kitty_releases_reported(),
-                ke.kind,
-                app.voice_listening(),
-                app.voice_hold_owned(),
-            );
-            if let Some(action) = action {
-                let effs = dispatch::dispatch(action, app);
-                if process_effects(effs, tasks, app, progress_tx) {
-                    return true;
-                }
-                needs_draw = true;
-                had_non_resize_change = true;
-            }
-            return false;
-        }
         let is_resize = matches!(ev, Event::Resize(_, _));
         let _rescue_guard = routed
             .is_startup_replay
@@ -3490,51 +3346,6 @@ fn is_paste_lf(ev: &Event) -> bool {
 fn active_feedback_modal_open(app: &AppView) -> bool {
     matches!(app.active_view, ActiveView::Agent(id) if app.agents.get(&id).is_some_and(|agent| agent.feedback_modal.is_some()))
 }
-/// Map a voice-chord key event to its action (pure, so it's unit-testable).
-/// Hold mode is press-to-record / release-to-stop, but only a hold-*owned* session stops on release.
-/// A `/voice`/toggle session (not hold-owned) has no release of its own, so a press toggles it off.
-fn voice_chord_action(
-    hold_mode: bool,
-    releases_reported: bool,
-    kind: KeyEventKind,
-    listening: bool,
-    hold_owned: bool,
-) -> Option<crate::app::actions::Action> {
-    use crate::app::actions::Action;
-    if hold_mode && releases_reported {
-        match kind {
-            KeyEventKind::Press if !listening => Some(Action::EnableVoiceMode),
-            KeyEventKind::Press if !hold_owned => Some(Action::VoiceToggle),
-            KeyEventKind::Release => Some(Action::VoiceStop),
-            _ => None,
-        }
-    } else if kind == KeyEventKind::Press {
-        Some(Action::VoiceToggle)
-    } else {
-        None
-    }
-}
-/// Whether the event-loop intercept claims a voice-chord key event (pure for unit tests).
-/// Its release only ever stops capture, so flipping the setting off mid-hold must not orphan it and wedge the mic open.
-/// Outside a hold, a bare release is never ours (normal typing) and a press honors the setting.
-fn voice_chord_claims_event(kind: KeyEventKind, keybind_enabled: bool, hold_owned: bool) -> bool {
-    if hold_owned {
-        return true;
-    }
-    kind != KeyEventKind::Release && keybind_enabled
-}
-/// The voice-capture chord: **Ctrl+Space** or **F8**.
-/// A press needs the exact chord (matching the registry, so Shift+F8 / Ctrl+Alt+Space don't fire).
-/// Callers gate release handling on an owning hold session, so a stray bare release is a no-op.
-fn is_voice_chord(ke: &KeyEvent) -> bool {
-    match ke.kind {
-        KeyEventKind::Release => matches!(ke.code, KeyCode::Char(' ') | KeyCode::F(8)),
-        _ => {
-            (ke.code == KeyCode::Char(' ') && ke.modifiers == KeyModifiers::CONTROL)
-                || (ke.code == KeyCode::F(8) && ke.modifiers.is_empty())
-        }
-    }
-}
 /// On terminals without bracketed paste, pasted text arrives as individual key events.
 /// Enter keys mid-run would otherwise trigger "submit prompt" and split multi-line pastes.
 /// **Windows only:** `>= PATH_COALESCE_THRESHOLD` events AND the assembled text starts with a drag-drop-style path anchor.
@@ -3577,8 +3388,7 @@ fn coalesce_live_keys(events: Vec<TimedInputEvent>) -> Vec<TimedInputEvent> {
     let events: Vec<TimedInputEvent> = events
         .into_iter()
         .filter(|ev| {
-            !matches!(&ev.event, Event::Key(ke)
-                if ke.kind == KeyEventKind::Release && !is_voice_chord(ke))
+            !matches!(&ev.event, Event::Key(ke) if ke.kind == KeyEventKind::Release)
         })
         .collect();
     let mut result = Vec::with_capacity(events.len());

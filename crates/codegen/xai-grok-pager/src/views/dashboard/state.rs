@@ -1236,11 +1236,6 @@ impl DashboardState {
         self.peek_reply.set_recap_visible(visible);
     }
 
-    pub(crate) fn set_voice_visible(&mut self, visible: bool) {
-        self.dispatch.set_voice_visible(visible);
-        self.peek_reply.set_voice_visible(visible);
-    }
-
     /// Gate `/auto` on both dashboard prompt registries (dispatch and peek reply).
     /// See [`crate::slash::SlashController::set_auto_mode_available`].
     pub(crate) fn set_auto_mode_available(&mut self, available: bool) {
@@ -4195,8 +4190,6 @@ fn dashboard_action_for_id(
         | ActionId::ShortcutsHelp
         | ActionId::OpenSettings
         | ActionId::OpenDashboard
-        | ActionId::EnableVoiceMode
-        | ActionId::VoiceToggle
         // Overlay actions are intercepted at the AppView level before they reach the dashboard's own input loop; they can never arrive here
         | ActionId::DashboardOverlayExit
         | ActionId::DashboardOverlayPrev

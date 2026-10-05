@@ -150,24 +150,18 @@ fn revalidate(app: &mut AppView, request: PendingEditorRequest) -> Option<Pendin
         .agents
         .get(&agent_id)
         .map(|agent| agent.external_prompt_editor_access());
-    let message = if app.voice_recording_target()
-        == Some(crate::app::app_view::VoiceTarget::Agent(agent_id))
-    {
-        Some(VOICE_MESSAGE)
-    } else {
-        match access {
-            Some(crate::app::agent_view::ExternalPromptEditorAccess::Ready) => None,
-            Some(crate::app::agent_view::ExternalPromptEditorAccess::Attachments) => {
-                Some(ATTACHMENT_MESSAGE)
-            }
-            Some(crate::app::agent_view::ExternalPromptEditorAccess::PastePending) => {
-                Some(PASTE_MESSAGE)
-            }
-            Some(crate::app::agent_view::ExternalPromptEditorAccess::OwnedElsewhere) => {
-                Some(OWNERSHIP_MESSAGE)
-            }
-            None => return None,
+    let message = match access {
+        Some(crate::app::agent_view::ExternalPromptEditorAccess::Ready) => None,
+        Some(crate::app::agent_view::ExternalPromptEditorAccess::Attachments) => {
+            Some(ATTACHMENT_MESSAGE)
         }
+        Some(crate::app::agent_view::ExternalPromptEditorAccess::PastePending) => {
+            Some(PASTE_MESSAGE)
+        }
+        Some(crate::app::agent_view::ExternalPromptEditorAccess::OwnedElsewhere) => {
+            Some(OWNERSHIP_MESSAGE)
+        }
+        None => return None,
     };
     if let Some(message) = message {
         report_prompt_failure(app, agent_id, message);

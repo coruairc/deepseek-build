@@ -13,8 +13,7 @@ use super::setters::{
     set_respect_manual_folds_inner, set_screen_mode_inner, set_scroll_lines_inner,
     set_scroll_mode_inner, set_scroll_speed_inner, set_show_thinking_blocks_inner,
     set_show_tips_inner, set_simple_mode_inner, set_theme_inner, set_timeline_inner,
-    set_timestamps, set_timestamps_inner, set_vim_mode_inner, set_voice_capture_mode_inner,
-    set_voice_keybind_enabled_inner, set_voice_stt_language_inner,
+    set_timestamps, set_timestamps_inner, set_vim_mode_inner,
 };
 use crate::app::actions::{Action, Effect, ModelChoice};
 use crate::app::app_view::{ActiveView, AppView};
@@ -54,7 +53,6 @@ pub(crate) fn refresh_open_settings_modals(app: &mut AppView) {
     let respect_manual_folds_from_app = app.appearance.scrollback.scroll.respect_manual_folds;
     let auto_mode_gate_from_app = app.auto_mode_gate;
     let ask_user_question_timeout_enabled_from_app = app.ask_user_question_timeout_enabled;
-    let voice_stt_language_from_app = app.voice_config.language.clone();
     let subagent_model_inheritance_from_app = app.subagent_model_inheritance;
     for agent in app.agents.values_mut() {
         // Walk both `Settings` and `ResetSettingsConfirm`
@@ -92,7 +90,6 @@ pub(crate) fn refresh_open_settings_modals(app: &mut AppView) {
                 respect_manual_folds: respect_manual_folds_from_app,
                 auto_mode_gate: auto_mode_gate_from_app,
                 ask_user_question_timeout_enabled: ask_user_question_timeout_enabled_from_app,
-                voice_stt_language: voice_stt_language_from_app.clone(),
                 subagent_model_inheritance: subagent_model_inheritance_from_app,
             };
             if coding_data_sharing_lock_from_app.is_some()
@@ -193,7 +190,6 @@ pub(in crate::app::dispatch) fn dispatch_open_settings(
     let respect_manual_folds_from_app = app.appearance.scrollback.scroll.respect_manual_folds;
     let auto_mode_gate_from_app = app.auto_mode_gate;
     let ask_user_question_timeout_enabled_from_app = app.ask_user_question_timeout_enabled;
-    let voice_stt_language_from_app = app.voice_config.language.clone();
     let subagent_model_inheritance_from_app = app.subagent_model_inheritance;
     // Theme rows are `hidden_in_minimal`. Snapshot this AppView's mode, not `MINIMAL_MODE_ACTIVE`
     // (other tests flip that process flag in parallel and would drop `theme` from the list).
@@ -244,7 +240,6 @@ pub(in crate::app::dispatch) fn dispatch_open_settings(
         respect_manual_folds: respect_manual_folds_from_app,
         auto_mode_gate: auto_mode_gate_from_app,
         ask_user_question_timeout_enabled: ask_user_question_timeout_enabled_from_app,
-        voice_stt_language: voice_stt_language_from_app,
         subagent_model_inheritance: subagent_model_inheritance_from_app,
     };
     let mut state = Box::new(SettingsModalState::new_with_row_visibility(
@@ -633,7 +628,6 @@ pub(crate) fn build_pager_snapshot(app: &AppView) -> crate::settings::PagerLocal
         respect_manual_folds: app.appearance.scrollback.scroll.respect_manual_folds,
         auto_mode_gate: app.auto_mode_gate,
         ask_user_question_timeout_enabled: app.ask_user_question_timeout_enabled,
-        voice_stt_language: app.voice_config.language.clone(),
         subagent_model_inheritance: app.subagent_model_inheritance,
     }
 }
@@ -782,15 +776,6 @@ pub(in crate::app::dispatch) fn action_for_reset(
             Some(Action::SetHunkTrackerMode((*s).to_string()))
         }
         ("screen_mode", SettingValue::Enum(s)) => Some(Action::SetScreenMode((*s).to_string())),
-        ("voice_keybind_enabled", SettingValue::Bool(b)) => {
-            Some(Action::SetVoiceKeybindEnabled(*b))
-        }
-        ("voice_capture_mode", SettingValue::Enum(s)) => {
-            Some(Action::SetVoiceCaptureMode((*s).to_string()))
-        }
-        ("voice_stt_language", SettingValue::Enum(s)) => {
-            Some(Action::SetVoiceSttLanguage((*s).to_string()))
-        }
         // fork_secondary_model: empty becomes Clear, non-empty is a skew guard
         ("fork_secondary_model", SettingValue::String(s)) => {
             if s.is_empty() {
@@ -1058,21 +1043,6 @@ pub(in crate::app::dispatch) fn apply_setting_rollback(
         }
         ("screen_mode", SettingValue::Enum(s)) => {
             set_screen_mode_inner(app, crate::settings::canonical_screen_mode(Some(s)));
-        }
-        ("voice_keybind_enabled", SettingValue::Bool(b)) => {
-            set_voice_keybind_enabled_inner(app, *b)
-        }
-        ("voice_capture_mode", SettingValue::Enum(s)) => {
-            set_voice_capture_mode_inner(
-                app,
-                crate::settings::canonical_voice_capture_mode(Some(s)),
-            );
-        }
-        ("voice_stt_language", SettingValue::Enum(s)) => {
-            set_voice_stt_language_inner(
-                app,
-                crate::settings::canonical_voice_stt_language(Some(s)),
-            );
         }
         // show_tips / auto_update: if the rollback equals the effective default, restore to None (keeps the mirror in sync with disk)
         ("show_tips", SettingValue::Bool(b)) => {

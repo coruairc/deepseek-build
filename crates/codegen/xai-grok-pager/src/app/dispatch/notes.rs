@@ -55,13 +55,6 @@ pub(super) fn dispatch_open_feedback_modal(
         }
         return vec![];
     };
-    if matches!(
-        app.voice_recording_target(),
-        Some(crate::app::app_view::VoiceTarget::Agent(target)) if target == id
-    ) {
-        feedback_notice(app, "Stop voice input before opening the feedback form");
-        return vec![];
-    }
     let blocked = {
         let Some(agent) = app.agents.get(&id) else {
             return vec![];

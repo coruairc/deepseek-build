@@ -239,7 +239,6 @@ fn dispatch_load_session_ungated(
         .prompt
         .set_contextual_hints(app.contextual_hints.undo, app.contextual_hints.plan_mode);
     agent_mut.set_session_recap_available(app.session_recap_available);
-    agent_mut.set_voice_mode_available(app.voice_mode_enabled);
     agent_mut.scrollback.begin_batch();
     if matches!(app.restore_code, Some(true)) {
         agent_mut.session.start_command(AgentCommand::RestoreCode);
@@ -1163,7 +1162,6 @@ pub(in crate::app::dispatch) fn dispatch_load_session_with_restore(
             .prompt
             .set_contextual_hints(app.contextual_hints.undo, app.contextual_hints.plan_mode);
         agent.set_session_recap_available(app.session_recap_available);
-        agent.set_voice_mode_available(app.voice_mode_enabled);
         agent.apply_app_scoped_gates(
             app.usage_visible,
             !app.has_external_auth_provider,

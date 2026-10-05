@@ -191,15 +191,6 @@ pub enum Action {
         /// handler has no `AppView`, so it travels with the send and is queued when it dispatches.
         image_notice: Option<String>,
     },
-    /// Enable session voice mode and start recording (the Ctrl+Space hold-to-talk key-press, on terminals that report key releases).
-    /// Start-only, never stops; use [`Self::VoiceStop`], [`Self::VoiceToggle`], or Esc to stop.
-    EnableVoiceMode,
-    /// Toggle capture (`/voice`, Ctrl+Space, Esc while listening, recording-row `[stop]`, and Ctrl+Space on terminals without key releases).
-    /// Stops if recording, otherwise starts.
-    VoiceToggle,
-    /// Stop capture unconditionally (Ctrl+Space hold-to-talk key release).
-    /// Clears any pending cold-start so a release during pipeline spawn can't leave a hot mic.
-    VoiceStop,
     /// Send a direct bash command (bypasses agent loop).
     SendBashCommand(String),
     /// The user wiped a substantial prompt draft: show the seen-gated "ctrl+z to undo" ephemeral tip on the active agent.
@@ -508,15 +499,6 @@ pub enum Action {
     SetHunkTrackerMode(String),
     /// Set default screen mode (`fullscreen` | `minimal`); restart-required.
     SetScreenMode(String),
-    /// Enable/disable the Ctrl+Space / F8 voice-dictation shortcut. SHELL-owned; persisted to `[ui].voice_keybind_enabled`.
-    /// Takes effect on the next keypress; `/voice` is unaffected.
-    SetVoiceKeybindEnabled(bool),
-    /// Set the voice capture mode (`toggle` | `hold`). SHELL-owned; persisted to `[ui].voice_capture_mode`.
-    /// Takes effect for the next Ctrl+Space press.
-    SetVoiceCaptureMode(String),
-    /// Set the voice STT language (catalog code or `auto`). SHELL-owned; persisted to `[ui].voice_stt_language`.
-    /// Takes effect for the next voice capture.
-    SetVoiceSttLanguage(String),
     /// Toggle timestamp display on messages.
     ToggleTimestamps,
     /// Toggle compact mode (reduce user message padding).

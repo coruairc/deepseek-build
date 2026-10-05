@@ -146,8 +146,6 @@ impl CommandRegistry {
         let mut hidden = HashSet::new();
         hidden.insert("dashboard".to_string());
         hidden.insert("recap".to_string());
-        // Voice is fail-closed until `set_voice_visible` runs after the runtime gate resolves (GA default on; remote kill switch may hide)
-        hidden.insert("voice".to_string());
         // `/auto` is fail-closed: hidden until `set_auto_mode_available(true)`.
         hidden.insert("auto".to_string());
         // Memory commands follow the shell's own gate: shown once the ACP catalog advertises them.
@@ -340,12 +338,6 @@ impl CommandRegistry {
     /// Hidden by default in [`Self::new`]; revealed from initialize meta.
     pub fn set_recap_visible(&mut self, visible: bool) {
         self.set_command_visible("recap", visible);
-    }
-
-    /// Show or hide the `/voice` command (runtime voice gate).
-    /// Hidden by default in [`Self::new`]; revealed when the gate is on (startup default on, or after a remote kill switch is lifted).
-    pub fn set_voice_visible(&mut self, visible: bool) {
-        self.set_command_visible("voice", visible);
     }
 
     /// Gate `/auto` on the auto permission-mode feature.

@@ -823,9 +823,6 @@ pub(crate) fn build_hints(
                 {
                     continue;
                 }
-                if def.id == ActionId::EnableVoiceMode || def.id == ActionId::VoiceToggle {
-                    continue;
-                }
                 hints.push(def.hint());
             }
             hints

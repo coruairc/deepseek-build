@@ -671,13 +671,6 @@ pub(super) fn handle_session_notification_with_origin(
                     .get("recap")
                     .is_some();
                 child_view.set_session_recap_available(recap_visible);
-                let voice_visible = agent
-                    .prompt
-                    .slash_controller
-                    .registry()
-                    .get("voice")
-                    .is_some();
-                child_view.set_voice_mode_available(voice_visible);
                 let restricted = agent
                     .prompt
                     .slash_controller

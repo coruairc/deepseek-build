@@ -562,12 +562,6 @@ impl AgentView {
             }
         }
         if self.line_viewer.is_some() && self.focused_card() != Some(BlockingCard::Permission) {
-            if let Event::Mouse(mouse) = ev
-                && mouse.kind == MouseEventKind::Down(MouseButton::Left)
-                && self.hit_voice_stop_button.contains(mouse.column, mouse.row)
-            {
-                return InputOutcome::Action(Action::VoiceToggle);
-            }
             let plan_prompt_focused = self
                 .plan_approval_view
                 .as_ref()
@@ -827,9 +821,6 @@ impl AgentView {
                             changed |= self.hit_credits.update_hover(mouse.column, mouse.row);
                         }
                         MouseEventKind::Down(MouseButton::Left) => {
-                            if self.hit_voice_stop_button.contains(mouse.column, mouse.row) {
-                                return InputOutcome::Action(Action::VoiceToggle);
-                            }
                             if self.hit_plan_button.contains(mouse.column, mouse.row) {
                                 self.reopen_plan_approval();
                                 return InputOutcome::Changed;

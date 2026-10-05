@@ -17,7 +17,6 @@ use super::session::load::dispatch_load_session;
 use super::session::load::focus_if_session_already_open;
 use super::session::modal::{dispatch_sessions_confirm_close, remove_agent_and_cleanup};
 use super::turn::dispatch_cancel_turn;
-use super::voice::{merge_prompt_with_voice_interim, voice_stop_on_submit};
 use crate::app::actions::{Action, Effect, PermissionModeKind};
 use crate::app::agent::{AgentId, DeferredModelSwitch};
 use crate::app::agent_view::AgentView;
@@ -89,7 +88,6 @@ pub(super) fn ensure_dashboard_state(app: &mut AppView) {
     state.adopt_command_tags(app.command_tags.clone());
     state.set_screen_mode(app.screen_mode);
     state.set_recap_visible(app.session_recap_available);
-    state.set_voice_visible(app.voice_mode_enabled);
     state.set_restricted_commands(&app.tier_restricted_commands);
     let billing = app.usage_visible;
     let usage_cmd = !app.has_external_auth_provider;
@@ -192,7 +190,6 @@ pub(super) fn dispatch_open_dashboard(app: &mut AppView) -> Vec<Effect> {
         let workspace = app.workspace_membership.view();
         d.gc_stale_refs(&dashboard_alive_fn(&app.agents, workspace.as_ref()));
         d.set_recap_visible(app.session_recap_available);
-        d.set_voice_visible(app.voice_mode_enabled);
         d.set_restricted_commands(&app.tier_restricted_commands);
     }
     let agent_cwds: Vec<(AgentId, std::path::PathBuf)> = app
@@ -705,7 +702,6 @@ fn set_create_permission_mode(
 /// Routed from the `+ New Agent` button, or Enter on an empty prompt while the button is focused.
 /// Mirrors `dispatch_dashboard_dispatch`'s new-session arm with `attach=true`, minus the prompt enqueue.
 pub(super) fn dispatch_dashboard_create_new_agent_with_detail(app: &mut AppView) -> Vec<Effect> {
-    let _ = voice_stop_on_submit(app);
     if app.cwd_has_git_ancestor && app.dashboard.as_ref().is_some_and(|d| d.dispatch_worktree) {
         return open_dashboard_worktree_dialog(app, None, true);
     }
@@ -1038,7 +1034,7 @@ pub(super) fn dispatch_dashboard_dispatch(
     text: String,
     attach: bool,
 ) -> Vec<Effect> {
-    let text = merge_prompt_with_voice_interim(text, voice_stop_on_submit(app));
+    let text = text;
     if let Some(d) = app.dashboard.as_mut()
         && d.paste_probe_in_flight > 0
     {
@@ -1134,7 +1130,7 @@ pub(super) fn dispatch_dashboard_dispatch(
 pub(super) fn dispatch_dashboard_dispatch_slash(app: &mut AppView, text: String) -> Vec<Effect> {
     use crate::slash::command::{CommandExecCtx, CommandResult};
     use crate::slash::parse_invocation;
-    let text = merge_prompt_with_voice_interim(text, voice_stop_on_submit(app));
+    let text = text;
     let trimmed = text.trim().to_string();
     if trimmed.is_empty() || !trimmed.starts_with('/') {
         return vec![];
@@ -1146,7 +1142,6 @@ pub(super) fn dispatch_dashboard_dispatch_slash(app: &mut AppView, text: String)
     let respect_manual_folds_from_app = app.appearance.scrollback.scroll.respect_manual_folds;
     let auto_mode_gate_from_app = app.auto_mode_gate;
     let ask_user_question_timeout_enabled_from_app = app.ask_user_question_timeout_enabled;
-    let voice_stt_language_from_app = app.voice_config.language.clone();
     let subagent_model_inheritance_from_app = app.subagent_model_inheritance;
     let result = {
         let Some(invocation) = parse_invocation(trimmed.as_str()) else {
@@ -1230,7 +1225,6 @@ pub(super) fn dispatch_dashboard_dispatch_slash(app: &mut AppView, text: String)
                 respect_manual_folds: respect_manual_folds_from_app,
                 auto_mode_gate: auto_mode_gate_from_app,
                 ask_user_question_timeout_enabled: ask_user_question_timeout_enabled_from_app,
-                voice_stt_language: voice_stt_language_from_app,
                 subagent_model_inheritance: subagent_model_inheritance_from_app,
             },
         };
@@ -1434,7 +1428,7 @@ pub(super) fn dispatch_dashboard_peek_reply(
     attach: bool,
 ) -> Vec<Effect> {
     use crate::views::dashboard::DashboardRowId;
-    let text = merge_prompt_with_voice_interim(text, voice_stop_on_submit(app));
+    let text = text;
     if let Some(d) = app.dashboard.as_mut()
         && d.paste_probe_in_flight > 0
     {

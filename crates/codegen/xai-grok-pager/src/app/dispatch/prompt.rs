@@ -14,7 +14,6 @@ use super::queue::{
 };
 use super::router::dispatch;
 use super::turn::finish_turn_view;
-use super::voice::{merge_prompt_with_voice_interim, voice_stop_on_submit};
 use crate::app::actions::{Action, DoctorFixTarget, Effect};
 use crate::app::agent::{AgentCommand, AgentId, AgentState};
 use crate::app::agent_view::AgentView;
@@ -79,9 +78,6 @@ pub(super) fn collect_live_doctor_report_for_terminal(
             notification_condition: app.notification_service.config().condition,
         },
     );
-    if crate::app::voice_mode_enabled() {
-        crate::diagnostics::apply_voice_probe(&mut report, true);
-    }
     Some(report)
 }
 
@@ -696,10 +692,7 @@ pub(super) fn dispatch_send_prompt_submission(
                 .registry()
                 .get_for_dispatch(invocation.token)
         {
-            let voice_owns_prompt = consume_input
-                && app.voice_recording_target()
-                    == Some(crate::app::app_view::VoiceTarget::Agent(id));
-            if let Some(refusal) = command.submission_refusal(invocation.args, voice_owns_prompt) {
+            if let Some(refusal) = command.submission_refusal(invocation.args, false) {
                 if app.screen_mode.is_minimal() {
                     with_active_agent(app, |agent| {
                         agent
@@ -714,14 +707,6 @@ pub(super) fn dispatch_send_prompt_submission(
         }
     }
 
-    // Promote the interim and hard-reset; merge only when consuming the composer.
-    let interim = voice_stop_on_submit(app);
-    let text = if consume_input {
-        merge_prompt_with_voice_interim(text, interim)
-    } else {
-        text
-    };
-
     // Capture app-level fields before the mut-borrow on `agent`.
     let coding_data_sharing_opt_out_from_app = app.coding_data_retention_opt_out;
     let coding_data_sharing_lock_from_app = app.coding_data_sharing_lock();
@@ -730,7 +715,6 @@ pub(super) fn dispatch_send_prompt_submission(
     let respect_manual_folds_from_app = app.appearance.scrollback.scroll.respect_manual_folds;
     let auto_mode_gate_from_app = app.auto_mode_gate;
     let ask_user_question_timeout_enabled_from_app = app.ask_user_question_timeout_enabled;
-    let voice_stt_language_from_app = app.voice_config.language.clone();
     let subagent_model_inheritance_from_app = app.subagent_model_inheritance;
     let login_method_id_from_app = app.login_method_id.as_ref().map(|id| id.0.to_string());
     let leader_mode = app.leader_mode;
@@ -863,7 +847,6 @@ pub(super) fn dispatch_send_prompt_submission(
                     respect_manual_folds: respect_manual_folds_from_app,
                     auto_mode_gate: auto_mode_gate_from_app,
                     ask_user_question_timeout_enabled: ask_user_question_timeout_enabled_from_app,
-                    voice_stt_language: voice_stt_language_from_app,
                     subagent_model_inheritance: subagent_model_inheritance_from_app,
                 },
             };

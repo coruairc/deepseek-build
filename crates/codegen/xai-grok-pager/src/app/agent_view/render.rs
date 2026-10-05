@@ -37,12 +37,6 @@ use std::time::Instant;
 /// Tests take `Default` and override only what they exercise.
 #[derive(Default)]
 pub struct AppRenderParams<'a> {
-    /// Voice feature available (shows the mic affordances).
-    pub voice_available: bool,
-    /// Mic open and streaming on the active surface; drives the recording row and the prompt voice overlay.
-    pub voice_listening: bool,
-    /// Interim transcript for the prompt overlay while dictating.
-    pub voice_interim: Option<&'a str>,
     /// The status row this frame paints, or `Off` when this frame has none.
     pub status_line: crate::views::status_line::StatusLineFrame,
     pub workspace_dashboard_enabled: bool,
@@ -576,9 +570,6 @@ impl AgentView {
         Option<crate::terminal::overlay::PostFlush>,
     ) {
         let AppRenderParams {
-            voice_available,
-            voice_listening,
-            voice_interim,
             status_line,
             workspace_dashboard_enabled,
             overlay_header,
@@ -1069,7 +1060,7 @@ impl AgentView {
         } else {
             1
         };
-        let voice_recording_height = if voice_listening { 1 } else { 0 };
+        let voice_recording_height = 0u16;
         let model_notice = self.session.models.current_notice();
         let model_notice_height = model_notice.as_ref().map_or(0, |notice| {
             let text_width =
@@ -2204,55 +2195,6 @@ impl AgentView {
             };
             crate::views::model_notice_banner::render(inset, buf, notice);
         }
-        if voice_listening && layout.voice_recording.height > 0 && layout.voice_recording.width > 0
-        {
-            let rec_area = layout.voice_recording;
-            let bg = theme.bg_base;
-            for col in 0..rec_area.width {
-                if let Some(cell) = buf.cell_mut((rec_area.x + col, rec_area.y)) {
-                    cell.set_char(' ');
-                    cell.fg = bg;
-                    cell.bg = bg;
-                }
-            }
-            let content_x = rec_area.x + layout_cfg.block_pad_left;
-            let (filled, brightness) = record_dot_pulse();
-            let dot = crate::glyphs::record_dot(filled);
-            let dot_color = crate::render::color::blend_color(bg, theme.accent_error, brightness)
-                .unwrap_or(theme.accent_error);
-            buf.set_string(
-                content_x,
-                rec_area.y,
-                dot,
-                Style::default().fg(dot_color).bg(bg),
-            );
-            buf.set_string(
-                content_x + 2,
-                rec_area.y,
-                "Recording",
-                Style::default().fg(theme.accent_error).bg(bg),
-            );
-            let stop_str = "[stop]";
-            let stop_w = unicode_width::UnicodeWidthStr::width(stop_str) as u16;
-            let stop_x = rec_area.x
-                + rec_area
-                    .width
-                    .saturating_sub(layout_cfg.block_pad_right + stop_w);
-            let stop_fg = if self.hit_voice_stop_button.hovered {
-                theme.accent_error
-            } else {
-                theme.gray
-            };
-            buf.set_string(
-                stop_x,
-                rec_area.y,
-                stop_str,
-                Style::default().fg(stop_fg).bg(bg),
-            );
-            self.hit_voice_stop_button.rect = Some(Rect::new(stop_x, rec_area.y, stop_w, 1));
-        } else {
-            self.hit_voice_stop_button.clear();
-        }
         self.follow_up_chips = match self.follow_ups.as_ref() {
             Some(fu) => agent::render_follow_ups(
                 layout.follow_ups,
@@ -2778,21 +2720,13 @@ impl AgentView {
             } else {
                 None
             };
-            let voice_overlay = if voice_available && (voice_listening || voice_interim.is_some()) {
-                Some(crate::views::prompt_widget::VoicePromptOverlay {
-                    interim: voice_interim,
-                    color: theme.accent_running,
-                })
-            } else {
-                None
-            };
             let prompt_result_inner = self.prompt.draw(
                 buf,
                 layout.prompt,
                 Some(layout.scrollback),
                 &prompt_style,
                 Some(&info),
-                voice_overlay,
+                None,
             );
             if let Some((s, ovr)) = saved_scroll {
                 self.prompt.textarea.set_scroll_override(ovr);

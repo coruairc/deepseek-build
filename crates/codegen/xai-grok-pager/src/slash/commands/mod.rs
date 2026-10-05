@@ -63,7 +63,6 @@ pub mod tutorial;
 pub mod usage;
 pub mod view_plan;
 pub mod vim_mode;
-pub mod voice;
 pub mod workflow;
 pub mod workflows;
 use super::command::SlashCommand;
@@ -80,7 +79,6 @@ pub fn builtin_commands() -> Vec<Arc<dyn SlashCommand>> {
         Arc::new(workflows::WorkflowsCommand),
         Arc::new(plugin::PluginsCommand),
         Arc::new(btw::BtwCommand),
-        Arc::new(voice::VoiceCommand),
         Arc::new(new::NewCommand),
         // Per turn.
         Arc::new(effort::EffortCommand),

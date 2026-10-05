@@ -1,7 +1,6 @@
 //! Mid-turn interjection dispatch: optimistic local echo, the `deepseek-build/interject` effect, and prompt-history recording.
 
 use super::ctx::NO_SESSION_NOTICE;
-use super::voice::voice_stop_on_submit;
 use crate::app::actions::Effect;
 use crate::app::agent::AgentId;
 use crate::app::app_view::{ActiveView, AppView};
@@ -49,12 +48,6 @@ fn dispatch_interject_on_inner(
     images: Vec<crate::prompt_images::PastedImage>,
     user_submit: bool,
 ) -> Vec<Effect> {
-    // Voice is app-wide and bound to the focused composer
-    // A /btw answer on another session must not commit interim text or kill dictation on the pane the user is actually talking into
-    if user_submit && matches!(app.active_view, ActiveView::Agent(active) if active == id) {
-        // Hard-reset only; `text` may not be from the composer
-        let _ = voice_stop_on_submit(app);
-    }
     let Some(agent) = app.agents.get_mut(&id) else {
         return vec![];
     };
@@ -127,8 +120,6 @@ pub(super) fn dispatch_send_prompt_now(
 ) -> Vec<Effect> {
     // The composer that raised the notice is already cleared, so it shows even when the send bails below.
     app.pending_image_notices.extend(image_notice);
-    // Hard-reset only; `text` may be a queue row, not the composer
-    let _ = voice_stop_on_submit(app);
     let ActiveView::Agent(id) = app.active_view else {
         return vec![];
     };

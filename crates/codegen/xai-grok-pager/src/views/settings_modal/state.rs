@@ -870,7 +870,7 @@ pub(super) fn setting_row_visible(
 
 fn build_rows(registry: &SettingsRegistry, visibility: RowVisibility) -> Vec<RowEntry> {
     let kitty_releases = crate::app::kitty_releases_reported();
-    let voice_mode = crate::app::voice_mode_enabled();
+    let voice_mode = false;
     // Keys that belong to a group sub-sheet are rendered only inside that sheet, never as their own top-level rows
     let group_children: std::collections::HashSet<SettingKey> = registry
         .all()
@@ -925,7 +925,6 @@ pub(super) fn action_for_bool(key: SettingKey, new: bool) -> Option<Action> {
         "contextual_hints.ssh_wrap" => Some(Action::SetContextualHintSshWrap(new)),
         "multiline_mode" => Some(Action::SetMultilineMode(new)),
         "vim_mode" => Some(Action::SetVimMode(new)),
-        "voice_keybind_enabled" => Some(Action::SetVoiceKeybindEnabled(new)),
         "remember_tool_approvals" => Some(Action::SetRememberToolApprovals(new)),
         "toolset.ask_user_question.timeout_enabled" => {
             Some(Action::SetAskUserQuestionTimeoutEnabled(new))
@@ -1004,8 +1003,6 @@ pub(super) fn action_for_enum_commit(key: SettingKey, choice: &'static str) -> O
         },
         "hunk_tracker_mode" => Some(Action::SetHunkTrackerMode(choice.to_string())),
         "screen_mode" => Some(Action::SetScreenMode(choice.to_string())),
-        "voice_capture_mode" => Some(Action::SetVoiceCaptureMode(choice.to_string())),
-        "voice_stt_language" => Some(Action::SetVoiceSttLanguage(choice.to_string())),
         "render_mermaid" => {
             crate::appearance::RenderMermaid::from_canonical(choice).map(Action::SetRenderMermaid)
         }

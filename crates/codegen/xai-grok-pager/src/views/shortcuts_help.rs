@@ -171,16 +171,8 @@ pub fn build_entries(
             entry_count: 0,
         });
         for def in defs {
-            // Slash-only actions with no real keybinding (e.g. `/voice`'s EnableVoiceMode) don't belong in a keyboard cheatsheet.
+            // Slash-only actions with no real keybinding don't belong in a keyboard cheatsheet.
             if def.default_key == crate::key!(Null) && def.alt_keys.is_empty() {
-                continue;
-            }
-            // The gate goes off via the remote kill switch or `GROK_VOICE_MODE=0`; don't advertise keys that
-            // do nothing `Ctrl+Space` decodes the same with or without the Kitty keyboard protocol (it just
-            // toggles instead of hold-to-talk). It is therefore shown on every terminal once the gates are on.
-            if def.id == crate::actions::ActionId::VoiceToggle
-                && (!crate::app::voice_mode_enabled() || !crate::app::voice_keybind_enabled())
-            {
                 continue;
             }
             let mut item = def.hint();

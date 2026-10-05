@@ -1285,12 +1285,6 @@ impl PromptWidget {
             .set_recap_visible(visible);
     }
 
-    pub(crate) fn set_voice_visible(&mut self, visible: bool) {
-        self.slash_controller
-            .registry_mut()
-            .set_voice_visible(visible);
-    }
-
     pub(crate) fn set_dashboard_visible(&mut self, visible: bool) {
         self.slash_controller
             .registry_mut()
@@ -3235,105 +3229,8 @@ impl PromptWidget {
         // Interim STT: muted italic overlay (not in the textarea)
         // Finalized text remains the real, editable draft
         // While it shows, the caret is drawn after the ghost words, where the final will leave it
-        let mut interim_caret: Option<(u16, u16)> = None;
-        let voice_interim_shown = if let Some(v) = voice
-            && let Some(interim) = v.interim.filter(|t| !t.trim().is_empty())
-            && ta_area.width > 0
-            && ta_area.height > 0
-        {
-            // muted() fallback where the blend is inexpressible (terminal
-            // theme): DIM instead of gray (Reset — full default fg).
-            let interim_style =
-                match crate::render::color::blend_color(bg, theme.text_secondary, 0.7) {
-                    Some(fg) => Style::default().fg(fg).bg(bg),
-                    None => theme.muted().bg(bg),
-                }
-                .add_modifier(Modifier::ITALIC);
-            if crate::voice::prompt_blank_for_voice(self.textarea.text()) {
-                let lines =
-                    wrap_voice_interim(interim, ta_area.width as usize, ta_area.height as usize);
-                for (i, line) in lines.iter().enumerate() {
-                    buf.set_string(ta_area.x, ta_area.y + i as u16, line, interim_style);
-                }
-                if let Some(last) = lines.last() {
-                    let end_x =
-                        ta_area.x + unicode_width::UnicodeWidthStr::width(last.as_str()) as u16;
-                    let last_y = ta_area.y + (lines.len() - 1) as u16;
-                    // Mirror the textarea: a full row wraps the caret to the next row, or pins it to the last cell on the last row
-                    interim_caret = Some(if end_x < ta_area.x + ta_area.width {
-                        (end_x, last_y)
-                    } else if last_y + 1 < ta_area.y + ta_area.height {
-                        (ta_area.x, last_y + 1)
-                    } else {
-                        (end_x - 1, last_y)
-                    });
-                }
-            } else {
-                // Ghost preview of the interim inserted at the caret, or replacing the active selection.
-                // Uses the same selection-aware insertion point and spacing rule
-                // (crate::voice::space_voice_fragment) as the real insertion so preview and result cannot drift.
-                let text = self.textarea.text();
-                let (base, at, tail_at) = match self.textarea.selection_range() {
-                    Some(sel) => (
-                        std::borrow::Cow::Owned(format!(
-                            "{}{}",
-                            text.get(..sel.start).unwrap_or(""),
-                            text.get(sel.end..).unwrap_or("")
-                        )),
-                        sel.start,
-                        sel.end,
-                    ),
-                    None => {
-                        let cursor = self.textarea.cursor();
-                        (std::borrow::Cow::Borrowed(text), cursor, cursor)
-                    }
-                };
-                let (display, _) = crate::voice::space_voice_fragment(&base, at, interim);
-
-                if let Some((start_x, row_y)) =
-                    self.textarea
-                        .screen_position_of(at, ta_area, self.textarea_state)
-                {
-                    let row_right = ta_area.x + ta_area.width;
-                    let avail = row_right.saturating_sub(start_x) as usize;
-                    if avail > 0 {
-                        // The textarea already painted the full draft: snapshot the cells after the insertion
-                        // point (selection end, or caret), paint the interim over the span, then re-blit that tail
-                        // shifted right by the ghost's width, so the prompt reads as pushed aside and a selection as replaced; a multi-row selection falls back to the caret row.
-                        let tail_x = self
-                            .textarea
-                            .screen_position_of(tail_at, ta_area, self.textarea_state)
-                            .filter(|(_, ty)| *ty == row_y)
-                            .map_or(start_x, |(tx, _)| tx.max(start_x));
-                        let saved: Vec<ratatui::buffer::Cell> = (tail_x..row_right)
-                            .map(|x| buf.cell((x, row_y)).cloned().unwrap_or_default())
-                            .collect();
-                        let truncated = crate::render::line_utils::truncate_str(&display, avail);
-                        let ghost_w =
-                            unicode_width::UnicodeWidthStr::width(truncated.as_str()) as u16;
-                        buf.set_string(start_x, row_y, &truncated, interim_style);
-                        // trim_end: the caret sits before the spacing added for the text that follows
-                        let words_w =
-                            unicode_width::UnicodeWidthStr::width(truncated.trim_end()) as u16;
-                        interim_caret =
-                            Some(((start_x + words_w).min(row_right.saturating_sub(1)), row_y));
-                        let mut x = start_x.saturating_add(ghost_w);
-                        for cell in saved {
-                            if x >= row_right {
-                                break;
-                            }
-                            if let Some(dst) = buf.cell_mut((x, row_y)) {
-                                *dst = cell;
-                            }
-                            x = x.saturating_add(1);
-                        }
-                    }
-                }
-            }
-            true
-        } else {
-            false
-        };
+        let interim_caret: Option<(u16, u16)> = None;
+        let voice_interim_shown = false;
 
         // Placeholder text when empty (unfocused, or opted in while focused).
         if self.textarea.text().is_empty()

@@ -1912,13 +1912,6 @@ fn resolve_action(action_id: Option<ActionId>) -> Option<InputOutcome> {
         ActionId::ToggleMultiline => return None,
         ActionId::InterjectPrompt => return None,
         ActionId::StashPrompt => return None,
-        ActionId::EnableVoiceMode => Action::EnableVoiceMode,
-        ActionId::VoiceToggle => {
-            if !crate::app::voice_keybind_enabled() {
-                return None;
-            }
-            Action::VoiceToggle
-        }
         ActionId::ShortcutsHelp => return None,
         ActionId::OpenSettings => return None,
         ActionId::ToggleTodos
