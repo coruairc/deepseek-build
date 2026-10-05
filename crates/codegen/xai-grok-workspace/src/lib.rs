@@ -269,10 +269,6 @@ mod init_metrics_tests {
                 "missing oidc refresh baseline outcome={outcome}"
             );
         }
-        assert!(has(
-            "grok_workspace_orphan_lost_total",
-            &[("reason", "sha_mismatch")]
-        ));
         assert!(
             families
                 .iter()

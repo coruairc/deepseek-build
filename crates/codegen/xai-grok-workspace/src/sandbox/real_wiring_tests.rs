@@ -1118,6 +1118,10 @@ async fn a_file_tool_never_writes_a_mode_layer_under_enforce() {
     let observed = Fixture::new("observe");
     let handle = observed.handle(observed.sandbox(BackendSource::Fixed(None)).await);
     let layer = crate::sandbox_mode::workspace_config_path(&observed.root);
+    run_tool(&handle, "read_file", json!({ "target_file": layer }))
+        .await
+        .outcome
+        .unwrap_or_else(|error| panic!("read under observe: {error}"));
     let raised = run_tool(
         &handle,
         "write",

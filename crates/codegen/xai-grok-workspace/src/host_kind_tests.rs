@@ -12,21 +12,11 @@ use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use xai_computer_hub_sdk::{AuthCredential, SharedAuthProvider};
-use xai_grok_tools::implementations::grok_build::image_gen::ImageGenClient;
-use xai_grok_tools::implementations::grok_build::video_gen::VideoGenClient;
-use xai_grok_tools::implementations::web_search::WebSearchConfig;
-use xai_grok_tools::implementations::web_search::client::WebSearchClient;
 use xai_grok_tools::registry::types::{FinalizedToolset, ToolServerConfig};
 use xai_tool_protocol::SessionId;
-/// The tools a hub-only host must not offer: each one calls the API with the server's own credential.
-const API_BACKED_TOOLS: &[&str] = &[
-    "web_search",
-    "image_gen",
-    "image_to_video",
-    "reference_to_video",
-];
 const API_BASE_URL: &str = "https://api.invalid/v1";
 static TRUNCATION_INSTALL_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 /// Tool ids without their namespace, in catalog order.
 fn unqualified_ids(config: &ToolServerConfig) -> Vec<&str> {
     config
@@ -42,40 +32,37 @@ fn unqualified_ids(config: &ToolServerConfig) -> Vec<&str> {
 fn bearer() -> SharedAuthProvider {
     Arc::new(AuthCredential::bearer("serve-scoped-token"))
 }
+
 #[test]
 fn a_caller_that_names_no_host_is_hub_only() {
     assert_eq!(WorkspaceHostKind::Daemon, WorkspaceHostKind::default());
     assert!(WorkspaceHostKind::default().is_hub_only());
     assert!(!WorkspaceHostKind::Sandbox.is_hub_only());
 }
+
 /// Only a daemon's root is edited from outside the agent, so only a daemon arms the OS watcher.
 #[test]
 fn only_a_daemon_streams_fs_changes() {
     assert!(WorkspaceHostKind::Daemon.streams_fs_changes());
     assert!(!WorkspaceHostKind::Sandbox.streams_fs_changes());
 }
-/// The sandbox keeps the whole workspace catalog, API-backed tools included; the daemon gets the
-/// same catalog with exactly those tools cut, in the same order.
+
+/// The daemon catalog is the sandbox catalog with the API-backed tools cut. The deepseek-build
+/// adapter has no API-backed workspace tools left, so the two catalogs are identical today; this
+/// pins that a future API-backed tool cannot slip past `api_backed_tool_ids`.
 #[test]
-fn daemon_catalog_is_the_sandbox_catalog_minus_the_api_backed_tools() {
-    let full = xai_grok_agent::workspace_grok_build_toolset();
+fn daemon_catalog_matches_the_sandbox_catalog() {
+    assert!(
+        xai_grok_agent::api_backed_tool_ids().is_empty(),
+        "no API-backed workspace tools remain"
+    );
     let sandbox = WorkspaceHostKind::Sandbox.default_toolset();
     let daemon = WorkspaceHostKind::Daemon.default_toolset();
-    let full_ids = unqualified_ids(&full);
-    for tool in API_BACKED_TOOLS {
-        assert!(
-            full_ids.contains(tool),
-            "the sandbox catalog must still ship `{tool}`: {full_ids:?}"
-        );
-    }
-    assert_eq!(full_ids, unqualified_ids(&sandbox));
-    let expected: Vec<&str> = full_ids
-        .iter()
-        .copied()
-        .filter(|id| !API_BACKED_TOOLS.contains(id))
-        .collect();
-    assert_eq!(expected, unqualified_ids(&daemon));
+    let ids = unqualified_ids(&sandbox);
+    assert_eq!(ids, unqualified_ids(&daemon));
+    assert!(ids.contains(&"read_file"), "{ids:?}");
 }
+
 /// Build a session the way `connect_local_workspace` does for `host`, with a bearer credential on hand.
 async fn session_for(host: WorkspaceHostKind) -> Arc<FinalizedToolset> {
     let _install = TRUNCATION_INSTALL_TEST_LOCK.lock().await;
@@ -97,8 +84,9 @@ async fn session_for(host: WorkspaceHostKind) -> Arc<FinalizedToolset> {
     .expect("the host's catalog must finalize");
     toolset
 }
-/// A daemon host builds sessions with no credential: no gen or search config, and no auth provider
-/// or API client in `Resources`. The sandbox still hands them all the credential.
+
+/// A daemon host builds sessions with no credential; the sandbox still hands its credential to the
+/// session and into `Resources`, so hub-only tools never see a server-side token.
 #[tokio::test]
 async fn only_a_sandbox_session_carries_the_credential() {
     for (host, expected) in [
@@ -113,13 +101,6 @@ async fn only_a_sandbox_session_carries_the_credential() {
             factory.build_terminal_backend().backend().clone(),
         );
         assert_eq!(expected, ctx.auth_provider.is_some(), "{host:?}");
-        assert_eq!(expected, ctx.image_gen_config.has_credentials(), "{host:?}");
-        assert_eq!(expected, ctx.video_gen_config.is_enabled(), "{host:?}");
-        assert_eq!(
-            expected,
-            matches!(ctx.web_search_config, WebSearchConfig::Enabled { .. }),
-            "{host:?}"
-        );
         let toolset = session_for(host).await;
         let resources = toolset.resources.lock().await;
         assert_eq!(
@@ -127,19 +108,12 @@ async fn only_a_sandbox_session_carries_the_credential() {
             resources.contains::<SharedAuthProvider>(),
             "{host:?}"
         );
-        assert_eq!(expected, resources.contains::<ImageGenClient>(), "{host:?}");
-        assert_eq!(expected, resources.contains::<VideoGenClient>(), "{host:?}");
-        assert_eq!(
-            expected,
-            resources.contains::<WebSearchClient>(),
-            "{host:?}"
-        );
     }
 }
+
 /// Run `test` against everything `connect_local_workspace` builds for `host` short of the hub
-/// connection, under a private workspace home and with data collection switched on: the
-/// production seams decide the catalog, bind policy, credential reach and uploads, not a copy of
-/// the rule.
+/// connection, under a private workspace home: the production seams decide the catalog and bind
+/// policy, not a copy of the rule.
 fn with_workspace<F: Future<Output = ()>>(
     host: WorkspaceHostKind,
     test: impl FnOnce(WorkspaceHandle) -> F,
@@ -179,39 +153,27 @@ fn pinned(tool_ids: &[&str]) -> serde_json::Value {
     let tools: Vec<serde_json::Value> = tool_ids.iter().map(|id| json!({ "id": id })).collect();
     json!({ "metadata": { "tools": tools } })
 }
-/// A daemon host, as `connect_local_workspace` builds it: binds must pin their toolset (one
-/// without fails closed with `missing_tool_config`), a pinned API-backed tool comes back unserved
-/// rather than registering without its client, no upload machinery exists even with data
-/// collection switched on, and the deployer RPCs have no credential to carry off-host.
+
+/// A daemon host, as `connect_local_workspace` builds it: binds must pin their toolset (one without
+/// fails closed with `missing_tool_config`), and the daemon carries no credential of its own.
 #[test]
-fn a_daemon_host_serves_pinned_toolsets_only_and_can_neither_upload_nor_deploy() {
+fn a_daemon_host_serves_pinned_toolsets_only() {
     with_workspace(WorkspaceHostKind::Daemon, |handle| async move {
         let shared = handle.shared();
         assert!(shared.require_explicit_toolset);
-        assert!(shared.upload_queue().is_none());
         assert!(shared.auth_provider().is_none());
         let resolver = bind_resolver_fixture(&handle);
         let served = resolver(
             SessionId::new("daemon-pinned").unwrap(),
-            Some(pinned(&[
-                "GrokBuild:read_file",
-                "GrokBuild:web_search",
-                "GrokBuild:image_gen",
-            ])),
+            Some(pinned(&["GrokBuild:read_file"])),
         )
         .await
         .expect("a pinned bind is served");
         let names = handler_names(&served);
         assert!(names.iter().any(|n| n == "read_file"), "{names:?}");
         assert!(
-            !names.iter().any(|n| n == "web_search" || n == "image_gen"),
-            "{names:?}"
-        );
-        assert_eq!(
-            vec![
-                "GrokBuild:image_gen".to_owned(),
-                "GrokBuild:web_search".to_owned()
-            ],
+            served.unserved_tool_ids.is_empty(),
+            "{:?}",
             served.unserved_tool_ids
         );
         assert_eq!(None, served.resolve_error);
@@ -229,35 +191,31 @@ fn a_daemon_host_serves_pinned_toolsets_only_and_can_neither_upload_nor_deploy()
         assert!(reason.starts_with("missing_tool_config:"), "{reason}");
     });
 }
-/// The sandbox is unchanged: uploads and the deployer credential are in place, a pinned API-backed
-/// tool is served, and a bind without a toolset still widens to the full catalog unless the
-/// launcher asked for strict mode itself.
+
+/// The sandbox is unchanged: the credential is in place, and a bind without a toolset still widens
+/// to the full catalog unless the launcher asked for strict mode itself.
 #[test]
-fn a_sandbox_host_keeps_uploads_the_credential_and_lax_binds() {
+fn a_sandbox_host_keeps_the_credential_and_lax_binds() {
     with_workspace(WorkspaceHostKind::Sandbox, |handle| async move {
         let shared = handle.shared();
         assert!(!shared.require_explicit_toolset);
-        assert!(shared.upload_queue().is_some());
         assert!(shared.auth_provider().is_some());
         let resolver = bind_resolver_fixture(&handle);
         let served = resolver(
             SessionId::new("sandbox-pinned").unwrap(),
-            Some(pinned(&["GrokBuild:read_file", "GrokBuild:web_search"])),
+            Some(pinned(&["GrokBuild:read_file"])),
         )
         .await
         .expect("bind");
         let names = handler_names(&served);
-        assert!(names.iter().any(|n| n == "web_search"), "{names:?}");
+        assert!(names.iter().any(|n| n == "read_file"), "{names:?}");
         assert!(served.unserved_tool_ids.is_empty());
         assert_eq!(None, served.resolve_error);
         let widened = resolver(SessionId::new("sandbox-unpinned").unwrap(), None)
             .await
             .expect("bind");
         let names = handler_names(&widened);
-        assert!(
-            names.iter().any(|n| n == "web_search") && names.iter().any(|n| n == "read_file"),
-            "{names:?}"
-        );
+        assert!(names.iter().any(|n| n == "read_file"), "{names:?}");
         assert_eq!(None, widened.resolve_error);
     });
 }

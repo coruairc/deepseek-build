@@ -1020,6 +1020,7 @@ async fn a_rejected_discovery_document_keeps_retrying() {
 /// `refresh_ended` pending, so a host does not exit over a 5xx or a config flag.
 #[tokio::test]
 async fn refresh_ended_stays_pending_unless_the_rejection_is_terminal() {
+    let _metrics = lock_metrics();
     let hits = Arc::new(AtomicU32::new(0));
     let retrying = spawn_mock_idp(
         serde_json::json!({"error": "temporarily_unavailable"}),
@@ -1118,6 +1119,7 @@ async fn rate_limit_429_zero_retry_after_uses_backoff() {
 
 #[tokio::test]
 async fn stale_persist_does_not_clobber_newer_token() {
+    let _metrics = lock_metrics();
     let dir = tempfile::tempdir().unwrap();
     let auth_path = write_auth_json(dir.path());
     let mut params = provider_params("https://auth.example.com".into(), None);

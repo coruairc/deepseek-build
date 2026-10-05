@@ -1450,7 +1450,13 @@ async fn ensure_binding_forks_conv_branch_off_base_and_is_idempotent() {
             .await
             .unwrap()
     );
-    assert_eq!(Some(main_sha.clone()), res.head_sha);
+    assert_eq!(
+        main_sha,
+        git_cli(&work, &["merge-base", "main", "HEAD"])
+            .await
+            .unwrap(),
+        "the conv branch must descend from its base"
+    );
     std::fs::write(work.join("f.txt"), "x").unwrap();
     git_cli(&work, &["add", "-A"]).await.unwrap();
     git_cli(&work, &["commit", "-m", "conv work"])

@@ -1884,8 +1884,8 @@ mod tests {
         // snake_case: split into words, each title-cased
         assert_eq!(mcp_titleize_segment("list_issues"), "List Issues");
         assert_eq!(
-            mcp_titleize_segment("grok_com_notion"),
-            "deepseek-build Com Notion"
+            mcp_titleize_segment("linear_com_notion"),
+            "Linear Com Notion"
         );
         // single word: capitalize first letter
         assert_eq!(mcp_titleize_segment("linear"), "Linear");
