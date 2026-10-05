@@ -116,7 +116,8 @@ fn format_acp_error_rate_limit_surfaces_detail_or_fallback() {
     let rpm = acp::Error::new(RATE_LIMITED_ERROR_CODE, "Rate limited")
         .data(format!("API error (status 429 Too Many Requests): {rpm_body}"));
     assert!(format_acp_error(&rpm, false).contains("api.deepseek.com/deepseek"));
-    assert_eq!(format_acp_error(&rpm, true), RATE_LIMITED_USER_MESSAGE_API_KEY);
+    // The subscription upsell rewrite was removed; the server body passes through for both auth kinds.
+    assert!(format_acp_error(&rpm, true).contains("api.deepseek.com/deepseek"));
     let empty = acp::Error::new(RATE_LIMITED_ERROR_CODE, "Rate limited");
     assert_eq!(format_acp_error(&empty, false), RATE_LIMITED_USER_MESSAGE_OAUTH);
     assert_eq!(format_acp_error(&empty, true), RATE_LIMITED_USER_MESSAGE_API_KEY);
@@ -2818,7 +2819,7 @@ fn format_session_info_api_key_without_env() {
     assert!(!text.contains("XAI_API_KEY"), "{text}");
     assert!(!text.contains("Manage account and credits"), "{text}");
     assert!(
-            text.contains("Run `grok login` to use your deepseek subscription instead."),
+            text.contains("Run `grok login` to use your authenticated session instead."),
             "{text}"
         );
     assert!(!text.contains("api.deepseek.com"), "{text}");
@@ -2830,7 +2831,7 @@ fn format_session_info_api_key_auth_suggests_grok_login() {
     assert!(text.contains("Auth method: API key (XAI_API_KEY)"), "{text}");
     assert!(!text.contains("Manage account and credits"), "{text}");
     assert!(
-            text.contains("Run `grok login` to use your deepseek subscription instead."),
+            text.contains("Run `grok login` to use your authenticated session instead."),
             "{text}"
         );
     assert!(!text.contains("Also present: XAI_API_KEY"), "{text}");

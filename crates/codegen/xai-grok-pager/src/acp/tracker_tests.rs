@@ -2516,10 +2516,6 @@ fn activity_writing_tool_call_labels_first_party_writing_tools() {
         ("todo_write", "Updating todo list…"),
         ("todowrite", "Updating todo list…"),
         ("workflow", "Writing workflow…"),
-        ("image_gen", "Writing image prompt…"),
-        ("image_edit", "Writing image prompt…"),
-        ("image_to_video", "Writing video prompt…"),
-        ("reference_to_video", "Writing video prompt…"),
         ("ask_user_question", "Preparing question…"),
         ("read_file", "Preparing read_file…"),
     ] {
@@ -4926,52 +4922,6 @@ fn generic_failed_tool_call_takes_its_error_from_raw_output() {
     );
 }
 #[test]
-fn send_feedback_update_renders_feedback_drafted() {
-    let tool_call_id = acp::ToolCallId::new(Arc::from("feedback-draft"));
-    let tool_meta = serde_json::json!({
-        "version": 1,
-        "name": "send_feedback",
-        "kind": "feedback",
-        "namespace": "grok_build",
-        "label": "Feedback",
-        "read_only": false,
-    });
-    let pending = acp::ToolCall::new(tool_call_id.clone(), "send_feedback".to_owned())
-        .kind(acp::ToolKind::Other)
-        .status(acp::ToolCallStatus::Pending)
-        .meta(
-            serde_json::json!({xai_grok_tools::tool_taxonomy::TOOL_META_KEY: tool_meta})
-                .as_object()
-                .cloned(),
-        );
-    let completed = acp::SessionUpdate::ToolCallUpdate(acp::ToolCallUpdate::new(
-        tool_call_id,
-        acp::ToolCallUpdateFields::new()
-            .title(Some("Dynamic tool call".to_owned()))
-            .status(Some(acp::ToolCallStatus::Completed))
-            .raw_input(Some(serde_json::json!({"title": "Draft"}))),
-    ));
-    let mut tracker = AcpUpdateTracker::new();
-    let mut scrollback = ScrollbackState::new();
-    tracker.handle_update(
-        acp::SessionUpdate::ToolCall(pending),
-        &meta(),
-        &mut scrollback,
-    );
-    tracker.handle_update(completed, &meta(), &mut scrollback);
-    let block = &scrollback.get(0).expect("feedback block").block;
-    let RenderBlock::ToolCall(ToolCallBlock::Other(other)) = block else {
-        panic!("expected Other block, got {block:?}");
-    };
-    assert_eq!(other.name, "Feedback drafted");
-    assert!(
-        !block
-            .searchable_text()
-            .unwrap()
-            .contains("Dynamic tool call")
-    );
-}
-#[test]
 fn call_mcp_tool_no_raw_input_does_not_panic() {
     let tc = acp::ToolCall::new(
         acp::ToolCallId::new(Arc::from("mcp2")),
@@ -5015,186 +4965,13 @@ fn pascal_case_todo_write_suppressed_from_scrollback() {
 }
 /// Every video ToolInput variant must route through `media_gen_block` so `[Open Video]` uses the typed `MediaGenOutput.path`.
 /// A regex scrape of the JSON prompt text is fragile on Windows with %-encoded session dirs.
-#[test]
-fn video_tool_variants_use_typed_path_not_generic_scrape() {
-    use crate::scrollback::block::BlockContent;
-    let dir = tempfile::tempdir().unwrap();
-    let video_path = dir.path().join("1.mp4");
-    std::fs::write(&video_path, b"fake-mp4").unwrap();
-    let cases: &[(&str, ToolOutput)] = &[
-        (
-            "ImageToVideo",
-            ToolOutput::ImageToVideo(xai_grok_tools::types::output::MediaGenOutput::new(
-                video_path.clone(),
-            )),
-        ),
-        (
-            "ReferenceToVideo",
-            ToolOutput::ReferenceToVideo(xai_grok_tools::types::output::MediaGenOutput::new(
-                video_path.clone(),
-            )),
-        ),
-    ];
-    for (variant, output) in cases {
-        let tc = acp::ToolCall::new(
-            acp::ToolCallId::new(Arc::from(format!("media-{variant}"))),
-            variant.to_string(),
-        )
-        .kind(acp::ToolKind::Other)
-        .status(acp::ToolCallStatus::Completed)
-        .content(vec![])
-        .raw_input(Some(serde_json::json!({ "variant" : variant })))
-        .raw_output(serde_json::to_value(output).ok())
-        .locations(vec![]);
-        let block = tool_call_to_block(&tc, None, &SubagentLabelRegistry::default());
-        let open_path = block
-            .inline_open_button()
-            .map(|(p, is_video)| {
-                assert!(is_video, "{variant}: expected video open button");
-                p
-            })
-            .or_else(|| block.video_references().first().map(|r| r.path.clone()))
-            .unwrap_or_else(|| panic!("{variant}: missing media ref / open button"));
-        assert_eq!(
-            open_path, video_path,
-            "{variant}: open path must be the typed MediaGenOutput.path"
-        );
-    }
-}
-#[test]
-fn media_gen_ref_skips_uploaded_only_video() {
-    let output = ToolOutput::ImageToVideo(xai_grok_tools::types::output::MediaGenOutput::uploaded(
-        "https://bucket.example/videos/x.mp4".into(),
-    ));
-    let tc = acp::ToolCall::new(
-        acp::ToolCallId::new(Arc::from("zdr-upload")),
-        "image_to_video",
-    )
-    .kind(acp::ToolKind::Other)
-    .status(acp::ToolCallStatus::Completed)
-    .content(vec![])
-    .raw_input(Some(serde_json::json!({ "variant": "ImageToVideo" })))
-    .raw_output(serde_json::to_value(output).ok())
-    .locations(vec![]);
-    assert!(
-        media_gen_ref(&tc).is_none(),
-        "uploaded_url-only media must not claim a local open path"
-    );
-}
 /// A tier-restricted (free / X Basic) imagine call short-circuits with the deepseek upsell as `ToolOutput::Text` on a `Completed` status.
 /// The media renderer has no file to open, so it must surface the upsell text in the card body (not a bare title).
 /// It must NOT mark the card as an error.
-#[test]
-fn tier_restricted_media_shows_upsell_text_not_error() {
-    let upsell = "Image generation is a deepseek feature. Upgrade at \
-         https://api.deepseek.com/deepseek?referrer=grok-build";
-    let output = ToolOutput::Text(xai_grok_tools::types::output::TextOutput::from(upsell));
-    let tc = acp::ToolCall::new(
-        acp::ToolCallId::new(Arc::from("tier-restricted-img")),
-        "image_gen",
-    )
-    .kind(acp::ToolKind::Other)
-    .status(acp::ToolCallStatus::Completed)
-    .content(vec![acp::ToolCallContent::Content(acp::Content::new(
-        acp::ContentBlock::Text(acp::TextContent::new(upsell)),
-    ))])
-    .raw_input(Some(serde_json::json!({ "variant": "ImageGen" })))
-    .raw_output(serde_json::to_value(output).ok())
-    .locations(vec![]);
-    let RenderBlock::ToolCall(ToolCallBlock::Other(block)) =
-        tool_call_to_block(&tc, None, &SubagentLabelRegistry::default())
-    else {
-        panic!("expected an Other tool-call block");
-    };
-    assert!(
-        block.is_success(),
-        "the upsell is a successful result, not an error"
-    );
-    assert!(
-        block
-            .output
-            .as_deref()
-            .unwrap_or_default()
-            .contains("deepseek"),
-        "upsell text must be shown in the card body, got: {:?}",
-        block.output
-    );
-}
 /// The daemon client hand-builds the media card's JSON (it cannot depend on `MediaGenOutput`); this pins that the
 /// exact shape it sends — `type` + `path` only — renders as a media ref for both spellings, and that the fuller
 /// shape the built-in tools send does too.
-#[test]
-fn daemon_generate_image_output_shape_renders_as_a_media_ref() {
-    let outputs = [
-        (
-            "ImageGen",
-            serde_json::json!({ "type": "ImageGen", "path": "/work/proj/assets/cat.png" }),
-        ),
-        (
-            "ImageEdit",
-            serde_json::json!({ "type": "ImageEdit", "path": "/work/proj/assets/cat.png" }),
-        ),
-        (
-            "ImageGen",
-            serde_json::json!({
-                "type": "ImageGen",
-                "path": "/work/proj/assets/cat.png",
-                "filename": "cat.png",
-                "session_folder": "assets",
-            }),
-        ),
-    ];
-    for (variant, output) in outputs {
-        let tc = acp::ToolCall::new(
-            acp::ToolCallId::new(Arc::from("daemon-image")),
-            "Generate image: \"a cat\"",
-        )
-        .kind(acp::ToolKind::Other)
-        .status(acp::ToolCallStatus::Completed)
-        .raw_input(Some(serde_json::json!({
-            "variant": variant, "prompt": "a cat", "aspect_ratio": "16:9",
-        })))
-        .raw_output(Some(output.clone()))
-        .locations(vec![]);
-        assert_eq!(
-            media_gen_ref(&tc),
-            Some((std::path::PathBuf::from("/work/proj/assets/cat.png"), false)),
-            "{output}"
-        );
-        let RenderBlock::ToolCall(ToolCallBlock::Other(block)) =
-            tool_call_to_block(&tc, None, &SubagentLabelRegistry::default())
-        else {
-            panic!("expected an Other tool-call block for {output}");
-        };
-        assert!(block.is_success(), "{output}");
-    }
-}
 /// A refused generation (the server's access error) fails the card with the reason, and draws no image.
-#[test]
-fn daemon_generate_image_refusal_is_a_failed_card_with_the_reason() {
-    let reason = "Developer, Sand, or training access required";
-    let tc = acp::ToolCall::new(
-        acp::ToolCallId::new(Arc::from("daemon-image")),
-        "Generate image: \"a cat\"",
-    )
-    .kind(acp::ToolKind::Other)
-    .status(acp::ToolCallStatus::Failed)
-    .raw_input(Some(serde_json::json!({
-        "variant": "ImageGen", "prompt": "a cat", "aspect_ratio": "auto",
-    })))
-    .content(vec![acp::ToolCallContent::from(acp::ContentBlock::Text(
-        acp::TextContent::new(reason.to_string()),
-    ))])
-    .locations(vec![]);
-    assert_eq!(media_gen_ref(&tc), None);
-    let RenderBlock::ToolCall(ToolCallBlock::Other(block)) =
-        tool_call_to_block(&tc, None, &SubagentLabelRegistry::default())
-    else {
-        panic!("expected an Other tool-call block");
-    };
-    assert!(!block.is_success());
-    assert_eq!(block.error.as_deref(), Some(reason));
-}
 /// A hook batch younger than the reveal delay is invisible; once it outlives the delay it outranks the phase it blocks.
 #[test]
 fn hooks_running_reveals_only_after_delay_and_outranks_thinking() {

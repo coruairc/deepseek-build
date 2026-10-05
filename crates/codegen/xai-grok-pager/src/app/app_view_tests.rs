@@ -6,7 +6,6 @@ use crate::app::agent_view::{AgentView, McpInitProgress, PromptMode};
 use crate::app::bundle::BundleState;
 use crate::scrollback::state::ScrollbackState;
 use crate::test_util::test_terminal;
-use crate::xai_grok_voice;
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
 };
@@ -289,7 +288,6 @@ pub(crate) fn test_app() -> AppView {
         minimal_state: crate::minimal_api::MinimalState::default(),
         reconnect_pending: false,
         show_resolved_model: true,
-        sharing_enabled: false,
         plugin_cta_enabled: false,
         plugin_cta_marketplace: None,
         workspace_dashboard_enabled: false,
@@ -318,16 +316,7 @@ pub(crate) fn test_app() -> AppView {
         dashboard_return: None,
         dashboard_persisted: None,
         keyboard_normalizer: KeyboardNormalizer::from_terminal_context(),
-        voice_mode_enabled: false,
         distribution: xai_grok_config::Distribution::STOCK,
-        voice_ui_active: false,
-        voice_config: xai_grok_voice::VoiceConfig::default(),
-        voice_auth: None,
-        voice_session: xai_grok_voice::VoiceSessionId::default(),
-        voice_trailing_final: None,
-        voice_clip_deadline: None,
-        voice_cmd_tx: None,
-        voice_state: VoiceState::Idle,
     }
 }
 pub(crate) fn test_app_with_agent() -> AppView {
@@ -931,50 +920,6 @@ fn needs_animation_gates_mode_switch_banner_countdown() {
     assert!(
         !app.needs_animation(),
         "expired mode banner must stop requesting ticks"
-    );
-}
-/// Draw-entry resync: an `expires_at` crossing between pushes must close the `/announcements` gate on the next frame.
-/// A later live list re-opens it through the same divergence check.
-#[test]
-fn slash_gate_resyncs_when_critical_expires_between_pushes() {
-    let mut app = test_app_with_agent();
-    let id = super::super::agent::AgentId(0);
-    app.agents
-        .get_mut(&id)
-        .unwrap()
-        .set_has_session_announcements(true);
-    app.active_announcements = vec![xai_grok_shell::util::config::RemoteAnnouncement {
-        id: Some("expired".into()),
-        message: Some("gone".into()),
-        severity: Some("critical".into()),
-        expires_at: Some("2000-01-01T00:00:00Z".into()),
-        ..Default::default()
-    }];
-    app.resync_announcement_slash_gate_on_divergence();
-    assert!(
-        !app.agents
-            .get(&id)
-            .unwrap_or_else(|| panic!("missing map entry"))
-            .prompt
-            .slash_controller
-            .has_session_announcements(),
-        "expired-only list must close the gate on the next frame"
-    );
-    app.active_announcements = vec![xai_grok_shell::util::config::RemoteAnnouncement {
-        id: Some("live".into()),
-        message: Some("new outage".into()),
-        severity: Some("critical".into()),
-        ..Default::default()
-    }];
-    app.resync_announcement_slash_gate_on_divergence();
-    assert!(
-        app.agents
-            .get(&id)
-            .unwrap_or_else(|| panic!("missing map entry"))
-            .prompt
-            .slash_controller
-            .has_session_announcements(),
-        "a live critical must re-open the gate"
     );
 }
 /// Critical freezes tip TTL and must not arm needs_animation for a tip that is not counting down (session-long metronome heat).
@@ -2137,40 +2082,6 @@ fn apply_auth_meta_clears_api_key_flag_and_restores_billing_on_personal_login() 
     assert!(!app.is_api_key_auth);
     assert!(app.usage_visible);
 }
-#[test]
-fn apply_auth_meta_api_key_enables_voice_and_skips_tier_gate() {
-    let mut app = test_app();
-    advertise_media_tools(&mut app);
-    assert!(!app.voice_mode_enabled);
-    app.apply_auth_meta(&xai_grok_login::AuthMeta {
-        auth_mode: Some("ApiKey".into()),
-        subscription_tier: Some("API Key".into()),
-        ..Default::default()
-    });
-    assert!(app.is_api_key_auth);
-    assert!(!app.usage_visible);
-    assert!(app.tier_restricted_commands.is_empty());
-    assert_tier_restricted_commands_present(&app);
-    assert!(!app.is_voice_tier_restricted());
-    assert!(app.voice_mode_enabled);
-    let mut app = test_app();
-    app.apply_auth_meta(&xai_grok_login::AuthMeta {
-        subscription_tier: Some("api_key".into()),
-        ..Default::default()
-    });
-    assert!(app.is_api_key_auth);
-    assert!(app.voice_mode_enabled);
-    assert!(app.tier_restricted_commands.is_empty());
-    app.apply_auth_meta(&xai_grok_login::AuthMeta {
-        auth_mode: Some("Oidc".into()),
-        subscription_tier: Some("Free".into()),
-        ..Default::default()
-    });
-    assert!(!app.is_api_key_auth);
-    assert!(!app.voice_mode_enabled);
-    assert!(app.usage_visible);
-    assert!(!app.tier_restricted_commands.is_empty());
-}
 fn expected_tier_restricted_commands() -> Vec<String> {
     TIER_RESTRICTED_COMMANDS
         .iter()
@@ -2179,7 +2090,6 @@ fn expected_tier_restricted_commands() -> Vec<String> {
 }
 /// The present/absent assertions must exercise the deny list, not incidental fail-closed hiding:
 /// `/imagine`, `/imagine-video` are `required_tools()`-gated, so advertise their tools (otherwise the registry fail-closes them).
-/// `/voice` is fail-closed hidden until the remote flag turns it on, so reveal it via the registry directly.
 fn advertise_media_tools(app: &mut AppView) {
     app.welcome_prompt
         .slash_controller
@@ -2190,7 +2100,6 @@ fn advertise_media_tools(app: &mut AppView) {
                 .map(str::to_string)
                 .collect(),
         );
-    app.welcome_prompt.set_voice_visible(true);
 }
 fn assert_tier_restricted_commands_absent(app: &AppView) {
     let reg = app.welcome_prompt.slash_controller.registry();
@@ -2278,19 +2187,6 @@ fn is_restricted_tier_classification() {
     assert!(!is_restricted_tier(Some("X Premium")));
     assert!(!is_restricted_tier(Some("X Premium+")));
     assert!(!is_restricted_tier(Some("SomeFutureTier")));
-}
-#[test]
-fn is_voice_tier_restricted_tracks_tier() {
-    let mut app = test_app();
-    app.apply_auth_meta(&xai_grok_login::AuthMeta::default());
-    assert!(app.is_voice_tier_restricted());
-    let mut app = test_app();
-    let meta = xai_grok_login::AuthMeta {
-        subscription_tier: Some("deepseek".into()),
-        ..Default::default()
-    };
-    app.apply_auth_meta(&meta);
-    assert!(!app.is_voice_tier_restricted());
 }
 #[test]
 fn apply_auth_meta_clears_gate_on_subscription() {
@@ -6170,204 +6066,18 @@ fn dashboard_picker_esc_after_search_click_restores_the_selection() {
 #[test]
 fn dashboard_picker_blocks_non_quit_global_actions() {
     use crate::views::session_picker_surface::SessionPickerSurface;
-    for (key, modifiers) in [
-        (KeyCode::Char('n'), KeyModifiers::CONTROL),
-        (KeyCode::Char(' '), KeyModifiers::CONTROL),
-    ] {
-        let mut app = test_app();
-        pin_non_vscode_registry(&mut app);
-        app.active_view = ActiveView::AgentDashboard;
-        app.dashboard = Some(crate::views::dashboard::DashboardState::new());
-        app.dashboard_session_picker = Some(SessionPickerSurface::new(1));
-        let outcome = app.handle_input(&key_event(key, modifiers));
-        assert!(
-            !matches!(
-                outcome,
-                InputOutcome::Action(Action::NewSession | Action::VoiceToggle)
-            ),
-            "non-quit global action escaped the picker: {outcome:?}"
-        );
-        assert!(app.pending_action.is_none());
-        assert!(app.dashboard_session_picker.is_some());
-    }
-}
-/// Ctrl+Space on the dashboard resolves to `VoiceToggle` via the global `When::Always` fallthrough.
-/// The dispatch input ignores the chord, so it falls through to `handle_global_action`.
-/// This registry route is the cheatsheet/command-palette fallback.
-#[test]
-fn ctrl_space_on_dashboard_routes_to_voice_toggle() {
-    let mut app = test_app();
-    pin_non_vscode_registry(&mut app);
-    app.active_view = ActiveView::AgentDashboard;
-    app.dashboard = Some(crate::views::dashboard::DashboardState::new());
-    let outcome = app.handle_input(&key_event(KeyCode::Char(' '), KeyModifiers::CONTROL));
-    assert!(
-        matches!(outcome, InputOutcome::Action(Action::VoiceToggle)),
-        "Ctrl+Space on the dashboard must route to VoiceToggle, got {outcome:?}"
-    );
-}
-/// With `[ui].voice_keybind_enabled = false` the global fallthrough must swallow the chord.
-/// Otherwise Ctrl+Space would still start dictation via the registry route whenever the event-loop intercept skips it.
-#[test]
-fn ctrl_space_on_dashboard_ignored_when_keybind_disabled() {
-    let mut app = test_app();
-    pin_non_vscode_registry(&mut app);
-    app.active_view = ActiveView::AgentDashboard;
-    app.dashboard = Some(crate::views::dashboard::DashboardState::new());
-    app.current_ui.voice_keybind_enabled = Some(false);
-    let outcome = app.handle_input(&key_event(KeyCode::Char(' '), KeyModifiers::CONTROL));
-    assert!(
-        !matches!(outcome, InputOutcome::Action(Action::VoiceToggle)),
-        "Ctrl+Space must be inert with the voice shortcut disabled, got {outcome:?}"
-    );
-}
-/// Esc while voice is recording on the dashboard must STOP voice (route to `VoiceToggle`).
-/// It must not fall into the dashboard's Esc cascade (clear filter / unfocus / deselect / exit).
-#[test]
-fn esc_on_dashboard_while_listening_stops_voice() {
-    let mut app = test_app();
-    pin_non_vscode_registry(&mut app);
-    app.active_view = ActiveView::AgentDashboard;
-    app.dashboard = Some(crate::views::dashboard::DashboardState::new());
-    app.voice_state = VoiceState::Recording {
-        hold: false,
-        target: VoiceTarget::DashboardDispatch,
-        partial: Partial::None,
-        route: None,
-    };
-    let outcome = app.handle_input(&key_event(KeyCode::Esc, KeyModifiers::NONE));
-    assert!(
-        matches!(outcome, InputOutcome::Action(Action::VoiceToggle)),
-        "Esc while recording on the dashboard must stop voice, got {outcome:?}"
-    );
-}
-#[test]
-fn esc_stops_voice_before_closing_dashboard_picker() {
-    use crate::views::session_picker_surface::SessionPickerSurface;
     let mut app = test_app();
     pin_non_vscode_registry(&mut app);
     app.active_view = ActiveView::AgentDashboard;
     app.dashboard = Some(crate::views::dashboard::DashboardState::new());
     app.dashboard_session_picker = Some(SessionPickerSurface::new(1));
-    app.voice_state = VoiceState::Recording {
-        hold: false,
-        target: VoiceTarget::DashboardDispatch,
-        partial: Partial::None,
-        route: None,
-    };
-    let outcome = app.handle_input(&key_event(KeyCode::Esc, KeyModifiers::NONE));
-    assert!(matches!(outcome, InputOutcome::Action(Action::VoiceToggle)));
+    let outcome = app.handle_input(&key_event(KeyCode::Char('n'), KeyModifiers::CONTROL));
+    assert!(
+        !matches!(outcome, InputOutcome::Action(Action::NewSession)),
+        "non-quit global action escaped the picker: {outcome:?}"
+    );
+    assert!(app.pending_action.is_none());
     assert!(app.dashboard_session_picker.is_some());
-}
-/// Esc on the dashboard while NOT recording must keep its normal cascade behaviour (here: not a `VoiceToggle`).
-#[test]
-fn esc_on_dashboard_not_listening_does_not_toggle_voice() {
-    let mut app = test_app();
-    pin_non_vscode_registry(&mut app);
-    app.active_view = ActiveView::AgentDashboard;
-    app.dashboard = Some(crate::views::dashboard::DashboardState::new());
-    app.voice_state = VoiceState::Idle;
-    let outcome = app.handle_input(&key_event(KeyCode::Esc, KeyModifiers::NONE));
-    assert!(
-        !matches!(outcome, InputOutcome::Action(Action::VoiceToggle)),
-        "Esc must not toggle voice when not recording, got {outcome:?}"
-    );
-}
-/// Esc with a voice cold-start still queued (pipeline spawning, mic not yet open) must cancel it.
-/// Otherwise the event loop would open the mic after the user backed out, even though `voice_listening` is still false.
-#[test]
-fn esc_cancels_pending_voice_cold_start() {
-    let mut app = test_app();
-    pin_non_vscode_registry(&mut app);
-    app.active_view = ActiveView::AgentDashboard;
-    app.dashboard = Some(crate::views::dashboard::DashboardState::new());
-    app.voice_state = VoiceState::ColdStart {
-        hold: false,
-        target: VoiceTarget::DashboardDispatch,
-    };
-    let outcome = app.handle_input(&key_event(KeyCode::Esc, KeyModifiers::NONE));
-    assert!(matches!(outcome, InputOutcome::Changed));
-    assert!(
-        !app.voice_state.is_pending_cold_start(),
-        "Esc must cancel the queued cold-start"
-    );
-    assert!(
-        app.voice_recording_target().is_none(),
-        "target dropped on cancel"
-    );
-}
-/// Esc on a stopped/uploading clip aborts it rather than falling through to the surface's Esc.
-#[test]
-fn esc_abandons_an_outstanding_clip() {
-    let mut app = test_app();
-    pin_non_vscode_registry(&mut app);
-    app.active_view = ActiveView::AgentDashboard;
-    app.dashboard = Some(crate::views::dashboard::DashboardState::new());
-    let (tx, mut rx) = tokio::sync::mpsc::channel(4);
-    app.voice_cmd_tx = Some(tx);
-    app.voice_state = VoiceState::Transcribing {
-        target: VoiceTarget::DashboardDispatch,
-        partial: Partial::None,
-    };
-    let outcome = app.handle_input(&key_event(KeyCode::Esc, KeyModifiers::NONE));
-    assert!(matches!(outcome, InputOutcome::Changed));
-    assert_eq!(VoiceState::Idle, app.voice_state);
-    assert!(matches!(
-        rx.try_recv(),
-        Ok(xai_grok_voice::VoiceCommand::Abort)
-    ));
-    assert_eq!(
-        Some(crate::voice::RECORDING_DISCARDED_TOAST),
-        app.dashboard
-            .as_ref()
-            .and_then(|d| d.error_toast.as_deref()),
-        "the key's effect is named; nothing else on screen showed a recording in flight"
-    );
-}
-/// The dictation overlay must only render on the surface that owns the bound target.
-/// After an explicit stop the interim is kept (`Stopping`) for a trailing final, so navigating away must not flash it on the wrong box.
-#[test]
-fn voice_overlay_bound_to_target_surface() {
-    let id = super::super::agent::AgentId(0);
-    let mut app = test_app();
-    app.voice_state = VoiceState::Stopping {
-        target: VoiceTarget::Agent(id),
-        partial: Partial::Shown("partial".into()),
-        route: Some(xai_grok_voice::VoiceRoute::Streaming),
-    };
-    app.active_view = ActiveView::Agent(id);
-    assert!(
-        app.voice_target_on_active_surface(),
-        "overlay shows on the agent that owns the dictation"
-    );
-    app.active_view = ActiveView::AgentDashboard;
-    assert!(
-        !app.voice_target_on_active_surface(),
-        "overlay hidden once the user navigates off the target surface"
-    );
-}
-/// Entering a session from the dashboard sets `active_view = Agent(id)` but leaves `attached_agent = Some(id)` as a return breadcrumb.
-/// The agent is fullscreen, so dictation into its prompt must stay on-surface and the bind-enforcer must not auto-stop it.
-/// Regression: recording bar missing after clicking into a session.
-#[test]
-fn voice_target_on_agent_entered_from_dashboard() {
-    let id = super::super::agent::AgentId(0);
-    let mut app = test_app();
-    app.voice_state = VoiceState::Recording {
-        hold: false,
-        target: VoiceTarget::Agent(id),
-        partial: Partial::None,
-        route: None,
-    };
-    app.active_view = ActiveView::Agent(id);
-    app.dashboard = Some(crate::views::dashboard::DashboardState::new());
-    app.dashboard.as_mut().unwrap().attached_agent = Some(id);
-    assert!(app.voice_target_on_active_surface());
-    app.enforce_voice_session_bound();
-    assert!(
-        app.voice_listening(),
-        "entering a session from the dashboard must not auto-stop the mic"
-    );
 }
 /// Attach a popup overlay onto a freshly-built `test_app_with_agent` and return the attached agent id.
 /// Convenience for the popup-handle-input tests.

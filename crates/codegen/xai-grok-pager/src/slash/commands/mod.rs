@@ -384,7 +384,7 @@ mod tests {
         let models = sample_models();
         let mut ctx = make_ctx(&models);
         let cmd = model::ModelCommand;
-        let result = cmd.run(&mut ctx, "grok 4.5");
+        let result = cmd.run(&mut ctx, "deepseek-build 4.5");
         match result {
             CommandResult::Action(Action::SetDefaultModel(id)) => {
                 assert_eq!(id.0.as_ref(), "deepseek-4.5");
@@ -745,18 +745,6 @@ mod tests {
         assert!(reg.get("recap").is_some());
         reg.set_recap_visible(false);
         assert!(reg.get("recap").is_none());
-    }
-    #[test]
-    fn voice_hidden_by_default_in_registry_until_revealed() {
-        let mut reg = CommandRegistry::new(builtin_commands());
-        assert!(
-            reg.get("voice").is_none(),
-            "/voice must be fail-closed until set_voice_visible(true)"
-        );
-        reg.set_voice_visible(true);
-        assert!(reg.get("voice").is_some());
-        reg.set_voice_visible(false);
-        assert!(reg.get("voice").is_none());
     }
     /// Every pager builtin trigger key must appear in the shell's `PAGER_COMMAND_KEYS`.
     /// Add new names there when adding a pager builtin.

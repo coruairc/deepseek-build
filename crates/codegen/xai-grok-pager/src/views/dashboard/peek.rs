@@ -1140,46 +1140,6 @@ mod tests {
         );
     }
 
-    /// The peek panel paints the `● rec` badge on its top border while voice capture is active, and streams the interim transcript into the reply box.
-    /// Without this, voice started with a row selected (peek replaces the dispatch box) would show no indicator at all.
-    #[test]
-    fn render_peek_paints_record_badge_and_interim_when_listening() {
-        use ratatui::buffer::Buffer;
-        use ratatui::layout::Rect;
-        let theme = Theme::current();
-        let panel = PeekPanelState::new(DashboardRowId::TopLevel(AgentId(0)), fields("Response"));
-        let mut reply = test_reply();
-        let mut buf = Buffer::empty(Rect::new(0, 0, 80, 6));
-        let _ = render_peek_panel(
-            &mut buf,
-            Rect::new(0, 0, 80, 6),
-            &panel,
-            &mut reply,
-            &theme,
-            true,
-            Some("hello there"),
-            false,
-            None,
-            None,
-            None,
-        );
-        // Badge `" ● rec "` starts at x = area.x + 2, so the dot is at x = 3.
-        assert_eq!(
-            buf.cell((3, 0)).map(|c| c.symbol()),
-            Some("\u{25CF}"),
-            "record dot must paint on the peek top border while listening"
-        );
-        // The interim transcript renders somewhere in the box body.
-        let body: String = (0..6)
-            .flat_map(|y| (0..80).map(move |x| (x, y)))
-            .filter_map(|(x, y)| buf.cell((x, y)).map(|c| c.symbol().to_string()))
-            .collect();
-        assert!(
-            body.contains("hello there"),
-            "interim transcript must stream into the peek reply, got: {body:?}"
-        );
-    }
-
     #[test]
     fn peek_handles_missing_question() {
         let mut f = fields("Idle");

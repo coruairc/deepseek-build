@@ -4094,42 +4094,6 @@ mod tests {
     }
 
     #[test]
-    fn hero_box_announcement_clamped_when_tight() {
-        // A real announcement can't disable the hero box: the slot is clamped to whatever still fits (the renderer trails a `…`)
-        // The box stays active rather than falling back to the stacked layout
-        let area = Rect::new(0, 0, 100, 17);
-        let a = long_ann();
-        let without = WelcomeLayout::compute(WelcomeLayoutInput {
-            content_area: area,
-            menu_height: 3,
-            ..Default::default()
-        });
-        assert!(without.has_hero_box());
-        let with_ann = WelcomeLayout::compute(WelcomeLayoutInput {
-            content_area: area,
-            menu_height: 3,
-            announcement: Some(&a),
-            ..Default::default()
-        });
-        assert!(
-            with_ann.has_hero_box(),
-            "announcement clamps to fit instead of disabling the box"
-        );
-        assert!(with_ann.hero_info.height > 0);
-        let input = WelcomeLayoutInput {
-            content_area: area,
-            menu_height: 3,
-            announcement: Some(&a),
-            ..Default::default()
-        };
-        assert!(
-            hero_box::min_content_height(&input, with_ann.hero_info.height, PROMPT_HEIGHT)
-                <= area.height,
-            "clamped slot must keep the box within the area"
-        );
-    }
-
-    #[test]
     fn hero_box_keeps_one_bottom_pad_below_actions() {
         // With a changelog/announcement the subtitle is hidden, but there's still exactly one padding row between the actions and the bottom border
         // (menu=4 + info=3 fills the inner, so the menu reaches the pad.)

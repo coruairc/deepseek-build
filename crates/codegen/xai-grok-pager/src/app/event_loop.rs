@@ -4389,29 +4389,6 @@ mod tests {
         assert!(tty_suspend_armed(&app));
     }
     #[test]
-    fn is_voice_chord_press_exact_release_keycode() {
-        use KeyEventKind::{Press, Release};
-        let hit = |code, mods, kind| {
-            is_voice_chord(&KeyEvent {
-                code,
-                modifiers: mods,
-                kind,
-                state: KeyEventState::NONE,
-            })
-        };
-        let (sp, f8, ctrl, none) = (
-            KeyCode::Char(' '),
-            KeyCode::F(8),
-            KeyModifiers::CONTROL,
-            KeyModifiers::NONE,
-        );
-        assert!(hit(sp, ctrl, Press) && hit(f8, none, Press));
-        assert!(!hit(sp, ctrl | KeyModifiers::ALT, Press));
-        assert!(!hit(f8, KeyModifiers::SHIFT, Press) && !hit(sp, none, Press));
-        assert!(hit(sp, none, Release) && hit(f8, none, Release));
-        assert!(!hit(KeyCode::Char('a'), none, Release));
-    }
-    #[test]
     fn feedback_modal_blocks_voice_chord_targeting() {
         let mut app = crate::app::app_view::tests::test_app_with_agent();
         assert!(!active_feedback_modal_open(&app));
@@ -4425,62 +4402,8 @@ mod tests {
         app.active_view = ActiveView::AgentDashboard;
         assert!(!active_feedback_modal_open(&app));
     }
-    #[test]
-    fn voice_chord_action_cases() {
-        use crate::app::actions::Action;
-        let press = KeyEventKind::Press;
-        let release = KeyEventKind::Release;
-        let tag = |a: Option<Action>| match a {
-            Some(Action::EnableVoiceMode) => "start",
-            Some(Action::VoiceStop) => "stop",
-            Some(Action::VoiceToggle) => "toggle",
-            None => "none",
-            _ => "other",
-        };
-        let cases = [
-            ((true, true, press, false, false), "start"),
-            ((true, true, release, true, true), "stop"),
-            ((true, true, press, true, true), "none"),
-            ((true, true, press, true, false), "toggle"),
-            ((false, false, press, false, false), "toggle"),
-            ((false, false, release, true, false), "none"),
-            ((true, false, release, true, false), "none"),
-        ];
-        for ((hold, releases, kind, listening, owned), want) in cases {
-            assert_eq!(
-                tag(voice_chord_action(hold, releases, kind, listening, owned)),
-                want,
-                "voice_chord_action({hold},{releases},{kind:?},{listening},{owned})"
-            );
-        }
-    }
     /// Hold-owned events are claimed even with the setting off (a dropped release would wedge the mic open, a past regression).
     /// Otherwise presses honor the setting and bare releases are never claimed.
-    #[test]
-    fn voice_chord_claims_event_cases() {
-        let press = KeyEventKind::Press;
-        let repeat = KeyEventKind::Repeat;
-        let release = KeyEventKind::Release;
-        let cases = [
-            ((release, false, true), true),
-            ((release, true, true), true),
-            ((press, false, true), true),
-            ((repeat, false, true), true),
-            ((press, true, false), true),
-            ((press, false, false), false),
-            ((repeat, true, false), true),
-            ((repeat, false, false), false),
-            ((release, true, false), false),
-            ((release, false, false), false),
-        ];
-        for ((kind, enabled, owned), want) in cases {
-            assert_eq!(
-                voice_chord_claims_event(kind, enabled, owned),
-                want,
-                "voice_chord_claims_event({kind:?},{enabled},{owned})"
-            );
-        }
-    }
     #[test]
     fn plan_reconnect_load_requires_session_id() {
         let agent = crate::test_util::make_agent_view(None, "/work/project");

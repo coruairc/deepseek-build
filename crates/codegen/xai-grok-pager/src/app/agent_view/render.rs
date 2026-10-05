@@ -4429,8 +4429,6 @@ mod voice_recording_overlay_tests {
             false,
             &mut Vec::new(),
             super::AppRenderParams {
-                voice_available: listening,
-                voice_listening: listening,
                 ..Default::default()
             },
         );
@@ -4442,18 +4440,6 @@ mod voice_recording_overlay_tests {
                     + "\n"
             })
             .collect()
-    }
-    /// The plan approval's line-viewer overlay used to paint over the `voice_recording` row.
-    /// That left a live mic (Ctrl+Space / F8 still work there) with no visible "Recording" indicator.
-    /// The overlay must stop above the record indicator row.
-    #[test]
-    fn recording_row_visible_while_plan_approval_open() {
-        let mut agent = plan_approval_agent();
-        let text = render_text(&mut agent, true);
-        assert!(
-            text.contains("Recording"),
-            "record indicator must stay visible under the plan approval viewer:\n{text}"
-        );
     }
     /// While voice is idle no indicator row exists, so the overlay keeps reaching the prompt as before.
     #[test]

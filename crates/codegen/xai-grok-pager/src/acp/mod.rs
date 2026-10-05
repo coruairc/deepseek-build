@@ -853,29 +853,31 @@ mod tests {
     }
     #[test]
     fn startup_auth_grok_com_no_provider_needs_login_pending() {
+        use xai_grok_shell::agent::auth_method::GROK_COM_METHOD_ID;
         let methods = vec![make_auth_method(
-            "api.deepseek.com",
+            GROK_COM_METHOD_ID,
             "api.deepseek.com",
             None,
         )];
         let (needs, label, method_id, mode) = startup_auth_metadata(&methods);
         assert!(needs);
         assert_eq!(label.as_deref(), Some("api.deepseek.com"));
-        assert_eq!(method_id.as_ref().unwrap().0.as_ref(), "api.deepseek.com");
+        assert_eq!(method_id.as_ref().unwrap().0.as_ref(), GROK_COM_METHOD_ID);
         assert_eq!(mode, AuthStartMode::Pending);
     }
     #[test]
     fn startup_auth_grok_com_with_external_provider_command() {
+        use xai_grok_shell::agent::auth_method::GROK_COM_METHOD_ID;
         let meta = serde_json::json!({ "external_provider": true });
         let methods = vec![make_auth_method(
-            "api.deepseek.com",
+            GROK_COM_METHOD_ID,
             "Acme Corp",
             Some(meta),
         )];
         let (needs, label, method_id, mode) = startup_auth_metadata(&methods);
         assert!(needs);
         assert_eq!(label.as_deref(), Some("Acme Corp"));
-        assert_eq!(method_id.as_ref().unwrap().0.as_ref(), "api.deepseek.com");
+        assert_eq!(method_id.as_ref().unwrap().0.as_ref(), GROK_COM_METHOD_ID);
         assert_eq!(mode, AuthStartMode::Command);
     }
     #[test]
@@ -933,7 +935,8 @@ mod tests {
     }
     #[test]
     fn startup_auth_method_id_is_copied_not_synthesized() {
-        let methods = vec![make_auth_method("api.deepseek.com", "My Login", None)];
+        use xai_grok_shell::agent::auth_method::GROK_COM_METHOD_ID;
+        let methods = vec![make_auth_method(GROK_COM_METHOD_ID, "My Login", None)];
         let (_, _, method_id, _) = startup_auth_metadata(&methods);
         let Some(first) = methods.first() else {
             panic!("expected an auth method");

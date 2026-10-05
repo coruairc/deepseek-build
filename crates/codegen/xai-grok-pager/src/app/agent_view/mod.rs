@@ -3359,25 +3359,6 @@ mod dropdown_chrome_tests {
     }
 }
 #[cfg(test)]
-mod voice_keybind_gate_tests {
-    use super::*;
-    /// The per-pane chord route drops `VoiceToggle` while the Voice shortcut
-    /// setting is off (the event-loop intercept skips the chord in that state,
-    /// so this route is what would otherwise leak it through).
-    #[test]
-    fn resolve_action_honors_voice_keybind_gate() {
-        let prev = crate::app::voice_keybind_enabled();
-        crate::app::set_voice_keybind_enabled_for_test(false);
-        assert!(resolve_action(Some(ActionId::VoiceToggle)).is_none());
-        crate::app::set_voice_keybind_enabled_for_test(true);
-        assert!(matches!(
-            resolve_action(Some(ActionId::VoiceToggle)),
-            Some(InputOutcome::Action(Action::VoiceToggle))
-        ));
-        crate::app::set_voice_keybind_enabled_for_test(prev);
-    }
-}
-#[cfg(test)]
 mod prompt_input_mode_tests {
     use super::*;
     use crate::app::actions::Action;

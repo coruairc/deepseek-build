@@ -22,8 +22,6 @@ fn shell_runtime_preserves_leader_resolution() {
         (vec!["stdio"], true),
         (vec!["--leader", "stdio"], true),
         (vec!["--no-leader", "stdio"], true),
-        (vec!["headless"], true),
-        (vec!["serve"], false),
         (vec!["leader"], false),
         (vec![], true),
     ] {

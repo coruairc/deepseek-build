@@ -21,10 +21,6 @@ mod status_line;
 mod task_result;
 mod transcript;
 mod turn;
-use super::billing::{
-    CreditLimitUpsellMode, credit_limit_upsell_mode, is_max_tier, open_credit_limit_upsell,
-    open_free_usage_upsell,
-};
 use super::cta::{
     CTA_MCP_ABSENT_MAX_ATTEMPTS, CTA_MCP_POLL_MAX_ATTEMPTS, cta_impression_plugin_name,
     cta_install_error_category, cta_install_relative_path, plugin_cta_phase_for,
@@ -70,14 +66,13 @@ use crate::app::actions::{
 use crate::app::agent::{AgentId, AgentSession, AgentState};
 use crate::app::agent_view::{ActivePane, AgentView, PromptMode};
 use crate::app::app_view::{
-    ActiveView, AppView, AuthMode, AuthState, Partial, PendingCodingDataWrite, TrustState,
-    VoiceState, VoiceTarget, WelcomeAnnouncementState,
+    ActiveView, AppView, AuthMode, AuthState, PendingCodingDataWrite, TrustState,
+    WelcomeAnnouncementState,
 };
 use crate::scrollback::block::RenderBlock;
 use crate::scrollback::blocks::{SessionEvent, ToolCallBlock};
 use crate::scrollback::state::ScrollbackState;
 use crate::views::session_picker_surface::SessionPickerHost;
-use crate::xai_grok_voice;
 use agent_client_protocol as acp;
 use indexmap::IndexMap;
 use std::path::PathBuf;
@@ -164,7 +159,7 @@ fn test_app() -> AppView {
         agent_override: None,
         bootstrap_acp_commands: Vec::new(),
         auth_methods: vec![acp::AuthMethod::Agent(acp::AuthMethodAgent::new(
-            acp::AuthMethodId::new("api.deepseek.com"),
+            acp::AuthMethodId::new(xai_grok_shell::agent::auth_method::GROK_COM_METHOD_ID),
             "deepseek-build".to_string(),
         ))],
         auth_state: AuthState::Done,
@@ -300,7 +295,6 @@ fn test_app() -> AppView {
         minimal_state: crate::minimal_api::MinimalState::default(),
         reconnect_pending: false,
         show_resolved_model: true,
-        sharing_enabled: false,
         plugin_cta_enabled: false,
         plugin_cta_marketplace: None,
         workspace_dashboard_enabled: false,
@@ -330,16 +324,7 @@ fn test_app() -> AppView {
         dashboard_persisted: None,
         keyboard_normalizer: crate::input::KeyboardNormalizer::from_terminal_context(),
         has_claude_import: false,
-        voice_mode_enabled: false,
         distribution: xai_grok_config::Distribution::STOCK,
-        voice_ui_active: false,
-        voice_config: xai_grok_voice::VoiceConfig::default(),
-        voice_auth: None,
-        voice_session: xai_grok_voice::VoiceSessionId::default(),
-        voice_trailing_final: None,
-        voice_clip_deadline: None,
-        voice_cmd_tx: None,
-        voice_state: VoiceState::Idle,
     }
 }
 /// Build a default `AgentSession` for tests.

@@ -1,6 +1,5 @@
 //! Tests for session create, exit, trust, startup actions, worktree creation, and cloud lifecycle.
 use super::*;
-use crate::xai_grok_voice;
 fn expect_agent(app: &AppView, id: AgentId) -> &AgentView {
     let Some(agent) = app.agents.get(&id) else {
         panic!("expected agent {id:?}");
@@ -22,92 +21,6 @@ fn pending_trust_workspace() -> (tempfile::TempDir, std::path::PathBuf, AppView)
         workspace: workspace.clone(),
     };
     (repo, workspace, app)
-}
-#[test]
-fn voice_on_welcome_creates_session_and_records() {
-    let mut app = test_app();
-    let (tx, mut rx) = tokio::sync::mpsc::channel(8);
-    app.voice_mode_enabled = true;
-    app.voice_cmd_tx = Some(tx);
-    assert!(app.agents.is_empty());
-    dispatch(Action::EnableVoiceMode, &mut app);
-    let ActiveView::Agent(id) = app.active_view else {
-        panic!("voice on welcome must create and switch to a session");
-    };
-    if !xai_grok_voice::AUDIO_SUPPORTED {
-        return;
-    }
-    assert!(app.voice_listening(), "capture starts into the new session");
-    assert_eq!(app.voice_recording_target(), Some(VoiceTarget::Agent(id)));
-    assert!(matches!(
-        rx.try_recv(),
-        Ok(xai_grok_voice::VoiceCommand::PttPress { .. })
-    ));
-}
-#[test]
-fn voice_final_routes_to_recording_session_not_active_view() {
-    let mut app = test_app_with_agent();
-    let rec = AgentId(0);
-    let other = AgentId(1);
-    let session = make_test_agent_session(&app, other, "second");
-    app.agents
-        .insert(other, AgentView::new(session, ScrollbackState::new()));
-    app.active_view = ActiveView::Agent(other);
-    app.voice_state = VoiceState::Stopping {
-        target: VoiceTarget::Agent(rec),
-        partial: Partial::None,
-        route: None,
-    };
-    crate::voice::handle_voice_event(
-        &mut app,
-        xai_grok_voice::VoiceEvent::UtteranceFinal {
-            text: "hello".into(),
-        },
-    );
-    assert_eq!(app.agents.get(&rec).unwrap().prompt.text(), "hello");
-    assert_eq!(app.agents.get(&other).unwrap().prompt.text(), "");
-}
-#[test]
-fn voice_final_dropped_after_recording_session_cleared() {
-    let mut app = test_app_with_agent();
-    let id = AgentId(0);
-    app.voice_state = VoiceState::Idle;
-    crate::voice::handle_voice_event(
-        &mut app,
-        xai_grok_voice::VoiceEvent::UtteranceFinal {
-            text: "late".into(),
-        },
-    );
-    assert_eq!(app.agents.get(&id).unwrap().prompt.text(), "");
-}
-#[test]
-fn voice_auto_stops_when_leaving_recording_session() {
-    let mut app = test_app_with_agent();
-    let id = AgentId(0);
-    let (tx, mut rx) = tokio::sync::mpsc::channel(8);
-    app.voice_cmd_tx = Some(tx);
-    app.voice_state = VoiceState::Recording {
-        hold: false,
-        target: VoiceTarget::Agent(id),
-        partial: Partial::None,
-        route: None,
-    };
-    app.active_view = ActiveView::Agent(id);
-    app.enforce_voice_session_bound();
-    assert!(app.voice_listening());
-    assert!(rx.try_recv().is_err());
-    app.active_view = ActiveView::AgentDashboard;
-    app.enforce_voice_session_bound();
-    assert!(!app.voice_listening(), "must stop when leaving the session");
-    assert!(app.voice_interim().is_none());
-    assert!(
-        app.voice_recording_target().is_none(),
-        "target dropped on leave"
-    );
-    assert!(matches!(
-        rx.try_recv(),
-        Ok(xai_grok_voice::VoiceCommand::Abort)
-    ));
 }
 #[test]
 fn chip_submit_without_session_keeps_chips_and_does_not_send() {

@@ -6275,33 +6275,6 @@ fn skill_prompt_with_images_toasts() {
     assert!(agent_ref(&app, id).prompt.images.is_empty());
 }
 
-/// A slash command whose action cannot carry images names itself in the toast.
-#[test]
-fn action_slash_command_with_images_toasts() {
-    let mut app = test_app_with_agent();
-    let id = AgentId(0);
-    {
-        let agent = app.agents.get_mut(&id).unwrap();
-        agent.prompt.set_text("/announcements hide ");
-        agent.prompt.set_cursor(agent.prompt.text().len());
-        agent
-            .prompt
-            .insert_image(crate::app::agent_view::test_fixtures::test_pasted_image())
-            .unwrap();
-    }
-    let text = agent_ref(&app, id).prompt.text().to_string();
-
-    dispatch(Action::SendPrompt(text), &mut app);
-
-    assert_eq!(
-        toast_text(&app, id),
-        Some("Images not sent with /announcements — paste them again")
-    );
-    let agent = agent_ref(&app, id);
-    assert!(agent.prompt.images.is_empty());
-    assert!(agent.prompt.text().is_empty());
-}
-
 /// A queued image whose file vanished sends without its block and tells the user which one.
 #[test]
 fn unloadable_image_toasts_on_drain() {
