@@ -4179,10 +4179,10 @@
             "terminal theme keeps the solid plan accent"
         );
 
-        // GrokNight: dimmed toward bg at truecolor; where quantization makes
+        // DeepSeekMonokai: dimmed toward bg at truecolor; where quantization makes
         // the palette named (blend inexpressible), the solid accent — never
         // the old gray fallback.
-        crate::theme::cache::set(crate::theme::ThemeKind::GrokNight);
+        crate::theme::cache::set(crate::theme::ThemeKind::DeepSeekMonokai);
         let style = render();
         let theme = Theme::current();
         assert_ne!(style.fg, Some(theme.gray), "never drops to gray");
@@ -4326,7 +4326,7 @@
             );
         }
 
-        crate::theme::cache::set(crate::theme::ThemeKind::GrokNight);
+        crate::theme::cache::set(crate::theme::ThemeKind::DeepSeekMonokai);
         let style = render("yolo");
         assert_eq!(style.fg, Some(Theme::current().gray), "RGB keeps gray fg");
         assert!(!style.add_modifier.contains(Modifier::DIM));
@@ -4522,14 +4522,14 @@
             "terminal-theme placeholder must be dimmed, got {terminal:?}"
         );
 
-        crate::theme::cache::set(crate::theme::ThemeKind::GrokNight);
-        let groknight = render(&mut PromptWidget::new());
+        crate::theme::cache::set(crate::theme::ThemeKind::DeepSeekMonokai);
+        let deepseek_monokai = render(&mut PromptWidget::new());
         assert_eq!(
-            groknight.fg,
+            deepseek_monokai.fg,
             Some(Theme::current().gray),
             "RGB-theme placeholder keeps the gray fg"
         );
-        assert!(!groknight.add_modifier.contains(Modifier::DIM));
+        assert!(!deepseek_monokai.add_modifier.contains(Modifier::DIM));
     }
 
     #[test]
@@ -5015,7 +5015,7 @@
     fn teal_highlighting_on_second_line() {
         // Theme::current() and the terminal-native lock are process-global.
         // A sibling can paint Color::Blue (terminal default accent_skill) and
-        // then swap in GrokNight's Rgb accent before this assert.
+        // then swap in DeepSeekMonokai's Rgb accent before this assert.
         let _theme = crate::theme::cache::pin_theme();
         crate::theme::cache::set_terminal_native_lock(false);
         // The slash highlight reads the global `embedded` flag (monochrome when set).

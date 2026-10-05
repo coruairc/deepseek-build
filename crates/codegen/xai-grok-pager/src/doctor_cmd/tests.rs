@@ -144,8 +144,8 @@ fn mixed_report() -> DiagnosticReport {
     report.facts.color = ColorFacts {
         level: RuntimeFact::Available(ColorLevel::Ansi256),
         available_themes: vec![
-            ThemeKind::GrokNight,
-            ThemeKind::GrokDay,
+            ThemeKind::DeepSeekMonokai,
+            ThemeKind::DeepSeekDay,
             ThemeKind::Terminal,
         ],
         total_themes: ThemeKind::ALL.len(),
@@ -492,7 +492,7 @@ fn human_mixed_fixture_is_exact() {
             "  · byobu                        tmux\n",
             "  · ssh                          yes\n",
             "  · color                        256\n",
-            "  · themes                       3/6: groknight, grokday, terminal\n",
+            "  · themes                       3/6: deepseek_monokai, deepseek_day, terminal\n",
             "  · keyboard                     cmd=dropped, opt=native (OS rescue active)\n",
             "  · newline                      Alt+Enter (Cursor: xterm.js cannot distinguish Shift+Enter)\n",
             "\n",
@@ -739,7 +739,7 @@ fn json_contract_is_structural_stable_ordered_and_ansi_free() {
                 "ssh": true,
                 "color": {
                     "level": {"status": "available", "value": "256"},
-                    "availableThemes": ["groknight", "grokday", "terminal"],
+                    "availableThemes": ["deepseek-monokai", "deepseek-day", "terminal"],
                     "totalThemes": 6
                 },
                 "keyboard": {"cmd": "dropped", "opt": "native", "os": "macos"},

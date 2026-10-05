@@ -4,7 +4,7 @@
 //! [`parser_options`] is the single source of truth for the parser feature set.
 //! `xai-grok-markdown` uses the same options, so analysis matches what deepseek-build renders.
 //!
-//! After parsing, Grok applies [`offset_events`]: only `~~…~~` counts as strikethrough.
+//! After parsing, deepseek-build applies [`offset_events`]: only `~~…~~` counts as strikethrough.
 //! Single-tilde pairs (`~text~`), which pulldown treats as strike, are demoted to literal `~` text so LLM output like `~**10%**` is not struck.
 
 #![deny(clippy::indexing_slicing)]
@@ -23,7 +23,7 @@ pub fn parser_options() -> Options {
         | Options::ENABLE_TABLES
 }
 
-/// Returns Grok's parser events with source byte ranges, single-tilde strikethrough already demoted.
+/// Returns deepseek-build's parser events with source byte ranges, single-tilde strikethrough already demoted.
 ///
 /// Prefer this over `Parser::new_ext(...).into_offset_iter()` so analysis and rendering agree on what counts as strikethrough.
 pub fn offset_events(text: &str) -> impl Iterator<Item = (Event<'_>, Range<usize>)> + '_ {

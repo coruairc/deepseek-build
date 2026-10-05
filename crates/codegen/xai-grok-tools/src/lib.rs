@@ -1,4 +1,4 @@
-//! Grok tools library.
+//! deepseek-build tools library.
 
 #![deny(clippy::indexing_slicing)]
 

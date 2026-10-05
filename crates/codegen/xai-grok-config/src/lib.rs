@@ -1,4 +1,4 @@
-//! Grok config covers file loading and layering, service endpoints, remote settings, vendor compat, the campaign overlay, and the MCP server list.
+//! deepseek-build config covers file loading and layering, service endpoints, remote settings, vendor compat, the campaign overlay, and the MCP server list.
 //! `xai-grok-cloud-config` fetches, caches, and refreshes the remote settings.
 //!
 //! Merge order (lowest to highest priority):

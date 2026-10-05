@@ -1110,7 +1110,7 @@ mod tests {
     fn key(source: &str) -> MermaidCacheKey {
         MermaidCacheKey::derive(
             source,
-            ThemeKind::GrokNight,
+            ThemeKind::DeepSeekMonokai,
             80,
             MermaidRenderQuality::Terminal,
         )
@@ -1899,12 +1899,12 @@ mod tests {
         let src = "flowchart LR\nA-->B";
         let dark_key = MermaidCacheKey::derive(
             src,
-            ThemeKind::GrokNight,
+            ThemeKind::DeepSeekMonokai,
             80,
             MermaidRenderQuality::Terminal,
         );
         let light_key =
-            MermaidCacheKey::derive(src, ThemeKind::GrokDay, 80, MermaidRenderQuality::Terminal);
+            MermaidCacheKey::derive(src, ThemeKind::DeepSeekDay, 80, MermaidRenderQuality::Terminal);
         assert_ne!(
             dark_key.cache_filename(),
             light_key.cache_filename(),
@@ -2161,7 +2161,7 @@ mod tests {
 
         // An on-click render in flight, keyed at the click-time theme and width
         let click_key =
-            MermaidCacheKey::derive(src, ThemeKind::GrokNight, 80, MermaidRenderQuality::Open);
+            MermaidCacheKey::derive(src, ThemeKind::DeepSeekMonokai, 80, MermaidRenderQuality::Open);
         let mut rt = MermaidRuntime::new();
         rt.pending.push(PendingMermaidAction {
             key: click_key.clone(),
@@ -2171,7 +2171,7 @@ mod tests {
 
         // A later (live) theme and width derives a DIFFERENT full key for the same source; full-key matching would miss the pending render...
         let live_key =
-            MermaidCacheKey::derive(src, ThemeKind::GrokDay, 240, MermaidRenderQuality::Open);
+            MermaidCacheKey::derive(src, ThemeKind::DeepSeekDay, 240, MermaidRenderQuality::Open);
         assert_ne!(
             click_key, live_key,
             "a theme/width change alters the full cache key",

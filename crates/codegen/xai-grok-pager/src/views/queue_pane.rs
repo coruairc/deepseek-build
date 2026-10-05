@@ -427,7 +427,7 @@ pub struct QueuePane {
     /// Visual style for the list pane framework.
     list_style: ListPaneStyle,
     /// Theme kind at the last render. Used to detect a theme switch and refresh `list_style`, whose `selection_bg` is captured from the theme.
-    /// (Otherwise the focused-row highlight keeps the previous theme's `bg_highlight`, e.g. GrokNight's dark band leaking into GrokDay.)
+    /// (Otherwise the focused-row highlight keeps the previous theme's `bg_highlight`, e.g. DeepSeekMonokai's dark band leaking into DeepSeekDay.)
     last_theme: ThemeKind,
     /// Shared visibility/focus state.
     pub overlay: OverlayState,
@@ -851,7 +851,7 @@ impl QueuePane {
         can_send_now: bool,
     ) {
         // Detect a theme switch and refresh the list style. Without this it would keep the theme active at
-        // construction (default GrokNight, dark) after the user switches.
+        // construction (default DeepSeekMonokai, dark) after the user switches.
         let current_theme = Theme::current_kind();
         if current_theme != self.last_theme {
             self.last_theme = current_theme;

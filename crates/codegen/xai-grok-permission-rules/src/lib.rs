@@ -1,4 +1,4 @@
-//! Grok's permission rule engine. The agent, the tools, and the session code stay out, so a
+//! deepseek-build's permission rule engine. The agent, the tools, and the session code stay out, so a
 //! small consumer can link the rules alone.
 
 #![deny(clippy::indexing_slicing)]

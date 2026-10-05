@@ -192,12 +192,12 @@ pub(crate) fn loading_spinner_active(
         })
 }
 /// Filter session entries by native, headless, remote, or external source. Default is
-/// [`Self::Grok`]: native deepseek-build sessions only (local / remote / conversation).
+/// [`Self::DeepSeek`]: native deepseek-build sessions only (local / remote / conversation).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SourceFilter {
     /// Native deepseek-build sessions only; excludes Claude/Codex/Cursor foreign rows.
     #[default]
-    Grok,
+    DeepSeek,
     /// `grok -p` one-shots only (`session_kind == "headless"`).
     Headless,
     Local,
@@ -209,7 +209,7 @@ pub enum SourceFilter {
 impl SourceFilter {
     pub fn label(self) -> &'static str {
         match self {
-            Self::Grok => "deepseek-build",
+            Self::DeepSeek => "deepseek-build",
             Self::Headless => "Headless",
             Self::Local => "Local",
             Self::Remote => "Remote",
@@ -219,17 +219,17 @@ impl SourceFilter {
     }
     pub fn next(self) -> Self {
         match self {
-            Self::Grok => Self::Headless,
+            Self::DeepSeek => Self::Headless,
             Self::Headless => Self::External,
             Self::External => Self::All,
             Self::All => Self::Local,
             Self::Local => Self::Remote,
-            Self::Remote => Self::Grok,
+            Self::Remote => Self::DeepSeek,
         }
     }
     /// Returns `true` when a non-default filter is selected.
     pub fn is_active(self) -> bool {
-        self != Self::Grok
+        self != Self::DeepSeek
     }
     /// Whether the deep content search is unavailable on this page: foreign stores are not FTS-indexed.
     /// The Headless page searches like every native page; the server filters hits by the page's headless policy.
@@ -252,7 +252,7 @@ impl SourceFilter {
     pub fn matches(self, source: &str, session_kind: Option<&str>) -> bool {
         let is_headless = session_kind == Some("headless");
         match self {
-            Self::Grok => !crate::app::is_foreign_picker_source(source) && !is_headless,
+            Self::DeepSeek => !crate::app::is_foreign_picker_source(source) && !is_headless,
             Self::Headless => is_headless && !crate::app::is_foreign_picker_source(source),
             Self::Local => {
                 (source == "local" || source == "both" || crate::app::is_daemon_session_row(source))
@@ -1309,13 +1309,13 @@ mod tests {
     }
     #[test]
     fn source_filter_matches() {
-        assert!(SourceFilter::Grok.matches("local", None));
-        assert!(SourceFilter::Grok.matches("remote", None));
-        assert!(SourceFilter::Grok.matches("both", None));
-        assert!(SourceFilter::Grok.matches("conversation", None));
-        assert!(!SourceFilter::Grok.matches("claude", None));
-        assert!(!SourceFilter::Grok.matches("codex", None));
-        assert!(!SourceFilter::Grok.matches("cursor", None));
+        assert!(SourceFilter::DeepSeek.matches("local", None));
+        assert!(SourceFilter::DeepSeek.matches("remote", None));
+        assert!(SourceFilter::DeepSeek.matches("both", None));
+        assert!(SourceFilter::DeepSeek.matches("conversation", None));
+        assert!(!SourceFilter::DeepSeek.matches("claude", None));
+        assert!(!SourceFilter::DeepSeek.matches("codex", None));
+        assert!(!SourceFilter::DeepSeek.matches("cursor", None));
         assert!(SourceFilter::All.matches("local", None));
         assert!(SourceFilter::All.matches("remote", None));
         assert!(SourceFilter::All.matches("both", None));
@@ -1343,13 +1343,13 @@ mod tests {
     }
     #[test]
     fn source_filter_cycles() {
-        assert_eq!(SourceFilter::Grok.next(), SourceFilter::Headless);
+        assert_eq!(SourceFilter::DeepSeek.next(), SourceFilter::Headless);
         assert_eq!(SourceFilter::Headless.next(), SourceFilter::External);
         assert_eq!(SourceFilter::External.next(), SourceFilter::All);
         assert_eq!(SourceFilter::All.next(), SourceFilter::Local);
         assert_eq!(SourceFilter::Local.next(), SourceFilter::Remote);
-        assert_eq!(SourceFilter::Remote.next(), SourceFilter::Grok);
-        assert_eq!(SourceFilter::default(), SourceFilter::Grok);
+        assert_eq!(SourceFilter::Remote.next(), SourceFilter::DeepSeek);
+        assert_eq!(SourceFilter::default(), SourceFilter::DeepSeek);
     }
     #[test]
     fn source_filter_filters_entries() {
@@ -1370,7 +1370,7 @@ mod tests {
         if let Some(slot) = entries.get_mut(6) {
             slot.session_kind = Some("headless".into());
         }
-        let grok = filter_session_entries(Some(&entries), "", SourceFilter::Grok);
+        let grok = filter_session_entries(Some(&entries), "", SourceFilter::DeepSeek);
         assert_eq!(grok, vec![0, 1, 2]);
         let headless = filter_session_entries(Some(&entries), "", SourceFilter::Headless);
         assert_eq!(headless, vec![6]);
@@ -1385,12 +1385,12 @@ mod tests {
     }
     #[test]
     fn source_filter_empty_and_unknown_source() {
-        assert!(SourceFilter::Grok.matches("", None));
+        assert!(SourceFilter::DeepSeek.matches("", None));
         assert!(SourceFilter::All.matches("", None));
         assert!(!SourceFilter::Local.matches("", None));
         assert!(!SourceFilter::Remote.matches("", None));
         assert!(!SourceFilter::External.matches("", None));
-        assert!(SourceFilter::Grok.matches("unknown", None));
+        assert!(SourceFilter::DeepSeek.matches("unknown", None));
         assert!(SourceFilter::All.matches("unknown", None));
         assert!(!SourceFilter::Local.matches("unknown", None));
         assert!(!SourceFilter::Remote.matches("unknown", None));
@@ -1398,7 +1398,7 @@ mod tests {
     }
     #[test]
     fn source_filter_is_active() {
-        assert!(!SourceFilter::Grok.is_active());
+        assert!(!SourceFilter::DeepSeek.is_active());
         assert!(SourceFilter::Headless.is_active());
         assert!(SourceFilter::Local.is_active());
         assert!(SourceFilter::Remote.is_active());
@@ -1417,7 +1417,7 @@ mod tests {
             entry_with_source("s1", "claude"),
             entry_with_source("s2", "codex"),
         ];
-        assert!(hidden_external_hint(Some(&entries), SourceFilter::Grok).is_none());
+        assert!(hidden_external_hint(Some(&entries), SourceFilter::DeepSeek).is_none());
         assert!(hidden_external_hint(Some(&entries), SourceFilter::Local).is_none());
         assert!(hidden_external_hint(Some(&entries), SourceFilter::Remote).is_none());
         assert!(hidden_external_hint(Some(&entries), SourceFilter::Headless).is_some());

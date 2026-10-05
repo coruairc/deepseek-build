@@ -191,7 +191,7 @@ mod tests {
     fn options_have_one_selected_model_and_a_mode_per_effort() {
         let models = [
             model("grok-build", "deepseek-build"),
-            model("deepseek-4.5", "Grok 4.5"),
+            model("deepseek-4.5", "deepseek-build 4.5"),
         ];
         let current = acp::ModelId::from("grok-build");
         let opts = build_session_config_options(
@@ -297,7 +297,7 @@ mod tests {
     fn acp_config_options_map_model_and_effort_selectors() {
         let models = [
             model("grok-build", "deepseek-build"),
-            model("deepseek-4.5", "Grok 4.5"),
+            model("deepseek-4.5", "deepseek-build 4.5"),
         ];
         let efforts = [ReasoningEffortOption {
             id: "high".to_string(),
@@ -321,7 +321,7 @@ mod tests {
                 "deepseek-4.5",
                 vec![
                     acp::SessionConfigSelectOption::new("grok-build", "deepseek-build"),
-                    acp::SessionConfigSelectOption::new("deepseek-4.5", "Grok 4.5"),
+                    acp::SessionConfigSelectOption::new("deepseek-4.5", "deepseek-build 4.5"),
                 ],
             )
             .category(acp::SessionConfigOptionCategory::Model),
@@ -338,7 +338,7 @@ mod tests {
 
     #[test]
     fn acp_config_options_effort_current_preserves_unlisted_value() {
-        let models = [model("deepseek-4.5", "Grok 4.5")];
+        let models = [model("deepseek-4.5", "deepseek-build 4.5")];
         let efforts = [ReasoningEffortOption {
             id: "high".to_string(),
             value: ReasoningEffort::High,
@@ -368,7 +368,7 @@ mod tests {
     fn acp_config_options_model_current_preserves_unlisted_value() {
         let models = [
             model("grok-build", "deepseek-build"),
-            model("deepseek-4.5", "Grok 4.5"),
+            model("deepseek-4.5", "deepseek-build 4.5"),
         ];
         let options =
             build_acp_config_options(&models, &acp::ModelId::from("stale-model"), &[], None);

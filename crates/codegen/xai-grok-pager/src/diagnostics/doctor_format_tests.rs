@@ -240,7 +240,7 @@ fn limited_color_output_is_stable() {
             "  multiplexer  None detected\n",
             "  ssh          no\n",
             "  color        256\n",
-            "  themes       3/6: groknight, grokday, terminal\n",
+            "  themes       3/6: deepseek_monokai, deepseek_day, terminal\n",
             "\n",
             "Clipboard\n",
             "  native       local (pbcopy)\n",

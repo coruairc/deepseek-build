@@ -174,7 +174,7 @@ fn enum_choice_gated_off_covers_voice_permission_and_terminal_theme() {
     for key in ["theme", "auto_dark_theme", "auto_light_theme"] {
         assert!(enum_choice_gated_off(key, "terminal", theme_off));
         assert!(!enum_choice_gated_off(key, "terminal", on));
-        assert!(!enum_choice_gated_off(key, "groknight", theme_off));
+        assert!(!enum_choice_gated_off(key, "deepseek-monokai", theme_off));
     }
 }
 
@@ -539,7 +539,7 @@ fn render_setting_row_selected_is_reversed_on_terminal_theme() {
         );
     }
 
-    crate::theme::cache::set(crate::theme::ThemeKind::GrokNight);
+    crate::theme::cache::set(crate::theme::ThemeKind::DeepSeekMonokai);
     let theme = Theme::current();
     let mut buf = Buffer::empty(area);
     render_setting_row(
@@ -1042,7 +1042,7 @@ fn settings_list_row_bg_reset_palette_is_bandless_with_reverse_overlay() {
     assert!(super::render::settings_row_overlay(&theme, false, false).is_none());
 
     // RGB themes keep the band and get no overlay.
-    let rgb = Theme::groknight();
+    let rgb = Theme::deepseek_monokai();
     assert_eq!(settings_list_row_bg(&rgb, true, false), rgb.bg_visual);
     assert!(super::render::settings_row_overlay(&rgb, true, false).is_none());
 }
@@ -2258,9 +2258,9 @@ fn int_editing_value_click_on_value_text_is_noop() {
 #[test]
 fn picking_enum_esc_dispatches_preview_revert_for_each_key() {
     let cases: &[(&str, &str)] = &[
-        ("theme", "groknight"),
-        ("auto_dark_theme", "groknight"),
-        ("auto_light_theme", "grokday"),
+        ("theme", "deepseek-monokai"),
+        ("auto_dark_theme", "deepseek-monokai"),
+        ("auto_light_theme", "deepseek-day"),
     ];
     for &(key, original) in cases {
         let mut s = make_state();
@@ -2296,16 +2296,16 @@ fn picking_enum_esc_dispatches_preview_revert_for_each_key() {
 #[test]
 fn picking_enum_esc_returns_to_browse() {
     let mut s = make_state();
-    s.transition_to_picking_enum("theme", 0, SettingValue::Enum("groknight"), true);
+    s.transition_to_picking_enum("theme", 0, SettingValue::Enum("deepseek-monokai"), true);
     let outcome = handle_settings_key(&mut s, &KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
     match outcome {
         SettingsKeyOutcome::Action(Action::PreviewTheme(name)) => {
             assert_eq!(
-                name, "groknight",
+                name, "deepseek-monokai",
                 "Esc revert must dispatch the original canonical"
             );
         }
-        other => panic!("expected Action::PreviewTheme(\"groknight\") on Esc, got {other:?}"),
+        other => panic!("expected Action::PreviewTheme(\"deepseek_monokai\") on Esc, got {other:?}"),
     }
     assert!(matches!(s.mode(), SettingsModalMode::Browse));
 }
@@ -2570,7 +2570,7 @@ fn browse_path_enter_commit_returns_to_browse() {
 #[test]
 fn deep_link_theme_commit_closes_with_set() {
     let mut s = make_state();
-    s.transition_to_picking_enum("theme", 0, SettingValue::Enum("groknight"), true);
+    s.transition_to_picking_enum("theme", 0, SettingValue::Enum("deepseek-monokai"), true);
     s.close_on_picker_exit = true;
 
     let outcome = handle_settings_key(&mut s, &KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
@@ -2587,13 +2587,13 @@ fn deep_link_theme_commit_closes_with_set() {
 #[test]
 fn deep_link_picker_esc_reverts_preview_and_closes() {
     let mut s = make_state();
-    s.transition_to_picking_enum("theme", 0, SettingValue::Enum("groknight"), true);
+    s.transition_to_picking_enum("theme", 0, SettingValue::Enum("deepseek-monokai"), true);
     s.close_on_picker_exit = true;
 
     let outcome = handle_settings_key(&mut s, &KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
     match outcome {
         SettingsKeyOutcome::ActionThenClose(Action::PreviewTheme(name)) => {
-            assert_eq!(name, "groknight");
+            assert_eq!(name, "deepseek-monokai");
         }
         other => panic!("expected ActionThenClose(PreviewTheme), got {other:?}"),
     }
@@ -5806,8 +5806,8 @@ fn docs_footer_tip_is_centered() {
         "width=40 must render SHORT path (contains `change a setting`): {row_short:?}",
     );
     assert!(
-        !row_short.contains("grokday"),
-        "width=40 must NOT render LONG path (no `grokday`): {row_short:?}",
+        !row_short.contains("deepseek-day"),
+        "width=40 must NOT render LONG path (no `deepseek_day`): {row_short:?}",
     );
     assert!(
         tip_start_short.abs_diff(trailing_short) <= 1,
@@ -6098,16 +6098,16 @@ fn click_settings_breadcrumb_collapses_picker_to_browse() {
         click_y,
     );
     // For preview-supporting enums (theme), the breadcrumb-click revert dispatches `Action::PreviewTheme(original)`
-    // The default theme's original canonical is `"groknight"`
+    // The default theme's original canonical is `"deepseek-monokai"`
     match outcome {
         SettingsKeyOutcome::Action(Action::PreviewTheme(orig)) => {
             assert_eq!(
-                orig, "groknight",
+                orig, "deepseek-monokai",
                 "breadcrumb-click revert must carry the original canonical",
             );
         }
         other => panic!(
-            "expected Action(PreviewTheme(\"groknight\")) — the keyboard \
+            "expected Action(PreviewTheme(\"deepseek_monokai\")) — the keyboard \
              Esc-equivalent revert — got {other:?}",
         ),
     }
@@ -6150,7 +6150,7 @@ fn click_settings_breadcrumb_ignores_close_on_picker_exit() {
     );
     match outcome {
         SettingsKeyOutcome::Action(Action::PreviewTheme(orig)) => {
-            assert_eq!(orig, "groknight");
+            assert_eq!(orig, "deepseek-monokai");
         }
         other => panic!("expected preview revert Action, got {other:?}"),
     }
@@ -6191,7 +6191,7 @@ fn click_settings_breadcrumb_after_nav_reverts_to_original() {
         other => panic!("expected PickingEnum, got {other:?}"),
     };
     // Pick a different index
-    // The default theme is `groknight` (index 1 per the registry); advance to index 0 to ensure we're navigating to a different value
+    // The default theme is `deepseek_monokai` (index 1 per the registry); advance to index 0 to ensure we're navigating to a different value
     let target_idx = if advanced_idx == 0 { 1 } else { 0 };
     match s.mode() {
         SettingsModalMode::PickingEnum {
@@ -6247,10 +6247,10 @@ fn d_key_in_picking_enum_dispatches_open_reset_confirm() {
                 key, "theme",
                 "OpenResetConfirm key must be the active picker setting",
             );
-            // Default theme is `groknight`
-            // Entering the picker captures `original_value = current value = groknight`, so the revert dispatches with that canonical
+            // Default theme is `deepseek_monokai`
+            // Entering the picker captures `original_value = current value = deepseek_monokai`, so the revert dispatches with that canonical
             assert_eq!(
-                orig, "groknight",
+                orig, "deepseek-monokai",
                 "PreviewTheme revert must carry the original canonical",
             );
         }
@@ -6708,7 +6708,7 @@ fn max_thoughts_width_preview_content_is_italic() {
 
 /// Test 4: the title row distinguishes itself from the content rows via two independent signals.
 /// "Darker" is not the contract; on the dark themes `bg_visual` is lighter than `bg_highlight`, and
-/// only GrokDay renders the title darker.
+/// only DeepSeekDay renders the title darker.
 #[test]
 fn max_thoughts_width_preview_title_styling_distinguishes_from_content() {
     let area = Rect {
@@ -6754,9 +6754,9 @@ fn max_thoughts_width_preview_title_styling_distinguishes_from_content() {
     // Contrast assertion: regardless of the active palette, the raw / un-quantized theme tokens differ
     // We use the raw theme directly so this assertion survives `NO_COLOR` / 256-color quantization
     let raw_theme = match crate::theme::Theme::current_kind() {
-        crate::theme::ThemeKind::GrokNight => crate::theme::Theme::groknight(),
+        crate::theme::ThemeKind::DeepSeekMonokai => crate::theme::Theme::deepseek_monokai(),
         crate::theme::ThemeKind::TokyoNight => crate::theme::Theme::tokyonight(),
-        crate::theme::ThemeKind::GrokDay => crate::theme::Theme::grokday(),
+        crate::theme::ThemeKind::DeepSeekDay => crate::theme::Theme::deepseek_day(),
         crate::theme::ThemeKind::RosePineMoon => crate::theme::Theme::rosepine_moon(),
         // Resolved via `Theme::current()` rather than a constructor because `theme::oscura` is a private module
         crate::theme::ThemeKind::OscuraMidnight => crate::theme::Theme::current(),
@@ -6764,7 +6764,7 @@ fn max_thoughts_width_preview_title_styling_distinguishes_from_content() {
         // assertion below does not apply — the preview reads via the
         // underline cue instead.
         crate::theme::ThemeKind::Terminal => return,
-        crate::theme::ThemeKind::Auto => crate::theme::Theme::groknight(),
+        crate::theme::ThemeKind::Auto => crate::theme::Theme::deepseek_monokai(),
     };
     assert_ne!(
         raw_theme.bg_visual, raw_theme.bg_highlight,

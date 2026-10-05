@@ -371,7 +371,7 @@ pub fn format_agents_md_section(configs: &[AgentConfigFile]) -> Option<String> {
 pub const LEGACY_AGENTS_MD_REMINDER_PREFIX: &str =
     "\n\n<system-reminder>\nAs you answer the user's questions, you can use the following context";
 
-/// Open/close `system-reminder` (Grok) or `system_reminder` (Cursor/IDE), case-insensitive.
+/// Open/close `system-reminder` (deepseek-build) or `system_reminder` (Cursor/IDE), case-insensitive.
 /// Shared with unit tests so CI fails if the pattern is ever invalid or too narrow.
 const SYSTEM_REMINDER_TAG_PATTERN: &str = r"(?i)<(\s*/?\s*system[-_]reminder)";
 

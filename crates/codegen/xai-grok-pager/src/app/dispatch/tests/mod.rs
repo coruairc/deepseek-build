@@ -1015,7 +1015,7 @@ fn with_theme_test_env(f: impl FnOnce()) {
         .unwrap_or_else(|e| e.into_inner());
     crate::theme::cache::reset_for_test();
     crate::theme::cache::seed_auto_theme_defaults_for_test();
-    crate::theme::cache::set(crate::theme::ThemeKind::GrokNight);
+    crate::theme::cache::set(crate::theme::ThemeKind::DeepSeekMonokai);
     crate::theme::system_appearance::clear_mock();
     f();
     crate::theme::system_appearance::clear_mock();

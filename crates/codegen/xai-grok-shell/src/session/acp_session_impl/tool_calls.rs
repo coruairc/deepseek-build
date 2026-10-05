@@ -158,7 +158,7 @@ fn split_exit_plan_tail(
 pub(super) enum PlanEditGate {
     /// Execute normally (plan mode inactive, not an edit, or allowed target).
     Allow,
-    /// Grok-toolset edit outside the plan file (plan-file-only rule).
+    /// deepseek-build-toolset edit outside the plan file (plan-file-only rule).
     RejectNonPlanFile,
 }
 /// Compat-toolset `Delete` is not on the markdown carve-out: it maps to `AccessKind::Edit` and is plan-file-only (same as grok edits).
@@ -3523,7 +3523,7 @@ mod plan_mode_edit_gate_tests {
             content: "x".into(),
         })
     }
-    /// Grok edit tools are plan-file-only while plan mode is active: the enforcement that makes plan mode read-only even under always-approve.
+    /// deepseek-build edit tools are plan-file-only while plan mode is active: the enforcement that makes plan mode read-only even under always-approve.
     #[test]
     fn grok_edits_outside_plan_file_rejected() {
         let t = active_tracker();

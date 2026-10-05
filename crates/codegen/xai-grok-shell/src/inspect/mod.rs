@@ -1,6 +1,6 @@
 //! `grok inspect`: configuration introspection.
 //!
-//! Shows everything Grok discovers in the current directory.
+//! Shows everything deepseek-build discovers in the current directory.
 //! That covers project instructions, permissions, hooks, skills, agents, plugins, MCP servers, LSP config, and config.toml sources.
 //! Supports `--json` for machine output.
 

@@ -1406,7 +1406,7 @@ mod tests {
     #[test]
     fn background_block_gutter_uses_block_background_fill() {
         // Background blocks own the gutter via the existing full-area fill, so the no-bg clear must not run for them
-        // Pinned so the band color (read from the process-global theme in user.rs build_lines) is GrokNight, not the developer's config
+        // Pinned so the band color (read from the process-global theme in user.rs build_lines) is DeepSeekMonokai, not the developer's config
         // Asserted relationally (gutter == content cell from the same render) so the test doesn't encode the pinned palette's exact quantized value
         let _guard = pin_theme();
         let theme = Theme::current();
@@ -1444,7 +1444,7 @@ mod tests {
         if !crate::theme::color_support::detect().has_color() {
             return;
         }
-        let theme = Theme::groknight();
+        let theme = Theme::deepseek_monokai();
         let mut entry = ScrollbackEntry::new(RenderBlock::agent_message("```\nZZZZ\n```\n"));
         // The code block's only content row is the first content row, which is also where the timestamp overlay lands.
         // Drop `created_at` so the overlay is skipped. It would otherwise paint the right-aligned clock into the gutter
@@ -1725,7 +1725,7 @@ mod tests {
         // `BlockBackground::None` and shade per line.
         use crate::scrollback::block::StubBlock;
 
-        let theme = Theme::groknight();
+        let theme = Theme::deepseek_monokai();
         let entry = ScrollbackEntry::new(RenderBlock::Stub(
             StubBlock::new("alpha\nbravo", Color::Blue).with_line_bg(LINE_BG, true),
         ));
@@ -1751,7 +1751,7 @@ mod tests {
         // They carry meaning, unlike the decorative tool-preview panels
         use crate::scrollback::block::StubBlock;
 
-        let theme = Theme::groknight();
+        let theme = Theme::deepseek_monokai();
         let entry = ScrollbackEntry::new(RenderBlock::Stub(
             StubBlock::new("alpha\nbravo", Color::Blue).with_line_bg(LINE_BG, false),
         ));

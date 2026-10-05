@@ -423,10 +423,10 @@ impl ProtectedEditReason {
                 "Note: This edit contains changes under `/etc`, which is system configuration and can affect this machine beyond the current project.",
             ),
             Self::GrokConfig => Some(
-                "Note: This edit contains changes to Grok config, which can alter permissions, tools, and other behavior in later sessions.",
+                "Note: This edit contains changes to deepseek-build config, which can alter permissions, tools, and other behavior in later sessions.",
             ),
             Self::GrokSandbox => Some(
-                "Note: This edit contains changes to the Grok sandbox config, which can loosen filesystem and network restrictions on commands.",
+                "Note: This edit contains changes to the deepseek-build sandbox config, which can loosen filesystem and network restrictions on commands.",
             ),
             Self::ClaudeSettings => Some(
                 "Note: This edit contains changes to Claude-compatible settings, which can install hooks or change permission mode without a separate execution approval.",
@@ -536,7 +536,7 @@ fn protected_edit_reason(path: &Path) -> Option<ProtectedEditReason> {
     None
 }
 
-/// Grok config files that alter permissions or sandbox restrictions; a silent edit would let the agent loosen its own guardrails.
+/// deepseek-build config files that alter permissions or sandbox restrictions; a silent edit would let the agent loosen its own guardrails.
 /// Matched directly inside any `.grok` dir (user-global default and workspace overlays) and directly under a custom `$GROK_HOME`.
 /// A custom home has no `.grok` component, so the component match alone cannot see it.
 fn protected_grok_config_file(path: &Path, components: &[&str]) -> Option<ProtectedEditReason> {

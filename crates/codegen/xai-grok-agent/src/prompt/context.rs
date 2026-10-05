@@ -139,8 +139,8 @@ pub struct PromptContext {
     #[serde(default = "default_system_prompt_label")]
     pub system_prompt_label: String,
 }
-/// Default identity on trim-tool-descriptions (`You are Grok released by xAI`).
-pub const DEFAULT_SYSTEM_PROMPT_LABEL: &str = "Grok";
+/// Default identity on trim-tool-descriptions (`You are deepseek-build released by xAI`).
+pub const DEFAULT_SYSTEM_PROMPT_LABEL: &str = "deepseek-build";
 fn default_system_prompt_label() -> String {
     DEFAULT_SYSTEM_PROMPT_LABEL.to_string()
 }
@@ -477,9 +477,9 @@ mod tests {
     #[test]
     fn test_placeholders_system_prompt_label_override() {
         let mut ctx = test_context();
-        ctx.system_prompt_label = "Grok Internal".into();
+        ctx.system_prompt_label = "deepseek-build Internal".into();
         let p = ctx.placeholders();
-        assert_eq!(jp(&p, "/system_prompt_label"), "Grok Internal");
+        assert_eq!(jp(&p, "/system_prompt_label"), "deepseek-build Internal");
     }
     #[test]
     fn test_missing_system_prompt_label_deserializes_to_default() {

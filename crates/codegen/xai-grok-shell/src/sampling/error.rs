@@ -109,7 +109,7 @@ pub(crate) fn map_sampling_err_to_acp(err: SamplingError) -> acp::Error {
             // Examples: content-safety blocks, ZDR-gated operations, remote-settings-blocked users
             // Passing the proxy's message via internal_error keeps the explanation visible without triggering the client's re-auth flow on -32000
             StatusCode::FORBIDDEN => {
-                let message = if message.contains("requires a Grok subscription")
+                let message = if message.contains("requires a deepseek-build subscription")
                     && crate::agent::auth_method::has_xai_api_key_env()
                 {
                     format!(
@@ -560,7 +560,7 @@ mod tests {
     #[test]
     fn format_rate_limited_api_key_rewrites_consumer_subscription_upsell() {
         let body = "Some resource has been exhausted: You are sending requests too quickly. \
-             Please slow down, or upgrade to a Grok subscription for higher limits: \
+             Please slow down, or upgrade to a deepseek-build subscription for higher limits: \
              https://api.deepseek.com/deepseek";
         let wire = format!("API error (status 429 Too Many Requests): {body}");
         // OAuth keeps the IC body (personal plan upgrade is correct).
@@ -795,7 +795,7 @@ mod tests {
         with_api_key_env(Some("xai-test"), || {
             let err = SamplingError::Api {
                 status: StatusCode::FORBIDDEN,
-                message: "The model 'grok-build' requires a Grok subscription.".into(),
+                message: "The model 'grok-build' requires a deepseek-build subscription.".into(),
                 model_metadata: None,
                 retry_after_secs: None,
                 should_retry: None,
@@ -821,7 +821,7 @@ mod tests {
         with_api_key_env(None, || {
             let err = SamplingError::Api {
                 status: StatusCode::FORBIDDEN,
-                message: "The model 'grok-build' requires a Grok subscription.".into(),
+                message: "The model 'grok-build' requires a deepseek-build subscription.".into(),
                 model_metadata: None,
                 retry_after_secs: None,
                 should_retry: None,

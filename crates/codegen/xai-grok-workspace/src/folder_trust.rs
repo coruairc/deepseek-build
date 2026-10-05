@@ -122,17 +122,17 @@ impl fmt::Display for GrantRefuse {
             Self::NoHome => write!(
                 f,
                 "Couldn't save folder trust: no home directory for the trust store. \
-                 Set GROK_HOME to an absolute directory (or unset it), then start Grok again."
+                 Set GROK_HOME to an absolute directory (or unset it), then start deepseek-build again."
             ),
             Self::Unreadable => write!(
                 f,
                 "Couldn't save folder trust: the trust store could not be read. \
-                 Fix or delete ~/.grok/trusted_folders.toml, then start Grok again and press y."
+                 Fix or delete ~/.grok/trusted_folders.toml, then start deepseek-build again and press y."
             ),
             Self::KeyMoved => write!(
                 f,
                 "Couldn't save folder trust: the folder path changed. \
-                 Start Grok again from the folder you want to trust."
+                 Start deepseek-build again from the folder you want to trust."
             ),
         }
     }

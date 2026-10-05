@@ -1571,7 +1571,7 @@ fn parse_hex_color(hex: &str) -> Result<Color, String> {
 }
 
 fn lookup_named_color(name: &str) -> Result<Color, String> {
-    // Named colors use the GrokNight RGB palette
+    // Named colors use the DeepSeekMonokai RGB palette
     // They are quantized (via `parse_color_string`, then `quantize()`) to match the terminal's capabilities
     let color = match name.to_uppercase().as_str() {
         // Background colors

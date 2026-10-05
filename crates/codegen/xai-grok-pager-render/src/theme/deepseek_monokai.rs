@@ -50,7 +50,7 @@ mod palette {
 use palette::*;
 
 impl Theme {
-    pub const fn groknight() -> Self {
+    pub const fn deepseek_monokai() -> Self {
         Self {
             bg_base: BG_STORM,
             bg_light: BG_HIGHLIGHT,

@@ -94,7 +94,7 @@ pub enum PluginOrigin {
         /// Marketplace name from the `name@marketplace` JSON key, when present.
         marketplace: Option<String>,
     },
-    /// Grok's install registry (`~/.grok/installed-plugins`).
+    /// deepseek-build's install registry (`~/.grok/installed-plugins`).
     MarketplaceInstall {
         /// Marketplace source display name (None for direct git/local installs).
         source_name: Option<String>,

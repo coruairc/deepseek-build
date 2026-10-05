@@ -21,6 +21,10 @@ const CLIPBOARD_SINK_ENV_VARS: &[&str] = &["GROK_OSC52_SINK", "LC_GROK_OSC52_SIN
 /// Host / wrap appearance hints that would make `theme=auto` non-deterministic
 /// in PTY tests (layout depends on the resolved palette).
 const APPEARANCE_ENV_VARS: &[&str] = &[
+    "DEEPSEEK_BUILD_APPEARANCE",
+    "LC_DEEPSEEK_BUILD_APPEARANCE",
+    "DEEPSEEK_BUILD_THEME",
+    "LC_DEEPSEEK_BUILD_THEME",
     "GROK_APPEARANCE",
     "LC_GROK_APPEARANCE",
     "GROK_THEME",

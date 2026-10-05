@@ -835,7 +835,7 @@ pub(crate) struct ListCommandsRequest {
     pub session_id: Option<acp::SessionId>,
     #[serde(default)]
     pub cwd: Option<String>,
-    /// Product lane: `"chat"` filters to Grok Chat / Grok Computer first-party skills only.
+    /// Product lane: `"chat"` filters to deepseek-build Chat / deepseek-build Computer first-party skills only.
     /// Omitted or any other value keeps the full Build catalog.
     #[serde(default)]
     pub kind: Option<String>,

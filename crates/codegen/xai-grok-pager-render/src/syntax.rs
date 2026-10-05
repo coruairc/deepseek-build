@@ -1,5 +1,5 @@
 //! Provides lazily-initialized `Syntect` instances for code highlighting.
-//! Dark themes (GrokNight, TokyoNight) share `grok-night.tmTheme`; GrokDay uses `grok-day.tmTheme` with deepened colors for light backgrounds.
+//! Dark themes (DeepSeekMonokai, TokyoNight) share `grok-night.tmTheme`; DeepSeekDay uses `grok-day.tmTheme` with deepened colors for light backgrounds.
 //!
 //! ## Terminal-native palette (minimal lock + `terminal` theme)
 //!
@@ -114,11 +114,11 @@ pub fn highlight_line(
     vec![Span::styled(text.to_string(), fallback)]
 }
 
-/// Terminal-native lock reports nominal `GrokNight`, so this returns the dark theme.
+/// Terminal-native lock reports nominal `DeepSeekMonokai`, so this returns the dark theme.
 /// Colors are remapped later; do not load a day theme from OS/terminal polarity.
 pub fn get_syntect() -> &'static Syntect {
     match crate::theme::Theme::current_kind() {
-        ThemeKind::GrokNight
+        ThemeKind::DeepSeekMonokai
         | ThemeKind::RosePineMoon
         | ThemeKind::OscuraMidnight
         // Terminal remaps every token in `syntect_rgb_to_fg`, so the
@@ -128,7 +128,7 @@ pub fn get_syntect() -> &'static Syntect {
             .get_or_init(|| Syntect::new(include_bytes!("../assets/monokai.tmTheme"))),
         ThemeKind::TokyoNight => SYNTECT_TOKYONIGHT
             .get_or_init(|| Syntect::new(include_bytes!("../assets/tokyo-night.tmTheme"))),
-        ThemeKind::GrokDay => SYNTECT_GROKDAY
+        ThemeKind::DeepSeekDay => SYNTECT_GROKDAY
             .get_or_init(|| Syntect::new(include_bytes!("../assets/grok-day.tmTheme"))),
     }
 }

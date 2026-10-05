@@ -327,7 +327,7 @@ fn classify_grok_hook_source(path: PathBuf) -> HookSourceConfig {
 #[derive(Debug, Clone, Copy)]
 pub struct DiscoveryOptions<'a> {
     pub git_root: Option<&'a Path>,
-    /// The Grok home, which holds the user's hooks and `hooks-paths`.
+    /// The deepseek-build home, which holds the user's hooks and `hooks-paths`.
     pub grok_home: Option<&'a Path>,
     /// The home directory, which holds the user's vendor hook settings.
     pub home: Option<&'a Path>,
@@ -349,7 +349,7 @@ pub fn discover_hook_source_paths(options: DiscoveryOptions<'_>) -> HookSourcePa
                 if let Some(e) = &resolved.configured_error {
                     tracing::warn!(
                         error = %e,
-                        "hooks-paths unreadable; retaining fixed Grok hook discovery sources only"
+                        "hooks-paths unreadable; retaining fixed deepseek-build hook discovery sources only"
                     );
                 }
                 resolved
@@ -360,7 +360,7 @@ pub fn discover_hook_source_paths(options: DiscoveryOptions<'_>) -> HookSourcePa
             Err(e) => {
                 tracing::warn!(
                     error = %e,
-                    "global hook source resolve hard-failed; omitting Grok global sources"
+                    "global hook source resolve hard-failed; omitting deepseek-build global sources"
                 );
                 Vec::new()
             }

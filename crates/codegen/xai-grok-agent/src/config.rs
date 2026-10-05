@@ -156,7 +156,7 @@ pub fn workspace_grok_build_toolset() -> ToolServerConfig {
         behavior_preset: None,
     }
 }
-/// Fully qualified ids of the workspace tools that call the Grok API with the workspace server's own credential.
+/// Fully qualified ids of the workspace tools that call the deepseek-build API with the workspace server's own credential.
 /// A server whose credential only serves the hub cannot run them, so it neither advertises nor serves them.
 pub fn api_backed_tool_ids() -> Vec<String> {
     Vec::new()

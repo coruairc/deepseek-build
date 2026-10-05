@@ -3915,7 +3915,7 @@ pub struct Features {
     /// Default: true (index any git repo). Patterns can explicitly match non-git directories.
     #[serde(default)]
     pub codebase_indexing: CodebaseIndexingSetting,
-    /// Show a blocking warning when Grok starts outside a Git repository. Default: false. Used as the local fallback when the `non_git_warning` remote settings flag in `grok_build_settings` is absent.
+    /// Show a blocking warning when deepseek-build starts outside a Git repository. Default: false. Used as the local fallback when the `non_git_warning` remote settings flag in `grok_build_settings` is absent.
     /// When the remote flag is present it takes precedence: `Some(false)` from remote settings overrides `true` here.
     #[serde(default)]
     pub non_git_warning: bool,

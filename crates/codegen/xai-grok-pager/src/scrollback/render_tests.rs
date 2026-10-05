@@ -3739,7 +3739,7 @@ fn dim_from_entry_stays_visible_on_terminal_theme() {
          the bright-black user-message band)"
     );
 
-    crate::theme::cache::set(crate::theme::ThemeKind::GrokNight);
+    crate::theme::cache::set(crate::theme::ThemeKind::DeepSeekMonokai);
     let cell = render_dimmed();
     assert_eq!(
         cell.fg,

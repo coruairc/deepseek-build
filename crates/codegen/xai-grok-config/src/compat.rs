@@ -90,7 +90,7 @@ impl CompatCell {
         self.remote_key
     }
 
-    /// Whether Grok currently implements this compatibility surface. Codex non-session cells remain
+    /// Whether deepseek-build currently implements this compatibility surface. Codex non-session cells remain
     /// reserved in the registry so their config shape is stable, but runtime discovery does not
     /// consume them.
     pub const fn is_runtime_supported(self) -> bool {

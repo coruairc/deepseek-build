@@ -1748,7 +1748,7 @@ mod tests {
         };
         assert_eq!(
             extract(
-                "Visit the following link to sign into Grok: https://auth.example.com/login?code=abc"
+                "Visit the following link to sign into deepseek-build: https://auth.example.com/login?code=abc"
             ),
             "https://auth.example.com/login?code=abc"
         );
