@@ -54,20 +54,20 @@ pub fn is_grok_bot_default_tool(name: &str) -> bool {
 pub const GROK_BOT_TOOL_DESCRIPTIONS: &[(&str, &str)] = &[
     (
         "bot_create_agent",
-        "Create a deepseek-build Bot agent. It greets the user itself; send no first \
+        "Create a deepseek-build Bot agent. It greets the user; send no first \
          prompt, never quote its id. Cannot be deleted; check bot_list_agents \
          first. Only when the user asks for a new agent; to reach an existing \
          one use bot_list_agents then bot_send_prompt. One agent per call.",
     ),
     (
         "bot_list_agents",
-        "List all deepseek-build Bot agents on the user's box with id, name, description, \
-         and status. Wakes the box. Its ids are the only valid agent_id values.",
+        "List all deepseek-build Bot agents with id, name, description, and \
+         status. Wakes the box. Its ids are the only valid agent_id values.",
     ),
     (
         "bot_send_prompt",
         "Send a prompt to a deepseek-build Bot agent. Returns once accepted unless mode \
-         waits for the reply. on_busy is supersede (default), reject, or queue. \
+         waits for the reply. on_busy: supersede (default), reject, or queue. \
          After a timeout or a missing notification, resume with bot_await_turn \
          and the returned handle; never re-send. Empty reply with \
          finished:true means no text. A <grok_bot agent_id> tag is that \
@@ -107,7 +107,7 @@ pub const GROK_BOT_TOOL_DESCRIPTIONS: &[(&str, &str)] = &[
     (
         "bot_search_agents",
         "Find deepseek-build Bot agents by name or description when you know what you \
-         want. Returns the best matches only; bot_list_agents shows every bot. \
+         want. Returns best matches only; bot_list_agents shows every bot. \
          Wakes the box.",
     ),
     (

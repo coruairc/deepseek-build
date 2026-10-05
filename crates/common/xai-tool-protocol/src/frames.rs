@@ -1585,9 +1585,13 @@ mod tests {
         assert_eq!(back.idle_since_ms, Some(1721234560000));
     }
 
-    /// The six queue/drain fields round-trip with real values on the wire.
+    /// The drain/producer fields round-trip with real values on the wire.
+    ///
+    /// The upload-queue fields this test used to pin were deleted alongside the
+    /// upload/exfil removal, so only the surviving drain/producer coverage
+    /// remains.
     #[test]
-    fn tool_server_status_payload_carries_queue_and_drain_fields() {
+    fn tool_server_status_payload_carries_drain_fields() {
         let payload = super::ToolServerStatusPayload {
             status: super::ToolServerLifecycleStatus::Draining,
             session_id: Some(sid()),
@@ -1601,10 +1605,6 @@ mod tests {
             last_tool_call_completed_ms: 0,
             uptime_ms: 5000,
             idle_since_ms: None,
-            upload_queue_pending: 7,
-            upload_queue_pending_bytes: 4096,
-            upload_queue_inflight: 2,
-            upload_queue_circuit_breaker_tripped: true,
             artifact_producers_inflight: 3,
             drain_started_ms: Some(1721234599999),
             turn_active: true,
@@ -1615,10 +1615,6 @@ mod tests {
             preview_ws_tunnels_open: 0,
         };
         let json = serde_json::to_value(&payload).expect("serialize");
-        assert_eq!(json["upload_queue_pending"], 7);
-        assert_eq!(json["upload_queue_pending_bytes"], 4096u64);
-        assert_eq!(json["upload_queue_inflight"], 2);
-        assert_eq!(json["upload_queue_circuit_breaker_tripped"], true);
         assert_eq!(json["artifact_producers_inflight"], 3);
         assert_eq!(json["drain_started_ms"], 1721234599999u64);
         assert_eq!(json["turn_active"], true);
@@ -1744,10 +1740,6 @@ mod tests {
         let back: super::ToolServerStatusPayload =
             serde_json::from_value(legacy_status_json()).expect("legacy payload must deserialize");
         assert_eq!(back.status, super::ToolServerLifecycleStatus::Ready);
-        assert_eq!(back.upload_queue_pending, 0);
-        assert_eq!(back.upload_queue_pending_bytes, 0);
-        assert_eq!(back.upload_queue_inflight, 0);
-        assert!(!back.upload_queue_circuit_breaker_tripped);
         assert_eq!(back.artifact_producers_inflight, 0);
         assert_eq!(back.drain_started_ms, None);
         assert!(!back.turn_active);

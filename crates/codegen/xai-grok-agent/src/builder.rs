@@ -1876,12 +1876,8 @@ mod tests {
                 "[{label}] rendered descriptions must not leak template markers"
             );
             assert!(
-                names.contains(&"send_feedback"),
-                "[{label}] parent grok-build sessions must advertise send_feedback; got tools: {names:?}"
-            );
-            assert!(
-                builtin_names.contains(&"send_feedback"),
-                "[{label}] parent grok-build built-in definitions must advertise send_feedback; got tools: {builtin_names:?}"
+                builtin_names.iter().all(|name| names.contains(name)),
+                "[{label}] built-in definitions must be a subset of advertised tools; builtins: {builtin_names:?}, tools: {names:?}"
             );
             assert!(
                 names.contains(&"enter_plan_mode"),
@@ -2006,24 +2002,9 @@ mod tests {
     async fn subagent_audience_never_receives_parent_only_tools() {
         use xai_grok_tools::computer::local::LocalTerminalBackend;
         use xai_grok_tools::notification::ToolNotificationHandle;
-        use xai_grok_tools::registry::types::ToolConfig;
-        let feedback_id =
-            ToolConfig::for_tool::<xai_grok_tools::implementations::grok_build::SendFeedbackTool>()
-                .id;
-        let mut kindless_feedback_id = crate::config::AgentDefinition::default_grok_build();
-        kindless_feedback_id.tool_config.tools = vec![ToolConfig::from_id(&feedback_id)];
-        kindless_feedback_id.inject_default_tools = false;
-        let mut kindless_feedback_name = crate::config::AgentDefinition::default_grok_build();
-        kindless_feedback_name.tool_config.tools = vec![
-            ToolConfig::from_id("custom:tool")
-                .with_name(xai_grok_tools::implementations::grok_build::SEND_FEEDBACK_TOOL_NAME),
-        ];
-        kindless_feedback_name.inject_default_tools = false;
         for definition in [
             crate::config::AgentDefinition::default_grok_build(),
             crate::config::AgentDefinition::grok_build_ask_user(),
-            kindless_feedback_id,
-            kindless_feedback_name,
         ] {
             let agent = AgentBuilder::new(
                 std::env::temp_dir(),
@@ -2042,7 +2023,7 @@ mod tests {
                 .into_iter()
                 .map(|definition| definition.function.name)
                 .collect();
-            for parent_only in ["ask_user_question", "send_feedback"] {
+            for parent_only in ["ask_user_question"] {
                 assert!(
                     !names.iter().any(|name| name == parent_only),
                     "subagents must not receive {parent_only}: {names:?}"
@@ -2158,11 +2139,7 @@ mod tests {
             lost.iter().all(|name| {
                 matches!(
                     name.as_str(),
-                    "workflow"
-                        | "ask_user_question"
-                        | "send_feedback"
-                        | "enter_plan_mode"
-                        | "exit_plan_mode"
+                    "workflow" | "ask_user_question" | "enter_plan_mode" | "exit_plan_mode"
                 )
             }),
             "child strip must not drop unrelated tools: lost={lost:?}"
@@ -2896,7 +2873,6 @@ mod tests {
             "read_file".into(),
             "grep".into(),
             "list_dir".into(),
-            "web_search".into(),
             "web_fetch".into(),
         ];
         let agent = build_with_tools(tools, vec![]).await;
@@ -2906,7 +2882,7 @@ mod tests {
             .iter()
             .map(|d| d.function.name.clone())
             .collect();
-        for absent in ["web_search", "web_fetch"] {
+        for absent in ["web_fetch"] {
             assert!(!names.contains(&absent.to_string()), "got: {names:?}");
         }
         for kept in ["read_file", "grep", "list_dir"] {
@@ -2917,17 +2893,15 @@ mod tests {
         }
     }
     #[tokio::test]
-    async fn requested_enabled_web_tools_survive_allowlist() {
+    async fn requested_enabled_web_fetch_survives_allowlist() {
         use xai_grok_tools::computer::local::LocalTerminalBackend;
         use xai_grok_tools::implementations::grok_build::web_fetch::WebFetchConfig;
-        use xai_grok_tools::implementations::web_search::WebSearchConfig;
         use xai_grok_tools::notification::ToolNotificationHandle;
         let mut definition = crate::config::AgentDefinition::default_grok_build();
         definition.tools = vec![
             "read_file".into(),
             "grep".into(),
             "list_dir".into(),
-            "web_search".into(),
             "web_fetch".into(),
         ];
         let agent = AgentBuilder::new(
@@ -2936,15 +2910,6 @@ mod tests {
             ToolNotificationHandle::noop(),
         )
         .from_definition(definition)
-        .with_web_search_config(WebSearchConfig::Enabled {
-            api_key: "test-key".into(),
-            base_url: "https://api.deepseek.com/v1".into(),
-            model: "test-web-search-model".into(),
-            extra_headers: Default::default(),
-            alpha_test_key: None,
-            allowed_domains: None,
-            excluded_domains: None,
-        })
         .with_web_fetch_config(WebFetchConfig::Enabled {
             params: Default::default(),
         })
@@ -2957,7 +2922,7 @@ mod tests {
             .iter()
             .map(|d| d.function.name.clone())
             .collect();
-        for kept in ["read_file", "grep", "list_dir", "web_search", "web_fetch"] {
+        for kept in ["read_file", "grep", "list_dir", "web_fetch"] {
             assert!(names.contains(&kept.to_string()), "got: {names:?}");
         }
         for excluded in ["run_terminal_command", "search_replace"] {
@@ -3044,28 +3009,13 @@ mod tests {
             "no full-toolset fallback — Edit must be excluded; got: {names:?}"
         );
     }
-    async fn build_with_web_search(
-        web_search_enabled: bool,
+    async fn build_with_backend_search(
         backend_search_enabled: bool,
         disallowed_tools: &[&str],
         tool_overrides: Option<xai_grok_sampling_types::ToolOverrides>,
     ) -> crate::agent::Agent {
         use xai_grok_tools::computer::local::LocalTerminalBackend;
-        use xai_grok_tools::implementations::web_search::WebSearchConfig;
         use xai_grok_tools::notification::ToolNotificationHandle;
-        let web_search_config = if web_search_enabled {
-            WebSearchConfig::Enabled {
-                api_key: "test-key".into(),
-                base_url: "https://api.deepseek.com/v1".into(),
-                model: "test-web-search-model".into(),
-                extra_headers: Default::default(),
-                alpha_test_key: None,
-                allowed_domains: None,
-                excluded_domains: None,
-            }
-        } else {
-            WebSearchConfig::Disabled
-        };
         let mut def = crate::config::AgentDefinition::default_grok_build();
         def.disallowed_tools = disallowed_tools.iter().map(|s| s.to_string()).collect();
         def.tool_overrides = tool_overrides;
@@ -3075,66 +3025,27 @@ mod tests {
             ToolNotificationHandle::noop(),
         )
         .from_definition(def)
-        .with_web_search_config(web_search_config)
         .with_backend_search(backend_search_enabled)
         .build()
         .await
         .expect("agent should build for backend-search test case")
     }
     #[tokio::test]
-    async fn disallowed_web_search_strips_function_and_hosted_tools() {
-        let agent = build_with_web_search(true, true, &["web_search"], None).await;
+    async fn disallowed_x_search_strips_hosted_tool() {
+        let agent = build_with_backend_search(true, &["x_search"], None).await;
         let hosted = agent.hosted_tools();
         assert!(
             !hosted
                 .iter()
-                .any(|t| matches!(t, xai_grok_sampling_types::HostedTool::WebSearch { .. })),
-            "hosted WebSearch must be removed when web_search is disallowed, got: {hosted:?}"
-        );
-        assert!(
-            hosted
-                .iter()
                 .any(|t| matches!(t, xai_grok_sampling_types::HostedTool::XSearch { .. })),
-            "XSearch must remain when only web_search is disallowed, got: {hosted:?}"
-        );
-        let has_web_search_fn = agent
-            .tool_definitions()
-            .await
-            .iter()
-            .any(|td| short_tool_name(&td.function.name) == "web_search");
-        assert!(
-            !has_web_search_fn,
-            "function web_search tool must be removed when disallowed"
+            "hosted XSearch must be removed when x_search is disallowed, got: {hosted:?}"
         );
     }
     #[tokio::test]
-    async fn hosted_tools_populated_when_backend_search_and_web_search_enabled() {
-        let agent = build_with_web_search(true, true, &[], None).await;
+    async fn hosted_tools_populated_when_backend_search_enabled() {
+        let agent = build_with_backend_search(true, &[], None).await;
         assert!(agent.backend_search_enabled());
         let hosted = agent.hosted_tools();
-        assert!(
-            hosted
-                .iter()
-                .any(|t| matches!(t, xai_grok_sampling_types::HostedTool::WebSearch { .. })),
-            "expected WebSearch hosted tool, got: {hosted:?}"
-        );
-        assert!(
-            hosted
-                .iter()
-                .any(|t| matches!(t, xai_grok_sampling_types::HostedTool::XSearch { .. })),
-            "expected XSearch hosted tool, got: {hosted:?}"
-        );
-    }
-    #[tokio::test]
-    async fn hosted_tools_only_xsearch_when_web_search_disabled() {
-        let agent = build_with_web_search(false, true, &[], None).await;
-        let hosted = agent.hosted_tools();
-        assert!(
-            !hosted
-                .iter()
-                .any(|t| matches!(t, xai_grok_sampling_types::HostedTool::WebSearch { .. })),
-            "WebSearch must NOT appear when web_search is disabled, got: {hosted:?}"
-        );
         assert!(
             hosted
                 .iter()
@@ -3144,7 +3055,7 @@ mod tests {
     }
     #[tokio::test]
     async fn hosted_tools_empty_when_backend_search_disabled() {
-        let agent = build_with_web_search(true, false, &[], None).await;
+        let agent = build_with_backend_search(false, &[], None).await;
         assert!(!agent.backend_search_enabled());
         assert!(agent.hosted_tools().is_empty());
     }
@@ -3156,8 +3067,7 @@ mod tests {
                     .unwrap(),
             ),
         };
-        let agent = build_with_web_search(
-            true,
+        let agent = build_with_backend_search(
             true,
             &[],
             Some(xai_grok_sampling_types::ToolOverrides {

@@ -353,8 +353,16 @@ mod tests {
         let block_start = on
             .find("\n\n<browser_verification>")
             .expect("flagged standard template must render browser verification");
-        assert_eq!(on.get(..block_start), Some(off.as_str()));
-        assert!(on.ends_with("</browser_verification>"));
+        let block_end = on
+            .find("</browser_verification>")
+            .expect("browser verification block must be closed")
+            + "</browser_verification>".len();
+        let stripped = format!("{}{}", &on[..block_start], &on[block_end..]);
+        assert_eq!(
+            stripped, off,
+            "the browser verification block must be the only difference between flagged and unflagged renders"
+        );
+        assert!(on.contains("<browser_verification>"));
         assert!(!off.contains("<browser_verification>"));
     }
     #[test]

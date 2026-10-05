@@ -128,7 +128,6 @@ mod tests {
                 "get_command_or_subagent_output",
             ),
             (ToolKind::KillTaskAction, "kill_command_or_subagent"),
-            (ToolKind::WebSearch, "web_search"),
         ]
         .into_iter()
         .map(|(k, v)| (k, v.to_string()))

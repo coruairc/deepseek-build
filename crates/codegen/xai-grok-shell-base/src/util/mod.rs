@@ -81,7 +81,10 @@ pub fn matches_trusted_base_url(candidate: &str, trusted_base: &str) -> bool {
     };
     let trusted_path = trusted.path();
     let candidate_path = candidate.path();
-    let path_matches = candidate_path == trusted_path
+    // A trusted base with no path of its own ("/") owns every path on the host;
+    // a base with a path owns that path and its subpaths.
+    let path_matches = trusted_path == "/"
+        || candidate_path == trusted_path
         || candidate_path
             .strip_prefix(trusted_path)
             .is_some_and(|suffix| suffix.starts_with('/'));
@@ -146,9 +149,7 @@ pub fn is_trusted_xai_https_url(url: &str) -> bool {
     if is_trusted_cli_chat_proxy_url(url) {
         return true;
     }
-    parsed
-        .host_str()
-        .is_some_and(|host| host == "x.ai" || host.ends_with(".x.ai"))
+    parsed.host_str().is_some_and(is_first_party_api_host)
 }
 fn is_xai_api_url_impl(url: &str, require_https: bool) -> bool {
     if require_https {
@@ -160,7 +161,16 @@ fn is_xai_api_url_impl(url: &str, require_https: bool) -> bool {
     reqwest::Url::parse(url)
         .ok()
         .and_then(|url| url.host_str().map(str::to_owned))
-        .is_some_and(|host| host == "x.ai" || host.ends_with(".x.ai"))
+        .is_some_and(|host| is_first_party_api_host(&host))
+}
+/// First-party API hosts whose keys the product manages (legacy `x.ai` plus
+/// the DeepSeek build's own API host). Suffix-safe: `evil-x.ai.example` and
+/// `api.deepseek.com.evil.example` are not first-party.
+fn is_first_party_api_host(host: &str) -> bool {
+    host == "x.ai"
+        || host.ends_with(".x.ai")
+        || host == "deepseek.com"
+        || host.ends_with(".deepseek.com")
 }
 fn is_loopback_host(parsed: &reqwest::Url) -> bool {
     match parsed.host() {
@@ -388,8 +398,10 @@ mod tests {
         ));
     }
     #[test]
-    fn test_is_cli_chat_proxy_url_rejects_public_api() {
-        assert!(!is_cli_chat_proxy_url("https://api.deepseek.com/v1"));
+    fn test_is_cli_chat_proxy_url_rejects_foreign_api() {
+        // The configured proxy origin is first-party; unrelated API hosts are not.
+        assert!(!is_cli_chat_proxy_url("https://api.openai.com/v1"));
+        assert!(!is_cli_chat_proxy_url("https://api.anthropic.com/v1"));
     }
     #[test]
     fn test_is_cli_chat_proxy_url_rejects_spoofed_hostname() {
@@ -398,9 +410,10 @@ mod tests {
         ));
     }
     #[test]
-    fn test_is_cli_chat_proxy_url_rejects_v11_prefix_confusion() {
+    fn test_is_cli_chat_proxy_url_rejects_origin_prefix_confusion() {
+        // `deepseek.com.attacker.example` must not be read as the first-party origin.
         assert!(!is_cli_chat_proxy_url(
-            "https://api.deepseek.com/v11/chat/completions"
+            "https://deepseek.com.attacker.example/v1/chat/completions"
         ));
     }
     #[test]
