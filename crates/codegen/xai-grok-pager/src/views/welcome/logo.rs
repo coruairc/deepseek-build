@@ -151,10 +151,10 @@ fn render_into(area: Rect, buf: &mut Buffer, theme: &Theme, logo: &str) {
         .max(1) as f32;
     let secs = anim_phase_secs();
 
-    // Blend each glyph from the resting gray toward the bright text color by its shine opacity, so a sheen sweeps across the braille art
+    // Blend each glyph from the resting DeepSeek blue toward a bright cyan by its shine opacity, so a blue-to-cyan sheen sweeps across the whale.
     // Adjacent glyphs that land on the same blended color share one Span to hold down the per-frame allocation
-    let base = theme.gray;
-    let hilite = theme.text_primary;
+    let base = theme.accent_assistant;
+    let hilite = theme.running;
     let logo_lines: Vec<Line> = lines
         .iter()
         .enumerate()

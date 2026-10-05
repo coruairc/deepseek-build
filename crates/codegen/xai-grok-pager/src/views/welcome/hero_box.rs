@@ -299,9 +299,9 @@ pub(super) fn render_hero_box(
         bool,
     )>,
 ) -> HeroBoxRects {
-    // Dim the box border toward the background for a softer, dimmer gray.
-    let border_color = crate::render::color::blend_color(theme.bg_base, theme.gray_dim, 0.45)
-        .unwrap_or(theme.gray_dim);
+    // DeepSeek-blue leaning border so the hero reads as branded rather than neutral gray.
+    let border_color = crate::render::color::blend_color(theme.bg_base, theme.accent_assistant, 0.6)
+        .unwrap_or(theme.accent_assistant);
     let border_block = Block::new()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
