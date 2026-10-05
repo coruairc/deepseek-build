@@ -13112,7 +13112,6 @@ dependencies = [
  "parking_lot",
  "portable-pty",
  "pretty_assertions",
- "prost",
  "rand 0.9.5",
  "ratatui",
  "regex",

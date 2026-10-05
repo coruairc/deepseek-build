@@ -190,8 +190,6 @@ xai-grok-shell = { path = "../xai-grok-shell", default-features = false, feature
 pretty_assertions = { workspace = true }
 rstest = { workspace = true }
 wiremock = { workspace = true }
-# Decodes the clip-transcription request the voice tests capture off wiremock.
-prost = { workspace = true }
 insta = { workspace = true }
 criterion = { workspace = true }
 tempfile = { workspace = true }
