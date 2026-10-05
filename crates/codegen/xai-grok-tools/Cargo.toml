@@ -94,6 +94,9 @@ futures-util = { workspace = true }
 xai-grok-sandbox = { path = "../xai-grok-sandbox", default-features = false }
 dhat = { workspace = true, optional = true }
 zstd = { workspace = true }
+# `util::vendor` (relocated from the deleted xai-file-utils) hashes downloaded tool
+# binaries at runtime, not just at build time.
+sha2 = { workspace = true }
 
 [target.'cfg(unix)'.dependencies]
 command-fds = { version = "0.3", features = ["tokio"] }
