@@ -422,7 +422,10 @@ mod tests {
                 ..
             } => assert_eq!(
                 live_tokens_by_model,
-                vec![("deepseek-4".to_owned(), 5_000), ("deepseek-3".to_owned(), 3_000)]
+                vec![
+                    ("deepseek-4".to_owned(), 5_000),
+                    ("deepseek-3".to_owned(), 3_000)
+                ]
             ),
             _ => panic!("expected GoalUpdated"),
         }

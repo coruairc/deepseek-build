@@ -33,7 +33,10 @@ fn gateway_toggle_propagates_failed_enable_persist() {
         .expect("serialize mcp/toggle params");
         let err = tokio::time::timeout(
             RPC_TIMEOUT,
-            conn.ext_method(acp::ExtRequest::new("deepseek-build/mcp/toggle", Arc::from(params))),
+            conn.ext_method(acp::ExtRequest::new(
+                "deepseek-build/mcp/toggle",
+                Arc::from(params),
+            )),
         )
         .await
         .expect("mcp/toggle timed out")

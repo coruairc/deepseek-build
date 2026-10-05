@@ -32,12 +32,12 @@ use std::num::NonZeroUsize;
 use tokio_util::sync::CancellationToken;
 use xai_grok_pager::agent_runtime::AgentRuntime;
 use xai_grok_pager::app::{
-    AgentCmd, Command, EARLY_PREFETCH_WAIT, HeadlessArgs, LeaderMgmtArgs, LeaderMgmtCommand,
-    LeaderMode, LeaderTargetArgs, PagerArgs, resolve_use_leader, warn_leader_disabled_by_sandbox,
+    AgentCmd, Command, EARLY_PREFETCH_WAIT, LeaderMgmtArgs, LeaderMgmtCommand, LeaderMode,
+    LeaderTargetArgs, PagerArgs, resolve_use_leader, warn_leader_disabled_by_sandbox,
 };
 use xai_grok_pager::app::{WorkspaceMgmtArgs, WorkspaceMgmtCommand, WorkspaceStartArgs};
 use xai_grok_pager::client_identity::PAGER_CLIENT_VERSION;
-use xai_grok_shell::agent::app::{run_headless, run_leader};
+use xai_grok_shell::agent::app::run_leader;
 use xai_grok_shell::agent::config::Config as AgentConfig;
 use xai_grok_shell::leader::{
     ClientCapabilities, ClientMode, ControlCommand, LeaderCapabilities, LeaderDescriptor,
@@ -68,7 +68,6 @@ fn process_identity(command: Option<&Command>, is_interactive: bool) -> Option<P
             | Command::Sessions(_)
             | Command::Usage(_)
             | Command::Setup { .. }
-            | Command::Share(_)
             | Command::Wrap(_)
             | Command::Export(_)
             | Command::Trace(_)
@@ -107,7 +106,6 @@ fn command_needs_pre_sandbox_policy_heal(command: Option<&Command>) -> bool {
             | Command::Sessions(_)
             | Command::Usage(_)
             | Command::Setup { .. }
-            | Command::Share(_)
             | Command::Wrap(_)
             | Command::Export(_)
             | Command::Trace(_)
@@ -156,16 +154,6 @@ mod test_seam {
         xai_grok_config::signed_policy::test_seam::set_embedded_keys(Some(&[(key_id, public_key)]));
     }
 }
-/// Apply headless args to an existing config, only overriding values that are explicitly set.
-/// Unset args leave the environment defaults in place.
-fn apply_headless_args_to_config(args: &HeadlessArgs, config: &mut AgentConfig) {
-    if let Some(v) = &args.grok_ws_origin {
-        config.grok_com_config.grok_ws_origin = v.clone();
-    }
-    if let Some(v) = &args.grok_ws_url {
-        config.grok_com_config.grok_ws_url = v.clone();
-    }
-}
 /// Apply global endpoint CLI args to an existing config.
 fn apply_agent_endpoint_args(
     agent_args: &xai_grok_pager::app::AgentArgs,
@@ -194,20 +182,6 @@ fn resolve_agent_profile_path(path: &std::path::Path) -> std::path::PathBuf {
             std::process::exit(1);
         }
     }
-}
-/// Print startup information for the serve command.
-fn print_serve_startup_info(bind_addr: SocketAddr, secret: &str) {
-    eprintln!();
-    eprintln!("   deepseek-build agent server starting...");
-    eprintln!();
-    eprintln!("   Address:  {}:{}", bind_addr.ip(), bind_addr.port());
-    eprintln!("   Secret:   {}", secret);
-    eprintln!();
-    eprintln!(
-        "   WebSocket URL: ws://{}/ws?server-key={}",
-        bind_addr, secret
-    );
-    eprintln!();
 }
 /// Entrypoint tag for `grok -p`; keys the quiet stderr default in `init_tracing_simple`.
 const HEADLESS_ENTRYPOINT: &str = "headless";
@@ -1222,7 +1196,7 @@ async fn run_agent_command(
     let signal_flush = agent_command::spawn_signal_flush();
     if matches!(
         agent_args.mode,
-        Some(AgentCmd::Leader(_) | AgentCmd::Stdio | AgentCmd::Headless(_) | AgentCmd::Serve(_))
+        Some(AgentCmd::Leader(_) | AgentCmd::Stdio) | None
     ) {
         xai_grok_shell::agent::app::suppress_otel();
     }
@@ -1351,10 +1325,8 @@ async fn run_agent_command(
     use xai_grok_telemetry::process_info::LeaderMode::{Attached, Standalone};
     set_identity(ProcessIdentity {
         entrypoint: match &agent_args.mode {
-            Some(AgentCmd::Stdio) => Entrypoint::Embedded,
+            Some(AgentCmd::Stdio) | None => Entrypoint::Embedded,
             Some(AgentCmd::Leader(_)) => Entrypoint::Leader,
-            Some(AgentCmd::Serve(_)) => Entrypoint::Workspace,
-            Some(AgentCmd::Headless(_)) | None => Entrypoint::Headless,
         },
         leader: if use_leader || matches!(agent_args.mode, Some(AgentCmd::Leader(_))) {
             Attached
@@ -1375,7 +1347,6 @@ async fn run_agent_command(
         };
         let mode = match &agent_args.mode {
             Some(AgentCmd::Stdio) => ClientMode::Stdio,
-            Some(AgentCmd::Headless(_)) | None => ClientMode::Headless,
             _ => ClientMode::Stdio,
         };
         let env_urls = xai_grok_shell::leader::LeaderEnvUrls::from(&agent_config.grok_com_config);
@@ -1550,30 +1521,8 @@ async fn run_agent_command(
         Some(AgentCmd::Stdio) => {
             agent_command::run_stdio(&runtime, &agent_config, signal_flush).await
         }
-        Some(AgentCmd::Headless(a)) => {
-            let mut agent_config = agent_config.clone();
-            apply_headless_args_to_config(&a, &mut agent_config);
-            run_headless(
-                &agent_config,
-                agent_args.reauthenticate,
-                agent_memory_config,
-            )
-            .await
-        }
-        Some(AgentCmd::Serve(a)) => {
-            let mut agent_config = agent_config.clone();
-            apply_headless_args_to_config(&a.headless, &mut agent_config);
-            let secret = a.get_secret();
-            let server_config = xai_grok_shell::agent::ServerConfig {
-                bind_addr: a.bind,
-                secret: secret.clone(),
-            };
-            print_serve_startup_info(a.bind, &secret);
-            xai_grok_shell::agent::run_agent_server(server_config, agent_config).await
-        }
         Some(AgentCmd::Leader(a)) => {
-            let mut agent_config = agent_config.clone();
-            apply_headless_args_to_config(&a.headless, &mut agent_config);
+            let agent_config = agent_config.clone();
             let leader_auto_update: Option<xai_grok_shell::agent::app::LeaderAutoUpdateConfig> =
                 None;
             let cursor_worker = None;
@@ -1581,7 +1530,6 @@ async fn run_agent_command(
                 &agent_config,
                 xai_grok_shell::agent::app::LeaderRunOptions {
                     no_exit_on_disconnect: a.no_exit_on_disconnect,
-                    relay_on_demand: a.relay_on_demand,
                     auto_update_check: leader_auto_update,
                     memory_config: agent_memory_config,
                     cursor_worker,
@@ -1590,14 +1538,8 @@ async fn run_agent_command(
             .await
         }
         None => {
-            let mut agent_config = agent_config.clone();
-            apply_headless_args_to_config(&agent_args.headless, &mut agent_config);
-            run_headless(
-                &agent_config,
-                agent_args.reauthenticate,
-                agent_memory_config,
-            )
-            .await
+            eprintln!("error: specify an agent subcommand: `agent stdio` or `agent leader`");
+            std::process::exit(2);
         }
     }
 }
@@ -2182,13 +2124,6 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
                 init_tracing_simple("cli");
                 let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
                 return xai_grok_pager::usage_cmd::run(usage_args);
-            }
-            Command::Share(ref share_args) => {
-                init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
-                let agent_config = xai_grok_shell::config::load_agent_config_disk_only()
-                    .map_err(|e| anyhow::anyhow!("Failed to create agent config: {e}"))?;
-                return xai_grok_pager::share_cmd::run(share_args, &agent_config).await;
             }
             Command::Export(export_args) => {
                 init_tracing_simple("cli");

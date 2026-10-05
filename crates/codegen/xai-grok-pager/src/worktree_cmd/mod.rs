@@ -315,7 +315,8 @@ async fn cmd_db(tx: &xai_acp_lib::AcpAgentTx, command: WorktreeDbCommand) -> Res
             Ok(())
         }
         WorktreeDbCommand::Rebuild => {
-            let report: RebuildReport = ext_call(tx, "deepseek-build/git/worktree/db/rebuild", &()).await?;
+            let report: RebuildReport =
+                ext_call(tx, "deepseek-build/git/worktree/db/rebuild", &()).await?;
             let written = display::print_rebuild(&report, &mut std::io::stdout().lock());
             Ok(crate::util::ignore_broken_pipe(written)?)
         }
@@ -520,7 +521,10 @@ mod tests {
             &serde_json::json!({ "idOrPath": "/wt" }),
         )
         .unwrap();
-        assert_eq!(c.method.as_ref(), "deepseek-build/git/worktree/clean-artifacts");
+        assert_eq!(
+            c.method.as_ref(),
+            "deepseek-build/git/worktree/clean-artifacts"
+        );
     }
     #[test]
     fn ext_request_builds_db_stats_empty_params() {

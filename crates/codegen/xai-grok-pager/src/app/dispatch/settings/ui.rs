@@ -126,10 +126,7 @@ pub(in crate::app::dispatch) fn dispatch_open_command_palette(app: &mut AppView)
         return vec![];
     }
     agent.active_modal = Some(ActiveModal::CommandPalette {
-        entries: crate::views::modal::default_palette_entries(
-            agent.sharing_enabled,
-            &agent.prompt.slash_controller,
-        ),
+        entries: crate::views::modal::default_palette_entries(&agent.prompt.slash_controller),
         // Type-to-find: open in input mode (matches Ctrl+P).
         state: crate::views::picker::PickerState::input_active(),
         window: crate::views::modal_window::ModalWindowState::new(),

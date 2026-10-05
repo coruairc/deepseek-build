@@ -1600,9 +1600,6 @@ struct SessionPersistence {
     remote_sync: Option<RemoteSync>,
     /// True only for sessions created this run (not resumed); gates the writeback backfill so a resumed, already-synced session isn't re-sent.
     created_fresh: bool,
-    /// WebSocket-based relay sync for real-time session sharing.
-    /// This streams updates to the relay backend in addition to local persistence.
-    relay_sync: Option<crate::relay::RelaySync>,
     /// Session title generation lifecycle.
     summary: crate::session::summary::SummaryGenerator,
     registry_title_sync: Option<RegistryGeneratedTitleSync>,
@@ -1845,9 +1842,6 @@ impl SessionPersistence {
         if let Some(sync) = &self.remote_sync {
             sync.queue(notification.clone());
         }
-        if let Some(relay) = &self.relay_sync {
-            relay.queue(notification);
-        }
     }
 
     /// Enable writeback for a session created `Local` before settings resolved.
@@ -2002,9 +1996,6 @@ impl SessionPersistence {
         }
         if let Some(sync) = &self.remote_sync {
             sync.flush();
-        }
-        if let Some(relay) = &self.relay_sync {
-            relay.flush();
         }
         result
     }
@@ -2877,7 +2868,6 @@ pub(crate) struct SessionDeps {
     pub(crate) sampling_client: OaiCompatClient,
     pub(crate) storage_mode: StorageMode,
     pub(crate) auth_manager: Option<Arc<xai_grok_login::AuthManager>>,
-    pub(crate) relay_sync: Option<crate::relay::RelaySync>,
     pub(crate) gateway: Option<GatewaySender>,
     pub(crate) session_summary_model: String,
     pub(crate) registry_title_sync: Option<RegistryGeneratedTitleSync>,
@@ -2896,7 +2886,6 @@ pub(crate) async fn new(
         sampling_client,
         storage_mode,
         auth_manager,
-        relay_sync,
         gateway,
         session_summary_model,
         registry_title_sync,
@@ -2943,7 +2932,6 @@ pub(crate) async fn new(
             rx,
             remote_sync: remote_sync.clone(),
             created_fresh: true,
-            relay_sync,
             summary: crate::session::summary::SummaryGenerator::new(
                 crate::session::summary::SummaryConfig {
                     sampling_client,
@@ -3052,7 +3040,6 @@ pub(crate) async fn new_with_explicit_dir(
             rx,
             remote_sync: None,
             created_fresh: false,
-            relay_sync: None,
             summary: crate::session::summary::SummaryGenerator::new(
                 crate::session::summary::SummaryConfig {
                     sampling_client,
@@ -3124,7 +3111,6 @@ pub(crate) async fn load_light(
         sampling_client,
         storage_mode,
         auth_manager,
-        relay_sync,
         gateway,
         session_summary_model,
         registry_title_sync,
@@ -3198,7 +3184,6 @@ pub(crate) async fn load_light(
             rx,
             remote_sync: remote_sync.clone(),
             created_fresh: false,
-            relay_sync,
             summary: summary_gen,
             registry_title_sync,
             gateway,

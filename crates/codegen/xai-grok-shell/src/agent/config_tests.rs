@@ -1209,8 +1209,18 @@ fn sampling_config_scopes_no_inline_citations_include() {
             crate::env::PROD_CLI_CHAT_PROXY_BASE_URL,
             true,
         ),
-        (true, ApiBackend::Responses, "https://api.deepseek.com/v1", true),
-        (false, ApiBackend::Responses, "https://api.deepseek.com/v1", false),
+        (
+            true,
+            ApiBackend::Responses,
+            "https://api.deepseek.com/v1",
+            true,
+        ),
+        (
+            false,
+            ApiBackend::Responses,
+            "https://api.deepseek.com/v1",
+            false,
+        ),
         (
             true,
             ApiBackend::ChatCompletions,
@@ -7150,7 +7160,9 @@ fn slug_propagation_enterprise_managed_config_key_mismatch() {
         .expect("grok-build key must exist");
     assert_eq!(by_key.info.context_window.get(), 500_000);
     assert_eq!(by_key.info.model, "deepseek-4.5");
-    let by_latest = resolved.get("deepseek-4.5").expect("deepseek-4.5 key must exist");
+    let by_latest = resolved
+        .get("deepseek-4.5")
+        .expect("deepseek-4.5 key must exist");
     assert_eq!(
         by_latest.info.context_window.get(),
         500_000,
@@ -7175,7 +7187,13 @@ fn slug_propagation_inherits_api_backend_but_not_agent_type() {
     .unwrap();
     let cfg = Config::new_from_toml_cfg(&raw).expect("config should parse");
     let mut prefetched = IndexMap::new();
-    let mut entry = test_model_entry("deepseek-4.5", "https://test.example.com/v1", None, None, None);
+    let mut entry = test_model_entry(
+        "deepseek-4.5",
+        "https://test.example.com/v1",
+        None,
+        None,
+        None,
+    );
     entry.info.context_window = NonZeroU64::new(default_cw).unwrap();
     entry.info.agent_type = default_agent_type();
     entry.info.api_backend = ApiBackend::default();
@@ -7207,7 +7225,13 @@ fn slug_propagation_does_not_overwrite_explicit_context_window() {
     .unwrap();
     let cfg = Config::new_from_toml_cfg(&raw).expect("config should parse");
     let mut prefetched = IndexMap::new();
-    let mut entry = test_model_entry("deepseek-4.5", "https://test.example.com/v1", None, None, None);
+    let mut entry = test_model_entry(
+        "deepseek-4.5",
+        "https://test.example.com/v1",
+        None,
+        None,
+        None,
+    );
     entry.info.context_window = NonZeroU64::new(65_536).unwrap();
     prefetched.insert("deepseek-4.5".to_owned(), entry);
     let resolved = resolve_model_list(&cfg, Some(prefetched));
@@ -7750,7 +7774,8 @@ fn slug_inherited_unmarked_capabilities_menu_keeps_no_default_effort() {
     let parsed =
         crate::remote::client::parse_remote_model_value(&row, "https://test.example.com/v1")
             .expect("row parses");
-    let entry = resolve_row_with_menu_donor("deepseek-4.6", "", ModelEntry::from_config_entry(&parsed));
+    let entry =
+        resolve_row_with_menu_donor("deepseek-4.6", "", ModelEntry::from_config_entry(&parsed));
     assert_eq!(effort_ids(&entry.info), ["low", "medium", "high", "xhigh"]);
     assert!(entry.info.supports_reasoning_effort);
     assert!(entry.info.reasoning_effort_server_default);

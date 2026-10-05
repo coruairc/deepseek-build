@@ -28,7 +28,13 @@ fn paint_rows(states: &[RowState], tick: u64) -> (Vec<(String, Color)>, PaintedA
     let mut buf = Buffer::empty(area);
     let mut state = DashboardState::new();
     state.spinner_tick = tick;
-    render_rows(&mut buf, area, &Theme::deepseek_monokai(), &rows, &mut state);
+    render_rows(
+        &mut buf,
+        area,
+        &Theme::deepseek_monokai(),
+        &rows,
+        &mut state,
+    );
     let cells = buf
         .content
         .iter()
@@ -2582,9 +2588,21 @@ fn pinned_rows_render_in_manual_order_after_activity_changes() {
                 crate::views::dashboard::sort_rows(&mut rows, grouping, &reorder);
                 let mut buffer = Buffer::empty(area);
                 if width < MIN_DASHBOARD_WIDTH {
-                    render_narrow_rows(&mut buffer, area, &Theme::deepseek_monokai(), &rows, &mut state);
+                    render_narrow_rows(
+                        &mut buffer,
+                        area,
+                        &Theme::deepseek_monokai(),
+                        &rows,
+                        &mut state,
+                    );
                 } else {
-                    render_rows(&mut buffer, area, &Theme::deepseek_monokai(), &rows, &mut state);
+                    render_rows(
+                        &mut buffer,
+                        area,
+                        &Theme::deepseek_monokai(),
+                        &rows,
+                        &mut state,
+                    );
                 }
 
                 let text = buf_to_text(&buffer);

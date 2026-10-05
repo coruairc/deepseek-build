@@ -187,7 +187,9 @@ mod tests {
             Some(0)
         );
         assert!(value.get("nextPageToken").is_none());
-        let partial = value.get("_meta").and_then(|m| m.get("deepseek-build/partial"));
+        let partial = value
+            .get("_meta")
+            .and_then(|m| m.get("deepseek-build/partial"));
         assert_eq!(
             partial
                 .and_then(|p| p.get("workspaces"))

@@ -13,12 +13,6 @@ use crate::notifications::{NotificationEvent, NotificationEventKind};
 use crate::scrollback::block::RenderBlock;
 use crate::settings::CodingDataSharingLock;
 
-/// Temporary kill switch: client share links are disabled.
-pub(super) fn dispatch_share_session(app: &mut AppView) -> Vec<Effect> {
-    app.show_toast("Session sharing is temporarily disabled");
-    vec![]
-}
-
 /// Monotonic generation for usage-modal fetches, shared by every surface that opens the modal.
 /// A reply from a previous open (modal closed and reopened) then can't overwrite newer results.
 /// `0` is reserved for background refreshes (minimal-mode paths, startup/login `FetchAppBilling`), which never settle a modal.

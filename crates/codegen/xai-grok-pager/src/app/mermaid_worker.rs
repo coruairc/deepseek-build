@@ -1903,8 +1903,12 @@ mod tests {
             80,
             MermaidRenderQuality::Terminal,
         );
-        let light_key =
-            MermaidCacheKey::derive(src, ThemeKind::DeepSeekDay, 80, MermaidRenderQuality::Terminal);
+        let light_key = MermaidCacheKey::derive(
+            src,
+            ThemeKind::DeepSeekDay,
+            80,
+            MermaidRenderQuality::Terminal,
+        );
         assert_ne!(
             dark_key.cache_filename(),
             light_key.cache_filename(),
@@ -2160,8 +2164,12 @@ mod tests {
         let src = "flowchart LR\nA-->B";
 
         // An on-click render in flight, keyed at the click-time theme and width
-        let click_key =
-            MermaidCacheKey::derive(src, ThemeKind::DeepSeekMonokai, 80, MermaidRenderQuality::Open);
+        let click_key = MermaidCacheKey::derive(
+            src,
+            ThemeKind::DeepSeekMonokai,
+            80,
+            MermaidRenderQuality::Open,
+        );
         let mut rt = MermaidRuntime::new();
         rt.pending.push(PendingMermaidAction {
             key: click_key.clone(),

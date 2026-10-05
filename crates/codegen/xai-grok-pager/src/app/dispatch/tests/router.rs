@@ -631,7 +631,9 @@ fn announcements_open_cta_opens_promo_and_noops_under_critical() {
         let effects = dispatch(Action::AnnouncementsOpenCta(surface), &mut app);
         assert!(effects.is_empty(), "open is a side effect, not an Effect");
         assert!(
-            opened().lines().any(|l| l == "https://deepseek-build/promo-open"),
+            opened()
+                .lines()
+                .any(|l| l == "https://deepseek-build/promo-open"),
             "surface {surface:?} must open the promo url; got {:?}",
             opened()
         );

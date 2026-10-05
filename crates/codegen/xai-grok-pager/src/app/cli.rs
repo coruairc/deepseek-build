@@ -58,9 +58,6 @@ pub enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Share a session and print the share URL
-    #[command(hide = true)]
-    Share(crate::share_cmd::ShareArgs),
     /// Run any command with local clipboard support (forwards OSC 52 to the system clipboard).
     #[cfg_attr(not(any(unix, windows)), command(hide = true))]
     #[command(long_about = "\
@@ -260,8 +257,6 @@ pub struct AgentArgs {
     /// Start a new agent even when config enables leader mode.
     #[arg(long, conflicts_with = "leader")]
     pub no_leader: bool,
-    #[command(flatten)]
-    pub headless: HeadlessArgs,
     /// Override the CLI chat proxy base URL.
     #[arg(long = "model-proxy-base-url")]
     pub cli_chat_proxy_base_url: Option<String>,
@@ -300,49 +295,8 @@ impl AgentArgs {
 pub enum AgentCmd {
     /// Run the agent over stdio
     Stdio,
-    /// Run the agent headlessly over the deepseek-build WebSocket relay
-    Headless(HeadlessArgs),
-    /// Run the agent as a WebSocket server
-    Serve(ServeArgs),
     /// Run as the shared leader process for other clients
     Leader(LeaderArgs),
-}
-/// WebSocket URL override arguments, used by headless / leader / serve modes.
-#[derive(Debug, clap::Args, Clone, Default)]
-pub struct HeadlessArgs {
-    #[arg(long = "grok-ws-origin")]
-    pub grok_ws_origin: Option<String>,
-    #[arg(long = "grok-ws-url")]
-    pub grok_ws_url: Option<String>,
-}
-/// Arguments for the `agent serve` subcommand.
-#[derive(Debug, clap::Args, Clone)]
-pub struct ServeArgs {
-    /// Address for the server to listen on
-    #[arg(long, default_value = "127.0.0.1:2419")]
-    pub bind: SocketAddr,
-    /// Secret token for client authentication (auto-generated if not provided)
-    #[arg(long, env = "GROK_AGENT_SECRET")]
-    pub secret: Option<String>,
-    /// Remote agent URL for proxy mode
-    #[arg(long)]
-    pub remote: Option<String>,
-    /// Authentication and WebSocket URL overrides
-    #[command(flatten)]
-    pub headless: HeadlessArgs,
-}
-impl ServeArgs {
-    /// Get the secret, generating a random one if not provided.
-    pub fn get_secret(&self) -> String {
-        self.secret
-            .clone()
-            .unwrap_or_else(|| generate_random_key(12))
-    }
-}
-/// Generate a random alphanumeric key of the given length.
-fn generate_random_key(len: usize) -> String {
-    let raw = uuid::Uuid::new_v4().to_string().replace('-', "");
-    raw.chars().cycle().take(len).collect()
 }
 /// Arguments for the `agent leader` subcommand.
 #[derive(Debug, clap::Args, Clone)]
@@ -350,17 +304,9 @@ pub struct LeaderArgs {
     /// Keep the leader running after the last client disconnects.
     #[arg(long)]
     pub no_exit_on_disconnect: bool,
-    /// Defer the api.deepseek.com relay WebSocket until the first headless IPC client registers.
-    /// Without this flag the leader connects the relay eagerly at startup.
-    /// Passed by leaders auto-spawned from interactive clients (TUI/IDE), which only need the relay if a headless client appears.
-    #[arg(long)]
-    pub relay_on_demand: bool,
     /// Disable periodic auto-update checks for the leader.
     #[arg(long)]
     pub no_auto_update: bool,
-    /// All environment URL overrides (passed from follower process)
-    #[command(flatten)]
-    pub headless: HeadlessArgs,
 }
 #[derive(Debug, Clone, Parser)]
 #[command(

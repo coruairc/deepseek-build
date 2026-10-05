@@ -47,7 +47,9 @@ pub(crate) async fn handle(agent: &MvpAgent, args: &acp::ExtRequest) -> ExtResul
         "deepseek-build/session/delete" => handle_session_delete(agent, args).await,
         "deepseek-build/session/update_mcp_servers" => handle_update_mcp_servers(agent, args).await,
         #[cfg(feature = "local-workspace")]
-        "deepseek-build/session/add_local_workspace" => handle_add_local_workspace(agent, args).await,
+        "deepseek-build/session/add_local_workspace" => {
+            handle_add_local_workspace(agent, args).await
+        }
         "deepseek-build/session/fork" => handle_session_fork(agent, args).await,
         "deepseek-build/plugins/reload" => handle_plugins_reload(agent).await,
         "deepseek-build/commands/list" => handle_commands_list(agent, args).await,

@@ -1560,12 +1560,10 @@ fn inject_capabilities_does_not_override_existing_model_id() {
 
 #[test]
 fn extract_yolo_mode_change_returns_value() {
-    let payload =
-        r#"{"jsonrpc":"2.0","method":"deepseek-build/yolo_mode_changed","params":{"yolo_mode":true}}"#;
+    let payload = r#"{"jsonrpc":"2.0","method":"deepseek-build/yolo_mode_changed","params":{"yolo_mode":true}}"#;
     assert_eq!(extract_yolo_mode_change(&pv(payload)), Some(true));
 
-    let payload =
-        r#"{"jsonrpc":"2.0","method":"deepseek-build/yolo_mode_changed","params":{"yolo_mode":false}}"#;
+    let payload = r#"{"jsonrpc":"2.0","method":"deepseek-build/yolo_mode_changed","params":{"yolo_mode":false}}"#;
     assert_eq!(extract_yolo_mode_change(&pv(payload)), Some(false));
 }
 
@@ -1578,12 +1576,10 @@ fn extract_yolo_mode_change_returns_none_for_other_methods() {
 /// Branch 1: an explicit `auto_mode` flag wins, even over `permission_mode`.
 #[test]
 fn extract_auto_mode_change_explicit_flag_wins() {
-    let payload =
-        r#"{"jsonrpc":"2.0","method":"deepseek-build/yolo_mode_changed","params":{"auto_mode":true}}"#;
+    let payload = r#"{"jsonrpc":"2.0","method":"deepseek-build/yolo_mode_changed","params":{"auto_mode":true}}"#;
     assert_eq!(extract_auto_mode_change(&pv(payload)), Some(true));
 
-    let payload =
-        r#"{"jsonrpc":"2.0","method":"deepseek-build/yolo_mode_changed","params":{"auto_mode":false}}"#;
+    let payload = r#"{"jsonrpc":"2.0","method":"deepseek-build/yolo_mode_changed","params":{"auto_mode":false}}"#;
     assert_eq!(extract_auto_mode_change(&pv(payload)), Some(false));
 
     // Explicit flag wins even when permission_mode would say otherwise.
@@ -1616,8 +1612,7 @@ fn extract_auto_mode_change_returns_none_when_no_auto_signal() {
     let payload = r#"{"jsonrpc":"2.0","method":"other/method","params":{"auto_mode":true}}"#;
     assert_eq!(extract_auto_mode_change(&pv(payload)), None);
 
-    let payload =
-        r#"{"jsonrpc":"2.0","method":"deepseek-build/yolo_mode_changed","params":{"yolo_mode":true}}"#;
+    let payload = r#"{"jsonrpc":"2.0","method":"deepseek-build/yolo_mode_changed","params":{"yolo_mode":true}}"#;
     assert_eq!(extract_auto_mode_change(&pv(payload)), None);
 }
 
@@ -2124,8 +2119,9 @@ fn extract_target_client_id_none_when_absent() {
 
 #[test]
 fn inject_yolo_notification_adds_client_identifier() {
-    let mut json =
-        pv(r#"{"jsonrpc":"2.0","method":"deepseek-build/yolo_mode_changed","params":{"yolo_mode":true}}"#);
+    let mut json = pv(
+        r#"{"jsonrpc":"2.0","method":"deepseek-build/yolo_mode_changed","params":{"yolo_mode":true}}"#,
+    );
 
     assert!(inject_client_identity_into_yolo_notification(
         &mut json, "grok-tui"
@@ -2221,7 +2217,10 @@ fn version_mismatch_notification_contains_correct_fields() {
     let payload = make_version_mismatch_notification("0.1.157", "0.1.150")
         .expect("should produce notification");
     let json: serde_json::Value = serde_json::from_str(&payload).unwrap();
-    assert_eq!(j(&json, "/method"), "deepseek-build/leader/version_mismatch");
+    assert_eq!(
+        j(&json, "/method"),
+        "deepseek-build/leader/version_mismatch"
+    );
     assert_eq!(j(&json, "/params/clientVersion"), "0.1.157");
     assert_eq!(j(&json, "/params/leaderVersion"), "0.1.150");
     assert!(
@@ -4471,8 +4470,9 @@ async fn roster_merge_round_trips_namespaced_ids_and_broadcasts_changes() {
     write_message(
         &mut writer_a,
         &ClientMessage::Acp {
-            payload: r#"{"jsonrpc":"2.0","id":41,"method":"_deepseek-build/sessions/list","params":{}}"#
-                .to_owned(),
+            payload:
+                r#"{"jsonrpc":"2.0","id":41,"method":"_deepseek-build/sessions/list","params":{}}"#
+                    .to_owned(),
         },
     )
     .await
@@ -4546,9 +4546,9 @@ async fn roster_merge_round_trips_namespaced_ids_and_broadcasts_changes() {
     for (name, reader) in [("A", &mut reader_a), ("B", &mut reader_b)] {
         let got = next_acp_payload(reader).await;
         assert!(
-            got.as_deref().is_some_and(
-                |p| p.contains("_deepseek-build/sessions/changed") && p.contains("cursor-worker:bc-1")
-            ),
+            got.as_deref()
+                .is_some_and(|p| p.contains("_deepseek-build/sessions/changed")
+                    && p.contains("cursor-worker:bc-1")),
             "client {name} must receive the synthesized roster broadcast, got {got:?}"
         );
     }

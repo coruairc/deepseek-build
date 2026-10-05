@@ -98,9 +98,9 @@ use super::settings::ui::{
 };
 use super::status::{
     dispatch_copy_session_id, dispatch_manage_billing, dispatch_open_gboom, dispatch_open_tutorial,
-    dispatch_privacy_banner_opt_in, dispatch_privacy_banner_opt_out, dispatch_share_session,
-    dispatch_show_context_info, dispatch_show_queue, dispatch_show_release_notes,
-    dispatch_show_session_info, dispatch_show_tasks, dispatch_show_usage, set_coding_data_sharing,
+    dispatch_privacy_banner_opt_in, dispatch_privacy_banner_opt_out, dispatch_show_context_info,
+    dispatch_show_queue, dispatch_show_release_notes, dispatch_show_session_info,
+    dispatch_show_tasks, dispatch_show_usage, set_coding_data_sharing,
 };
 use super::task_result::{dispatch_task_result, unregister_all_active_sessions};
 use super::transcript::{
@@ -1040,7 +1040,6 @@ fn dispatch_inner(action: Action, app: &mut AppView) -> Vec<Effect> {
         Action::DemoteToBackground => dispatch_demote_to_background(app),
         Action::RequestBundleStatus => vec![Effect::FetchBundleStatus],
         Action::CycleMode => dispatch_cycle_mode(app),
-        Action::ShareSession => dispatch_share_session(app),
         Action::ShowSessionInfo => dispatch_show_session_info(app),
         Action::ShowReleaseNotes { title, content } => {
             dispatch_show_release_notes(app, title, content)

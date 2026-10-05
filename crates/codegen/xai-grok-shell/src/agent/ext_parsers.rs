@@ -144,7 +144,8 @@ mod tests {
         let p = serde_json::json!({
             "sessionId": "s1", "id": "p9", "newText": "replacement text"
         });
-        match parse_queue_edit_command("deepseek-build/queue/edit", &p, Some("grok-vscode".into())) {
+        match parse_queue_edit_command("deepseek-build/queue/edit", &p, Some("grok-vscode".into()))
+        {
             Some(SessionCommand::EditQueuedPrompt {
                 id,
                 new_text,
@@ -193,7 +194,11 @@ mod tests {
         let p = serde_json::json!({
             "sessionId": "s1", "id": "p10", "expectedVersion": 2
         });
-        match parse_queue_edit_command("deepseek-build/queue/interject", &p, Some("grok-tui".into())) {
+        match parse_queue_edit_command(
+            "deepseek-build/queue/interject",
+            &p,
+            Some("grok-tui".into()),
+        ) {
             Some(SessionCommand::InterjectQueuedPrompt {
                 id,
                 expected_version,
@@ -244,8 +249,12 @@ mod tests {
 
         // interject without id yields None (can't target an entry)
         assert!(
-            parse_queue_edit_command("deepseek-build/queue/interject", &serde_json::json!({}), None)
-                .is_none()
+            parse_queue_edit_command(
+                "deepseek-build/queue/interject",
+                &serde_json::json!({}),
+                None
+            )
+            .is_none()
         );
 
         // hold_edit / release_edit: id only (combine-hold while the client edits).
@@ -261,18 +270,27 @@ mod tests {
 
         // hold_edit / release_edit without id yields None (can't target an entry)
         assert!(
-            parse_queue_edit_command("deepseek-build/queue/hold_edit", &serde_json::json!({}), None)
-                .is_none()
+            parse_queue_edit_command(
+                "deepseek-build/queue/hold_edit",
+                &serde_json::json!({}),
+                None
+            )
+            .is_none()
         );
         assert!(
-            parse_queue_edit_command("deepseek-build/queue/release_edit", &serde_json::json!({}), None)
-                .is_none()
+            parse_queue_edit_command(
+                "deepseek-build/queue/release_edit",
+                &serde_json::json!({}),
+                None
+            )
+            .is_none()
         );
 
         // An unknown method yields None
         // Outbound `changed` is the other production `deepseek-build/queue/*` method and must not parse as an edit command
         assert!(
-            parse_queue_edit_command("deepseek-build/queue/bogus", &serde_json::json!({}), None).is_none()
+            parse_queue_edit_command("deepseek-build/queue/bogus", &serde_json::json!({}), None)
+                .is_none()
         );
         assert!(
             parse_queue_edit_command(
@@ -293,7 +311,8 @@ mod tests {
         );
         // remove without id yields None (can't target an entry)
         assert!(
-            parse_queue_edit_command("deepseek-build/queue/remove", &serde_json::json!({}), None).is_none()
+            parse_queue_edit_command("deepseek-build/queue/remove", &serde_json::json!({}), None)
+                .is_none()
         );
     }
 }

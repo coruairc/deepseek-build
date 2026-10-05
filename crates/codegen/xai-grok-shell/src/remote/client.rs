@@ -1,4 +1,4 @@
-use crate::session::export::{ExportedMessage, ExportedMetadata, ExportedSession};
+use crate::session::export::{ExportedMessage, ExportedMetadata};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -13,23 +13,11 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 /// Web base URL. No first-party default: caller must supply `GROK_CODE_WEB_URL`.
 const GROK_CODE_WEB_URL: &str = "";
 
-pub fn share_url(permission_id: &str) -> String {
-    let web_url =
-        std::env::var("GROK_CODE_WEB_URL").unwrap_or_else(|_| GROK_CODE_WEB_URL.to_string());
-    format!("{}/build/share/{}", web_url, permission_id)
-}
-
 async fn parse_json_response<T: serde::de::DeserializeOwned>(
     response: reqwest::Response,
 ) -> Result<T, BackendError> {
     let bytes = response.bytes().await?;
     serde_json::from_slice(&bytes).map_err(BackendError::from)
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ShareResponse {
-    pub permission_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -190,40 +178,6 @@ impl BackendClient {
         &self.base_url
     }
 
-    /// The session data (`save_session_data`) is sent inline to the backend.
-    /// If the backend responds with 413 (payload too large), the error is logged as a warning and the share continues.
-    /// The caller is expected to have already uploaded the data to GCS via a signed URL as a fallback.
-    pub async fn share_session(
-        &self,
-        session: &ExportedSession,
-        agent_id: &str,
-    ) -> Result<String, BackendError> {
-        self.upsert_session(&session.session_id, &session.metadata, agent_id)
-            .await?;
-
-        match self
-            .save_session_data(
-                &session.session_id,
-                &session.messages,
-                Some(&session.metadata),
-            )
-            .await
-        {
-            Ok(()) => {}
-            Err(BackendError::RequestFailed { status: 413, .. }) => {
-                tracing::warn!(
-                    session_id = %session.session_id,
-                    "Backend returned 413 for save_session_data; \
-                     session data should already be in GCS via signed URL"
-                );
-            }
-            Err(e) => return Err(e),
-        }
-
-        let share_response = self.create_share_link(&session.session_id).await?;
-        Ok(share_url(&share_response.permission_id))
-    }
-
     /// Must include X-XAI-Token-Auth so nginx auth subrequest routes to OAuth.
     /// See: crates/codegen/xai-grok-shell/src/agent/app.rs:run_headless
     // Returns a HeaderMap; reqwest .header() appends, so we must not touch a builder that already has Content-Type from .json()
@@ -371,22 +325,6 @@ impl BackendClient {
 
         let data: LoadDataResponse = response.json().await?;
         Ok(data)
-    }
-
-    pub(crate) async fn create_share_link(
-        &self,
-        session_id: &str,
-    ) -> Result<ShareResponse, BackendError> {
-        let url = format!("{}/sessions/{}/share", self.base_url, session_id);
-        let response = self.send_with_auth(self.reqwest_client.post(&url)).await?;
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await.unwrap_or_default();
-            return Err(BackendError::RequestFailed { status, body });
-        }
-
-        let share_response: ShareResponse = response.json().await?;
-        Ok(share_response)
     }
 
     pub(crate) async fn delete_session_data(&self, session_id: &str) -> Result<(), BackendError> {

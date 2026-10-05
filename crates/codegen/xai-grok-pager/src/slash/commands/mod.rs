@@ -52,7 +52,6 @@ pub mod rewind;
 pub mod screen_mode_switch;
 pub mod session_info;
 pub mod settings_cmd;
-pub mod share;
 pub mod tasks;
 pub mod theme;
 pub mod think;
@@ -108,7 +107,6 @@ pub fn builtin_commands() -> Vec<Arc<dyn SlashCommand>> {
         Arc::new(queue::QueueCommand),
         // This session and what came out of it.
         Arc::new(session_info::SessionInfoCommand),
-        Arc::new(share::ShareCommand),
         Arc::new(rename::RenameCommand),
         Arc::new(history::HistoryCommand),
         Arc::new(transcript::TranscriptCommand),

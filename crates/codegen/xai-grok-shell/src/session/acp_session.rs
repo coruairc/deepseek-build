@@ -1829,7 +1829,8 @@ mod tool_meta_stamp_tests {
                     }
                 }
                 let early = early.expect("early ToolCall emitted");
-                let t = tool_meta(early.as_ref()).expect("early ToolCall carries deepseek-build/tool");
+                let t =
+                    tool_meta(early.as_ref()).expect("early ToolCall carries deepseek-build/tool");
                 assert_eq!(
                     t.pointer("/name").unwrap_or(&serde_json::Value::Null),
                     "read_file"
@@ -1844,7 +1845,8 @@ mod tool_meta_stamp_tests {
                 );
                 assert!(t.get("input").is_none(), "identity-only before parse");
                 let refined = refined.expect("refinement ToolCallUpdate emitted");
-                let t = tool_meta(refined.as_ref()).expect("refinement carries deepseek-build/tool");
+                let t =
+                    tool_meta(refined.as_ref()).expect("refinement carries deepseek-build/tool");
                 assert_eq!(
                     t.pointer("/input/path").unwrap_or(&serde_json::Value::Null),
                     "/tmp/stamp.txt"

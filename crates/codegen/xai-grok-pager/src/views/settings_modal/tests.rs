@@ -2305,7 +2305,9 @@ fn picking_enum_esc_returns_to_browse() {
                 "Esc revert must dispatch the original canonical"
             );
         }
-        other => panic!("expected Action::PreviewTheme(\"deepseek_monokai\") on Esc, got {other:?}"),
+        other => {
+            panic!("expected Action::PreviewTheme(\"deepseek_monokai\") on Esc, got {other:?}")
+        }
     }
     assert!(matches!(s.mode(), SettingsModalMode::Browse));
 }
@@ -3004,7 +3006,10 @@ fn fork_secondary_model_picker_opens_on_persisted_model() {
     assert_ne!(slug, xai_grok_shell::models::default_model());
     let snapshot = PagerLocalSnapshot {
         available_models: vec![
-            ("Grok 3".to_string(), acp::ModelId::new(Arc::from("deepseek-3"))),
+            (
+                "Grok 3".to_string(),
+                acp::ModelId::new(Arc::from("deepseek-3")),
+            ),
             (
                 "Grok 4.5 Fast".to_string(),
                 acp::ModelId::new(Arc::from(slug)),

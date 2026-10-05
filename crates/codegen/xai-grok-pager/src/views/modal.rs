@@ -373,10 +373,7 @@ pub enum PaletteCommand {
     OpenFeedbackModal,
 }
 /// Build the default set of palette entries with section grouping.
-pub(crate) fn default_palette_entries(
-    sharing_enabled: bool,
-    slash: &crate::slash::SlashController,
-) -> Vec<PaletteEntry> {
+pub(crate) fn default_palette_entries(slash: &crate::slash::SlashController) -> Vec<PaletteEntry> {
     let screen_mode = slash.screen_mode();
     let mut entries = vec![
         PaletteEntry {
@@ -413,11 +410,6 @@ pub(crate) fn default_palette_entries(
             label: "Resume Session".into(),
             shortcut: "/resume".into(),
             command: PaletteCommand::SlashCommand("/resume".into()),
-        },
-        PaletteEntry {
-            label: "Share Session".into(),
-            shortcut: "/share".into(),
-            command: PaletteCommand::SlashCommand("/share".into()),
         },
         PaletteEntry {
             label: "Rename Session".into(),
@@ -577,11 +569,6 @@ pub(crate) fn default_palette_entries(
         },
     ];
     entries.retain(|entry| {
-        if !sharing_enabled
-            && matches!(&entry.command, PaletteCommand::SlashCommand(s) if s.trim() == "/share")
-        {
-            return false;
-        }
         if let PaletteCommand::SlashCommand(text) = &entry.command
             && let Some(invocation) = crate::slash::parse_invocation(text.trim())
             && !slash
@@ -606,10 +593,9 @@ pub(crate) fn default_palette_entries(
 /// Filter palette entries for search, preserving section headers when any item in the section matches.
 pub(crate) fn filter_palette_entries(
     query: &str,
-    sharing_enabled: bool,
     slash: &crate::slash::SlashController,
 ) -> Vec<PaletteEntry> {
-    let all = default_palette_entries(sharing_enabled, slash);
+    let all = default_palette_entries(slash);
     let query_lower = query.to_lowercase();
     if query_lower.is_empty() {
         return all;
@@ -1027,8 +1013,9 @@ fn fit_docs_ask_grok_tip(docs_path: &str, width: usize) -> String {
     if width == 0 {
         return String::new();
     }
-    let long =
-        format!("Tip · Ask deepseek-build about the docs ({docs_path}), e.g. \"how do I set up MCP?\"");
+    let long = format!(
+        "Tip · Ask deepseek-build about the docs ({docs_path}), e.g. \"how do I set up MCP?\""
+    );
     if long.width() <= width {
         return long;
     }
@@ -1520,7 +1507,9 @@ mod doc_picker_tip_tests {
     #[test]
     fn fit_docs_tip_prefers_path_and_never_overflows() {
         let path = crate::util::display_user_grok_path(DOCS_USER_GUIDE_REL);
-        let long = format!("Tip · Ask deepseek-build about the docs ({path}), e.g. \"how do I set up MCP?\"");
+        let long = format!(
+            "Tip · Ask deepseek-build about the docs ({path}), e.g. \"how do I set up MCP?\""
+        );
         let short = format!("Tip · Ask deepseek-build about the docs · {path}");
         let path_only = format!("Tip · {path}");
         assert_eq!(fit_docs_ask_grok_tip(&path, long.width()), long);

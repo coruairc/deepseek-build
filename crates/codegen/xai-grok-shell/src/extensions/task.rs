@@ -422,7 +422,9 @@ pub(crate) async fn handle_scheduler(agent: &MvpAgent, args: &acp::ExtRequest) -
 /// Handle `deepseek-build/subagent/*` extension methods.
 pub(crate) async fn handle_subagent(agent: &MvpAgent, args: &acp::ExtRequest) -> ExtResult {
     match args.method.as_ref() {
-        "deepseek-build/subagent/message" => crate::extensions::subagent_message::handle(agent, args).await,
+        "deepseek-build/subagent/message" => {
+            crate::extensions::subagent_message::handle(agent, args).await
+        }
         "deepseek-build/subagent/cancel" => {
             let req: CancelSubagentRequest = parse(args)?;
             tracing::info!(subagent_id = %req.subagent_id, "Cancelling subagent via ext method");

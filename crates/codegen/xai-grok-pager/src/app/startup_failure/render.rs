@@ -138,7 +138,9 @@ impl NextStep {
     fn text(self) -> &'static str {
         match self {
             Self::Retry => "Start deepseek-build again.",
-            Self::CheckNetworkThenRetry => "Check your network connection, then start deepseek-build again.",
+            Self::CheckNetworkThenRetry => {
+                "Check your network connection, then start deepseek-build again."
+            }
             Self::RestartSharedLeader => {
                 "Stop it with the command below, which also stops any other deepseek-build \
                  session using it, then start deepseek-build again."

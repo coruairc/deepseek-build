@@ -1684,7 +1684,10 @@ async fn test_session_ownership_cleanup_on_disconnect() {
     // Also verifies the eviction was actually sent
     let eviction = acp_rx.recv().await.unwrap();
     let eviction_json: serde_json::Value = serde_json::from_str(&eviction).unwrap();
-    assert_eq!(eviction_json["method"], "_deepseek-build/internal/evict_sessions");
+    assert_eq!(
+        eviction_json["method"],
+        "_deepseek-build/internal/evict_sessions"
+    );
 
     // Connect a NEW client; the server should still be running
     let mut client2 = LeaderClient::connect(
@@ -2669,7 +2672,10 @@ async fn test_leader_code_nav_isolation_end_to_end() {
 
     let status_fwd = acp_rx.recv().await.unwrap();
     let status_json: serde_json::Value = serde_json::from_str(&status_fwd).unwrap();
-    assert_eq!(status_json["params"]["method"], "deepseek-build/code/status");
+    assert_eq!(
+        status_json["params"]["method"],
+        "deepseek-build/code/status"
+    );
     assert_eq!(status_json["params"]["params"]["sessionId"], "web-session");
 
     web_client.cancel();
@@ -3023,7 +3029,10 @@ async fn test_sever_mid_rpc_orphans_response_and_replay_recovers() {
     // The eviction notification on the agent channel is the deterministic signal that the server processed the disconnect
     let evict = acp_rx.recv().await.unwrap();
     let evict_json: serde_json::Value = serde_json::from_str(&evict).unwrap();
-    assert_eq!(evict_json["method"], "_deepseek-build/internal/evict_sessions");
+    assert_eq!(
+        evict_json["method"],
+        "_deepseek-build/internal/evict_sessions"
+    );
 
     // The agent completes the turn anyway: durable terminal notification plus the RPC response addressed to the dead client
     response_tx

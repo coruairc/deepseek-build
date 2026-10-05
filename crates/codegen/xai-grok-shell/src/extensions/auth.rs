@@ -22,7 +22,9 @@ pub async fn handle(agent: &MvpAgent, args: &acp::ExtRequest) -> ExtResult {
         "deepseek-build/auth/logout" => handle_logout(agent, args).await,
         "deepseek-build/auth/info" => handle_info(agent),
         "deepseek-build/auth/check_subscription" => handle_check_subscription(agent).await,
-        "deepseek-build/auth/hydrate_team_capability" => handle_hydrate_team_capability(agent, args).await,
+        "deepseek-build/auth/hydrate_team_capability" => {
+            handle_hydrate_team_capability(agent, args).await
+        }
         _ => Err(acp::Error::method_not_found()),
     }
 }

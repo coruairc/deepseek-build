@@ -534,7 +534,10 @@ mod tests {
             let result = cmd.run(&mut ctx, "dark");
             match result {
                 CommandResult::Action(Action::SetTheme(name)) => {
-                    assert_eq!(name, "deepseek-monokai", "alias must normalise to canonical");
+                    assert_eq!(
+                        name, "deepseek-monokai",
+                        "alias must normalise to canonical"
+                    );
                 }
                 other => panic!("expected Action::SetTheme(\"deepseek_monokai\"), got {other:?}"),
             }

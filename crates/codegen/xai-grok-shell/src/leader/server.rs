@@ -467,7 +467,11 @@ fn event_seq_of(json: &serde_json::Value) -> Option<u64> {
 fn is_machine_wide_broadcast_notification(json: &serde_json::Value) -> bool {
     matches!(
         method_of(json),
-        Some("deepseek-build/sessions/changed" | "deepseek-build/models/update" | "deepseek-build/mcp/servers_updated")
+        Some(
+            "deepseek-build/sessions/changed"
+                | "deepseek-build/models/update"
+                | "deepseek-build/mcp/servers_updated"
+        )
     )
 }
 /// The namespaced method a leader payload carries, normalizing the two ext wire forms the gateway produces: direct: `{"method":"deepseek-build/foo", ...}` -> `deepseek-build/foo` wrapped: `{"method":"_deepseek-build/foo","params":{"method":"deepseek-build/foo",...}}` -> `deepseek-build/foo`
@@ -1503,7 +1507,6 @@ pub async fn run_leader_server(
     agent_busy: Arc<AtomicBool>,
     agent_activity: AgentActivity,
     ready_rx: watch::Receiver<bool>,
-    relay_demand_tx: watch::Sender<bool>,
     shutdown_tx: watch::Sender<super::protocol::ShutdownReason>,
     leader_version_override: Option<&'static str>,
     control_state: LeaderServerControlState,
@@ -1598,19 +1601,6 @@ pub async fn run_leader_server(
                                 "client_type": client.client_type,
                             })),
                         );
-                        if mode == ClientMode::Headless {
-                            let newly_demanded = relay_demand_tx.send_if_modified(|demanded| {
-                                let changed = !*demanded;
-                                *demanded = true;
-                                changed
-                            });
-                            if newly_demanded {
-                                info!(
-                                    client_id = id.0,
-                                    "First headless client registered; signalling relay demand"
-                                );
-                            }
-                        }
                         let effective_leader_version =
                             leader_version_override.unwrap_or(LEADER_VERSION);
                         if let Some(ref cv) = client.capabilities.client_version
@@ -2548,8 +2538,6 @@ pub struct ServerHandle {
     /// Set the shutdown reason before cancelling so clients receive the correct `ShuttingDown` reason.
     /// The default value is [`ShutdownReason::Manual`]; send [`ShutdownReason::AutoUpdate`] before cancelling for auto-update shutdowns.
     pub shutdown_tx: watch::Sender<super::protocol::ShutdownReason>,
-    /// Observe relay demand: flips to `true` when the first headless client registers (see `relay_demand_tx` on [`run_leader_server`]).
-    pub relay_demand_rx: watch::Receiver<bool>,
     /// Leader-local control metadata and CPU profiling state, exposed for tests.
     pub control_state: LeaderServerControlState,
 }
@@ -2571,7 +2559,6 @@ pub async fn spawn_leader_server(socket_path: PathBuf) -> Result<ServerHandle, S
     let (ready_tx, ready_rx) = watch::channel(true);
     let (shutdown_tx, _shutdown_reason_rx) =
         watch::channel(super::protocol::ShutdownReason::Manual);
-    let (relay_demand_tx, relay_demand_rx) = watch::channel(false);
     let control_state = default_test_control_state(&socket_path);
     let cancel_clone = cancel.clone();
     let socket_path_clone = socket_path.clone();
@@ -2590,7 +2577,6 @@ pub async fn spawn_leader_server(socket_path: PathBuf) -> Result<ServerHandle, S
             agent_busy_clone,
             AgentActivity::default(),
             ready_rx,
-            relay_demand_tx,
             shutdown_tx_for_server,
             None,
             control_state_for_server,
@@ -2608,7 +2594,6 @@ pub async fn spawn_leader_server(socket_path: PathBuf) -> Result<ServerHandle, S
         agent_busy,
         ready_tx,
         shutdown_tx,
-        relay_demand_rx,
         control_state,
     })
 }

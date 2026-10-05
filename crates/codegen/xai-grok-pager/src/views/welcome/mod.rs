@@ -2742,7 +2742,10 @@ mod tests {
             );
         }
         assert!(full.contains("deepseek-build"), "full badge: {full:?}");
-        assert!(inline.contains("deepseek-build"), "inline badge: {inline:?}");
+        assert!(
+            inline.contains("deepseek-build"),
+            "inline badge: {inline:?}"
+        );
         assert!(footer.contains("acme"), "footer keeps the team: {footer:?}");
         assert!(
             !footer.ends_with('\u{2502}'),
@@ -4186,9 +4189,18 @@ mod tests {
             Some("GOOD"),
         );
         // No code param, empty code, and unexpected characters all yield None.
-        assert_eq!(extract_user_code("https://deepseek-build/oauth2/device"), None);
-        assert_eq!(extract_user_code("https://deepseek-build/d?user_code="), None);
-        assert_eq!(extract_user_code("https://deepseek-build/d?user_code=AB%20CD"), None);
+        assert_eq!(
+            extract_user_code("https://deepseek-build/oauth2/device"),
+            None
+        );
+        assert_eq!(
+            extract_user_code("https://deepseek-build/d?user_code="),
+            None
+        );
+        assert_eq!(
+            extract_user_code("https://deepseek-build/d?user_code=AB%20CD"),
+            None
+        );
     }
 
     #[test]

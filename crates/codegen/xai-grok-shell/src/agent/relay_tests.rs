@@ -710,7 +710,10 @@ fn relay_initialize_gains_user_message_echo_capability() {
         meta.get("deepseek-build/userMessageEcho"),
         Some(&serde_json::json!(true))
     );
-    assert_eq!(meta.get("deepseek-build/fs_notify"), Some(&serde_json::json!(true)));
+    assert_eq!(
+        meta.get("deepseek-build/fs_notify"),
+        Some(&serde_json::json!(true))
+    );
     assert_eq!(frame.get("id"), Some(&serde_json::json!(7)));
 }
 #[test]

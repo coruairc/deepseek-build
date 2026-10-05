@@ -17,7 +17,10 @@ pub(crate) use version_mismatch::{is_version_mismatch_banner, version_mismatch_b
 /// TUI dispatch, headless dispatch, and the session-load ACP barrier all share this list.
 /// A new method thus cannot be handled in one path and classified `Unrelated` in another.
 pub(crate) fn is_session_update_ext_method(method: &str) -> bool {
-    matches!(method, "deepseek-build/session_notification" | "deepseek-build/session/update")
+    matches!(
+        method,
+        "deepseek-build/session_notification" | "deepseek-build/session/update"
+    )
 }
 use crate::client_identity::{HEADLESS_CLIENT_TYPE, PAGER_CLIENT_TYPE, PAGER_CLIENT_VERSION};
 use agent_client_protocol as acp;
@@ -757,9 +760,15 @@ mod tests {
     use super::*;
     #[test]
     fn is_session_update_ext_method_covers_both_carriers() {
-        assert!(is_session_update_ext_method("deepseek-build/session_notification"));
-        assert!(is_session_update_ext_method("deepseek-build/session/update"));
-        assert!(!is_session_update_ext_method("deepseek-build/task_completed"));
+        assert!(is_session_update_ext_method(
+            "deepseek-build/session_notification"
+        ));
+        assert!(is_session_update_ext_method(
+            "deepseek-build/session/update"
+        ));
+        assert!(!is_session_update_ext_method(
+            "deepseek-build/task_completed"
+        ));
         assert!(!is_session_update_ext_method("session/update"));
     }
     #[test]

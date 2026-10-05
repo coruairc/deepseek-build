@@ -119,8 +119,14 @@ fn stamp_scheduler_meta(
 ) {
     stamp_event_id(config, meta);
     let meta = meta.get_or_insert_with(acp::Meta::new);
-    meta.insert("deepseek-build/schedulerGeneration".to_owned(), generation.into());
-    meta.insert("deepseek-build/schedulerRevision".to_owned(), revision.into());
+    meta.insert(
+        "deepseek-build/schedulerGeneration".to_owned(),
+        generation.into(),
+    );
+    meta.insert(
+        "deepseek-build/schedulerRevision".to_owned(),
+        revision.into(),
+    );
 }
 fn durable_append_landed(result: Result<(), DurableAppendError>) -> Result<(), String> {
     match result {

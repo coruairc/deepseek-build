@@ -1486,7 +1486,10 @@ mod tests {
         };
         let rows = collect_roster(&[entry], &empty);
         assert_eq!(rows.len(), 1);
-        assert_eq!(nth(&rows, 0).secondary_line.as_deref(), Some("deepseek-4.5"));
+        assert_eq!(
+            nth(&rows, 0).secondary_line.as_deref(),
+            Some("deepseek-4.5")
+        );
     }
     /// The last-turn summary wins the secondary line over the model id.
     #[test]

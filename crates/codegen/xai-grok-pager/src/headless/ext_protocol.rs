@@ -24,7 +24,9 @@ pub(crate) fn reply_headless_ext_method(args: AcpArgsBox<acp::ExtRequest>) {
     // Known methods are answered without parsing params: even a malformed request gets the policy reply rather than a dropped channel
     let response = match method {
         // The model sees the tool's NO_OPERATOR_TEXT (headless sessions are non-interactive), not the interactive "user declined" cancel text
-        "deepseek-build/ask_user_question" => ext_response_from(&AskUserQuestionExtResponse::Cancelled),
+        "deepseek-build/ask_user_question" => {
+            ext_response_from(&AskUserQuestionExtResponse::Cancelled)
+        }
         "deepseek-build/mcp/elicit" => {
             use xai_grok_tools::mcp_elicitation::McpElicitExtResponse;
             ext_response_from(&McpElicitExtResponse::Cancel)
@@ -111,7 +113,9 @@ pub(crate) fn handle_ext_notification(
             match crate::acp::version_mismatch_banner(params) {
                 Some(banner) => tracing::warn!(%banner, "deepseek-build/leader/version_mismatch"),
                 None => {
-                    tracing::warn!("ignoring deepseek-build/leader/version_mismatch without usable versions")
+                    tracing::warn!(
+                        "ignoring deepseek-build/leader/version_mismatch without usable versions"
+                    )
                 }
             }
             ExtEvent::None
