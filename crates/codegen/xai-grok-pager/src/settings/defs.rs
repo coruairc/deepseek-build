@@ -267,7 +267,6 @@ const SCREEN_MODE_CHOICES: &[EnumChoice] = &[
     },
 ];
 
-
 /// Concrete-only theme catalog (excludes "auto"), used by both `auto_dark_theme` and `auto_light_theme`.
 /// There is no dark/light filtering: the user can pair any theme with any system-appearance bucket.
 const CONCRETE_THEME_CHOICES: &[EnumChoice] = &[

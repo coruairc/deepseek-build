@@ -3,9 +3,7 @@
 //! A thin `tokio::select!` loop. All input routing, rendering, and state management is delegated to [`AppView`].
 //! The event loop only handles IO: terminal events, the ACP channel, spawned task results, animation ticks, and hot-reloadable config changes.
 use super::actions::{Action, Effect, TaskResult};
-use super::app_view::{
-    ActiveView, AppView, AuthState, InputOutcome, PasteProvenance, TrustState,
-};
+use super::app_view::{ActiveView, AppView, AuthState, InputOutcome, PasteProvenance, TrustState};
 use super::session_load_barrier::{
     AcpDrainArm, SessionLoadAcpTick, SessionLoadBarrier, session_load_agent_id,
 };
@@ -3387,9 +3385,7 @@ fn coalesce_live_keys(events: Vec<TimedInputEvent>) -> Vec<TimedInputEvent> {
     }
     let events: Vec<TimedInputEvent> = events
         .into_iter()
-        .filter(|ev| {
-            !matches!(&ev.event, Event::Key(ke) if ke.kind == KeyEventKind::Release)
-        })
+        .filter(|ev| !matches!(&ev.event, Event::Key(ke) if ke.kind == KeyEventKind::Release))
         .collect();
     let mut result = Vec::with_capacity(events.len());
     let mut i = 0;

@@ -155,7 +155,6 @@ pub(in crate::app::dispatch) fn set_hunk_tracker_mode(
     }]
 }
 
-
 /// State-only mutation for `vim_mode`.
 /// Propagates to every in-process agent so background subagents and side panes pick up the change without restart.
 /// The cache mirror lets new agents created later read the same value via `cache::load_vim_mode()` in `AgentView::new`.
