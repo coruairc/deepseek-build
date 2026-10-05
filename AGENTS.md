@@ -8,17 +8,24 @@ decisions; wins on conflict), [`PLAN.md`](PLAN.md) (audit + phased plan),
 ## 0. Snapshot
 
 - **Branch:** `dsb/integration` (the integration branch; all work merged here).
-- **HEAD:** `b68327ca` — "chore(egress): scrub legacy xAI/host strings to clear HARD gate".
 - **Remote:** `origin git@github.com:coruairc/deepseek-build.git`.
 - **Toolchain:** Rust **1.94.0** via rustup (pinned in `rust-toolchain.toml`). Do not bump.
   `protoc` on PATH (`/usr/bin/protoc`); `dotslash` not needed.
-- **Binary name (still upstream):** package `xai-grok-pager-bin`, artifact
-  `target/release/xai-grok-pager`. Rebrand to `deepseek-build` is **not** done.
-- **Egress gate:** `scripts/check-egress.sh` → **HARD OK**; SOFT report = **3452**
-  branding/ACP-namespace hits (must become 0 after the rebrand slice).
-- **Build:** `cargo check -p xai-grok-pager-bin` is green (~2 min warm).
-  `cargo test --workspace` currently **fails to compile** (see §5).
-- **Release build:** was started, then aborted by the user. No release binary exists yet.
+- **Binary:** `target/release/deepseek-build` (package `xai-grok-pager-bin`, D2 keeps the
+  internal package name). **Rebrand done**: config dir `~/.deepseek-build`, ACP namespace
+  `deepseek-build/*`, brand constants in `crates/codegen/xai-grok-brand/`.
+- **Egress gate:** `scripts/check-egress.sh --strict` → **exit 0** (HARD OK, SOFT zero).
+- **Build:** `cargo check -p xai-grok-pager-bin` and `cargo build --release` are green.
+  `cargo test --workspace` currently **fails to compile** (see `KNOWN-ISSUES.md`).
+- **Release build:** DONE — `target/release/deepseek-build` (~197 MB).
+- **Runtime egress (observed):** single-turn prompt contacts only
+  `api.deepseek.com:443` + one local AF_UNIX socket; `--version`/`--help` make no
+  outbound connects. Measured with an `LD_PRELOAD` connect-logger (`strace`/netns
+  unavailable in this environment).
+- **Status:** ready to test with a real `DEEPSEEK_API_KEY`. See `TESTING.md`,
+  `scripts/sandbox-run.sh`, `KNOWN-ISSUES.md`. Remaining: backend removal,
+  wiremock suite, TUI (Phase 3), hardening (Phase 4), test-suite repair, and the
+  stubs/undeleted crates listed in `KNOWN-ISSUES.md`.
 
 ## 1. How to resume (another machine)
 
