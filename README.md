@@ -16,27 +16,32 @@ OpenAI-compatible Chat Completions API. It is a work in progress (see
 | Area | State |
 |------|-------|
 | Phase 0 — audit & plan | Done (`PLAN.md`, `DECISIONS.md`) |
-| Phase 1 — cleanup | Partial: upload/exfil, telemetry/Sentry/OTLP, xAI voice/Imagine/web_search, auto-update, announcements, cloud-config/remote control, and xAI model/endpoint strings are removed or neutralized. **HARD egress gate is green.** Rebrand (name/config/env/ACP namespace) is **not** done. |
-| Phase 2 — DeepSeek adapter | Core done: `thinking` control, `reasoning_content` round-trip + sanitizer, `tool_choice` downgrade in thinking mode, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-v4-pro`). Wiremock suite + live smoke test **not** done. |
-| Phase 3 — TUI | Not started |
-| Phase 4 — harden existing features | Not started |
-| Phase 5 — testable product | Not started (release build was aborted; see handoff) |
+| Phase 1 — cleanup | Done: upload/exfil, telemetry/Sentry/OTLP, xAI voice/Imagine/web_search, auto-update, announcements, cloud-config/remote control, session share/relay, and xAI model/endpoint strings are removed or neutralized. **HARD and SOFT egress gates are green**; rebrand (binary, config dir, ACP namespace, strings) done. |
+| Phase 2 — DeepSeek adapter | Core done: Chat Completions-only backend (`Responses`/`Messages` deleted), `thinking` control, `reasoning_content` round-trip + sanitizer, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-v4-pro`), wiremock suite. Live smoke test still needs a real key. |
+| Phase 3 — TUI | Implemented: reasoning fold (`e`/`E`/`Ctrl+E`), collapsible thinking, status line (model/context/effort/tokens/cache/cost), `/model` `/effort` `/think` `/theme`, Monokai default theme + whale logo. |
+| Phase 4 — harden existing features | Partial: runtime read-before-write guard and dangerous-command warnings are in; plan mode, permissions, resume, subagents, MCP, `AGENTS.md`, and checkpoints exist and need end-to-end exercising. |
+| Phase 5 — testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. |
 
 See [`AGENTS.md`](AGENTS.md) for a precise resume-from-here handoff.
 
 ## Security & network
 
-The only network destinations are:
+There is no telemetry, analytics, or auto-update. The only network destinations
+are:
 
 1. the configured model provider (default `https://api.deepseek.com`), and
 2. user-configured MCP servers.
 
-Run the guard at any time:
+See [`SECURITY.md`](SECURITY.md#network--privacy) for the full statement and how
+to verify the boundary. Run the static guard at any time:
 
 ```sh
 scripts/check-egress.sh          # HARD gate must be OK; prints a SOFT branding report
-scripts/check-egress.sh --strict # also fails on remaining branding/ACP-namespace strings (post-rebrand)
+scripts/check-egress.sh --strict # also fails on remaining branding/ACP-namespace strings
 ```
+
+To watch runtime egress, run the binary through
+`scripts/sandbox-run.sh` (see [`TESTING.md`](TESTING.md)).
 
 ## Requirements
 
@@ -53,16 +58,17 @@ rustup toolchain install 1.94.0 --component rustfmt clippy
 # Validate a crate quickly
 cargo check -p xai-grok-pager-bin
 
-# Build the binary (artifact: target/release/xai-grok-pager)
+# Build the binary (artifact: target/release/deepseek-build)
 cargo build --release -p xai-grok-pager-bin
 
 # Run
-target/release/xai-grok-pager
+target/release/deepseek-build
 ```
 
 > Internal crate/package names still carry the upstream `xai-grok-*` prefix
-> (a deliberate scope decision, see `DECISIONS.md` D2). The user-facing binary
-> and strings will be renamed to `deepseek-build` in the rebrand slice.
+> (a deliberate scope decision, see `DECISIONS.md` D2). The user-facing binary,
+> config dir (`~/.deepseek-build`), ACP namespace, and strings are
+> `deepseek-build`.
 
 ## Configuration
 
@@ -73,15 +79,16 @@ export DEEPSEEK_API_KEY=sk-...          # preferred
 # or: export DEEPSEEK_BUILD_API_KEY=sk-...
 ```
 
-Models: `deepseek-v4-pro` (default) and `deepseek-flash` (a hidden
-`deepseek-v4-flash` legacy alias is also present). A custom OpenAI-compatible
-`base_url` is supported via model config.
+Models: `deepseek-v4-pro` (default) and `deepseek-flash`, plus a hidden
+`deepseek-v4-flash` legacy alias; each offers `none`/`low`/`high`/`max`
+reasoning effort. A custom OpenAI-compatible `base_url` is supported via model
+config.
 
 ## Testing the binary safely
 
-`scripts/sandbox-run.sh` (see the handoff notes) is intended to run the binary
-with only `api.deepseek.com` reachable. Manual test steps live in
-`TESTING.md` (to be written in the Phase 5 slice).
+`scripts/sandbox-run.sh` runs the binary with only `api.deepseek.com` reachable.
+A 20–30 minute manual test plan lives in [`TESTING.md`](TESTING.md); known gaps
+are in [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md).
 
 ## Repository layout
 
@@ -90,7 +97,7 @@ Key crates:
 
 | Crate | Purpose |
 |-------|---------|
-| `xai-grok-pager-bin` | binary `xai-grok-pager` |
+| `xai-grok-pager-bin` | binary `deepseek-build` |
 | `xai-grok-pager` | TUI |
 | `xai-grok-shell` | agent runtime, sessions, turns |
 | `xai-grok-sampler` | HTTP/streaming client (`reqwest`) |
