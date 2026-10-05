@@ -1,3 +1,6 @@
 /target
 **/*.rs.bk
 .DS_Store
+
+# OpenWork chat attachments (not part of the repo)
+.opencode/openwork/inbox/
