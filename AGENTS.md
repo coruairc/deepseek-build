@@ -87,7 +87,11 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
   `tool_choice` downgrade, `reasoning_content` final-pass sanitizer (backfills all prior
   assistant turns when tools are present), typographic-quote tool-call JSON repair,
   `TokenUsage` cache hit/miss helpers, DeepSeek default catalog (`cdbf5aa3`, `28296f7e`).
-  Tests: `cargo test -p xai-grok-sampling-types --lib` (297), sampler stream tests (13).
+  Tests: `cargo test -p xai-grok-sampling-types --lib` (298), sampler stream tests (13).
+- **Rebrand (D1/D2) done** (`dsb/rebrand`, `8fcbff78`): brand constants in
+  `crates/codegen/xai-grok-brand/`, binary `deepseek-build`, config dir `~/.deepseek-build`,
+  ACP namespace `deepseek-build/*`, user-visible strings. `scripts/check-egress.sh --strict`
+  exits 0 (SOFT zero). Most `GROK_*` env vars still carry the old name (not gated).
 
 ## 3. What is LEFT (ordered)
 
@@ -96,10 +100,9 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
    `conversation/responses.rs`, `conversation/messages.rs`, `rs` types) and
    `xai-grok-sampler` (`client.rs` responses/messages paths, `stream/{responses,messages}.rs`).
    This is adapter-owned — keep it single-owner.
-2. **Rebrand (D1/D2) → SOFT gate zero:** centralize name / config-dir / env-prefix in ONE
-   module; rename binary to `deepseek-build`; config dir `~/.deepseek-build`; env prefix
-   `DEEPSEEK_BUILD_*`; ACP extension namespace `x.ai/*` → `deepseek-build/*`; user-visible
-   strings. Then `scripts/check-egress.sh --strict` must be zero.
+2. ~~**Rebrand (D1/D2) → SOFT gate zero**~~ **DONE** (`dsb/rebrand`, `8fcbff78`). Remaining
+   sub-item: rename the remaining `GROK_*` env vars to `DEEPSEEK_BUILD_*` (624 distinct; not
+   gated).
 3. **Finish real deletion of Phase-1 stubs** (see §5): shell `src/upload/*`,
    `session/repo_changes`, `feedback_manager`, feedback UI, `share`, vendored
    `shell/src/cloud_config/**`, `xai-computer-hub-{core,sdk,mcp-adapter}` and consumers,
@@ -129,9 +132,10 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
 
 ## 4. Gates (from the task) and current status
 
-1. `cargo build --release`, `cargo test --workspace`, clippy, fmt clean — **FAIL** (tests
-   don't compile yet; release build not finished).
-2. HARD egress zero — **PASS**. SOFT zero after rebrand — **FAIL** (3452 pending rebrand).
+1. `cargo build --release` — **PASS** (`target/release/deepseek-build`). `cargo test --workspace`
+   — **FAIL** (tests don't compile yet). Workspace-wide clippy/fmt not re-verified.
+2. HARD egress zero — **PASS**. SOFT zero after rebrand — **PASS**
+   (`scripts/check-egress.sh --strict` exits 0).
 3. Runtime egress test via `strace -f -e trace=connect` — **NOT RUN**.
 4. Adapter wiremock + live smoke — **NOT DONE** (live needs the key).
 5. Independent verification sub-agent — was run once earlier for the adapter; **re-run at the
