@@ -170,7 +170,7 @@ fn plugin_cta_catalog_reload_empty_candidates_resets_matched_phase() {
     let id = AgentId(0);
     {
         let cta = &mut app.agents.get_mut(&id).unwrap().plugin_cta;
-        cta.source_url_or_path = Some(xai_grok_plugin_marketplace::OFFICIAL_SOURCE_GIT_URL.into());
+        cta.source_url_or_path = Some("https://github.com/example/plugins.git".into());
         cta.candidates = vec![cta_entry("figma", "not_installed")];
         cta.phase = CtaPhase::Matched {
             plugin_relative_path: "plugins/figma".into(),
@@ -181,9 +181,9 @@ fn plugin_cta_catalog_reload_empty_candidates_resets_matched_phase() {
     }
     let response = xai_hooks_plugins_types::MarketplaceListResponse {
         sources: vec![xai_hooks_plugins_types::MarketplaceScanResult {
-            source_name: xai_grok_plugin_marketplace::OFFICIAL_SOURCE_NAME.into(),
+            source_name: "Example Plugins".into(),
             source_kind: "git".into(),
-            source_url_or_path: xai_grok_plugin_marketplace::OFFICIAL_SOURCE_GIT_URL.into(),
+            source_url_or_path: "https://github.com/example/plugins.git".into(),
             plugins: vec![cta_entry("figma", "installed")],
             error: None,
         }],
@@ -1809,15 +1809,6 @@ fn move_setting_away_from_default(app: &mut AppView, key: crate::settings::Setti
         }
         "screen_mode" => {
             let _ = dispatch(Action::SetScreenMode("minimal".to_string()), app);
-        }
-        "voice_keybind_enabled" => {
-            let _ = dispatch(Action::SetVoiceKeybindEnabled(false), app);
-        }
-        "voice_capture_mode" => {
-            let _ = dispatch(Action::SetVoiceCaptureMode("toggle".to_string()), app);
-        }
-        "voice_stt_language" => {
-            let _ = dispatch(Action::SetVoiceSttLanguage("es".to_string()), app);
         }
         "fork_secondary_model" => {
             use agent_client_protocol as acp;
@@ -3488,8 +3479,8 @@ fn set_theme_toast_format_uses_display_name() {
             "toast must contain label, got: {toast:?}",
         );
         assert!(
-            toast.contains("deepseek-build Day"),
-            "toast must use display name `deepseek-build Day`, not canonical `deepseek_day`, got: {toast:?}",
+            toast.contains("DeepSeek Day"),
+            "toast must use display name `DeepSeek Day`, not canonical `deepseek_day`, got: {toast:?}",
         );
         assert!(toast.contains('\u{2713}'), "toast must contain the ✓ glyph");
     });
@@ -3501,7 +3492,7 @@ fn set_auto_dark_theme_toast_format_uses_display_name() {
         let _ = dispatch(Action::SetAutoDarkTheme("deepseek-day".into()), &mut app);
         let toast = read_toast(&app);
         assert!(toast.contains("Auto dark theme"));
-        assert!(toast.contains("deepseek-build Day"));
+        assert!(toast.contains("DeepSeek Day"));
         assert!(toast.contains('\u{2713}'));
     });
 }
@@ -3515,7 +3506,7 @@ fn set_auto_light_theme_toast_format_uses_display_name() {
         );
         let toast = read_toast(&app);
         assert!(toast.contains("Auto light theme"));
-        assert!(toast.contains("deepseek-build Night"));
+        assert!(toast.contains("DeepSeek Monokai"));
     });
 }
 /// `apply_setting_rollback` for theme keys: a failed persist reverts `app.current_ui.theme` AND the live cache.

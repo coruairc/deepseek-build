@@ -2301,7 +2301,6 @@ mod permissions;
 mod session_events;
 mod follow_ups;
 mod settings;
-mod announcements;
 mod scheduled_tasks;
 mod queue_and_adoption;
 mod plan_mode;

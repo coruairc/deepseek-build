@@ -411,7 +411,11 @@ mod tests {
         with_test_env(|| {
             set(ThemeKind::Terminal);
             set_terminal_native_lock(true);
-            assert_eq!(current_kind(), ThemeKind::DeepSeekMonokai, "masked nominal kind");
+            assert_eq!(
+                current_kind(),
+                ThemeKind::DeepSeekMonokai,
+                "masked nominal kind"
+            );
             assert_eq!(selected_kind(), ThemeKind::Terminal, "raw stored selection");
             set_terminal_native_lock(false);
             assert_eq!(selected_kind(), current_kind());
@@ -704,7 +708,11 @@ mod tests {
     fn env_theme_overrides_config() {
         with_test_env(|| {
             assert_eq!(
-                resolve_initial_theme_from(Some("deepseek-day"), Some(ThemeKind::TokyoNight), false),
+                resolve_initial_theme_from(
+                    Some("deepseek-day"),
+                    Some(ThemeKind::TokyoNight),
+                    false
+                ),
                 ThemeKind::DeepSeekDay
             );
             assert!(!is_auto_mode());
@@ -739,7 +747,11 @@ mod tests {
     fn unknown_env_theme_falls_through_to_config() {
         with_test_env(|| {
             assert_eq!(
-                resolve_initial_theme_from(Some("not-a-theme"), Some(ThemeKind::DeepSeekDay), false),
+                resolve_initial_theme_from(
+                    Some("not-a-theme"),
+                    Some(ThemeKind::DeepSeekDay),
+                    false
+                ),
                 ThemeKind::DeepSeekDay
             );
         });
@@ -755,7 +767,10 @@ mod tests {
     #[test]
     fn grok_theme_wins_over_lc_and_config() {
         with_test_env(|| {
-            let env = theme_env(&[("GROK_THEME", "deepseek-day"), ("LC_GROK_THEME", "tokyonight")]);
+            let env = theme_env(&[
+                ("GROK_THEME", "deepseek-day"),
+                ("LC_GROK_THEME", "tokyonight"),
+            ]);
             assert_eq!(
                 resolve_initial_theme_from(
                     env_theme_name_from(&env),

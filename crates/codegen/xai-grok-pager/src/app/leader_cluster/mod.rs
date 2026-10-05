@@ -387,7 +387,6 @@ impl PagerLeaderCluster {
                 Arc::new(AtomicBool::new(false)),
                 xai_grok_shell::agent::activity::AgentActivity::default(),
                 tokio::sync::watch::channel(true).1,
-                tokio::sync::watch::channel(false).0,
                 tokio::sync::watch::channel(xai_grok_shell::leader::ShutdownReason::Manual).0,
                 None,
                 control_state,

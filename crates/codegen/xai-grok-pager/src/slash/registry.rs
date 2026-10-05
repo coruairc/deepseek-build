@@ -742,41 +742,6 @@ mod tests {
     }
 
     #[test]
-    fn set_share_visible_hides_and_restores_share_command() {
-        let share: Arc<dyn SlashCommand> = Arc::new(DummyCommand {
-            name: "share",
-            aliases: &[],
-        });
-        let other: Arc<dyn SlashCommand> = Arc::new(DummyCommand {
-            name: "exit",
-            aliases: &[],
-        });
-        let mut registry = CommandRegistry::new(vec![share, other]);
-
-        // Default: /share is menu-hidden (offered nowhere) but still dispatchable.
-        assert!(registry.get("share").is_none());
-        assert!(
-            registry.get_for_dispatch("share").is_some(),
-            "typed /share must still resolve while menu-hidden"
-        );
-        assert!(!registry.triggers().iter().any(|t| t.canonical == "share"));
-
-        // Revealing /share restores menu lookup and triggers.
-        registry.set_share_visible(true);
-        assert!(registry.get("share").is_some());
-        assert!(registry.get_for_dispatch("share").is_some());
-        assert!(registry.triggers().iter().any(|t| t.canonical == "share"));
-        // Other commands are unaffected.
-        assert!(registry.get("exit").is_some());
-
-        // Hiding again is menu-only: no offer, typed path still works.
-        registry.set_share_visible(false);
-        assert!(registry.get("share").is_none());
-        assert!(registry.get_for_dispatch("share").is_some());
-        assert!(!registry.triggers().iter().any(|t| t.canonical == "share"));
-    }
-
-    #[test]
     fn restricted_commands_hide_and_restore() {
         let usage: Arc<dyn SlashCommand> = Arc::new(DummyCommand {
             name: "usage",
@@ -858,16 +823,16 @@ mod tests {
 
     #[test]
     fn restricted_wins_over_visible_setters() {
-        let share: Arc<dyn SlashCommand> = Arc::new(DummyCommand {
-            name: "share",
+        let recap: Arc<dyn SlashCommand> = Arc::new(DummyCommand {
+            name: "recap",
             aliases: &[],
         });
-        let mut registry = CommandRegistry::new(vec![share]);
+        let mut registry = CommandRegistry::new(vec![recap]);
 
-        registry.set_restricted_commands(&["share".to_string()]);
-        // A later `set_share_visible(true)` must NOT resurrect a restricted command; deny wins over every visibility gate
-        registry.set_share_visible(true);
-        assert!(registry.get("share").is_none());
+        registry.set_restricted_commands(&["recap".to_string()]);
+        // A later `set_recap_visible(true)` must NOT resurrect a restricted command; deny wins over every visibility gate
+        registry.set_recap_visible(true);
+        assert!(registry.get("recap").is_none());
     }
 
     #[test]

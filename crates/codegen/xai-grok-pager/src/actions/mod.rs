@@ -890,25 +890,16 @@ mod tests {
         // Former mouse-toggle dual bindings removed from scrollback.
         assert_eq!(registry.lookup(&f9, When::ScrollbackFocused), None);
         assert_eq!(registry.lookup(&f9, When::AgentScreen), None);
-        // Ctrl+Shift+M is no longer the voice chord; it resolves to nothing
+        // Voice capture has been removed; its former chords resolve to nothing.
         assert_eq!(
             registry.lookup(&ctrl_shift_m, When::ScrollbackFocused),
             None
         );
         assert_eq!(registry.lookup(&ctrl_shift_m, When::Always), None);
-        // Voice capture is bound to BOTH Ctrl+Space and F8, and is global (`When::Always`)
-        // It resolves on the agent screen and the dashboard alike (distinct from the Ctrl+M model picker / multiline)
-        // It is not agent-scoped, so an exact AgentScreen lookup misses
-        assert_eq!(
-            registry.lookup(&ctrl_space, When::Always),
-            Some(ActionId::VoiceToggle)
-        );
+        assert_eq!(registry.lookup(&ctrl_space, When::Always), None);
         assert_eq!(registry.lookup(&ctrl_space, When::AgentScreen), None);
         let f8 = KeyEvent::new(KeyCode::F(8), KeyModifiers::NONE);
-        assert_eq!(
-            registry.lookup(&f8, When::Always),
-            Some(ActionId::VoiceToggle)
-        );
+        assert_eq!(registry.lookup(&f8, When::Always), None);
     }
 
     #[test]

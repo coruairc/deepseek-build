@@ -1302,11 +1302,6 @@ mod doc_viewer_scroll_tests {
 #[cfg(test)]
 mod palette_sharing_tests {
     use super::*;
-    fn has_share(entries: &[PaletteEntry]) -> bool {
-        entries
-            .iter()
-            .any(|e| matches!(&e.command, PaletteCommand::SlashCommand(s) if s.trim() == "/share"))
-    }
     fn slash(mode: crate::app::ScreenMode) -> crate::slash::SlashController {
         let mut controller =
             crate::slash::SlashController::with_builtins(std::path::PathBuf::from("."));
@@ -1314,16 +1309,8 @@ mod palette_sharing_tests {
         controller
     }
     #[test]
-    fn default_palette_includes_share_when_enabled() {
-        let entries = default_palette_entries(true, &slash(crate::app::ScreenMode::Fullscreen));
-        assert!(
-            has_share(&entries),
-            "/share should be present when sharing_enabled=true"
-        );
-    }
-    #[test]
     fn default_palette_includes_dashboard() {
-        let entries = default_palette_entries(true, &slash(crate::app::ScreenMode::Fullscreen));
+        let entries = default_palette_entries(&slash(crate::app::ScreenMode::Fullscreen));
         let has_dashboard = entries.iter().any(
             |e| matches!(&e.command, PaletteCommand::SlashCommand(s) if s.trim() == "/dashboard"),
         );
@@ -1338,7 +1325,7 @@ mod palette_sharing_tests {
         );
     }
     fn slash_rows(mode: crate::app::ScreenMode) -> Vec<String> {
-        default_palette_entries(true, &slash(mode))
+        default_palette_entries(&slash(mode))
             .into_iter()
             .filter_map(|entry| match entry.command {
                 PaletteCommand::SlashCommand(text) => Some(text.trim().to_string()),
@@ -1370,7 +1357,7 @@ mod palette_sharing_tests {
             crate::app::ScreenMode::Minimal,
             crate::app::ScreenMode::Fullscreen,
         ] {
-            let entries = default_palette_entries(true, &slash(mode));
+            let entries = default_palette_entries(&slash(mode));
             assert!(
                 entries.iter().any(|e| e.label == "Workflows"),
                 "hub row missing in {mode:?}"
@@ -1399,7 +1386,7 @@ mod palette_sharing_tests {
     #[test]
     fn edit_prompt_palette_entry_shows_mode_correct_hint() {
         let hint = |mode| {
-            default_palette_entries(true, &slash(mode))
+            default_palette_entries(&slash(mode))
                 .into_iter()
                 .find(|entry| matches!(entry.command, PaletteCommand::EditPromptExternal))
                 .expect("palette offers the external editor in every mode")
@@ -1409,40 +1396,9 @@ mod palette_sharing_tests {
         assert_eq!(hint(crate::app::ScreenMode::Fullscreen), "/edit-prompt");
     }
     #[test]
-    fn default_palette_omits_share_when_disabled() {
-        let entries = default_palette_entries(false, &slash(crate::app::ScreenMode::Fullscreen));
-        assert!(
-            !has_share(&entries),
-            "/share must not appear in palette when sharing_enabled=false"
-        );
-    }
-    #[test]
-    fn filter_palette_omits_share_when_disabled() {
-        let entries = filter_palette_entries("", false, &slash(crate::app::ScreenMode::Fullscreen));
-        assert!(
-            !has_share(&entries),
-            "/share must not appear in unfiltered palette when sharing_enabled=false"
-        );
-        let entries =
-            filter_palette_entries("share", false, &slash(crate::app::ScreenMode::Fullscreen));
-        assert!(
-            !has_share(&entries),
-            "/share must not appear when filtering for 'share' with sharing_enabled=false"
-        );
-    }
-    #[test]
-    fn filter_palette_includes_share_when_enabled_and_matched() {
-        let entries =
-            filter_palette_entries("share", true, &slash(crate::app::ScreenMode::Fullscreen));
-        assert!(
-            has_share(&entries),
-            "/share should match a 'share' query when sharing_enabled=true"
-        );
-    }
-    #[test]
     fn palette_tools_section_routes_each_tab_to_itself() {
         use crate::views::extensions_modal::ExtensionsTab;
-        let entries = default_palette_entries(true, &slash(crate::app::ScreenMode::Fullscreen));
+        let entries = default_palette_entries(&slash(crate::app::ScreenMode::Fullscreen));
         for (label, expected) in [
             ("Hooks", ExtensionsTab::Hooks),
             ("Plugins", ExtensionsTab::Plugins),

@@ -240,7 +240,7 @@ fn limited_color_output_is_stable() {
             "  multiplexer  None detected\n",
             "  ssh          no\n",
             "  color        256\n",
-            "  themes       3/6: deepseek_monokai, deepseek_day, terminal\n",
+            "  themes       3/6: deepseek-monokai, deepseek-day, terminal\n",
             "\n",
             "Clipboard\n",
             "  native       local (pbcopy)\n",
@@ -253,7 +253,7 @@ fn limited_color_output_is_stable() {
             "\n",
             "  ! terminal.limited-color  This terminal reports 256 color, so truecolor themes are unavailable\n",
             "      Run: `export COLORTERM=truecolor`\n",
-            "      Note: Add this export to your shell startup file, such as `~/.zshrc` or `~/.bashrc`, then restart Grok.\n",
+            "      Note: Add this export to your shell startup file, such as `~/.zshrc` or `~/.bashrc`, then restart deepseek-build.\n",
         )
     );
 }
@@ -372,7 +372,7 @@ fn wezterm_xtversion_runtime_evidence_output_is_stable() {
             "Issues (1)\n",
             "\n",
             "  ! terminal.wezterm-kitty  Shift+Enter can't insert a newline in WezTerm over SSH\n",
-            "      Note: For this session, type `\\` and then press Enter. Grok can't negotiate the Kitty keyboard protocol over SSH yet. `enable_kitty_keyboard = true` applies only to local WezTerm sessions.\n",
+            "      Note: For this session, type `\\` and then press Enter. deepseek-build can't negotiate the Kitty keyboard protocol over SSH yet. `enable_kitty_keyboard = true` applies only to local WezTerm sessions.\n",
         )
     );
 }
@@ -540,7 +540,7 @@ fn runtime_startup_findings_are_visible_with_useful_doctor_content() {
         },
     );
 
-    assert!(output.contains("Grok is using the terminal bell"));
+    assert!(output.contains("deepseek-build is using the terminal bell"));
     assert!(output.contains("If the bell works for you"));
     assert!(output.contains("may not report focus changes"));
     assert!(output.contains(&crate::util::display_user_grok_path("config.toml")));
@@ -584,7 +584,9 @@ fn runtime_findings_merge_before_single_formatter_orders_issues_before_recommend
         },
     );
 
-    let issue = output.find("Grok is using the terminal bell").unwrap();
+    let issue = output
+        .find("deepseek-build is using the terminal bell")
+        .unwrap();
     let recommendation = output.find("Recommendations").unwrap();
     assert!(issue < recommendation);
     assert!(!output.contains("No issues found."));

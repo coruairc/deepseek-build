@@ -76,7 +76,7 @@ mod tests {
             "narrow width must truncate with ellipsis: {long_row:?}"
         );
         assert!(
-            long_row.contains("https://x.ai"),
+            long_row.contains("https://deepseek-build"),
             "URL-first message should keep the URL prefix under truncation: {long_row:?}"
         );
         assert!(

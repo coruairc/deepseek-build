@@ -2406,7 +2406,7 @@ mod tests {
             let mut output = Vec::new();
             write_version(&mut output, label).unwrap();
             let output = String::from_utf8(output).unwrap();
-            assert!(output.starts_with("grok "));
+            assert!(output.starts_with("deepseek-build "));
             assert!(output.contains(env!("VERSION_WITH_COMMIT")));
             assert!(output.ends_with(expected_suffix), "{output:?}");
         }
@@ -2462,8 +2462,7 @@ mod tests {
         }
         eprintln!(
             "skip jemalloc prof checks: opt.prof false \
-             (release-dist static conf, or MALLOC_CONF=prof:true,prof_active:false,lg_prof_sample={})",
-            xai_grok_shell::heap_profile::LG_PROF_SAMPLE
+             (release-dist static conf, or MALLOC_CONF=prof:true,prof_active:false,lg_prof_sample=524288)"
         );
         false
     }
@@ -2492,23 +2491,6 @@ mod tests {
         fn drop(&mut self) {
             let _ = jemalloc_set_prof_active(self.previous);
         }
-    }
-    #[cfg(all(feature = "jemalloc", unix))]
-    fn assert_stats_sane(stats: xai_grok_shell::heap_profile::JemallocStats) {
-        assert!(stats.allocated > 0, "allocated={}", stats.allocated);
-        assert!(stats.resident > 0, "resident={}", stats.resident);
-        assert!(
-            stats.resident >= stats.allocated,
-            "resident {} < allocated {}",
-            stats.resident,
-            stats.allocated
-        );
-    }
-    #[cfg(all(feature = "jemalloc", unix))]
-    #[test]
-    #[serial_test::serial(jemalloc_heap_profile)]
-    fn jemalloc_stats_readable_after_epoch() {
-        assert_stats_sane(jemalloc_heap_stats().expect("stats readable"));
     }
     #[cfg(all(feature = "jemalloc", unix))]
     #[test]
@@ -2543,33 +2525,6 @@ mod tests {
             err.to_ascii_lowercase().contains("nul"),
             "unexpected error: {err}"
         );
-    }
-    #[cfg(all(feature = "jemalloc", unix))]
-    #[test]
-    #[serial_test::serial(jemalloc_heap_profile)]
-    fn install_heap_profile_hooks_wires_shell_apis() {
-        install_heap_profile_hooks();
-        assert_stats_sane(
-            xai_grok_shell::heap_profile::stats().expect("shell stats after install"),
-        );
-        if !require_opt_prof() {
-            assert!(!xai_grok_shell::heap_profile::prof_available());
-            return;
-        }
-        assert!(xai_grok_shell::heap_profile::prof_available());
-        assert_prof_active(false);
-        {
-            let _guard = ProfActiveGuard::set(true);
-            assert_prof_active(true);
-            assert!(xai_grok_shell::heap_profile::set_prof_active(true));
-            assert_prof_active(true);
-        }
-        assert_prof_active(false);
-        assert!(xai_grok_shell::heap_profile::set_prof_active(false));
-        assert_prof_active(false);
-        let dump = TempHeapDump::new("shell");
-        xai_grok_shell::heap_profile::dump_to_path(dump.path()).expect("shell dump");
-        dump.assert_nonempty_dump();
     }
     use clap::Parser as _;
     /// `grok dashboard` flags the startup hook without forcing leader mode.

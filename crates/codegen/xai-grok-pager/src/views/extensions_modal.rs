@@ -4690,9 +4690,7 @@ mod tests {
             &std::collections::HashSet::new(),
         );
         assert!(
-            rows.labels
-                .iter()
-                .any(|l| l.starts_with("Managed by api.deepseek.com")),
+            rows.labels.iter().any(|l| l.starts_with("Managed (")),
             "managed section header must appear"
         );
         assert!(
@@ -7839,7 +7837,7 @@ mod tests {
     }
 
     #[test]
-    fn ordered_marketplace_view_pins_official_then_az() {
+    fn ordered_marketplace_view_is_az_by_source_then_plugin() {
         let mp = |name: &str, url: &str, err: Option<&str>, plugins: &[&'static str]| {
             xai_hooks_plugins_types::MarketplaceScanResult {
                 source_name: name.into(),
@@ -7864,7 +7862,7 @@ mod tests {
             mp("zeta-mp", "https://example.com/zeta", Some("boom"), &[]),
             mp(
                 "xAI Official",
-                xai_grok_plugin_marketplace::OFFICIAL_SOURCE_GIT_URL,
+                "https://github.com/example/plugins.git",
                 None,
                 &["zeta", "alpha"],
             ),
@@ -7875,10 +7873,14 @@ mod tests {
             .iter()
             .filter_map(|v| sources.get(v.source_index).map(|s| s.source_name.as_str()))
             .collect();
-        assert_eq!(names, ["xAI Official", "alpha-mp", "zeta-mp"]);
+        assert_eq!(names, ["alpha-mp", "xAI Official", "zeta-mp"]);
         let plugin_names: Vec<_> = view
-            .first()
-            .into_iter()
+            .iter()
+            .filter(|v| {
+                sources
+                    .get(v.source_index)
+                    .is_some_and(|s| s.source_name == "xAI Official")
+            })
             .flat_map(|v| {
                 v.plugin_indices.iter().filter_map(|&pi| {
                     sources

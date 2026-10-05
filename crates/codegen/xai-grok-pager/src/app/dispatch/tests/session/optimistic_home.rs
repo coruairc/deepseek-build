@@ -5,7 +5,6 @@ use crate::app::dispatch::session::lifecycle::{
     handle_session_created, handle_session_failed, handle_worktree_session_failed,
     maybe_create_home_session,
 };
-use crate::xai_grok_voice;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 fn key_event(code: KeyCode, mods: KeyModifiers) -> Event {
     Event::Key(KeyEvent {
@@ -1258,57 +1257,6 @@ fn initial_prompt_from_welcome_honors_always_worktree() {
         "grok \"prompt\" with Always must isolate, got {effects:?}"
     );
     assert!(matches!(app.active_view, ActiveView::Agent(_)));
-}
-#[test]
-fn voice_disabled_on_welcome_does_not_leave_home() {
-    let mut app = test_app();
-    maybe_create_home_session(&mut app);
-    app.voice_mode_enabled = false;
-    let effects = dispatch(Action::EnableVoiceMode, &mut app);
-    assert!(effects.is_empty());
-    assert!(matches!(app.active_view, ActiveView::Welcome));
-    assert!(app.home_session_agent.is_some());
-}
-#[test]
-fn voice_on_welcome_honors_always_worktree() {
-    let mut app = test_app_git();
-    app.new_session_worktree_mode = crate::app::app_view::WorktreeMode::Always;
-    assert!(maybe_create_home_session(&mut app).is_empty());
-    let (tx, _rx) = tokio::sync::mpsc::channel(8);
-    app.voice_mode_enabled = true;
-    app.voice_cmd_tx = Some(tx);
-    let effects = dispatch(Action::EnableVoiceMode, &mut app);
-    assert!(
-        effects
-            .iter()
-            .any(|e| matches!(e, Effect::CreateWorktreeSession { .. })),
-        "voice on home with Always must isolate, got {effects:?}"
-    );
-    assert!(app.home_session_agent.is_none());
-    assert!(matches!(app.active_view, ActiveView::Agent(_)));
-}
-#[test]
-fn voice_on_welcome_after_exit_starts_a_session() {
-    let mut app = test_app();
-    maybe_create_home_session(&mut app);
-    crate::app::dispatch::session::lifecycle::reveal_home_session(&mut app);
-    assert!(matches!(app.active_view, ActiveView::Agent(_)));
-    let _ = dispatch(Action::ExitSession, &mut app);
-    assert!(matches!(app.active_view, ActiveView::Welcome));
-    assert!(!app.agents.is_empty(), "exit leaves the prior agent");
-    assert!(app.home_session_agent.is_none());
-    let (tx, _rx) = tokio::sync::mpsc::channel(8);
-    app.voice_mode_enabled = true;
-    app.voice_cmd_tx = Some(tx);
-    dispatch(Action::EnableVoiceMode, &mut app);
-    assert!(
-        matches!(app.active_view, ActiveView::Agent(_)),
-        "voice after /exit must start a session, got {:?}",
-        app.active_view
-    );
-    if xai_grok_voice::AUDIO_SUPPORTED {
-        assert!(app.voice_listening(), "capture must start");
-    }
 }
 #[test]
 fn worktree_create_failure_restores_queued_prompt_to_welcome() {

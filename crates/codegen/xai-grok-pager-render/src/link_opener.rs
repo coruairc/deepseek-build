@@ -452,10 +452,7 @@ mod tests {
             "referrer",
             "grok-build",
         );
-        assert_eq!(
-            out,
-            "https://api.deepseek.com/deepseek?referrer=grok-build"
-        );
+        assert_eq!(out, "https://api.deepseek.com/deepseek?referrer=grok-build");
     }
 
     #[test]
@@ -507,11 +504,11 @@ mod tests {
         let out = ensure_query_param(
             "https://api.deepseek.com/deepseek",
             "referrer",
-            "deepseek-build",
+            "deepseek build",
         );
         assert_eq!(
             out,
-            "https://api.deepseek.com/deepseek?referrer=grok+build"
+            "https://api.deepseek.com/deepseek?referrer=deepseek+build"
         );
     }
 

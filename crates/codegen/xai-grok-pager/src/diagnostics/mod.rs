@@ -2378,23 +2378,6 @@ mod tests {
     }
 
     #[test]
-    fn voice_missing_finding_has_stable_id_and_manual_remediation() {
-        let finding = voice_missing_finding(
-            "no microphone recorder found on PATH: install pipewire (pw-record)".to_owned(),
-        );
-        assert_eq!(finding.id, VOICE_NO_INPUT_DEVICE_ID);
-        assert_eq!(finding.disposition, FindingDisposition::Issue);
-        assert!(finding.message.contains("no microphone recorder"));
-        assert!(finding.remediation.is_none());
-        assert!(finding.automatic_remediation.is_none());
-        assert!(finding.note.as_deref().is_some_and(|note| {
-            note.contains("install a supported audio recorder")
-                && note.contains("grok doctor")
-                && note.contains("can't detect denied macOS microphone access")
-        }));
-    }
-
-    #[test]
     fn notification_explicit_bel_unknown_terminal_is_intentional() {
         let ctx = TerminalContext {
             brand: TerminalName::Unknown,

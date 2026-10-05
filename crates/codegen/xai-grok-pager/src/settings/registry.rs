@@ -1107,18 +1107,6 @@ mod tests {
                         "voice_capture_mode default drifts from UiConfig::default()",
                     );
                 }
-                // voice_stt_language: Option<String>; None reads as "en"
-                ("voice_stt_language", SettingKind::Enum { default, .. }) => {
-                    assert_eq!(
-                        ui.voice_stt_language, None,
-                        "test assumes UiConfig::default().voice_stt_language is None",
-                    );
-                    assert_eq!(
-                        *default,
-                        canonical_voice_stt_language(ui.voice_stt_language.as_deref()),
-                        "voice_stt_language default drifts from UiConfig::default()",
-                    );
-                }
                 // hunk_tracker_mode: Option<String>; None reads as "off"
                 ("hunk_tracker_mode", SettingKind::Enum { default, .. }) => {
                     assert_eq!(
@@ -1351,90 +1339,6 @@ mod tests {
         assert_eq!(canonical_voice_capture_mode(Some("hold_send")), "hold");
         assert_eq!(canonical_voice_capture_mode(Some("")), "hold");
         assert_eq!(canonical_voice_capture_mode(None), "hold");
-    }
-
-    /// With the UI key unset, `current_value_for` shows the live language.
-    /// That is the snapshot mirror of `voice_config.language`, e.g. an explicit `[voice].language`.
-    /// A set UI key wins.
-    #[test]
-    fn voice_stt_language_current_value_falls_back_to_live_config() {
-        let pager = PagerLocalSnapshot {
-            voice_stt_language: "es".into(),
-            ..Default::default()
-        };
-        let ui = UiConfig::default();
-        assert_eq!(
-            current_value_for("voice_stt_language", &ui, &pager),
-            Some(SettingValue::Enum("es")),
-        );
-        let ui_set = UiConfig {
-            voice_stt_language: Some("ja".into()),
-            ..Default::default()
-        };
-        assert_eq!(
-            current_value_for("voice_stt_language", &ui_set, &pager),
-            Some(SettingValue::Enum("ja")),
-        );
-    }
-
-    /// Spot-check the delegation to `xai_grok_voice::canonicalize_stt_language`.
-    /// Exhaustive alias and locale coverage lives in the voice crate's tests.
-    #[test]
-    fn canonical_voice_stt_language_delegates_to_voice_crate() {
-        assert_eq!(canonical_voice_stt_language(Some("auto")), "auto");
-        assert_eq!(canonical_voice_stt_language(Some("tl")), "fil");
-        assert_eq!(canonical_voice_stt_language(None), "en");
-    }
-
-    /// Settings enum choices (minus the client-only `auto`) must equal the voice crate's official STT catalog.
-    /// This prevents offering unsupported codes or omitting newly documented languages.
-    #[test]
-    fn voice_stt_language_settings_match_voice_crate_catalog() {
-        use std::collections::HashSet;
-
-        let reg = SettingsRegistry::defaults();
-        let meta = reg
-            .find("voice_stt_language")
-            .expect("voice_stt_language must be registered");
-        let SettingKind::Enum {
-            choices, default, ..
-        } = &meta.kind
-        else {
-            panic!("voice_stt_language must be Enum");
-        };
-        assert_eq!(*default, "en");
-
-        let mut setting_codes: HashSet<&str> = HashSet::new();
-        let mut saw_auto = false;
-        for c in choices.iter() {
-            if c.canonical == "auto" {
-                saw_auto = true;
-                assert_eq!(c.display, "System");
-                continue;
-            }
-            assert!(
-                setting_codes.insert(c.canonical),
-                "duplicate settings language code {}",
-                c.canonical
-            );
-            let lang = xai_grok_voice::stt_language_by_code(c.canonical)
-                .unwrap_or_else(|| panic!("settings offers unsupported STT code {}", c.canonical));
-            assert_eq!(
-                c.display, lang.name,
-                "display name for {} must match voice crate",
-                c.canonical
-            );
-        }
-        assert!(saw_auto, "settings must offer System (auto)");
-
-        let crate_codes: HashSet<&str> = xai_grok_voice::STT_LANGUAGES
-            .iter()
-            .map(|l| l.code)
-            .collect();
-        assert_eq!(
-            setting_codes, crate_codes,
-            "settings concrete languages must match xai_grok_voice::STT_LANGUAGES exactly"
-        );
     }
 
     #[test]

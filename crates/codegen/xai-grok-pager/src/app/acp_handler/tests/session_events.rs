@@ -400,32 +400,6 @@
     }
 
     #[test]
-    fn retry_exhausted_api_key_rewrites_consumer_subscription_upsell() {
-        use xai_grok_shell::sampling::error::RATE_LIMITED_USER_MESSAGE_API_KEY;
-
-        let rpm = RetryState::Exhausted {
-            attempts: 2,
-            reason: "API error (status 429 Too Many Requests): \
-                     Some resource has been exhausted: You are sending requests too quickly. \
-                     Please slow down, or upgrade to a deepseek-build subscription for higher limits: \
-                     https://api.deepseek.com/deepseek"
-                .into(),
-            is_rate_limited: true,
-        };
-
-        let mut session = make_session(Some("s1"));
-        let mut scrollback = ScrollbackState::new();
-        apply_retry_state(&rpm, &mut session, &mut scrollback, true);
-        match last_session_event(&scrollback) {
-            Some(SessionEvent::RetryFailed { error, .. }) => {
-                assert_eq!(error, RATE_LIMITED_USER_MESSAGE_API_KEY);
-                assert!(!error.contains("api.deepseek.com/deepseek"));
-            }
-            other => panic!("expected API-key rate-limit RetryFailed, got {other:?}"),
-        }
-    }
-
-    #[test]
     fn retry_exhausted_non_rate_limited_does_not_set_flag() {
         let mut session = make_session(Some("s1"));
         let mut scrollback = ScrollbackState::new();

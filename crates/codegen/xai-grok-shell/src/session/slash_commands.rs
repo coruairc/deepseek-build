@@ -527,6 +527,7 @@ pub const PAGER_COMMAND_KEYS: &[&str] = &[
     "terminal-info",
     "terminal-setup",
     "theme",
+    "think",
     "timeline",
     "timestamps",
     "title",

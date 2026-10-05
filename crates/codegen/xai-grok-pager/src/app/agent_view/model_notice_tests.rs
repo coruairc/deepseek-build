@@ -67,8 +67,6 @@ fn draw(
         false,
         &mut Vec::new(),
         AppRenderParams {
-            voice_available: listening,
-            voice_listening: listening,
             ..Default::default()
         },
     );
@@ -126,26 +124,4 @@ fn notice_follows_the_current_model() {
         .models
         .set_current(acp::ModelId::new(RESTRICTED_ID), None);
     assert!(painted_notice(&draw(&mut agent, 100, 40, None, false)).is_some());
-}
-#[test]
-fn notice_keeps_the_tip_and_record_rows_visible() {
-    for (width, height) in [(80, 24), (100, 40)] {
-        let mut agent = agent_on(RESTRICTED_ID);
-        let rows = draw(&mut agent, width, height, Some(TIP), true);
-        let dump = rows.join("\n");
-        let tip = row_of(&rows, TIP).unwrap_or_else(|| panic!("tip row is visible:\n{dump}"));
-        let notice =
-            row_of(&rows, "! Reminder:").unwrap_or_else(|| panic!("notice is visible:\n{dump}"));
-        let recording =
-            row_of(&rows, "Recording").unwrap_or_else(|| panic!("record row is visible:\n{dump}"));
-        assert!(
-            tip < notice && notice < recording,
-            "tip, notice, record row in order:\n{dump}"
-        );
-        assert_eq!(
-            Some(RESTRICTED_TEXT.to_owned()),
-            painted_notice(&rows),
-            "{dump}"
-        );
-    }
 }

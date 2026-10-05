@@ -496,44 +496,6 @@ mod tests {
     }
 
     #[test]
-    fn revalidation_cancels_after_warm_voice_ownership_change() {
-        let (mut app, request) = app_with_prompt_request();
-        let id = AgentId(0);
-        let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        app.voice_cmd_tx = Some(tx);
-        app.voice_state = crate::app::app_view::VoiceState::Recording {
-            hold: false,
-            target: crate::app::app_view::VoiceTarget::Agent(id),
-            partial: crate::app::app_view::Partial::None,
-            route: None,
-        };
-        assert!(prepare(&mut app, request).unwrap().is_none());
-        assert!(
-            get_agent(&app, id)
-                .scrollback
-                .iter_entries()
-                .any(|(_, entry)| entry.block.searchable_text().as_deref() == Some(VOICE_MESSAGE))
-        );
-    }
-
-    #[test]
-    fn revalidation_cancels_after_cold_voice_ownership_change() {
-        let (mut app, request) = app_with_prompt_request();
-        let id = AgentId(0);
-        app.voice_state = crate::app::app_view::VoiceState::ColdStart {
-            hold: false,
-            target: crate::app::app_view::VoiceTarget::Agent(id),
-        };
-        assert!(prepare(&mut app, request).unwrap().is_none());
-        assert!(
-            get_agent(&app, id)
-                .scrollback
-                .iter_entries()
-                .any(|(_, entry)| entry.block.searchable_text().as_deref() == Some(VOICE_MESSAGE))
-        );
-    }
-
-    #[test]
     fn revalidation_cancels_after_paste_probe_ownership_change() {
         let (mut app, request) = app_with_prompt_request();
         let id = AgentId(0);
