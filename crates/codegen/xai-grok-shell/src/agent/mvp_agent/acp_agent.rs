@@ -1,7 +1,7 @@
 #![cfg_attr(rustfmt, rustfmt::skip)]
 #![allow(unused_imports)]
 use super::*;
-use super::turn_end::{TurnEndCapture, run_registry_turn_end};
+use super::turn_end::TurnEndCapture;
 use xai_grok_telemetry::instrument_task;
 use xai_grok_telemetry::region;
 use xai_grok_telemetry::region::Parent;
@@ -1403,19 +1403,7 @@ impl acp::Agent for MvpAgent {
                     ..
                 } = turn_ok;
                 if let Some(cap) = turn_end_capture {
-                    let (head, head_branch, registry_claim) = cap.finish().await;
-                    let registry = self.build_registry_turn_end_args(
-                        &arguments.session_id,
-                        turn_number,
-                        &handle,
-                        &arguments.prompt,
-                        registry_claim,
-                        head,
-                        head_branch,
-                    );
-                    tokio::task::spawn(async move {
-                        run_registry_turn_end(registry).await;
-                    });
+                    cap.finish(&handle.cmd_tx).await;
                 }
                 let last_turn_usage = last_turn_usage_for_meta;
                 Ok(
