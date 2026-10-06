@@ -1609,8 +1609,7 @@ impl acp::Agent for MvpAgent {
             "deepseek-build/session/search" => {
                 crate::extensions::session_search::handle(self, &args).await
             }
-            "deepseek-build/session/resolve_local_for_worktree_resume"
-            | "deepseek-build/session/rehydrate" => {
+            "deepseek-build/session/resolve_local_for_worktree_resume" => {
                 let ops = self.resolve_workspace_ops()?;
                 crate::extensions::worktree::handle(self, &ops, &args).await
             }

@@ -9,10 +9,10 @@ use crate::session::ExtMethodResult;
 use crate::session::persistence::LocalSessionResolutionKind;
 use crate::session::worktree::{
     ApplyWorktreeRequest, CreateWorktreeFromWorktreeRequest, CreateWorktreeRequest,
-    CreateWorktreeResponse, RehydrateSessionRequest, RemoveWorktreeRequest,
-    ResumeSessionInWorktreeRequest, WorktreeNotificationSender, WorktreeStatus, WorktreeType,
-    create_jj_workspace, create_worktree_async, create_worktree_from_worktree_async,
-    rehydrate_session_in_worktree, resolve_session_repo_wide, resume_session_in_worktree,
+    CreateWorktreeResponse, RemoveWorktreeRequest, ResumeSessionInWorktreeRequest,
+    WorktreeNotificationSender, WorktreeStatus, WorktreeType, create_jj_workspace,
+    create_worktree_async, create_worktree_from_worktree_async, resolve_session_repo_wide,
+    resume_session_in_worktree,
 };
 use xai_grok_telemetry::instrument_task;
 use xai_grok_telemetry::region::Parent;
@@ -416,24 +416,6 @@ pub async fn handle(
                         .data(format!("repo-wide resolution failed: {e}")))
                 }
             }
-        }
-        // ── Session rehydration (devbox recovery) ─────────────────────────
-        "deepseek-build/session/rehydrate" => {
-            let req = serde_json::from_str::<RehydrateSessionRequest>(args.params.get())?;
-            let registry_client = agent.session_registry_client();
-            let (grove_worktree, grove_gate_source) =
-                crate::util::config::grove_worktree_gate(agent.remote_settings().as_ref());
-
-            to_response(
-                rehydrate_session_in_worktree(
-                    &req,
-                    ops,
-                    registry_client.as_ref(),
-                    grove_worktree,
-                    grove_gate_source,
-                )
-                .await,
-            )
         }
         // ── Worktree management methods ──────────────────────────────────
         "deepseek-build/git/worktree/list" => {
