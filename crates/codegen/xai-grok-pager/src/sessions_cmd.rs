@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::Subcommand;
-use xai_grok_login::{AuthManager, try_ensure_fresh_auth};
 use xai_grok_shell::agent::config::Config as AgentConfig;
 use xai_grok_shell::session::merge::MergedSession;
 use xai_grok_shell::util::grok_home::grok_home;
@@ -34,35 +33,12 @@ enum SessionsCommand {
 }
 
 pub async fn run(args: SessionsArgs, agent_config: &AgentConfig) -> Result<()> {
-    // Best-effort only: never force an interactive public login here. Enterprise deployments may configure only a
-    // deployment_key and a custom xai_api_base_url. Otherwise we still proceed so the SessionRegistryClient can use
-    // the deployment_key when talking to the custom proxy.
-    let auth = try_ensure_fresh_auth(
-        &agent_config.grok_com_config,
-        agent_config.endpoints.proxy_url(),
-    )
-    .await;
-
-    let auth_manager = std::sync::Arc::new(AuthManager::new_with_proxy_base_url(
-        &grok_home(),
-        agent_config.grok_com_config.clone(),
-        agent_config.endpoints.proxy_url(),
-    ));
-
-    let client = xai_grok_shell::agent::session_registry_client::SessionRegistryClient::new(
-        agent_config.endpoints.proxy_url(),
-        String::new(),
-    )
-    .with_deployment_key(agent_config.endpoints.deployment_key.clone())
-    .with_alpha_test_key(agent_config.endpoints.alpha_test_key.clone())
-    .with_auth(auth_manager.clone());
-
     let cwd = std::env::current_dir().unwrap_or_else(|_| ".".into());
 
     match args.command {
         SessionsCommand::List { limit } => {
             let sessions = xai_grok_shell::session::merge::fetch_merged(
-                Some(&client),
+                None,
                 cwd.to_str(),
                 xai_grok_shell::session::merge::CwdScope::WithSiblings,
                 None,
@@ -74,8 +50,6 @@ pub async fn run(args: SessionsArgs, agent_config: &AgentConfig) -> Result<()> {
             print_sessions_grouped(&sessions);
         }
         SessionsCommand::Search { query, limit } => {
-            use std::collections::HashSet;
-            use xai_grok_shell::session::merge::REMOTE_TIMEOUT;
             use xai_grok_shell::session::storage::search::{
                 IndexDecision, SessionSearchRequest, execute_search,
             };
@@ -91,35 +65,10 @@ pub async fn run(args: SessionsArgs, agent_config: &AgentConfig) -> Result<()> {
                 include_content: true,
             };
             let root = grok_home();
-
-            let remote_limit = (limit * 3).max(100) as i64;
-            let (local_resp, remote_results) = tokio::join!(
-                execute_search(IndexDecision::settled(&search), &root, &req),
-                async {
-                    tokio::time::timeout(
-                        REMOTE_TIMEOUT,
-                        client.search(Some(&req.query), remote_limit),
-                    )
-                    .await
-                    .unwrap_or_else(|_| {
-                        eprintln!("warning: remote session search timed out");
-                        Ok(Vec::new())
-                    })
-                    .unwrap_or_else(|e| {
-                        eprintln!("warning: remote session search failed: {e}");
-                        Vec::new()
-                    })
-                }
-            );
-
-            let resp = local_resp?;
+            let resp = execute_search(IndexDecision::settled(&search), &root, &req).await?;
             if let Some(by) = search.off_reason() {
-                eprintln!(
-                    "warning: local session search is off ({by}); searched remote sessions only."
-                );
+                eprintln!("warning: local session search is off ({by}); no results are available.");
             }
-            let local_ids: HashSet<&str> =
-                resp.results.iter().map(|r| r.session_id.as_str()).collect();
 
             for hit in &resp.results {
                 let title = summary_or_untitled(&hit.title);
@@ -140,38 +89,7 @@ pub async fn run(args: SessionsArgs, agent_config: &AgentConfig) -> Result<()> {
                 );
             }
 
-            let remaining = limit.saturating_sub(resp.results.len());
-            let mut remote_shown = 0usize;
-            for r in &remote_results {
-                if remote_shown >= remaining {
-                    break;
-                }
-                if local_ids.contains(r.session_id.as_str()) {
-                    continue;
-                }
-                let title = summary_or_untitled(&r.summary);
-                let time = chrono::DateTime::parse_from_rfc3339(&r.updated_at)
-                    .map(|dt| {
-                        dt.with_timezone(&chrono::Local)
-                            .format("%b %d, %l:%M%P")
-                            .to_string()
-                    })
-                    .unwrap_or_default();
-                let snippet: String = r
-                    .first_prompt
-                    .as_deref()
-                    .unwrap_or("")
-                    .chars()
-                    .take(80)
-                    .collect();
-                println!(
-                    "{} (remote)  {}\n  {}\n  {}",
-                    r.session_id, time, title, snippet
-                );
-                remote_shown += 1;
-            }
-
-            println!("\nTotal: {}", resp.results.len() + remote_shown);
+            println!("\nTotal: {}", resp.results.len());
         }
         SessionsCommand::Delete { id } => {
             // Pass `cwd = None` so the session is found by id regardless of which workspace it was created in
