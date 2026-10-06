@@ -491,9 +491,6 @@ impl SessionActor {
             command_name = tracing::field::Empty,
             command_source = tracing::field::Empty,
         );
-        if let Some(ref tp) = request.traceparent {
-            xai_grok_telemetry::link_span_to_meta(&span, &serde_json::json!({ "traceparent": tp }));
-        }
         self.handle_turn_input_inner(request).instrument(span).await
     }
     async fn handle_turn_input_inner(
@@ -880,7 +877,6 @@ impl SessionActor {
             turn_number: turn_idx,
         });
         let current_prompt_index = self.chat_state_handle.get_prompt_index().await;
-        xai_grok_telemetry::session_ctx::begin_prompt_id();
         let mut chunk_meta = serde_json::Map::new();
         chunk_meta.insert("modelId".into(), serde_json::json!(model_id));
         chunk_meta.insert(
@@ -1099,9 +1095,7 @@ impl SessionActor {
                 .await
                 .map(|c| c.model)
                 .unwrap_or_default();
-            if policy.analytics.is_human_prompt()
-                && (self.telemetry_enabled || xai_grok_telemetry::external::is_active())
-            {
+            if policy.analytics.is_human_prompt() && self.telemetry_enabled {
                 let effective_client_identifier =
                     prompt_client_identifier.or_else(|| self.client_identifier.clone());
                 let ev = xai_grok_telemetry::events::PromptSubmitted {
@@ -1109,8 +1103,7 @@ impl SessionActor {
                     model_id,
                     client_identifier: effective_client_identifier,
                     screen_mode: prompt_screen_mode,
-                    prompt_text: xai_grok_telemetry::external::is_active()
-                        .then(|| user_message.to_owned()),
+                    prompt_text: None,
                     command_name: otel_command_name,
                 };
                 xai_grok_telemetry::session_ctx::log_event_dual(self.telemetry_enabled, ev);
@@ -1453,27 +1446,6 @@ impl SessionActor {
                 model_id: turn_model_id.clone(),
             })
             .await;
-        if xai_grok_telemetry::external::is_active() {
-            let committed = self
-                .chat_state_handle
-                .get_assistant_text_in_turn()
-                .await
-                .unwrap_or_default();
-            let captured = self.streaming_turn_capture.lock().assembled_response_text();
-            let trust_committed = matches!(
-                &result,
-                Ok(TurnOutcome::Completed { .. }) | Ok(TurnOutcome::StationarityEnded)
-            );
-            let response_text = crate::session::streaming_capture::StreamingTurnCapture::merge_assistant_response_for_otel(
-                committed,
-                &captured,
-                trust_committed,
-            );
-            xai_grok_telemetry::external::emit(&xai_grok_telemetry::events::AssistantResponse {
-                response_length: response_text.len(),
-                response_text: (!response_text.is_empty()).then_some(response_text),
-            });
-        }
         match &result {
             Ok(TurnOutcome::Completed { stop, .. }) => {
                 self.emit_turn_ended(

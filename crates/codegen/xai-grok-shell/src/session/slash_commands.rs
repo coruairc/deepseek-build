@@ -34,7 +34,6 @@ enum WorkflowProjection {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum BuiltinGate {
     AlwaysOn,
-    Feedback,
     Memory,
     MemoryConfigured,
     /// Checks `scheduler_create` only.
@@ -240,18 +239,6 @@ pub(super) const BUILTIN_COMMANDS: &[BuiltinCommand] = &[
         resolve: |_args| BuiltinAction::SessionInfo,
     },
     BuiltinCommand {
-        name: "feedback",
-        description: "Send feedback about the current session",
-        argument_hint: Some("feedback text"),
-        aliases: &[],
-        model_authored_eligibility: ModelAuthoredEligibility::Denied,
-        gate: BuiltinGate::Feedback,
-        workflow_projection: WorkflowProjection::None,
-        resolve: |args| BuiltinAction::Feedback {
-            text: args.trim().to_string(),
-        },
-    },
-    BuiltinCommand {
         name: "deep-research",
         description: "Research with bounded parallel agents, cross-check evidence, and write a cited report",
         argument_hint: Some("<query>"),
@@ -376,7 +363,6 @@ const PROMPT_COMMANDS: &[BuiltinCommand] = &[BuiltinCommand {
 /// In test code, prefer `all_enabled()` when the gating itself isn't under test; otherwise the test silently loses coverage of any gated builtin.
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct CommandAvailability {
-    pub feedback: bool,
     /// Memory is enabled with v2 filesystem access or legacy `memory_search`/`memory_get` tools.
     /// `/flush` and `/dream` only make sense when the model can later read back what they wrote.
     pub memory: bool,
@@ -395,7 +381,6 @@ impl CommandAvailability {
     pub(crate) fn allows(&self, gate: BuiltinGate) -> bool {
         match gate {
             BuiltinGate::AlwaysOn => true,
-            BuiltinGate::Feedback => self.feedback,
             BuiltinGate::Memory => self.memory,
             BuiltinGate::MemoryConfigured => self.memory_configured,
             BuiltinGate::Scheduler => self.scheduler,
@@ -409,7 +394,6 @@ impl CommandAvailability {
     #[cfg(test)]
     pub(crate) fn all_enabled() -> Self {
         Self {
-            feedback: true,
             memory: true,
             memory_configured: true,
             scheduler: true,
@@ -463,7 +447,6 @@ pub const PAGER_COMMAND_KEYS: &[&str] = &[
     "exit",
     "expand",
     "export",
-    "feedback",
     "find",
     "flush",
     "fork",
@@ -1161,9 +1144,6 @@ pub(super) enum BuiltinAction {
     PluginsUpdate {
         name: Option<String>,
     },
-    Feedback {
-        text: String,
-    },
     MemoryBrowse,
     GoalSet {
         objective: String,
@@ -1207,7 +1187,6 @@ impl BuiltinAction {
             BuiltinAction::PluginsInstall { .. } => "plugins-install",
             BuiltinAction::PluginsUninstall { .. } => "plugins-uninstall",
             BuiltinAction::PluginsUpdate { .. } => "plugins-update",
-            BuiltinAction::Feedback { .. } => "feedback",
             BuiltinAction::MemoryBrowse => "memory",
             BuiltinAction::GoalSet { .. }
             | BuiltinAction::GoalStatus
@@ -1240,7 +1219,6 @@ impl BuiltinAction {
             BuiltinAction::PluginsInstall { .. } => true,
             BuiltinAction::PluginsUninstall { .. } => true,
             BuiltinAction::PluginsUpdate { name } => name.is_some(),
-            BuiltinAction::Feedback { text } => !text.is_empty(),
             BuiltinAction::MemoryBrowse => false,
             BuiltinAction::GoalSet { .. } => true,
             BuiltinAction::GoalStatus

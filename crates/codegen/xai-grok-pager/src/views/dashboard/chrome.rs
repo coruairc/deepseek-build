@@ -13,17 +13,7 @@ use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use unicode_width::UnicodeWidthStr;
-/// Promo upgrade CTA for the dashboard header, resolved through the shared slot gate by the producer (`app_view`).
-#[derive(Clone, Copy)]
-pub struct HeaderUpgradeCta<'a> {
-    /// The `[label]` button text.
-    pub label: &'a str,
-    /// True when the promo is non-dismissible, so the `Ctrl+O` override applies.
-    pub pinned: bool,
-    /// The promo's trimmed `cta.caption` value; painted only when `pinned` is set.
-    pub caption: Option<&'a str>,
-}
-/// Paint the dashboard header into `area` and write `location_hit` / `upgrade_cta_hit`.
+/// Paint the dashboard header into `area` and write `location_hit`.
 pub(super) fn render_header(
     buf: &mut Buffer,
     area: Rect,
@@ -31,7 +21,6 @@ pub(super) fn render_header(
     rows: &[DashboardRow],
     state: &mut DashboardState,
     registry: &crate::actions::ActionRegistry,
-    upgrade_cta: Option<HeaderUpgradeCta<'_>>,
 ) {
     if area.area() == 0 {
         return;
@@ -107,11 +96,7 @@ pub(super) fn render_header(
         .min()
         .map(|min_x| min_x.saturating_sub(3).saturating_sub(area.x))
         .unwrap_or(area.width) as usize;
-    let upgrade_caption = upgrade_cta.and_then(|cta| cta.pinned.then_some(cta.caption).flatten());
-    let upgrade_reserve = upgrade_cta.map_or(0usize, |cta| {
-        1 + crate::views::announcements::upgrade_cta_reserve(cta.label, upgrade_caption) as usize
-    });
-    let label_budget = full_label_budget.saturating_sub(upgrade_reserve);
+    let label_budget = full_label_budget;
     let LocationParts {
         branch,
         is_worktree,
@@ -159,24 +144,6 @@ pub(super) fn render_header(
             width: hit_w,
             height: 1,
         }));
-    }
-    if let Some(HeaderUpgradeCta { label, .. }) = upgrade_cta {
-        let avail = full_label_budget.saturating_sub(label_w as usize);
-        if avail > 1 {
-            let cta_x = area.x + label_w;
-            buf.set_span(cta_x, area.y, &Span::styled(" ", bg), 1);
-            let painted = crate::views::announcements::render_cta_button(
-                buf,
-                theme,
-                cta_x + 1,
-                area.y,
-                (avail - 1) as u16,
-                label,
-                upgrade_caption,
-                state.upgrade_cta_hit.hovered,
-            );
-            state.upgrade_cta_hit.set(painted);
-        }
     }
 }
 fn key_hint_style(theme: &Theme) -> Style {

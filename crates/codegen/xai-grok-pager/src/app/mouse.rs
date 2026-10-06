@@ -171,18 +171,6 @@ impl AgentView {
                     }
                     return InputOutcome::Changed;
                 }
-                if self.hit_announcement_hide.contains(mouse.column, mouse.row)
-                    && !self.pos_occluded(mouse.column, mouse.row)
-                {
-                    return InputOutcome::Action(Action::AnnouncementsHide);
-                }
-                if self.hit_announcement_cta.contains(mouse.column, mouse.row)
-                    && !self.pos_occluded(mouse.column, mouse.row)
-                {
-                    return InputOutcome::Action(Action::AnnouncementsOpenCta(
-                        xai_grok_telemetry::events::AnnouncementCtaSurface::Banner,
-                    ));
-                }
                 if self
                     .plugin_cta
                     .hit_dismiss
@@ -215,13 +203,6 @@ impl AgentView {
                         .cloned()
                 {
                     return InputOutcome::Action(Action::SubmitFollowUp(text));
-                }
-                if self.hit_upgrade_cta.contains(mouse.column, mouse.row)
-                    && !self.pos_occluded(mouse.column, mouse.row)
-                {
-                    return InputOutcome::Action(Action::AnnouncementsOpenCta(
-                        xai_grok_telemetry::events::AnnouncementCtaSurface::Header,
-                    ));
                 }
                 if self.hit_dashboard.contains(mouse.column, mouse.row) {
                     return InputOutcome::Action(if self.in_dashboard_overlay {
@@ -1037,12 +1018,6 @@ impl AgentView {
                 changed |= self.hit_bg_button.update_hover(mouse.column, mouse.row);
                 changed |= self.hit_watching_cue.update_hover(mouse.column, mouse.row);
                 changed |= self
-                    .hit_announcement_hide
-                    .update_hover(mouse.column, mouse.row);
-                changed |= self
-                    .hit_announcement_cta
-                    .update_hover(mouse.column, mouse.row);
-                changed |= self
                     .privacy_banner
                     .hit_opt_in
                     .update_hover(mouse.column, mouse.row);
@@ -1076,7 +1051,6 @@ impl AgentView {
                 changed |= self.hit_dashboard.update_hover(mouse.column, mouse.row);
                 changed |= self.hit_overlay_prev.update_hover(mouse.column, mouse.row);
                 changed |= self.hit_overlay_next.update_hover(mouse.column, mouse.row);
-                changed |= self.hit_upgrade_cta.update_hover(mouse.column, mouse.row);
                 {
                     let new_kill = self
                         .tasks

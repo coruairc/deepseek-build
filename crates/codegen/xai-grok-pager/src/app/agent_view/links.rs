@@ -77,36 +77,6 @@ impl AgentView {
             .iter()
             .any(|r| rect.intersects(*r))
     }
-    /// Append the promo banner [label] button's OSC 8 span when the CTA rect is armed, no frame occluder covers it, and a CTA target resolves.
-    /// Split from `draw`'s emit-gated block so the guards are unit-testable; the caller owns the `hyperlink_route().emit_osc8` check.
-    pub(super) fn push_promo_cta_link_span(
-        &self,
-        link_spans_out: &mut Vec<xai_ratatui_inline::LinkSpan>,
-        banner_announcements: &[xai_grok_shell::util::config::RemoteAnnouncement],
-        hidden_announcement_ids: &std::collections::BTreeSet<String>,
-    ) {
-        if let Some((_, url)) = crate::views::announcements::promo_cta_target(
-            banner_announcements,
-            hidden_announcement_ids,
-        ) {
-            self.push_cta_link_span(link_spans_out, self.hit_announcement_cta.rect, url);
-        }
-    }
-    /// OSC 8 twin for the in-session header upgrade CTA (`hit_upgrade_cta`), so hyperlink-capable terminals can open the promo from the header.
-    /// It shares the banner CTA's url resolution and occluder rule.
-    pub(super) fn push_upgrade_cta_link_span(
-        &self,
-        link_spans_out: &mut Vec<xai_ratatui_inline::LinkSpan>,
-        banner_announcements: &[xai_grok_shell::util::config::RemoteAnnouncement],
-        hidden_announcement_ids: &std::collections::BTreeSet<String>,
-    ) {
-        if let Some((_, url)) = crate::views::announcements::promo_cta_target(
-            banner_announcements,
-            hidden_announcement_ids,
-        ) {
-            self.push_cta_link_span(link_spans_out, self.hit_upgrade_cta.rect, url);
-        }
-    }
     /// Append one OSC 8 span per painted row of the connectors URL inside the extensions modal's wait
     /// overlay. The overlay is the topmost paint in that frame, so no occluder check applies; the
     /// active-wait accessor already withholds rects while a message or pending action covers it.

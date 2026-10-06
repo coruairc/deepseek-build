@@ -415,17 +415,8 @@ pub fn oauth_gateway_email_from_auth(auth: &crate::GrokAuth) -> Option<String> {
     }
 }
 
-/// Push the current identity attributes (never the token) to the external OTEL stream. Reads the same `CredentialSnapshot` the internal layer stamps per export, so both pipelines attribute identically.
-/// `user.id` is copied whenever the snapshot has a non-empty principal (including API-key sessions). OAuth/gateway email is attached when present; never from git, API-key, or deployment-key.
-/// No-op when the OTel provider was never initialized or the external stream is dormant.
-pub fn sync_external_otel_identity() {
-    if let Some(provider) = OTEL_PROVIDER.get() {
-        let snapshot = provider.snapshot();
-        let mut attrs = xai_grok_telemetry::external::IdentityAttrs::from_snapshot(&snapshot);
-        attrs.email = provider.oauth_gateway_email();
-        xai_grok_telemetry::external::set_identity(attrs);
-    }
-}
+/// No-op: the external OTEL stream was removed.
+pub fn sync_external_otel_identity() {}
 
 /// No-ops if the OTel layer was never initialized.
 pub fn wire_otel_deployment_key(key: String) {

@@ -562,11 +562,6 @@ pub struct AppView {
     pub scroll_debug_hud: crate::views::scroll_debug_hud::ScrollDebugHud,
     /// Release-safe FPS HUD (`/debug fps`; `GROK_FPS` env on release builds, where the dev overlay is compiled out); see the module doc.
     pub fps_hud: crate::views::fps_hud::FpsHud,
-    pub active_announcements: Vec<xai_grok_shell::util::config::RemoteAnnouncement>,
-    /// Persisted hide keys, filtered at the banner selection gate.
-    /// Hiding one critical reveals the next unhidden one, and a NEW id shows the banner again.
-    pub hidden_announcement_ids: std::collections::BTreeSet<String>,
-    pub announcements_last_gen: u64,
     /// Selected welcome announcement for this pager launch.
     pub announcement: Option<xai_grok_shell::util::config::RemoteAnnouncement>,
     /// Cached changelog markdown (for `/release-notes`).
@@ -1334,9 +1329,6 @@ impl AppView {
             tracing_rx: None,
             scroll_debug_hud: crate::views::scroll_debug_hud::ScrollDebugHud::new(),
             fps_hud: crate::views::fps_hud::FpsHud::new(),
-            active_announcements: Vec::new(),
-            hidden_announcement_ids: Default::default(),
-            announcements_last_gen: 0,
             announcement: None,
             changelog_markdown: None,
             changelog_bullets: Vec::new(),
@@ -1594,34 +1586,6 @@ impl AppView {
     /// A personal subscription login. API keys, external auth providers, and backend-billed accounts carry no subscription tier
     pub(super) fn consumer_account(&self) -> bool {
         !self.backend_billed && !self.is_api_key_auth && !self.has_external_auth_provider
-    }
-    /// Draw-time expiry can flip the live-announcement predicate between pushes.
-    /// Resync the slash gate only when it diverges from the stored flags (checked per frame, fan-out runs only on change).
-    pub fn resync_announcement_slash_gate_on_divergence(&mut self) {
-        let has =
-            crate::views::announcements::has_session_announcements(&self.active_announcements);
-        if self
-            .agents
-            .values()
-            .any(|a| a.prompt.slash_controller.has_session_announcements() != has)
-        {
-            self.sync_session_announcement_slash_gate();
-        }
-    }
-    /// Offer `/announcements` only when session items (critical or promo) exist.
-    /// Even hidden items count; the user may still run `/announcements show`.
-    pub fn sync_session_announcement_slash_gate(&mut self) {
-        let has =
-            crate::views::announcements::has_session_announcements(&self.active_announcements);
-        for agent in self.agents.values_mut() {
-            agent
-                .prompt
-                .slash_controller
-                .set_has_session_announcements(has);
-            for child in agent.subagent_views.values_mut() {
-                child.set_has_session_announcements(has);
-            }
-        }
     }
     /// The agent tab on screen.
     /// Always the root agent, even when a subagent view is focused within the tab.
@@ -2117,11 +2081,6 @@ impl AppView {
         }
         let zdr_blocked = self.is_zdr_blocked();
         let has_access = self.has_access();
-        let welcome_pinned_upgrade_cta = crate::views::announcements::promo_cta(
-            &self.active_announcements,
-            &self.hidden_announcement_ids,
-        )
-        .is_some_and(|(owner, _, _)| !crate::views::announcements::is_dismissible(owner));
         let has_foreign_resume = self.foreign_resume_hint().is_some();
         let sp_loading = crate::views::session_picker::loading_spinner_active(
             self.session_picker_entries.as_deref(),
@@ -2173,7 +2132,7 @@ impl AppView {
                     privacy_banner_policy_rect: self.welcome_privacy_banner_policy_rect.as_ref(),
                     on_privacy_banner: &mut self.welcome_on_privacy_banner,
                     on_upgrade_cta: &mut self.welcome_on_upgrade_cta,
-                    upgrade_cta_keyboard: welcome_pinned_upgrade_cta,
+                    upgrade_cta_keyboard: false,
                     changelog_cta_rect: self.welcome_changelog_cta_rect.as_ref(),
                     on_changelog_cta: &mut self.welcome_on_changelog_cta,
                     announcement_truncated: self.welcome_announcement.truncated,
@@ -3377,11 +3336,6 @@ fn handle_welcome_input(ev: &Event, ctx: &mut WelcomeInputCtx<'_>) -> InputOutco
             return InputOutcome::Action(Action::SendPrompt(text));
         }
         if matches!(ctx.auth_state, AuthState::Done) {
-            if ctx.upgrade_cta_keyboard && key!('o', CONTROL).matches(key) {
-                return InputOutcome::Action(Action::AnnouncementsOpenCta(
-                    xai_grok_telemetry::events::AnnouncementCtaSurface::Keyboard,
-                ));
-            }
             if key!('w', CONTROL).matches(key) && ctx.cwd_has_git_ancestor {
                 return InputOutcome::Action(Action::OpenNewWorktreeDialog);
             }
@@ -3597,13 +3551,6 @@ fn handle_welcome_input(ev: &Event, ctx: &mut WelcomeInputCtx<'_>) -> InputOutco
                 {
                     return InputOutcome::Action(Action::OpendeepseekUrl);
                 }
-                if let Some(rect) = ctx.upgrade_cta_rect
-                    && rect.contains(ratatui::layout::Position::new(mouse.column, mouse.row))
-                {
-                    return InputOutcome::Action(Action::AnnouncementsOpenCta(
-                        xai_grok_telemetry::events::AnnouncementCtaSurface::Welcome,
-                    ));
-                }
                 if let Some(rect) = ctx.privacy_banner_opt_in_rect
                     && rect.contains(ratatui::layout::Position::new(mouse.column, mouse.row))
                 {
@@ -3636,13 +3583,6 @@ fn handle_welcome_input(ev: &Event, ctx: &mut WelcomeInputCtx<'_>) -> InputOutco
                         title: "Release Notes".to_string(),
                         content: md.trim().to_string(),
                     });
-                }
-                if let Some(rect) = ctx.announcement_rect
-                    && (ctx.announcement_truncated || *ctx.announcement_expanded)
-                    && rect.contains(ratatui::layout::Position::new(mouse.column, mouse.row))
-                {
-                    *ctx.announcement_expanded = !*ctx.announcement_expanded;
-                    return InputOutcome::Changed;
                 }
                 if let Some(rect) = ctx.auth_url_rect
                     && matches!(ctx.auth_state, AuthState::Authenticating { .. })
@@ -4014,7 +3954,6 @@ impl AppView {
         crate::memory_release::run_deferred_release();
     }
     fn draw_inner(&mut self, terminal: &mut PagerTerminal) {
-        self.resync_announcement_slash_gate_on_divergence();
         if self.screen_mode.is_minimal() {
             if let Some(hooks) = crate::minimal_hook::hooks() {
                 (hooks.draw)(self, terminal);
@@ -4053,11 +3992,7 @@ impl AppView {
         let dev_fps_rows = self.dev_fps_rows();
         let fps_overlay = self.fps_hud.overlay(dev_fps_rows);
         let foreign_resume_hint = self.foreign_resume_hint().cloned();
-        let privacy_banner_agent = self.privacy_banner_should_show()
-            && !crate::views::announcements::has_critical_session_announcement(
-                &self.active_announcements,
-                &self.hidden_announcement_ids,
-            );
+        let privacy_banner_agent = self.privacy_banner_should_show();
         let agent_mouse_pos = self.last_mouse_pos;
         let status_line_frame = self.status_line_frame();
         let welcome_mode = self.home_session().map(|home| {
@@ -4173,19 +4108,7 @@ impl AppView {
                                 None => model_name_base,
                             };
                             let model_notice = self.models.current_notice();
-                            let hero_cta = crate::views::announcements::promo_cta(
-                                &self.active_announcements,
-                                &self.hidden_announcement_ids,
-                            );
-                            let hero_announcement = hero_cta
-                                .map(|(owner, _, _)| owner)
-                                .or_else(|| {
-                                    crate::views::announcements::first_session_announcement(
-                                        &self.active_announcements,
-                                        &self.hidden_announcement_ids,
-                                    )
-                                })
-                                .or(self.announcement.as_ref());
+                            let hero_announcement = self.announcement.as_ref();
                             let welcome_params = crate::views::welcome::WelcomeRenderParams {
                                 prompt_focus: if self.welcome_prompt_focused {
                                     WelcomePromptFocus::Focused
@@ -4249,7 +4172,7 @@ impl AppView {
                                 changelog_bullets: &self.changelog_bullets,
                                 changelog_has_full_notes: self.changelog_markdown.is_some(),
                                 welcome_announcement_expanded: self.welcome_announcement.expanded,
-                                upgrade_cta: hero_cta.map(|(_owner, label, _)| label),
+                                upgrade_cta: None,
                                 privacy_banner,
                                 #[cfg(feature = "local-workspace")]
                                 workspace_mode: self.welcome_workspace_mode,
@@ -4438,11 +4361,6 @@ impl AppView {
                                 d.restore_peek_viewport(agents);
                             }
                             if let Some(agent) = agents.get_mut(&id) {
-                                let announcement_banner_h =
-                                    crate::views::announcements::session_banner_height(
-                                        &self.active_announcements,
-                                        &self.hidden_announcement_ids,
-                                    );
                                 let privacy_banner = privacy_banner_agent;
                                 let show_session_tip = !privacy_banner
                                     && self.tip.is_some()
@@ -4452,8 +4370,6 @@ impl AppView {
                                     crate::views::privacy_banner::MIN_HEIGHT
                                 } else if has_mode_banner {
                                     1
-                                } else if announcement_banner_h > 0 {
-                                    announcement_banner_h
                                 } else if show_session_tip {
                                     1
                                 } else {
@@ -4468,8 +4384,6 @@ impl AppView {
                                     overlay_focused,
                                     crate::app::agent_view::BannerSlotParams {
                                         height: banner_height,
-                                        announcements: &self.active_announcements,
-                                        hidden_ids: &self.hidden_announcement_ids,
                                         privacy_banner,
                                         mouse_pos: agent_mouse_pos,
                                         tip: if show_session_tip {
@@ -4550,19 +4464,6 @@ impl AppView {
                                     } else {
                                         &self.dashboard_local_sessions
                                     };
-                                let dash_upgrade_cta = crate::views::announcements::promo_cta(
-                                    &self.active_announcements,
-                                    &self.hidden_announcement_ids,
-                                )
-                                .map(|(owner, label, _)| {
-                                    crate::views::dashboard::HeaderUpgradeCta {
-                                        label,
-                                        pinned: !crate::views::announcements::is_dismissible(owner),
-                                        caption: crate::views::announcements::usable_cta_caption(
-                                            owner,
-                                        ),
-                                    }
-                                });
                                 let workspace_rows =
                                     crate::app::workspace_sync::WorkspaceRowSource::capture(
                                         agents,
@@ -4582,7 +4483,6 @@ impl AppView {
                                     workspace_rows.inputs(),
                                     self.dashboard_session_picker.as_mut(),
                                     self.dashboard_sessions_loading,
-                                    dash_upgrade_cta,
                                     self.credit_balance.as_ref(),
                                 );
                                 let (popup_cursor, popup_post_flush, drawn_popup_agent) =

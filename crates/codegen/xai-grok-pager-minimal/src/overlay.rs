@@ -513,10 +513,10 @@ pub fn app_modal_active(agent: &AgentView) -> bool {
     agent.active_modal.is_some()
 }
 
-/// Whether a modal owns the whole live band (a centered app-modal or the feedback form), so no `insert_before` may run under it.
+/// Whether a modal owns the whole live band (a centered app-modal), so no `insert_before` may run under it.
 /// The extensions modal shares the band size (see `compute_target`) but is not held here.
 pub fn is_live_region_modal_active(agent: &AgentView) -> bool {
-    app_modal_active(agent) || minimal_api::feedback_modal(agent).is_some()
+    app_modal_active(agent)
 }
 
 /// Render the active centered app-modal into `area`.

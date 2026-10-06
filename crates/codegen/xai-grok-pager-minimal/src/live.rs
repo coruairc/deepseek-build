@@ -149,9 +149,6 @@ pub fn draw_live(app: &mut AppView, terminal: &mut PagerTerminal, ctx: &Terminal
                 super::overlay::render_app_modal(frame.buffer_mut(), area, agent, compact);
                 return (None, None);
             }
-            if let Some(modal) = minimal_api::feedback_modal_mut(agent) {
-                return super::feedback::render(frame.buffer_mut(), area, modal, &theme, compact);
-            }
             if minimal_api::extensions_modal(agent).is_some() {
                 let tick = (now_millis() / 100) as u64;
                 if let Some(state) = minimal_api::extensions_modal_mut(agent) {

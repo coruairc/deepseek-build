@@ -731,7 +731,6 @@ impl SessionActor {
                 }
                 ok_end_turn(0, None)
             }
-            BuiltinAction::Feedback { text } => self.execute_feedback_command(text).await,
             BuiltinAction::MemoryBrowse => {
                 match self.memory_listing() {
                     Ok(listing) => {

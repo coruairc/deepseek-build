@@ -126,11 +126,6 @@ impl acp::Agent for MvpAgent {
         &self,
         arguments: acp::InitializeRequest,
     ) -> Result<acp::InitializeResponse, acp::Error> {
-        if let Some(meta) = arguments.meta.as_ref() {
-            xai_grok_telemetry::link_current_span_to_meta(
-                &serde_json::Value::Object(meta.clone()),
-            );
-        }
         tracing::debug!(target: "sampling_log", "Received initialize request");
         xai_grok_telemetry::unified_log::info("agent initialized", None, None);
         startup::mark_agent_serving();
@@ -950,12 +945,6 @@ impl acp::Agent for MvpAgent {
         arguments: acp::NewSessionRequest,
     ) -> Result<acp::NewSessionResponse, acp::Error> {
         let span = tracing::info_span!("agent.new_session");
-        if let Some(meta) = arguments.meta.as_ref() {
-            xai_grok_telemetry::link_span_to_meta(
-                &span,
-                &serde_json::Value::Object(meta.clone()),
-            );
-        }
         self.new_session_inner(arguments).instrument(span).await
     }
     async fn load_session(
@@ -993,11 +982,6 @@ impl acp::Agent for MvpAgent {
         mut arguments: acp::PromptRequest,
     ) -> Result<acp::PromptResponse, acp::Error> {
         use crate::session::plan_mode::PromptMode;
-        if let Some(meta) = arguments.meta.as_ref() {
-            xai_grok_telemetry::link_current_span_to_meta(
-                &serde_json::Value::Object(meta.clone()),
-            );
-        }
         let preamble_span = region!("prompt.preamble", Parent::Inherit);
         tracing::debug!(
             target: "sampling_log",
@@ -1209,7 +1193,10 @@ impl acp::Agent for MvpAgent {
             }
         };
         let prompt_blocks = arguments.prompt.clone();
-        let traceparent = xai_grok_telemetry::current_traceparent();
+        let artifact_upload_ctx = trace_context
+            .as_ref()
+            .map(|ctx| ctx.artifact_upload_context());
+        let traceparent: Option<String> = None;
         let dispatch_result: Result<(), acp::Error> = if send_now {
             handle
                 .cmd_tx
@@ -1595,12 +1582,6 @@ impl acp::Agent for MvpAgent {
         &self,
         args: acp::ExtRequest,
     ) -> Result<acp::ExtResponse, acp::Error> {
-        let request_meta = serde_json::from_str::<serde_json::Value>(args.params.get())
-            .ok()
-            .and_then(|v| v.get("_meta").cloned());
-        if let Some(meta) = &request_meta {
-            xai_grok_telemetry::link_current_span_to_meta(meta);
-        }
         tracing::info!("Received extension method call: method={}", args.method);
         #[allow(unused_mut)]
         let mut backend_no_bridge_err: Option<acp::Error> = None;

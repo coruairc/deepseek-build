@@ -241,27 +241,9 @@ pub fn update_telemetry_config(config: &AgentConfig, auth_manager: &AuthManager)
         crate::http::shared_client(),
     );
 }
-/// Assemble the default OTel layer config both `xai-grok-pager` and `xai-grok-tui` need at tracing init time.
-pub fn build_default_otel_layer_config() -> xai_grok_telemetry::otel_layer::OtelLayerConfig {
-    let endpoints = crate::agent::config::EndpointsConfig::default();
-    let (credentials, token_header_value) =
-        crate::credential_factory::build_bootstrap_otel_credentials();
-    let exporter = xai_grok_telemetry::otel_layer::OtelExporterConfig {
-        traces_url: endpoints.resolve_otlp_traces_endpoint(),
-        extra_headers: endpoints.resolve_otlp_headers(),
-        export_interval: endpoints.resolve_otlp_export_interval(),
-        timeout: endpoints.resolve_otlp_timeout(),
-        enabled: endpoints.resolve_traces_export_enabled()
-            && !crate::agent::config::is_telemetry_explicitly_disabled_sync(),
-    };
-    xai_grok_telemetry::otel_layer::OtelLayerConfig {
-        credentials,
-        token_header_value,
-        alpha_test_key: None,
-        exporter,
-    }
-}
-/// No-op: managed-config post-login sync was removed.
+/// Sync this principal's config now rather than waiting for the background tick.
+/// Stay quiet about absence or failure during login; confirm only when config was actually applied.
+/// Driven by the login callers here so auth does not reach into managed config.
 pub async fn apply_post_login_config(
     _authenticated: xai_grok_login::GrokAuth,
 ) -> anyhow::Result<()> {

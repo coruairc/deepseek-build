@@ -436,30 +436,7 @@ pub(super) fn render_announcement_with_upgrade_cta(
         ..area
     };
     let truncated = render_announcement_block(buf, theme, text_area, ann, expanded, mouse_pos);
-    let mut cta_rect = None;
-    if let Some(label) = upgrade_cta {
-        use unicode_width::UnicodeWidthStr;
-        let text_rows =
-            announcement_text_rows(ann, text_area.width, expanded).min(text_area.height);
-        let cta_y = area.y + text_rows + 1;
-        if cta_y < area.y + area.height {
-            // Hover follows the button cells under the mouse position, like the sibling info blocks
-            // The shared painter owns the styling and truncation
-            let btn_w =
-                UnicodeWidthStr::width(format!("[{label}]").as_str()).min(area.width as usize);
-            let hovered = mouse_pos.is_some_and(|(mx, my)| {
-                my == cta_y && mx >= area.x && (mx as usize) < area.x as usize + btn_w
-            });
-            // A pinned (non-dismissible) promo shows its dim `cta.caption`; a dismissible one stays bare
-            // No permission prompt exists on the welcome screen, so no gating; the painter drops the caption whole if too narrow
-            let caption = (!crate::views::announcements::is_dismissible(ann))
-                .then(|| crate::views::announcements::usable_cta_caption(ann))
-                .flatten();
-            cta_rect = crate::views::announcements::render_cta_button(
-                buf, theme, area.x, cta_y, area.width, label, caption, hovered,
-            );
-        }
-    }
+    let cta_rect = None;
     (text_area, truncated, cta_rect)
 }
 

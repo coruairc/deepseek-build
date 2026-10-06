@@ -1227,9 +1227,7 @@ pub(crate) async fn spawn_session_actor(
             })
             .await;
         let memory_retrieval_mode = configured_memory_retrieval_mode(memory_config.as_ref());
-        let harness_metrics = if !startup_hints.is_subagent
-            && (telemetry_enabled || xai_grok_telemetry::external::is_active())
-        {
+        let harness_metrics = if !startup_hints.is_subagent && telemetry_enabled {
             let plugin_names = plugin_registry
                 .as_ref()
                 .map(|reg| {
@@ -2584,14 +2582,7 @@ pub(crate) async fn spawn_session_on_thread(
             let actor_main = async move {
                 let _trace_span = parent_traceparent
                     .as_ref()
-                    .map(|tp| {
-                        let meta = serde_json::json!({ "traceparent": tp })
-                            .as_object()
-                            .cloned()
-                            .unwrap_or_default();
-                        let span = xai_grok_telemetry::span_from_meta_traceparent(&meta);
-                        span.entered()
-                    });
+                    .map(|_| tracing::info_span!("acp_dispatch").entered());
                 let session_spawn_span = match spawn_trace {
                     Some(ctx) => {
                         tracing::info_span!(

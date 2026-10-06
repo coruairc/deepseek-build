@@ -4,22 +4,6 @@
 //! Resume, new-with-id, and fork are thus not re-derived in three places.
 use super::cli::PagerArgs;
 use std::path::{Path, PathBuf};
-pub(crate) fn stamp_phase_traceparent(meta: &mut Option<agent_client_protocol::Meta>) {
-    let Some(span) = xai_grok_telemetry::startup::current_phase_span() else {
-        return;
-    };
-    stamp_span_traceparent(meta, &span);
-}
-/// Stamp `span`'s traceparent into `meta` so the agent-side leg of the send nests under `span`.
-pub(crate) fn stamp_span_traceparent(
-    meta: &mut Option<agent_client_protocol::Meta>,
-    span: &tracing::Span,
-) {
-    if let Some(tp) = xai_grok_telemetry::traceparent_of_span(span) {
-        meta.get_or_insert_with(agent_client_protocol::Meta::new)
-            .insert("traceparent".into(), serde_json::Value::String(tp));
-    }
-}
 /// Session-create intent deferred until [`AppView::session_startup_allowed`].
 ///
 /// Replaces the prior matrix of `startup_load_session`, cwd, the `startup_fork` tuple, and ad-hoc preferred-only replay.

@@ -334,15 +334,6 @@ pub fn init_tracing() -> TracingHandle {
         .with_target(true)
         .with_ansi(true)
         .with_writer(make_writer);
-    let otel_layer = xai_grok_telemetry::otel_layer::build_otel_layer(
-        xai_grok_telemetry::otel_layer::OtelClientInfo {
-            client_name: "grok-pager",
-            client_version: xai_grok_version::VERSION,
-            service_version: xai_grok_version::full_version(),
-            app_entrypoint: "tui",
-        },
-        xai_grok_shell::agent::init::build_default_otel_layer_config(),
-    );
     let instrumentation_layer = xai_grok_telemetry::instrumentation::layer();
     let sampling_log_layer = xai_grok_telemetry::sampling_log::layer();
     let hooks_log_layer = xai_grok_telemetry::hooks_log::layer();
@@ -351,8 +342,7 @@ pub fn init_tracing() -> TracingHandle {
         .with(instrumentation_layer)
         .with(sampling_log_layer)
         .with(xai_grok_telemetry::span_profile::layer("tui"))
-        .with(hooks_log_layer)
-        .with(otel_layer);
+        .with(hooks_log_layer);
     xai_grok_telemetry::debug_log::install_firehose(registry, "tui");
     TracingHandle { rx }
 }

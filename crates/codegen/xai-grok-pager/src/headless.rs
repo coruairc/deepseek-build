@@ -538,10 +538,9 @@ async fn open_session(
         }
         anyhow::bail!("Session does not exist");
     }
-    let mut meta = serde_json::json!({ "sessionKind": "headless" })
+    let meta = serde_json::json!({ "sessionKind": "headless" })
         .as_object()
         .cloned();
-    crate::app::session_startup::stamp_phase_traceparent(&mut meta);
     let new_resp: acp::NewSessionResponse = acp_send(
         acp::NewSessionRequest::new(cwd.to_path_buf())
             .mcp_servers(mcp_servers)
@@ -564,10 +563,9 @@ async fn open_session_with_id(
     crate::app::session_startup::ensure_session_id_available(session_id, &cwd_str)?;
     let mcp_servers =
         cli_config::load_mcp_servers(cwd, &xai_grok_tools::types::compat::CompatConfig::default());
-    let mut meta = serde_json::json!({ "sessionId": session_id, "sessionKind": "headless" })
+    let meta = serde_json::json!({ "sessionId": session_id, "sessionKind": "headless" })
         .as_object()
         .cloned();
-    crate::app::session_startup::stamp_phase_traceparent(&mut meta);
     let new_resp: acp::NewSessionResponse = acp_send(
         acp::NewSessionRequest::new(cwd.to_path_buf())
             .mcp_servers(mcp_servers)

@@ -20,7 +20,6 @@ pub mod effort_levels;
 pub mod exit;
 pub mod expand;
 pub mod export;
-pub mod feedback;
 pub mod find;
 pub mod fork;
 pub mod gboom;
@@ -139,7 +138,6 @@ pub fn builtin_commands() -> Vec<Arc<dyn SlashCommand>> {
         // Docs, account and one-off maintenance.
         Arc::new(docs::DocsCommand),
         Arc::new(release_notes::ReleaseNotesCommand),
-        Arc::new(feedback::FeedbackCommand),
         Arc::new(privacy::PrivacyCommand),
         Arc::new(doctor::DoctorCommand),
         Arc::new(import_claude::ImportClaudeCommand),

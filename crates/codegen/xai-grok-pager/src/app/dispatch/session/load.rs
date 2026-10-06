@@ -249,7 +249,6 @@ fn dispatch_load_session_ungated(
         !app.has_external_auth_provider,
         app.chat_mode,
         app.screen_mode,
-        &app.active_announcements,
         &app.tier_restricted_commands,
     );
     agent_mut.chat_kind = chat_kind || app.chat_mode;
@@ -1167,7 +1166,6 @@ pub(in crate::app::dispatch) fn dispatch_load_session_with_restore(
             !app.has_external_auth_provider,
             app.chat_mode,
             app.screen_mode,
-            &app.active_announcements,
             &app.tier_restricted_commands,
         );
         agent.chat_kind = app.chat_mode;

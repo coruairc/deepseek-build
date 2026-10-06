@@ -38,7 +38,6 @@ pub mod state;
 mod test_support;
 mod usage_modal;
 
-pub use chrome::HeaderUpgradeCta;
 pub(crate) use render::render_dashboard;
 pub use render::{popup_rect, render_popup_overlay};
 pub use row::{

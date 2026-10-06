@@ -15,9 +15,6 @@ use crate::events::TelemetryEvent;
 pub struct TelemetryCtx {
     pub session_id: String,
     pub prompt_index: Arc<tokio::sync::Mutex<usize>>,
-    /// Per-prompt correlation UUID for the external OTEL stream (`prompt.id`, events only, never metrics).
-    /// Set at turn start where `prompt_index` increments; `None` outside a prompt.
-    pub prompt_id: Arc<parking_lot::Mutex<Option<String>>>,
 }
 
 impl TelemetryCtx {
@@ -25,36 +22,8 @@ impl TelemetryCtx {
         Self {
             session_id,
             prompt_index,
-            prompt_id: Arc::new(parking_lot::Mutex::new(None)),
         }
     }
-}
-
-/// Snapshot of the ambient ctx for the external OTEL stream.
-pub(crate) struct ExternalCtxSnapshot {
-    pub session_id: String,
-    pub turn_number: Option<u32>,
-    pub prompt_id: Option<String>,
-}
-
-/// Rotate the per-prompt correlation UUID at turn start (where `prompt_index` increments). No-op outside a session ctx scope.
-/// The id is attached as `prompt.id` to external OTEL events only.
-pub fn begin_prompt_id() {
-    let _ = TELEMETRY_CTX.try_with(|c| {
-        *c.prompt_id.lock() = Some(uuid::Uuid::new_v4().to_string());
-    });
-}
-
-/// Snapshot the task-local ctx (if any) for external emission.
-/// Non-blocking: a contended `prompt_index` lock yields `turn_number = None` rather than stalling the emitting task.
-pub(crate) fn external_ctx_snapshot() -> Option<ExternalCtxSnapshot> {
-    TELEMETRY_CTX
-        .try_with(|c| ExternalCtxSnapshot {
-            session_id: c.session_id.clone(),
-            turn_number: c.prompt_index.try_lock().map(|g| *g as u32).ok(),
-            prompt_id: c.prompt_id.lock().clone(),
-        })
-        .ok()
 }
 
 tokio::task_local! {
@@ -86,7 +55,7 @@ fn clone_current() -> Option<TelemetryCtx> {
     TELEMETRY_CTX.try_with(|c| (**c).clone()).ok()
 }
 
-/// `spawn_local` `fut` with the caller's [`TelemetryCtx`] re-entered in the child, so turn work keeps `session.id`/`prompt.id`/`turn_number`.
+/// `spawn_local` `fut` with the caller's [`TelemetryCtx`] re-entered in the child, so turn work keeps `session.id`/`turn_number`.
 pub fn spawn_local_in_session_ctx<F>(fut: F) -> tokio::task::JoinHandle<F::Output>
 where
     F: std::future::Future + 'static,
@@ -131,9 +100,7 @@ impl EmitterOrigin {
 const _: () = assert!(EmitterOrigin::ALL.len() == <EmitterOrigin as strum::EnumCount>::COUNT);
 
 /// Product analytics event (type-safe). Only fires in `Enabled` mode.
-/// Unconditionally fans out to the external OTEL stream first; that gate is `external::is_active()`, independent of `TelemetryMode`.
 pub fn log_event<T: TelemetryEvent>(data: T) {
-    crate::external::emit(&data);
     if !client::is_enabled() {
         return;
     }
@@ -144,38 +111,30 @@ pub fn log_event<T: TelemetryEvent>(data: T) {
 /// Fire-and-forget posts die with the session runtime on pager/embedded `/exit`, where [`drain_at_session_exit`] is a no-op.
 /// The process-exit drain cannot see this runtime either. Use for the last emit on that path.
 pub async fn log_event_now<T: TelemetryEvent>(data: T) {
-    crate::external::emit(&data);
     if !client::is_enabled() {
         return;
     }
     emit_event_now(T::NAME, data).await;
 }
 
-/// Emit one event to the external stream always and to the product events/Mixpanel funnel only when `internal_enabled`.
+/// Emit one event to the product events/Mixpanel funnel only when `internal_enabled`.
 /// Callers use this when their internal sink is gated more strictly than [`log_event`]'s `Enabled` check (the shell's `Enabled && !ZDR`).
-/// [`log_event`] already fans out externally, so the branch keeps the external emit exactly-once and never sends an internal record under ZDR.
 pub fn log_event_dual<T: TelemetryEvent>(internal_enabled: bool, data: T) {
     if internal_enabled {
         log_event(data);
-    } else {
-        crate::external::emit(&data);
     }
 }
 
 /// Session lifecycle event (type-safe). Fires in both `Enabled` and `SessionMetrics` modes.
 /// Emits with the [`EmitterOrigin::Shell`] prefix; workspace-side callers use [`log_session_event_with_origin`].
-/// Unconditionally fans out to the external OTEL stream first (independent gate; see [`log_event`]).
 pub fn log_session_event<T: TelemetryEvent>(data: T) {
-    crate::external::emit(&data);
     if !client::is_session_metrics_enabled() {
         return;
     }
     emit_event_with_origin(EmitterOrigin::Shell, T::NAME, data);
 }
 
-/// Session lifecycle event tagged with the emitting [`EmitterOrigin`]. No external fan-out here: the external stream is
-/// Shell-origin only, and workspace-side callers invoke this directly. An `external = …` macro arm on a workspace-only
-/// event therefore has no effect (pinned by a test in `external::tests`).
+/// Session lifecycle event tagged with the emitting [`EmitterOrigin`].
 pub fn log_session_event_with_origin<T: TelemetryEvent>(origin: EmitterOrigin, data: T) {
     if !client::is_session_metrics_enabled() {
         return;
@@ -553,17 +512,16 @@ mod tests {
                     Arc::new(tokio::sync::Mutex::new(7usize)),
                 );
                 with_session_ctx(ctx, async {
-                    begin_prompt_id();
-                    let parent_prompt = external_ctx_snapshot().expect("parent ctx").prompt_id;
-                    assert!(parent_prompt.is_some());
-                    let child = spawn_local_in_session_ctx(async {
-                        external_ctx_snapshot().expect("child re-enters ctx")
-                    })
-                    .await
-                    .expect("join");
+                    let child = spawn_local_in_session_ctx(async { clone_current() })
+                        .await
+                        .expect("join")
+                        .expect("child re-enters ctx");
                     assert_eq!(child.session_id, "sess-inherit");
-                    assert_eq!(child.turn_number, Some(7));
-                    assert_eq!(child.prompt_id, parent_prompt);
+                    assert_eq!(
+                        *child.prompt_index.try_lock().expect("uncontended"),
+                        7,
+                        "turn number must re-enter the child ctx"
+                    );
                 })
                 .await;
             })
@@ -574,7 +532,7 @@ mod tests {
     async fn spawn_local_in_session_ctx_is_noop_outside_ctx() {
         tokio::task::LocalSet::new()
             .run_until(async {
-                let seen = spawn_local_in_session_ctx(async { external_ctx_snapshot().is_some() })
+                let seen = spawn_local_in_session_ctx(async { clone_current().is_some() })
                     .await
                     .expect("join");
                 assert!(!seen, "helper must not invent a ctx");

@@ -2522,9 +2522,6 @@ pub(crate) async fn run(
                         );
                         last_leader_generation = generation;
                         app.reconnect_pending = true;
-                        // Connection-scoped: a re-elected shell reseeds its push gen from wall clock
-                        // A surviving higher watermark would silently drop its fresh pushes
-                        app.announcements_last_gen = 0;
 
                         // Cancel any in-flight re-init from a previous reconnect cycle and restore those agents' stashed transcripts
                         // Their load requests rode the now-dead connection
@@ -3340,9 +3337,6 @@ fn is_paste_lf(ev: &Event) -> bool {
         if ke.kind == KeyEventKind::Press
             && ke.code == KeyCode::Char('j')
             && ke.modifiers == KeyModifiers::CONTROL)
-}
-fn active_feedback_modal_open(app: &AppView) -> bool {
-    matches!(app.active_view, ActiveView::Agent(id) if app.agents.get(&id).is_some_and(|agent| agent.feedback_modal.is_some()))
 }
 /// On terminals without bracketed paste, pasted text arrives as individual key events.
 /// Enter keys mid-run would otherwise trigger "submit prompt" and split multi-line pastes.
@@ -4387,20 +4381,6 @@ mod tests {
             },
         );
         assert!(tty_suspend_armed(&app));
-    }
-    #[test]
-    fn feedback_modal_blocks_voice_chord_targeting() {
-        let mut app = crate::app::app_view::tests::test_app_with_agent();
-        assert!(!active_feedback_modal_open(&app));
-        let ActiveView::Agent(id) = app.active_view else {
-            panic!("test app must start on an agent");
-        };
-        app.agents.get_mut(&id).unwrap().feedback_modal = Some(
-            crate::views::feedback_modal::FeedbackModalState::new(Default::default()),
-        );
-        assert!(active_feedback_modal_open(&app));
-        app.active_view = ActiveView::AgentDashboard;
-        assert!(!active_feedback_modal_open(&app));
     }
     /// Hold-owned events are claimed even with the setting off (a dropped release would wedge the mic open, a past regression).
     /// Otherwise presses honor the setting and bare releases are never claimed.
