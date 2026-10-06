@@ -15,7 +15,6 @@ use crate::session::WorkspaceSession;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use xai_computer_hub_sdk::ToolServer;
 use xai_grok_sandbox::command::grants::{
     Expiry, Grant, GrantDecision, GrantId, GrantScope, GrantSubject, PROVENANCE_COMMAND_MAX_CHARS,
     Provenance,
@@ -235,9 +234,9 @@ impl SettleContext<'_> {
         format!("hub:{}", self.session_id)
     }
 }
-/// The hub's backstop on a permission round trip, which is when the gate stops waiting for the
+/// The backstop on a permission round trip, which is when the gate stops waiting for the
 /// card's answer; the card counts down to it.
-const CARD_DEADLINE: std::time::Duration = ToolServer::HOOK_REQUEST_BACKSTOP_TIMEOUT;
+const CARD_DEADLINE: std::time::Duration = std::time::Duration::from_secs(600);
 /// Settle one decoded violation, counted once under the settlement it reached. Fails closed:
 /// without a transport, on a transport error, on a cancelled card or a grant that cannot be
 /// recorded the denial stands.

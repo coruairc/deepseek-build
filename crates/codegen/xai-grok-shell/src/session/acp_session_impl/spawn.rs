@@ -1648,7 +1648,7 @@ pub(crate) async fn spawn_session_actor(
     let obs_bridge = {
         let sid = xai_tool_protocol::SessionId::new(&*session_info.id.0)
             .unwrap_or_else(|_| xai_tool_protocol::SessionId::new("unknown").expect("valid"));
-        xai_computer_hub_sdk::ObservabilityBridge::new(None, sid)
+        crate::session::acp_session::ObservabilityBridge::new(sid)
     };
     let config_load = spawn_step!("config_load");
     let mut effective_config = crate::config::load_effective_config()

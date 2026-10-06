@@ -434,51 +434,6 @@ pub(crate) struct ClientFsBase {
     pub(crate) canonical: PathBuf,
 }
 impl WorkspaceHandle {
-    /// `None` when not connected.
-    /// Never hands out an owned `ToolServer`: dropping a clone starts server teardown.
-    pub async fn trace_donation_reporter(
-        &self,
-        service_name: &str,
-    ) -> Option<(
-        xai_computer_hub_sdk::HubDonatingReporter,
-        xai_computer_hub_sdk::TraceDonationPump,
-    )> {
-        self.shared
-            .hub_handle
-            .lock()
-            .await
-            .as_ref()
-            .map(|hub| hub.server.trace_donation_reporter(service_name))
-    }
-    /// Post-connect entry point for the log export layer, the analogue of [`Self::trace_donation_reporter`]. Returns `None` when not connected (the layer stays inert).
-    /// Never hands out an owned `ToolServer`: dropping a clone starts server teardown.
-    pub async fn log_donation_layer(
-        &self,
-        service_name: &str,
-    ) -> Option<(
-        xai_computer_hub_sdk::LogDonationSender,
-        xai_computer_hub_sdk::LogDonationPump,
-    )> {
-        self.shared
-            .hub_handle
-            .lock()
-            .await
-            .as_ref()
-            .map(|hub| hub.server.log_donation_layer(service_name))
-    }
-    /// Post-connect entry point for metric export, the analogue of [`Self::trace_donation_reporter`]. Returns `None` when not connected (no reporter is spawned).
-    /// Never hands out an owned `ToolServer`: dropping a clone starts server teardown.
-    pub async fn metric_donation_reporter(
-        &self,
-        service_name: &str,
-    ) -> Option<xai_computer_hub_sdk::MetricDonationPump> {
-        self.shared
-            .hub_handle
-            .lock()
-            .await
-            .as_ref()
-            .map(|hub| hub.server.metric_donation_reporter(service_name))
-    }
     /// Construct a handle with zero sessions. Sessions are created explicitly via [`Self::create_session`] or [`Self::fork_session`].
     /// There is no implicit "main" session: callers (TUI, workspace-server binary) create their first session after construction.
     pub fn new(config: WorkspaceConfig) -> WorkspaceResult<Self> {
@@ -519,7 +474,7 @@ impl WorkspaceHandle {
         identity: crate::identity::WorkspaceIdentity,
     ) -> WorkspaceResult<Self> {
         let sessions = std::collections::HashMap::new();
-        let local_registry = xai_computer_hub_sdk::LocalRegistry::new();
+        let local_registry = xai_tool_runtime::LocalRegistry::new();
         let capacity = if config.event_buffer_capacity == 0 {
             DEFAULT_EVENT_BUFFER_CAPACITY
         } else {
@@ -671,16 +626,6 @@ impl WorkspaceHandle {
     }
     pub fn activity_tracker(&self) -> &std::sync::Arc<crate::activity::ActivityTracker> {
         &self.shared.activity_tracker
-    }
-    /// The [`ToolServer`](xai_computer_hub_sdk::ToolServer) for this workspace, if a server connection is active. Callers must treat `None` as "no server available right now" and degrade gracefully.
-    pub fn hub_server(&self) -> Option<xai_computer_hub_sdk::ToolServer> {
-        self.shared.hub_server()
-    }
-    /// Like [`Self::hub_server`] but awaits the connection lock instead of returning `None` on contention.
-    /// A transient `connect_hub` lock is not mistaken for "no server"; `None` means no server is connected.
-    /// Use from async callers.
-    pub async fn hub_server_blocking(&self) -> Option<xai_computer_hub_sdk::ToolServer> {
-        self.shared.hub_server_blocking().await
     }
     /// The folder's per-command shell sandbox, when the host built the workspace with one (the
     /// daemon does; the CLI and the remote sandbox server do not).
@@ -4626,12 +4571,12 @@ impl WorkspaceHandle {
     pub fn create_local_harness(
         &self,
         session_id: &str,
-    ) -> WorkspaceResult<xai_computer_hub_sdk::ToolHarness> {
+    ) -> WorkspaceResult<xai_tool_runtime::ToolHarness> {
         let session = self
             .session(session_id)
             .ok_or_else(|| WorkspaceError::SessionNotFound(session_id.to_string()))?;
         let toolset = session.toolset();
-        let registry = xai_computer_hub_sdk::LocalRegistry::new();
+        let registry = xai_tool_runtime::LocalRegistry::new();
         for def in toolset.tool_definitions() {
             let tool_name = def.function.name.clone();
             let desc = xai_tool_types::ToolDescription::new(
@@ -4653,7 +4598,7 @@ impl WorkspaceHandle {
         }
         let session_id = xai_tool_protocol::SessionId::new(session_id.to_string())
             .map_err(|e| WorkspaceError::HubError(format!("invalid session id: {e}")))?;
-        Ok(xai_computer_hub_sdk::ToolHarness::local_only_with(
+        Ok(xai_tool_runtime::ToolHarness::local_only_with(
             registry,
             session_id,
             xai_tool_runtime::TypedExtensions::default(),

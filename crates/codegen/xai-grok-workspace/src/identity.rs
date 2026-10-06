@@ -64,10 +64,3 @@ impl WorkspaceIdentity {
         }
     }
 }
-
-/// Derive the workspace owner identity from the server auth provider's [`AuthIdentity`](xai_computer_hub_sdk::AuthIdentity).
-impl From<xai_computer_hub_sdk::AuthIdentity> for WorkspaceIdentity {
-    fn from(id: xai_computer_hub_sdk::AuthIdentity) -> Self {
-        Self::new(id.user_id, id.principal_type, id.principal_id)
-    }
-}

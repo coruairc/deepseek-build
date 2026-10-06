@@ -46,9 +46,8 @@ pub(crate) fn has_event_with(
     })
 }
 #[cfg(test)]
-pub(crate) fn noop_observability_bridge() -> xai_computer_hub_sdk::ObservabilityBridge {
-    xai_computer_hub_sdk::ObservabilityBridge::new(
-        None,
+pub(crate) fn noop_observability_bridge() -> crate::session::acp_session::ObservabilityBridge {
+    crate::session::acp_session::ObservabilityBridge::new(
         xai_tool_protocol::SessionId::new("test").expect("valid"),
     )
 }

@@ -1099,7 +1099,6 @@ impl AgentBuilder {
                 lsp: self.lsp,
                 app_builder_deployer_config: self.app_builder_deployer_config,
                 api_key_provider: self.api_key_provider,
-                auth_provider: None,
                 attribution_callback: self.attribution_callback,
                 system_reminder_tag: self.system_reminder_tag,
             },

@@ -582,7 +582,6 @@ async fn scrape_activity_loop(
 // ── Preview-metrics scraper ────────────────────────────────────────────────
 
 const PREVIEW_METRICS_PATH: &str = "/__control/metrics";
-const PREVIEW_METRICS_PREFIX: &str = "preview_proxy_";
 const PREVIEW_METRICS_SCRAPE_INTERVAL: Duration = Duration::from_secs(60);
 
 fn metrics_url(control_port: u16) -> String {
@@ -592,16 +591,17 @@ fn metrics_url(control_port: u16) -> String {
     )
 }
 
-/// Scrapes the proxy's loopback-only metrics and donates them through the hub's active metrics sink.
+/// Scrapes the proxy's loopback-only metrics for local diagnostics.
 pub async fn supervise_preview_metrics(control_port: Option<u16>, shutdown: watch::Receiver<bool>) {
     scrape_metrics_loop(
         control_port.unwrap_or(DEFAULT_PREVIEW_CONTROL_PORT),
         PREVIEW_METRICS_SCRAPE_INTERVAL,
         shutdown,
         |body| {
-            if let Some(sink) = xai_computer_hub_sdk::metric_donate::active_metrics_sink() {
-                sink.export_text_exposition(body, PREVIEW_METRICS_PREFIX);
-            }
+            tracing::trace!(
+                bytes = body.len(),
+                "preview-proxy metrics scraped (local diagnostics only)"
+            );
         },
     )
     .await;

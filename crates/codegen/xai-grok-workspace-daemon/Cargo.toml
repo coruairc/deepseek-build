@@ -15,8 +15,6 @@ serde_json = { workspace = true }
 strum = { workspace = true }
 tokio = { workspace = true, features = ["macros", "process", "rt", "sync", "time"] }
 tracing = { workspace = true }
-# Metric donation sink for the preview-proxy metrics scraper.
-xai-computer-hub-sdk = { workspace = true, features = ["metrics"] }
 # reset_oom_score_adj in the preview-proxy pre_exec hook.
 xai-tty-utils = { workspace = true }
 

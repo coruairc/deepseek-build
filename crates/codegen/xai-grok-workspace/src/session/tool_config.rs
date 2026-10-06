@@ -35,7 +35,7 @@ pub(crate) fn resolve_session_toolset(
     session_env: Arc<HashMap<String, String>>,
     session_id: &str,
     factory: &dyn SessionContextFactory,
-    local_registry: Option<xai_computer_hub_sdk::LocalRegistry>,
+    local_registry: Option<xai_tool_runtime::LocalRegistry>,
     lsp: Option<std::sync::Arc<dyn xai_grok_tools::implementations::lsp::LspBackend>>,
     viewer_ctx: Option<xai_tool_runtime::WorkspaceViewerContext>,
     notification_handle: Option<xai_grok_tools::notification::types::ToolNotificationHandle>,
@@ -74,7 +74,7 @@ pub(crate) fn resolve_session_toolset_for_host(
     session_env: Arc<HashMap<String, String>>,
     session_id: &str,
     factory: &dyn SessionContextFactory,
-    local_registry: Option<xai_computer_hub_sdk::LocalRegistry>,
+    local_registry: Option<xai_tool_runtime::LocalRegistry>,
     lsp: Option<std::sync::Arc<dyn xai_grok_tools::implementations::lsp::LspBackend>>,
     viewer_ctx: Option<xai_tool_runtime::WorkspaceViewerContext>,
     notification_handle: Option<xai_grok_tools::notification::types::ToolNotificationHandle>,
@@ -126,7 +126,7 @@ pub(crate) fn resolve_session_toolset_rebuild(
     session_env: Arc<HashMap<String, String>>,
     session_id: &str,
     factory: &dyn SessionContextFactory,
-    local_registry: Option<xai_computer_hub_sdk::LocalRegistry>,
+    local_registry: Option<xai_tool_runtime::LocalRegistry>,
     lsp: Option<std::sync::Arc<dyn xai_grok_tools::implementations::lsp::LspBackend>>,
     viewer_ctx: Option<xai_tool_runtime::WorkspaceViewerContext>,
     notification_handle: Option<xai_grok_tools::notification::types::ToolNotificationHandle>,
@@ -346,8 +346,6 @@ static REGISTRY_TOOL_IDS: std::sync::LazyLock<Arc<std::collections::HashSet<Stri
 /// `state_path` is `<home>/sessions/<session_id>/` only when set; `session_folder` is `/tmp/sessions/…`, not the project cwd.
 /// The persistent-shell backend is built once per session and reused on every context build.
 pub struct WorkspaceSessionContextFactory {
-    auth: Option<xai_computer_hub_sdk::SharedAuthProvider>,
-    api_base_url: Option<String>,
     /// Resolved `$GROK_WORKSPACE_HOME` when tool-state persistence is enabled; `None` disables it.
     /// Resolved once by the caller so the factory performs no per-build env reads.
     tool_state_home: Option<PathBuf>,
@@ -366,24 +364,12 @@ impl Default for WorkspaceSessionContextFactory {
 impl WorkspaceSessionContextFactory {
     pub fn new() -> Self {
         Self {
-            auth: None,
-            api_base_url: None,
             tool_state_home: None,
             served_tool_ids: REGISTRY_TOOL_IDS.clone(),
             sandbox_launch: None,
         }
     }
-    /// Factory with auth: gen tools use the provider's live token.
-    pub fn with_auth(auth: xai_computer_hub_sdk::SharedAuthProvider, api_base_url: String) -> Self {
-        Self {
-            auth: Some(auth),
-            api_base_url: Some(api_base_url),
-            tool_state_home: None,
-            served_tool_ids: REGISTRY_TOOL_IDS.clone(),
-            sandbox_launch: None,
-        }
-    }
-    /// Factory for a host whose credential only serves the hub. Sessions get no credential, and the
+    /// Factory for a host with no credential. Sessions get no credential, and the
     /// tools that would call the API with one are not served even when a bind pins them: they come
     /// back to the binder as `unserved_tool_ids` instead of registering without a client.
     pub fn hub_only() -> Self {
@@ -457,7 +443,6 @@ impl SessionContextFactory for WorkspaceSessionContextFactory {
         backend: Arc<dyn xai_grok_tools::computer::types::TerminalBackend>,
     ) -> xai_grok_tools::registry::types::SessionContext {
         use xai_grok_tools::implementations::grok_build::app_builder::AppBuilderDeployerConfig;
-        let _ = (&self.auth, &self.api_base_url);
         let fs = Arc::new(xai_grok_tools::computer::local::LocalFs)
             as Arc<dyn xai_grok_tools::computer::types::AsyncFileSystem>;
         let notification_handle = xai_grok_tools::notification::ToolNotificationHandle::noop();
@@ -479,7 +464,6 @@ impl SessionContextFactory for WorkspaceSessionContextFactory {
             lsp: None,
             app_builder_deployer_config,
             api_key_provider: None,
-            auth_provider: self.auth.clone(),
             attribution_callback: None,
             system_reminder_tag: xai_grok_tools::reminders::DEFAULT_REMINDER_TAG,
         }

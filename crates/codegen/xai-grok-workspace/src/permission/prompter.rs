@@ -756,18 +756,8 @@ impl AcpPrompter {
         };
 
         let outcome = match &self.hub_permission {
-            // Route the prompt to chat over the server (see `ToolServerPermissionTransport` for the await/release contract)
-            Some(transport) => {
-                crate::permission::hub_permission::request_permission_via_hub(
-                    transport.as_ref(),
-                    access,
-                    tool_call_update.tool_call_id.0.as_ref(),
-                    hook_ask,
-                    // The manager records "always" answers in its own store.
-                    xai_tool_runtime::ToolApprovalPolicy::GrantsAllowed,
-                )
-                .await
-            }
+            // No hub transport exists anymore: prompts always go through the local ACP gateway.
+            Some(_) => unreachable!("hub permission transport removed"),
             None => {
                 let permission_options = self.build_options(access);
                 let req = acp::RequestPermissionRequest::new(

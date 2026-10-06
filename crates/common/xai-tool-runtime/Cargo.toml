@@ -8,6 +8,7 @@ description = "Unified Tool trait, dispatch trait, error taxonomy, notifications
 [dependencies]
 anyhow = { workspace = true }
 async-trait = { workspace = true }
+dashmap = { workspace = true }
 futures = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

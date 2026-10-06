@@ -19,10 +19,7 @@ use crate::host_kind::WorkspaceHostKind;
 use crate::permission::grants::{
     evaluate_bash_with_ambient, protected_target, record_prompt_outcome, session_grant_pre_decision,
 };
-use crate::permission::hub_permission::{
-    PermissionHookTransport, ToolServerPermissionTransport, hitl_permission_live_enabled,
-    prompt_outcome_allows, request_permission_via_hub,
-};
+use crate::permission::hub_permission::{PermissionHookTransport, prompt_outcome_allows};
 use crate::permission::prompter::PromptOutcome;
 use crate::permission::state::{CachedStateStore, PermissionState, StateFileAccess};
 use crate::permission::types::{AccessKind, Decision};
@@ -78,11 +75,10 @@ pub(crate) enum PromptGate {
     SandboxCard,
 }
 
-/// Pre-release stopgap: the daemon runs every hub tool call unasked (no permission cards) until
-/// sandboxing lands. The sandbox guest keeps the opt-in its plane already uses
-/// (`GROK_HITL_PERMISSION_LIVE`).
+/// There is no hub transport anymore: tool calls run in-process and the daemon gate is always
+/// `Off`; the sandbox guest keeps the pre-run prompt path that its own plane drives.
 pub fn approval_gate_for(host_kind: WorkspaceHostKind) -> ToolApprovalGate {
-    resolve_gate(host_kind, hitl_permission_live_enabled())
+    resolve_gate(host_kind, false)
 }
 
 fn resolve_gate(host_kind: WorkspaceHostKind, hitl_opt_in: bool) -> ToolApprovalGate {
@@ -253,38 +249,6 @@ fn permission_denied(message: impl Into<String>) -> ToolError {
     ToolError::new(ToolErrorKind::PermissionDenied, message)
 }
 
-/// Settle one hub tool call under `gate`: `Ok` lets it run, `Err` is the denial the model sees.
-///
-/// # Errors
-/// The toolset's own decode error when the call cannot be parsed (it could not have run);
-/// `PermissionDenied` when a persisted deny matches, no hub transport can carry the prompt, or the
-/// owner rejects, redirects, or does not answer.
-pub(crate) async fn approve_hub_call(
-    workspace: &WorkspaceHandle,
-    session: &WorkspaceSession,
-    tool_name: &str,
-    call_id: &str,
-    args: &Value,
-    gate: PromptGate,
-) -> Result<(), ToolError> {
-    let transport = workspace.hub_server_blocking().await.and_then(|server| {
-        ToolServerPermissionTransport::from_session_id(server, session.session_id())
-    });
-    settle(
-        session,
-        workspace.shared.root_cwd(),
-        tool_name,
-        call_id,
-        args,
-        transport
-            .as_ref()
-            .map(|t| t as &dyn PermissionHookTransport),
-        gate,
-        grant_store_access(workspace),
-    )
-    .await
-}
-
 /// How the session's grant store is read and written now: as the daemon's own file while the
 /// folder's sandbox is on (its mode is not `off`) — the store a sandboxed command may have
 /// planted — as a plain file otherwise, which is the CLI's own behaviour.
@@ -295,103 +259,6 @@ pub(crate) fn grant_store_access(workspace: &WorkspaceHandle) -> StateFileAccess
         },
         _ => StateFileAccess::Plain,
     }
-}
-
-async fn settle(
-    session: &WorkspaceSession,
-    served_root: &Path,
-    tool_name: &str,
-    call_id: &str,
-    args: &Value,
-    transport: Option<&dyn PermissionHookTransport>,
-    gate: PromptGate,
-    store_access: StateFileAccess,
-) -> Result<(), ToolError> {
-    let policy = session.approval.policy();
-    // A client's auto-approve is unattended mode; only a tenant that allows unattended hosts may grant it.
-    if policy == ToolApprovalPolicy::UnattendedAllowed && session.yolo_mode() {
-        return Ok(());
-    }
-    let input = session
-        .toolset()
-        .try_parse(tool_name, args)
-        .await
-        .inspect_err(|_| count("undecodable"))?;
-    let access = AccessKind::from(&input);
-    if !requires_approval(&access) {
-        return Ok(());
-    }
-
-    let mut slot = session.approval.grants.lock().await;
-    let mut folder = match policy {
-        ToolApprovalPolicy::AlwaysPrompt => None,
-        ToolApprovalPolicy::GrantsAllowed | ToolApprovalPolicy::UnattendedAllowed => {
-            // A store opened under the other access is opened again: a folder's sandbox that
-            // came on since must not keep reading its grants as a plain file
-            if slot
-                .as_ref()
-                .is_none_or(|folder| *folder.store.access() != store_access)
-            {
-                match AbsPathBuf::new(session.cwd().to_path_buf()) {
-                    Ok(cwd) => {
-                        *slot = Some(FolderGrants::load(cwd, served_root, store_access).await);
-                    }
-                    Err(e) => {
-                        tracing::warn!(error = %e, "session cwd has no grant store; every mutating call prompts")
-                    }
-                }
-            }
-            slot.as_mut()
-        }
-    };
-    if let Some(folder) = &mut folder {
-        match folder.pre_decision(&access, policy).await {
-            Some(Ok(())) => {
-                count("grant_allow");
-                return Ok(());
-            }
-            Some(Err(reason)) => {
-                count("grant_deny");
-                return Err(permission_denied(reason));
-            }
-            None => {}
-        }
-    }
-    // SECURITY: only the prompt is the sandbox card's; a deny row above refused the call already,
-    // and `always_prompt` keeps the pre-run prompt (its ceiling records no answer the card could
-    // stand in for)
-    if gate == PromptGate::SandboxCard && policy != ToolApprovalPolicy::AlwaysPrompt {
-        count("sandbox_card");
-        return Ok(());
-    }
-
-    let Some(transport) = transport else {
-        // SECURITY: fail closed; a guarded tool never runs without a channel to the session owner
-        count("no_transport");
-        tracing::warn!(tool = %tool_name, session = %session.session_id(), "no hub transport for the permission prompt; rejecting guarded tool");
-        return Err(permission_denied(
-            "tool permission unavailable (no hub transport)",
-        ));
-    };
-    let outcome = request_permission_via_hub(transport, &access, call_id, None, policy).await;
-    if let Some(folder) = &mut folder {
-        folder.record(&access, &outcome).await;
-    }
-    if prompt_outcome_allows(&outcome) {
-        count("prompt_allow");
-        return Ok(());
-    }
-    tracing::info!(tool = %tool_name, session = %session.session_id(), call_id, ?outcome, "tool permission denied via hub; rejecting tool call");
-    Err(match &outcome {
-        PromptOutcome::FollowupMessage(msg) => {
-            count("prompt_redirect");
-            permission_denied(format!("tool permission redirected: {msg}"))
-        }
-        _ => {
-            count("prompt_deny");
-            permission_denied(format!("tool permission denied for {tool_name}"))
-        }
-    })
 }
 
 #[cfg(test)]

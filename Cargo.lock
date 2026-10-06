@@ -5012,15 +5012,6 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
@@ -7399,18 +7390,6 @@ dependencies = [
  "procfs",
  "protobuf",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "prometheus-parse"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "811031bea65e5a401fb2e1f37d802cca6601e204ac463809a3189352d13b78a5"
-dependencies = [
- "chrono",
- "itertools 0.12.1",
- "once_cell",
- "regex",
 ]
 
 [[package]]
@@ -12366,83 +12345,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xai-computer-hub-core"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "dashmap",
- "futures",
- "schemars 1.0.4",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "xai-tool-protocol",
- "xai-tool-runtime",
- "xai-tool-types",
-]
-
-[[package]]
-name = "xai-computer-hub-mcp-adapter"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "futures",
- "prometheus",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "xai-computer-hub-sdk",
- "xai-tool-protocol",
- "xai-tool-runtime",
- "xai-tool-types",
-]
-
-[[package]]
-name = "xai-computer-hub-sdk"
-version = "0.1.0"
-dependencies = [
- "arc-swap",
- "async-trait",
- "axum",
- "base64 0.22.1",
- "chrono",
- "dashmap",
- "fastrace",
- "fastrace-opentelemetry",
- "futures",
- "http",
- "indexmap",
- "opentelemetry",
- "opentelemetry-proto",
- "opentelemetry_sdk",
- "parking_lot",
- "prometheus",
- "prometheus-parse",
- "prost",
- "reqwest 0.12.24",
- "schemars 1.0.4",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tokio-tungstenite",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
- "url",
- "uuid",
- "xai-computer-hub-core",
- "xai-tool-protocol",
- "xai-tool-runtime",
- "xai-tool-types",
- "xai-tracing",
-]
-
-[[package]]
 name = "xai-crash-handler"
 version = "0.1.0"
 dependencies = [
@@ -13003,7 +12905,6 @@ dependencies = [
  "url",
  "webbrowser",
  "which",
- "xai-computer-hub-sdk",
  "xai-grok-config",
  "xai-grok-extra-ca",
  "xai-grok-sandbox",
@@ -13647,7 +13548,6 @@ dependencies = [
  "xai-chat-state",
  "xai-codebase-graph",
  "xai-compaction-transcript",
- "xai-computer-hub-sdk",
  "xai-dirs",
  "xai-fast-worktree",
  "xai-fsnotify",
@@ -13952,8 +13852,6 @@ dependencies = [
  "wildmatch",
  "windows 0.61.3",
  "wiremock",
- "xai-computer-hub-core",
- "xai-computer-hub-sdk",
  "xai-dirs",
  "xai-grok-auth",
  "xai-grok-config",
@@ -14057,8 +13955,6 @@ dependencies = [
  "wait-timeout",
  "xai-acp-lib",
  "xai-codebase-graph",
- "xai-computer-hub-mcp-adapter",
- "xai-computer-hub-sdk",
  "xai-dirs",
  "xai-fast-worktree",
  "xai-fsnotify",
@@ -14107,7 +14003,6 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tracing",
- "xai-computer-hub-sdk",
  "xai-grok-workspace-types",
  "xai-tool-protocol",
  "xai-tool-runtime",
@@ -14130,7 +14025,6 @@ dependencies = [
  "tokio",
  "tracing",
  "windows 0.61.3",
- "xai-computer-hub-sdk",
  "xai-tty-utils",
 ]
 
@@ -14294,6 +14188,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "dashmap",
  "futures",
  "schemars 1.0.4",
  "serde",

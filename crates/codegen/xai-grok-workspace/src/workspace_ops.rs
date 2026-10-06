@@ -25,7 +25,7 @@ use serde_json::Value;
 use std::io::Write;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use xai_computer_hub_sdk::ToolHarness;
+use xai_tool_runtime::ToolHarness;
 use xai_grok_tools::types::output::ToolRunResult;
 use xai_grok_tools::types::resources::SessionFolder;
 use xai_grok_workspace_client::{WorkspaceClient, is_transport_fatal};
