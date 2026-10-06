@@ -252,20 +252,6 @@ impl MvpAgent {
             trust_scan,
         })
     }
-    /// Where generated titles are pushed, suppressed for ZDR teams.
-    fn registry_title_sync(
-        &self,
-    ) -> Option<crate::session::persistence::RegistryGeneratedTitleSync> {
-        self.session_registry_client().map(|client| {
-            crate::session::persistence::RegistryGeneratedTitleSync {
-                client,
-                suppress_for_zdr: self
-                    .auth_manager
-                    .current_or_expired()
-                    .is_some_and(|a| a.is_zdr_team()),
-            }
-        })
-    }
 }
 /// A blocking step in `new_session_inner`, recorded on entry so a timeout can name the stuck step.
 #[derive(
@@ -606,7 +592,6 @@ impl MvpAgent {
             (crate::session::persistence::PersistenceHandle::noop(), None)
         } else {
             let _timer = crate::instrumentation_timer!("session.persistence_init");
-            let registry_title_sync = self.registry_title_sync();
             crate::session::persistence::new(
                 &session_info,
                 model_id,
@@ -616,7 +601,6 @@ impl MvpAgent {
                     auth_manager: Some(self.auth_manager.clone()),
                     gateway: Some(self.gateway.clone()),
                     session_summary_model: summary_model,
-                    registry_title_sync,
                     search_index: self.search_index_cell(),
                     session_kind: client_session_kind,
                 },
@@ -1010,7 +994,6 @@ impl MvpAgent {
         let mut persistence_timer = crate::instrumentation_timer!("session.load");
         persistence_timer.with_field("session_id", session_id.0.as_ref());
         persistence_timer.with_subphase(xai_grok_telemetry::startup::Subphase::SessionLoad);
-        let registry_title_sync = self.registry_title_sync();
         let (persistence_info, persistence) = crate::session::persistence::load_light(
             &session_info,
             false,
@@ -1020,7 +1003,6 @@ impl MvpAgent {
                 auth_manager: Some(self.auth_manager.clone()),
                 gateway: Some(self.gateway.clone()),
                 session_summary_model: summary_model,
-                registry_title_sync,
                 search_index: self.search_index_cell(),
                 session_kind: None,
             },
@@ -1397,10 +1379,6 @@ impl MvpAgent {
         summary: &crate::session::persistence::Summary,
         restore_code_requested: bool,
     ) -> Option<serde_json::Value> {
-        let registry_client_for_restore = self.session_registry_client();
-        if restore_code_requested && registry_client_for_restore.is_none() {
-            xai_grok_workspace::session::git::warn_registry_disabled_restore(session_id.0.as_ref());
-        }
         let restore_checkout_allowed =
             xai_grok_workspace::session::git::restore_code_checkout_allowed(
                 cwd.as_path(),
@@ -1444,13 +1422,7 @@ impl MvpAgent {
             let kind = if !outcome.checked_out {
                 RestoreKind::CheckoutFailed
             } else {
-                match registry_client_for_restore {
-                    None => RestoreKind::RegistryOff,
-                    Some(registry_client) => {
-                        let _ = registry_client;
-                        RestoreKind::RegistryOff
-                    }
-                }
+                RestoreKind::RegistryOff
             };
             code_restore_info =
                 crate::agent::restore_code::build_code_restore_meta(target_sha, &outcome, kind);

@@ -53,7 +53,6 @@ fn test_actor_inner(
             // These tests run the actor as resumed; the backfill on writeback upgrade only runs for a fresh session
             created_fresh: false,
             summary,
-            registry_title_sync: None,
             gateway: None,
             search_index: crate::session::storage::search::SharedSearchIndex::never_indexed(),
             disk_full_tx,

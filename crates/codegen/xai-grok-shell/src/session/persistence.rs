@@ -144,13 +144,6 @@ impl PersistenceContentChunk {
     }
 }
 
-/// Mirrors generated titles to the session registry after local persistence succeeds.
-#[derive(Clone)]
-pub(crate) struct RegistryGeneratedTitleSync {
-    pub client: crate::agent::session_registry_client::SessionRegistryClient,
-    pub suppress_for_zdr: bool,
-}
-
 use crate::session::storage::SessionUpdate;
 use serde::{Deserialize, Serialize};
 
@@ -1592,7 +1585,6 @@ struct SessionPersistence {
     created_fresh: bool,
     /// Session title generation lifecycle.
     summary: crate::session::summary::SummaryGenerator,
-    registry_title_sync: Option<RegistryGeneratedTitleSync>,
     /// Client gateway for `SessionSummaryGenerated` notifications.
     /// Used to announce an auto-generated title only once it has actually been adopted.
     /// A title rejected for racing a manual `/rename` thus never reaches the client.
@@ -1946,32 +1938,10 @@ impl SessionPersistence {
         flushed.and(prior_write).and(synced)
     }
 
-    /// Announce a newly adopted auto title (first generation or refresh) to the client, remote store, and session registry.
+    /// Announce a newly adopted auto title (first generation or refresh) to the client.
     /// Called only after the title actually landed on disk, so a title rejected for racing a manual `/rename` is never announced.
     fn announce_adopted_title(&self, title: String) {
         crate::session::summary::notify_client(&self.gateway, &self.info, &title);
-        if let Some(reg) = self.registry_title_sync.as_ref()
-            && !reg.suppress_for_zdr
-        {
-            let client = reg.client.clone();
-            let sid = self.info.id.to_string();
-            tokio::spawn(async move {
-                let req = crate::agent::session_registry_client::UpdateRequest {
-                    summary: Some(title),
-                    first_prompt: None,
-                    last_turn_number: None,
-                    repo_head_at_end: None,
-                    restorable_turn_number: None,
-                };
-                if let Err(e) = client.update(&sid, &req).await {
-                    tracing::warn!(
-                        error = %e,
-                        session_id = %sid,
-                        "session registry summary sync failed after title update"
-                    );
-                }
-            });
-        }
     }
 
     /// [`Self::flush_and_sync`] over the full barrier file set: `CopyFile` snapshots the whole session directory regardless of dirtiness.
@@ -2693,7 +2663,6 @@ pub(crate) struct SessionDeps {
     pub(crate) auth_manager: Option<Arc<xai_grok_login::AuthManager>>,
     pub(crate) gateway: Option<GatewaySender>,
     pub(crate) session_summary_model: String,
-    pub(crate) registry_title_sync: Option<RegistryGeneratedTitleSync>,
     pub(crate) search_index: crate::session::storage::search::SharedSearchIndex,
     /// Client-claimed kind for a fresh session (allowlisted at `session/new`; currently only `"headless"`).
     /// Ignored by the load paths, which never restamp a persisted kind.
@@ -2711,7 +2680,6 @@ pub(crate) async fn new(
         auth_manager: _,
         gateway,
         session_summary_model,
-        registry_title_sync,
         search_index,
         session_kind,
     } = deps;
@@ -2760,7 +2728,6 @@ pub(crate) async fn new(
                     persistence_tx: summary_tx,
                 },
             ),
-            registry_title_sync,
             gateway,
             search_index,
             disk_full_tx,
@@ -2867,7 +2834,6 @@ pub(crate) async fn new_with_explicit_dir(
                     persistence_tx: summary_tx,
                 },
             ),
-            registry_title_sync: None,
             gateway: None,
             // A bootstrap never sees a subagent session: `list_sessions_sync` drops hidden summaries, and a subagent kind is hidden
             // Skip it here too
@@ -2920,7 +2886,6 @@ pub(crate) async fn load_light(
         auth_manager: _,
         gateway,
         session_summary_model,
-        registry_title_sync,
         search_index,
         session_kind: _,
     } = deps;
@@ -2983,7 +2948,6 @@ pub(crate) async fn load_light(
             rx,
             created_fresh: false,
             summary: summary_gen,
-            registry_title_sync,
             gateway,
             search_index,
             disk_full_tx,
