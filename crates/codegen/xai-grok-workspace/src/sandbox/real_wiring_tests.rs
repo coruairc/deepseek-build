@@ -63,11 +63,7 @@ impl SessionRoutedToolHandler {
     ) -> Result<Self, xai_tool_protocol::IdError> {
         Ok(Self { handle, tool })
     }
-    async fn handle_call(
-        &self,
-        ctx: ToolCallContext,
-        args: Value,
-    ) -> ToolStream<TypedToolOutput> {
+    async fn handle_call(&self, ctx: ToolCallContext, args: Value) -> ToolStream<TypedToolOutput> {
         let harness = self
             .handle
             .create_local_harness("main")
