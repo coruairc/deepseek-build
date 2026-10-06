@@ -375,7 +375,6 @@ pub async fn handle(
             let mut grove_worktree = None;
             let grove_gate_source = apply_grove_worktree_flag(agent, &mut grove_worktree);
             let grove_worktree = grove_worktree.unwrap_or(false);
-            let registry_client = agent.session_registry_client();
             let agent_id = xai_grok_telemetry::id::agent_id();
 
             to_response(
@@ -384,7 +383,6 @@ pub async fn handle(
                     ops,
                     worktree_type_default,
                     restore_code_default,
-                    registry_client.as_ref(),
                     Some(agent.auth_manager().clone()),
                     &agent_id,
                     grove_worktree,
