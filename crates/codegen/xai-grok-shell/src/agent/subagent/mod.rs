@@ -12,7 +12,7 @@
 //!   so that edits, bash commands, and file reads go through the same backends.
 #![deny(clippy::too_many_arguments, clippy::fn_params_excessive_bools)]
 use crate::agent::config::{resolve_credentials, sampling_config_for_model};
-use crate::agent::remote_config::resolve_catalog_key;
+use crate::agent::model_catalog::resolve_catalog_key;
 use crate::extensions::notification::{SessionNotification, SessionUpdate};
 use crate::session::{
     self, SessionCommand, SessionHandle, commands::PromptTurnResult as SubagentPromptTurnResult,
@@ -310,7 +310,7 @@ pub(crate) struct SubagentSpawnContext {
     /// Plugin registry for plugin-aware agent lookup.
     pub plugin_registry: Option<std::sync::Arc<xai_grok_agent::plugins::PluginRegistry>>,
     /// Shared models manager for etag-triggered refresh.
-    pub models_manager: crate::agent::remote_config::ModelsManager,
+    pub models_manager: crate::agent::model_catalog::ModelsManager,
     /// Pre-resolved file tool overrides (hashline vs standard) from the parent.
     /// `None` means use the standard (default) file tools.
     pub file_tool_overrides: Option<Vec<xai_grok_tools::registry::types::ToolConfig>>,

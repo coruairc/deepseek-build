@@ -674,17 +674,6 @@ impl MvpAgent {
                 .with_auth(self.auth_manager.clone()),
         )
     }
-    pub(crate) fn conversations_client(
-        &self,
-    ) -> Option<crate::remote::ConversationsClient> {
-        if !crate::session::unified_list::conversations_lane_active() {
-            return None;
-        }
-        Some(crate::remote::ConversationsClient::new(self.auth_manager.clone()))
-    }
-    pub(crate) fn workspaces_client(&self) -> crate::remote::WorkspacesClient {
-        crate::remote::WorkspacesClient::new(self.auth_manager.clone())
-    }
     /// Pre-session command availability snapshot. Used by the `deepseek-build/commands/list` ext method and the `InitializeResponse._meta` path (`builtin_commands()`). Both fire before any session exists.
     /// The eventual agent's toolset is unknown (it depends on the model the user picks). So runtime/tool-dependent gates (`/flush`, `/loop`, `/memory`, …) fail closed.
     /// The session-scoped `available_commands_update` in `acp_session.rs` fills in the real per-model gating as soon as a session starts.
@@ -1522,221 +1511,43 @@ impl MvpAgent {
     }
     /// Upgrade storage mode from newly-arrived remote settings.
     /// Mirrors the `resolve_config` gate: only upgrades from `Local`, writeback needs xai auth.
+    /// With remote settings removed, this never upgrades to writeback.
     fn reapply_storage_mode(&self) {
         if self.storage_mode.get() != StorageMode::Local {
             return;
         }
-        let resolved_mode = {
-            let cfg = self.cfg.borrow();
-            if cfg.mode == crate::agent::config::AgentMode::Generic {
-                return;
-            }
-            let has_xai_auth = self
-                .auth_manager
-                .current_or_expired()
-                .is_some_and(|a| a.is_xai_auth());
-            StorageMode::from_remote_gated(cfg.remote_settings.as_ref(), has_xai_auth)
-        };
-        if resolved_mode == self.storage_mode.get() {
-            return;
-        }
-        tracing::info!(?resolved_mode, "storage mode upgraded from remote settings");
-        self.storage_mode.set(resolved_mode);
-        if resolved_mode == StorageMode::Writeback {
-            self.session_registry
-                .for_each_resident(|_, handle| {
-                    let _ = handle
-                        .persistence_tx
-                        .send(crate::session::persistence::PersistenceMsg::UpgradeToWriteback {
-                            auth_manager: self.auth_manager.clone(),
-                        });
-                });
-        }
     }
-    /// Live `/v1/settings` read. Does not join the startup load and does not
-    /// accept a warm disk cache. `Rejected` is preserved for 401 self-heal.
-    async fn fetch_settings(
-        &self,
-        auth: &xai_grok_login::GrokAuth,
-    ) -> crate::remote::SettingsFetch {
-        let query = {
-            let cfg = self.cfg.borrow();
-            crate::agent::remote_config::settings_get::SettingsQuery::from_endpoints(
-                &cfg.endpoints,
-                auth.clone(),
-                cfg.grok_com_config.clone(),
-            )
-        };
-        crate::cloud_config::settings_get::fetch_settings_live(
-                query,
-                crate::cloud_config::managed_config::policy_repair_pending,
-            )
-            .await
-    }
-    /// Fetch remote settings for `auth` and drive the external-OTEL gate from the outcome. Re-closes the gate first only on an account switch, then hands the outcome to [`OtelGate::resolve`].
-    /// That returns the settings only on a successful fetch for the still-live identity. Both post-auth callers funnel through here. [`OtelGate::resolve`]: crate::agent::otel_gate::OtelGate::resolve
+    /// Remote settings fetch was removed; no settings can arrive post-auth.
     pub(super) async fn fetch_settings_resolving_gate(
         &self,
-        auth: &xai_grok_login::GrokAuth,
+        _auth: &xai_grok_login::GrokAuth,
     ) -> Option<crate::util::config::RemoteSettings> {
-        let identity = auth.user_id.clone();
-        let channel = {
-            let proxy_url = self.cfg.borrow().endpoints.proxy_url();
-            crate::agent::otel_gate::policy_channel_for(&proxy_url)
-        };
-        self.otel_gate.rearm_on_switch(&identity, channel);
-        let outcome = self
-            .settings_refresh
-            .refresh(auth, || self.fetch_settings_self_healing_401(auth))
-            .await;
-        let live = self.auth_manager.current_or_expired().map(|a| a.user_id);
-        match outcome {
-            Some(outcome) => self.otel_gate.resolve(&identity, outcome, live.as_deref()),
-            None => None,
-        }
+        None
     }
-    /// Fetch settings; on a `401` try one self-healing [`AuthManager::auth`] refresh and re-fetch if it yields a *different* token. This recovers a 401 from a token that expired mid-fetch.
-    /// The caller waits at most `STARTUP_AUTH_REFRESH_TIMEOUT`, but the refresh is spawned and runs to completion past the deadline. Dropping it mid-exchange could abandon an IdP response carrying the rotated refresh token.
-    /// On timeout or error the original `Rejected` stands.
-    async fn fetch_settings_self_healing_401(
-        &self,
-        auth: &xai_grok_login::GrokAuth,
-    ) -> crate::remote::SettingsFetch {
-        let outcome = self.fetch_settings(auth).await;
-        if matches!(outcome, crate::remote::SettingsFetch::Rejected) {
-            let manager = self.auth_manager.clone();
-            let attempt = tokio::spawn(async move { manager.auth().await });
-            if let Ok(Ok(Ok(fresh))) = tokio::time::timeout(
-                    crate::http::STARTUP_AUTH_REFRESH_TIMEOUT,
-                    attempt,
-                )
-                .await && fresh.key != auth.key
-            {
-                return self.fetch_settings(&fresh).await;
-            }
-        }
-        outcome
-    }
-    /// Writes remote settings into `cfg` along with the fields derived from them, so no derived field drifts between post-fetch callers.
+    /// Writes remote settings into `cfg`. No-op: remote settings fetch was removed.
     pub(super) fn store_remote_settings(
         &self,
-        settings: crate::util::config::RemoteSettings,
+        _settings: crate::util::config::RemoteSettings,
     ) {
-        let mut cfg = self.cfg.borrow_mut();
-        cfg.remote_settings = Some(settings);
-        crate::util::config::sync_campaign_fields(&mut cfg);
-        if let Some(v) = cfg
-            .remote_settings
-            .as_ref()
-            .and_then(|s| s.path_not_found_hints)
-        {
-            cfg.path_not_found_hints = v;
-        }
     }
-    /// Stores settings and fans out side effects via [`Self::on_remote_settings_changed`].
-    /// Shared tail for callers that do not also re-init the telemetry client (those use [`Self::refresh_remote_settings`]).
+    /// Stores settings and fans out side effects. No-op: remote settings fetch was removed.
     pub(super) fn install_remote_settings(
         &self,
-        settings: crate::util::config::RemoteSettings,
+        _settings: crate::util::config::RemoteSettings,
     ) {
-        self.store_remote_settings(settings);
-        self.on_remote_settings_changed();
     }
-    /// Re-fetch remote settings, re-init the telemetry client, apply side effects, and push `deepseek-build/settings/update` to clients. Called from both auth handlers (first install and reauth/account switch).
-    /// Agent-level fields resolved at startup (`worktree_type`, `restore_code`) are NOT re-resolved here. That requires a broader refactor of the init path.
-    pub(super) async fn refresh_remote_settings(&self, auth: &xai_grok_login::GrokAuth) {
-        if !crate::util::config::resolve_remote_fetch_enabled() {
-            tracing::debug!("post-auth settings refresh skipped: remote_fetch disabled");
-            return;
-        }
-        let is_xai = auth.is_xai_auth();
-        let user_id = auth.user_id.clone();
-        let team_id = auth.team_id.clone();
-        let remote_was_absent = self.cfg.borrow().remote_settings.is_none();
-        let Some(settings) = self.fetch_settings_resolving_gate(auth).await else {
-            if remote_was_absent {
-                self.run_deferred_remote_work();
-            }
-            return;
-        };
-        tracing::info!("post-auth settings refreshed");
-        self.store_remote_settings(settings);
-        let (
-            telemetry_config,
-            telemetry_mode,
-            grok_user_id,
-            grok_team_id,
-            deployment_key,
-            subscription_tier,
-        ) = {
-            let cfg = self.cfg.borrow();
-            crate::util::config::cache_remote_mcp_startup_timeout_secs(
-                cfg.remote_settings.as_ref().and_then(|s| s.mcp_startup_timeout_secs),
-            );
-            let telemetry_mode = cfg.resolve_telemetry_mode();
-            let trace_upload = cfg.resolve_trace_upload();
-            tracing::info!(
-                telemetry = %telemetry_mode,
-                trace_upload = %trace_upload,
-                "post-auth data capture config re-resolved",
-            );
-            let grok_user_id = is_xai.then(|| user_id.clone());
-            let grok_team_id = is_xai.then(|| team_id.clone()).flatten();
-            let telemetry_config = cfg.telemetry.clone();
-            let deployment_key = cfg.endpoints.deployment_key.clone();
-            let subscription_tier_display = cfg
-                .remote_settings
-                .as_ref()
-                .and_then(|rs| rs.subscription_tier_display.clone());
-            (
-                telemetry_config,
-                telemetry_mode.value,
-                grok_user_id,
-                grok_team_id,
-                deployment_key,
-                subscription_tier_display,
-            )
-        };
-        let subscription_tier = resolve_subscription_tier_for_telemetry(
-            subscription_tier,
-            self.auth_manager.current_or_expired().as_ref(),
-        );
-        xai_grok_telemetry::client::init(
-            telemetry_config,
-            telemetry_mode,
-            grok_user_id,
-            grok_team_id,
-            deployment_key,
-            self.origin_client_info_from_meta(None),
-            xai_grok_version::VERSION.to_owned(),
-            subscription_tier,
-            crate::http::shared_client(),
-        );
-        xai_grok_login::credential_provider::sync_external_otel_identity();
-        self.on_remote_settings_changed();
-        if remote_was_absent {
-            self.run_deferred_remote_work();
-        }
-    }
-    /// Refresh remote settings and re-resolve eagerly-resolved config fields. Called on `/new` session creation so feature flags reflect the latest remote settings state without requiring a TUI restart.
-    /// Extends [`refresh_remote_settings`] by also re-running [`resolve_runtime_fields`] with the fresh settings. In-flight sessions are unaffected; they snapshot config at creation.
+    /// Re-fetch remote settings. No-op: remote settings fetch was removed.
+    pub(super) async fn refresh_remote_settings(&self, _auth: &xai_grok_login::GrokAuth) {}
+    /// Refresh remote settings and re-resolve eagerly-resolved config fields. No-op: remote settings fetch was removed.
     pub(super) async fn refresh_settings_and_reapply(
         &self,
-        auth: &xai_grok_login::GrokAuth,
+        _auth: &xai_grok_login::GrokAuth,
     ) {
-        self.refresh_remote_settings(auth).await;
-        {
-            let mut cfg = self.cfg.borrow_mut();
-            crate::util::config::sync_campaign_fields(&mut cfg);
-        }
-        let raw_config = crate::config::load_effective_config()
-            .unwrap_or_else(|e| {
-                tracing::warn!(error = %e, "config reload failed during settings refresh");
-                toml::Value::Table(toml::map::Map::new())
-            });
-        self.re_resolve_runtime_fields_and_sync_memory(&raw_config);
-        self.emit_settings_update_notification();
     }
+    /// Fire-and-forget remote settings refresh for new sessions. No-op: remote settings fetch was removed.
+    pub(super) fn spawn_settings_reapply(&self) {}
+    /// Resolve post-auth remote settings in the background. No-op: remote settings fetch was removed.
+    pub(super) fn spawn_post_auth_settings(&self, _auth: xai_grok_login::GrokAuth) {}
     /// Spawns a background task coalesced on `in_flight`: a request while one is in flight is dropped.
     /// The task is bounded by `SETTINGS_REAPPLY_TIMEOUT`.
     /// Returns whether a task was spawned.
@@ -1761,86 +1572,6 @@ impl MvpAgent {
                 .await;
         });
         true
-    }
-    /// Fire-and-forget remote settings refresh for new sessions (at most one in flight).
-    pub(super) fn spawn_settings_reapply(&self) {
-        let agent_ref = LocalRef::new(self);
-        let auth_manager = self.auth_manager.clone();
-        let _spawned = self
-            .spawn_coalesced_settings_task(
-                &self.settings_reapply_in_flight,
-                async move {
-                    let auth_result = tokio::time::timeout(
-                            crate::http::STARTUP_FETCH_TIMEOUT,
-                            auth_manager.auth(),
-                        )
-                        .await;
-                    let mut deferred_to_sibling = false;
-                    if let Ok(Ok(auth)) = auth_result {
-                        let agent = agent_ref.get();
-                        if agent.post_auth_settings_in_flight.get() {
-                            deferred_to_sibling = true;
-                        } else {
-                            agent.refresh_settings_and_reapply(&auth).await;
-                        }
-                    }
-                    if !deferred_to_sibling {
-                        agent_ref.get().run_deferred_remote_work();
-                    }
-                },
-            );
-        #[cfg(test)]
-        if _spawned {
-            self.settings_reapply_spawn_count
-                .set(self.settings_reapply_spawn_count.get() + 1);
-        }
-    }
-    /// Resolve post-auth remote settings in the background. A slow or hung `/settings` then can't gate `authenticate` (and thus the client's first draw).
-    /// The external-OTEL gate stays fail-closed until this resolves; the result reaches clients via `deepseek-build/settings/update`. Its own guard keeps an in-flight reapply from coalescing away the authenticated identity.
-    pub(super) fn spawn_post_auth_settings(&self, auth: xai_grok_login::GrokAuth) {
-        let agent_ref = LocalRef::new(self);
-        let _spawned = self
-            .spawn_coalesced_settings_task(
-                &self.post_auth_settings_in_flight,
-                async move {
-                    let agent = agent_ref.get();
-                    agent.refresh_remote_settings(&auth).await;
-                    agent.maybe_fetch_post_auth_settings().await;
-                },
-            );
-        #[cfg(test)]
-        if _spawned {
-            self.post_auth_settings_spawn_count
-                .set(self.post_auth_settings_spawn_count.get() + 1);
-        }
-    }
-    /// Shared fetch half of every settings refresh. Endpoint fields come from a scoped `cfg` borrow; failures normalize to `None`. `fetch_settings_blocking` runs off-executor (it already retries transient errors internally).
-    /// Callers own their miss logging; the apply halves deliberately stay separate (full reapply vs announcements-only).
-    pub(super) async fn fetch_remote_settings(
-        &self,
-        auth: xai_grok_login::GrokAuth,
-    ) -> Option<crate::util::config::RemoteSettings> {
-        if !crate::util::config::resolve_remote_fetch_enabled() {
-            tracing::debug!("settings fetch skipped: remote_fetch disabled");
-            return None;
-        }
-        let (base_url, alpha_test_key) = {
-            let cfg = self.cfg.borrow();
-            (cfg.endpoints.proxy_url(), cfg.endpoints.alpha_test_key.clone())
-        };
-        match tokio::task::spawn_blocking(move || crate::remote::fetch_settings_blocking(
-                &base_url,
-                &auth,
-                alpha_test_key.as_deref(),
-            ))
-            .await
-        {
-            Ok(outcome) => outcome.into_option(),
-            Err(e) => {
-                tracing::warn!(error = %e, "settings fetch task panicked");
-                None
-            }
-        }
     }
     pub(super) async fn send_model_auto_switched(
         &self,
@@ -1968,7 +1699,7 @@ impl MvpAgent {
         let cfg = self.cfg.borrow();
         let alpha_test_key = cfg.endpoints.alpha_test_key.clone();
         let client_version = cfg.client_version.clone();
-        let deployment_id = crate::cloud_config::managed_config::resolve_deployment_id(
+        let deployment_id = crate::agent::model_catalog::resolve_deployment_id(
             cfg.endpoints.deployment_key.as_deref(),
         );
         drop(cfg);
@@ -2084,7 +1815,7 @@ impl MvpAgent {
         gateway: GatewaySender,
         cfg: &AgentConfig,
         auth_manager: Arc<AuthManager>,
-        models_manager: crate::agent::remote_config::ModelsManager,
+        models_manager: crate::agent::model_catalog::ModelsManager,
     ) -> Self {
         models_manager.set_gateway(gateway.clone());
         let sampling_config = models_manager.sampling_config();
@@ -2142,15 +1873,6 @@ impl MvpAgent {
             ),
             plugin_registry_initialized: std::cell::Cell::new(false),
             models_manager,
-            chat_modes: {
-                let chat_modes = crate::agent::chat_modes::ChatModesManager::new(
-                    auth_manager.clone(),
-                );
-                if crate::agent::chat_modes::process_chat_mode_enabled() {
-                    chat_modes.warm_in_background();
-                }
-                chat_modes
-            },
             cfg: RefCell::new(cfg.clone()),
             auth_method_id: crate::agent::auth_method::new_shared_auth_method_id(None),
             sampling_config: RefCell::new(sampling_config),
@@ -2215,7 +1937,6 @@ impl MvpAgent {
             supervisor_started: std::cell::Cell::new(false),
             settings_reapply_in_flight: std::rc::Rc::new(std::cell::Cell::new(false)),
             post_auth_settings_in_flight: std::rc::Rc::new(std::cell::Cell::new(false)),
-            settings_refresh: crate::agent::remote_config::SettingsRefresh::default(),
             #[cfg(test)]
             finalize_spy: RefCell::new(Vec::new()),
             #[cfg(test)]

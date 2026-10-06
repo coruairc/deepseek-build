@@ -4887,41 +4887,9 @@ pub(crate) fn execute(
                 });
         }
         Effect::RefreshGate => {
-            tasks
-                .spawn(async move {
-                    let settings = tokio::task::spawn_blocking(|| {
-                            if !xai_grok_shell::util::config::resolve_remote_fetch_enabled() {
-                                return None;
-                            }
-                            let grok_home = xai_grok_shell::util::grok_home::grok_home();
-                            let store = xai_grok_login::read_auth_json(
-                                    &grok_home.join("auth.json"),
-                                )
-                                .ok()?;
-                            let scope = xai_grok_login::GrokComConfig::default()
-                                .auth_scope();
-                            let auth = xai_grok_login::lookup_auth(&store, &scope)?;
-                            let proxy_base = std::env::var(
-                                    "GROK_CLI_CHAT_PROXY_BASE_URL",
-                                )
-                                .unwrap_or_else(|_| {
-                                    xai_grok_shell::agent::config::CLI_CHAT_PROXY_BASE_URL_DEFAULT
-                                        .to_owned()
-                                });
-                            xai_grok_shell::remote::fetch_settings_blocking(
-                                    &proxy_base,
-                                    &auth,
-                                    None,
-                                )
-                                .into_option()
-                        })
-                        .await
-                        .ok()
-                        .flatten();
-                    TaskResult::GateRefreshed {
-                        settings,
-                    }
-                });
+            tasks.spawn(async move {
+                TaskResult::GateRefreshed { settings: None }
+            });
         }
         Effect::FetchAppBilling { nonce } => {
             let tx = acp_tx.clone();

@@ -4,48 +4,36 @@
 //! singletons, model catalog) and returns a resolved config + `ModelsManager`.
 //! [`update_telemetry_config`] re-initializes telemetry after auth changes.
 use crate::agent::config::{self, Config as AgentConfig, ModelEntry};
-use crate::agent::remote_config::settings_get::SettingsWait;
-use crate::agent::remote_config::{ModelsManager, ResolvedModels, settings_get};
-use crate::cloud_config::managed_config::LaunchProfile;
+use crate::agent::model_catalog::ModelsManager;
 use crate::config::StorageMode;
 use indexmap::IndexMap;
 use std::sync::{Arc, Mutex, TryLockError};
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 use xai_grok_login::{AuthManager, GrokAuth};
-/// The policy refusal stays typed; stringify only at the process boundary.
+/// A bootstrap failure, stringified only at the process boundary.
 #[derive(Debug, thiserror::Error)]
 pub enum BootstrapError {
-    #[error("{0}")]
-    PolicyRefusal(crate::cloud_config::managed_config::ManagedPolicyRefusal),
     #[error("{0}")]
     Config(String),
     #[error("bootstrap cancelled")]
     Cancelled,
-}
-impl From<crate::cloud_config::managed_config::ManagedPolicyRefusal> for BootstrapError {
-    fn from(refusal: crate::cloud_config::managed_config::ManagedPolicyRefusal) -> Self {
-        Self::PolicyRefusal(refusal)
-    }
 }
 impl From<String> for BootstrapError {
     fn from(message: String) -> Self {
         Self::Config(message)
     }
 }
-/// The owned handoff from the async boot pre-resolve to sync bootstrap: the
-/// settled settings wait and the pre-resolved catalog, moved by value so a
-/// concurrent boot in the same process cannot observe another boot's. Fields are
-/// private; only [`resolve_boot_startup_settings`] builds one and
-/// [`bootstrap_with_cancel`] consumes it.
+/// The owned handoff from the async boot pre-resolve to sync bootstrap.
+/// Remote settings and model prefetch were removed, so this carries no payload;
+/// it exists so the async pre-resolve call sites keep a stable shape.
 #[must_use]
 pub struct BootstrapPrefetch {
-    settings_wait: Option<SettingsWait>,
-    models: ResolvedModels,
+    _private: (),
 }
 /// One bootstrap at a time. A connect-timeout drop does not abort
 /// `spawn_blocking`, so the fallback connect would otherwise overlap
-/// `start_refresh_supervisor` / `init_process`.
+/// `init_process`.
 static BOOTSTRAP_GATE: Mutex<()> = Mutex::new(());
 struct BootstrapPermit<'a>(#[expect(dead_code)] std::sync::MutexGuard<'a, ()>);
 fn ensure_bootstrap_not_cancelled(cancel: &CancellationToken) -> Result<(), BootstrapError> {
@@ -83,73 +71,37 @@ pub(crate) fn hold_bootstrap_gate_for_tests() -> std::sync::MutexGuard<'static, 
         }
     }
 }
-/// Resolve config, init process singletons, build the model catalog.
-/// The `ModelsManager` is `Clone + Send`, so callers that need a handle for the config watcher can clone it before passing it to `MvpAgent::with_models`.
+/// Resolve config, init process singletons, build the local model catalog.
 pub fn bootstrap(
     cfg: &AgentConfig,
     auth_manager: &Arc<AuthManager>,
-    prefetched: Option<IndexMap<String, ModelEntry>>,
+    _prefetched: Option<IndexMap<String, ModelEntry>>,
 ) -> Result<(AgentConfig, ModelsManager), BootstrapError> {
     bootstrap_with_cancel(
         cfg,
         auth_manager,
-        prefetched,
+        _prefetched,
         &CancellationToken::new(),
         None,
     )
 }
 /// [`bootstrap`] that stops at phase boundaries when `cancel` fires.
-/// Connect timeout drops the pager's `spawn_blocking` join; that does not abort the worker. The token is the stop signal, and [`BOOTSTRAP_GATE`] keeps a fallback connect from running `start_refresh_supervisor` / `init_process` beside the one that is still winding down.
 pub fn bootstrap_with_cancel(
     cfg: &AgentConfig,
     auth_manager: &Arc<AuthManager>,
-    prefetched: Option<IndexMap<String, ModelEntry>>,
+    _prefetched: Option<IndexMap<String, ModelEntry>>,
     cancel: &CancellationToken,
-    boot: Option<BootstrapPrefetch>,
+    _boot: Option<BootstrapPrefetch>,
 ) -> Result<(AgentConfig, ModelsManager), BootstrapError> {
     let _permit = acquire_bootstrap_gate(cancel)?;
     ensure_bootstrap_not_cancelled(cancel)?;
-    let (boot_wait, boot_models) = match boot {
-        Some(b) => (b.settings_wait, Some(b.models)),
-        None => (None, None),
-    };
     xai_grok_telemetry::id::prefetch_agent_id();
     xai_grok_telemetry::startup::enter(xai_grok_telemetry::startup::StartupPhase::Bootstrap);
-    let mut cfg = cfg.clone();
-    let profile = observed_launch_profile();
-    let warmed_auth = auth_manager.current();
-    let pre_gate_prefetch = {
-        let mut timer = crate::instrumentation_timer!("startup.bootstrap.remote_settings");
-        timer.with_subphase(xai_grok_telemetry::startup::Subphase::RemoteSettings);
-        ensure_remote_settings_side_effects(
-            &mut cfg,
-            profile,
-            cancel,
-            warmed_auth.as_ref(),
-            boot_wait.as_ref(),
-        )?
-    };
-    ensure_bootstrap_not_cancelled(cancel)?;
-    if !cfg!(test) {
-        let _timer = crate::instrumentation_timer!("startup.bootstrap.policy_gate");
-        crate::cloud_config::managed_config::managed_policy_gate()?;
-    }
-    ensure_bootstrap_not_cancelled(cancel)?;
-    if !cfg!(test) {
-        let _timer = crate::instrumentation_timer!("startup.bootstrap.refresh_supervisor");
-        crate::cloud_config::managed_config::start_refresh_supervisor(auth_manager);
-    }
+    let cfg = cfg.clone();
     let cfg = {
         let mut timer = crate::instrumentation_timer!("startup.bootstrap.resolve_config");
         timer.with_subphase(xai_grok_telemetry::startup::Subphase::ResolveConfig);
-        let cfg = resolve_config(
-            &cfg,
-            auth_manager,
-            pre_gate_prefetch,
-            profile,
-            cancel,
-            boot_wait.as_ref(),
-        );
+        let cfg = resolve_config(&cfg, auth_manager);
         cfg.validate_model_filters()?;
         cfg
     };
@@ -164,23 +116,8 @@ pub fn bootstrap_with_cancel(
     let models_manager = {
         let mut timer = crate::instrumentation_timer!("startup.model_catalog.models_manager");
         timer.with_subphase(xai_grok_telemetry::startup::Subphase::ModelsManager);
-        let prefetched = match prefetched {
-            Some(models) => Some(models),
-            None => match boot_models {
-                Some(resolved) => resolved,
-                None => crate::agent::remote_config::fetch_initial_models_blocking(
-                    cancel,
-                    Some(cfg.grok_com_config.clone()),
-                    warmed_auth.clone(),
-                ),
-            },
-        };
-        if cancel.is_cancelled() {
-            return Err(BootstrapError::Cancelled);
-        }
-        ModelsManager::from_config(&cfg, prefetched, auth_manager.clone())?
+        ModelsManager::from_config(&cfg, auth_manager.clone())?
     };
-    models_manager.start_auth_refresh_watcher(auth_manager.refresh_notifier());
     Ok((cfg, models_manager))
 }
 /// Prints the error to the user's real stderr (undoing any TUI redirect) and exits.
@@ -189,225 +126,17 @@ pub(crate) fn exit_on_config_error<T>(e: BootstrapError) -> T {
     eprintln!("\nConfiguration error:\n\n    {e}\n");
     std::process::exit(1);
 }
-#[must_use]
-#[derive(Debug)]
-enum StartupPrefetch {
-    Ran,
-    ClientSupplied,
-}
-#[cfg(test)]
-thread_local! {
-    static PREFETCH_RUNS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
-}
-/// Await the startup load on this async runtime and install any settings onto
-/// `cfg`. Leader, ACP, stdio, headless, and the websocket server must call
-/// this before sync bootstrap: those boots run on a current-thread runtime,
-/// where a sync wait cannot drive the load.
-///
-/// Returns the owned [`BootstrapPrefetch`] the caller threads into
-/// `bootstrap_with_cancel`, so a boot consumes only its own catalog and settled
-/// wait; nothing crosses through a process-global registry.
+/// No-op: remote settings and model prefetch were removed, so the async
+/// pre-resolve carries nothing into sync bootstrap.
 pub async fn resolve_boot_startup_settings(
-    cfg: &mut AgentConfig,
-    cancel: &CancellationToken,
-    start_models_prefetch: bool,
-    warmed_auth: Option<GrokAuth>,
+    _cfg: &mut AgentConfig,
+    _cancel: &CancellationToken,
+    _start_models_prefetch: bool,
+    _warmed_auth: Option<GrokAuth>,
 ) -> Result<BootstrapPrefetch, BootstrapError> {
-    let models_load = if start_models_prefetch {
-        crate::agent::remote_config::start_initial_models_load(
-            cancel.clone(),
-            Some(cfg.grok_com_config.clone()),
-            warmed_auth.clone(),
-        )
-    } else {
-        None
-    };
-    let profile = observed_launch_profile();
-    let deadline = startup_settings_deadline(profile);
-    let started = std::time::Instant::now();
-    let need_settings = cfg.remote_settings.is_none();
-    let query = need_settings.then(|| {
-        settings_get::SettingsQuery::resolve(warmed_auth.clone(), Some(cfg.grok_com_config.clone()))
-    });
-    let (wait, models) = tokio::join!(
-        async {
-            match query {
-                Some(query) => {
-                    Some(settings_get::await_startup_settings(query, deadline, cancel).await)
-                }
-                None => None,
-            }
-        },
-        async {
-            match models_load {
-                Some(load) => load.join(cancel, crate::http::STARTUP_FETCH_TIMEOUT).await,
-                None => None,
-            }
-        },
-    );
-    if cancel.is_cancelled() || matches!(wait, Some(SettingsWait::Cancelled)) {
-        return Err(BootstrapError::Cancelled);
-    }
-    if let Some(wait) = &wait {
-        install_settings_wait(
-            cfg,
-            profile,
-            deadline,
-            started.elapsed(),
-            wait,
-            warmed_auth.as_ref(),
-        );
-    }
-    Ok(BootstrapPrefetch {
-        settings_wait: wait,
-        models,
-    })
+    Ok(BootstrapPrefetch { _private: () })
 }
-fn install_settings_wait(
-    cfg: &mut AgentConfig,
-    profile: LaunchProfile,
-    deadline: std::time::Duration,
-    waited: std::time::Duration,
-    wait: &settings_get::SettingsWait,
-    warmed_auth: Option<&GrokAuth>,
-) {
-    match wait {
-        settings_get::SettingsWait::Cancelled => {}
-        settings_get::SettingsWait::TimedOut => {
-            crate::agent::remote_config::record_degraded_start(
-                crate::agent::remote_config::DegradedStartCause::DeadlineMissed,
-                profile,
-                deadline,
-                waited,
-            );
-            tracing::info!("settings getter timed out; falling open to defaults");
-        }
-        settings_get::SettingsWait::Ready(outcome) => {
-            if !install_allowed(outcome, cfg, warmed_auth) {
-                tracing::info!("startup settings discarded at consume: policy or identity changed");
-            } else if let Some(settings) = outcome.settings().cloned() {
-                cfg.remote_settings = Some(settings);
-                crate::util::config::set_remote_campaigns_from_settings(
-                    cfg.remote_settings.as_ref(),
-                );
-                tracing::info!(source = "getter", "remote_settings resolved at startup");
-            } else if outcome.attempted() {
-                crate::agent::remote_config::record_degraded_start(
-                    crate::agent::remote_config::DegradedStartCause::FetchFailed,
-                    profile,
-                    deadline,
-                    waited,
-                );
-            }
-        }
-    }
-}
-fn install_allowed(
-    outcome: &settings_get::SettingsOutcome,
-    cfg: &AgentConfig,
-    warmed_auth: Option<&GrokAuth>,
-) -> bool {
-    outcome.install_allowed(
-        &cfg.grok_com_config,
-        warmed_auth,
-        crate::cloud_config::managed_config::policy_repair_pending,
-    )
-}
-/// Fill `remote_settings` if absent and apply process-global remote side effects.
-/// The boot spends at most one settings retry budget (#278686).
-fn ensure_remote_settings_side_effects(
-    cfg: &mut AgentConfig,
-    profile: LaunchProfile,
-    cancel: &CancellationToken,
-    warmed_auth: Option<&GrokAuth>,
-    boot_wait: Option<&SettingsWait>,
-) -> Result<StartupPrefetch, BootstrapError> {
-    let prefetch = if let Some(wait) = boot_wait {
-        if matches!(wait, SettingsWait::Cancelled) || cancel.is_cancelled() {
-            return Err(BootstrapError::Cancelled);
-        }
-        if cfg.remote_settings.is_none()
-            && let SettingsWait::Ready(outcome) = wait
-            && install_allowed(outcome, cfg, warmed_auth)
-            && let Some(settings) = outcome.settings().cloned()
-        {
-            cfg.remote_settings = Some(settings);
-            crate::util::config::set_remote_campaigns_from_settings(cfg.remote_settings.as_ref());
-        }
-        StartupPrefetch::Ran
-    } else if cfg.remote_settings.is_none() {
-        #[cfg(test)]
-        PREFETCH_RUNS.with(|c| c.set(c.get() + 1));
-        let deadline = startup_settings_deadline(profile);
-        let started = std::time::Instant::now();
-        let query = settings_get::SettingsQuery::resolve(
-            warmed_auth.cloned(),
-            Some(cfg.grok_com_config.clone()),
-        );
-        let wait = settings_get::block_on_startup_settings(query, deadline, cancel);
-        if matches!(wait, settings_get::SettingsWait::Cancelled) {
-            return Err(BootstrapError::Cancelled);
-        }
-        install_settings_wait(
-            cfg,
-            profile,
-            deadline,
-            started.elapsed(),
-            &wait,
-            warmed_auth,
-        );
-        StartupPrefetch::Ran
-    } else if cancel.is_cancelled() {
-        return Err(BootstrapError::Cancelled);
-    } else {
-        StartupPrefetch::ClientSupplied
-    };
-    crate::agent::config::apply_remote_settings_side_effects(
-        cfg.remote_settings.as_ref(),
-        &config::EndpointsConfig::from_effective_config().proxy_url(),
-    );
-    Ok(prefetch)
-}
-fn observed_launch_profile() -> LaunchProfile {
-    if cfg!(test) {
-        LaunchProfile::Personal
-    } else {
-        crate::cloud_config::managed_config::startup_profile()
-    }
-}
-fn startup_settings_deadline(profile: LaunchProfile) -> std::time::Duration {
-    match profile {
-        LaunchProfile::Managed => crate::http::MANAGED_STARTUP_SETTINGS_WAIT_DEADLINE,
-        LaunchProfile::Personal => crate::http::STARTUP_SETTINGS_WAIT_DEADLINE,
-    }
-}
-/// Reuse the pre-gate result: one boot never spends a second settings fetch, and any
-/// managed sync is the supervisor's.
-fn apply_post_gate_settings(
-    cfg: &mut AgentConfig,
-    pre_gate: StartupPrefetch,
-    profile: LaunchProfile,
-    cancel: &CancellationToken,
-    warmed_auth: Option<&GrokAuth>,
-    boot_wait: Option<&SettingsWait>,
-) {
-    match (cfg.remote_settings.is_some(), pre_gate) {
-        (true, _) => {}
-        (false, StartupPrefetch::ClientSupplied) => {
-            let _ =
-                ensure_remote_settings_side_effects(cfg, profile, cancel, warmed_auth, boot_wait);
-        }
-        (false, StartupPrefetch::Ran) => {}
-    }
-}
-fn resolve_config(
-    cfg: &AgentConfig,
-    auth_manager: &AuthManager,
-    pre_gate_prefetch: StartupPrefetch,
-    profile: LaunchProfile,
-    cancel: &CancellationToken,
-    boot_wait: Option<&SettingsWait>,
-) -> AgentConfig {
+fn resolve_config(cfg: &AgentConfig, auth_manager: &AuthManager) -> AgentConfig {
     let mut cfg = cfg.clone();
     if let Ok(layers) = crate::config::ConfigLayers::load()
         && layers.has_managed()
@@ -423,16 +152,6 @@ fn resolve_config(
         }
     }
     crate::config::apply_policy(&mut cfg);
-    let warmed_auth = auth_manager.current();
-    apply_post_gate_settings(
-        &mut cfg,
-        pre_gate_prefetch,
-        profile,
-        cancel,
-        warmed_auth.as_ref(),
-        boot_wait,
-    );
-    crate::util::config::sync_campaign_fields(&mut cfg);
     let has_xai_auth = auth_manager.current().is_some_and(|a| a.is_xai_auth());
     if cfg.storage_mode == StorageMode::Local
         && cfg.mode != crate::agent::config::AgentMode::Generic
@@ -444,15 +163,10 @@ fn resolve_config(
         tracing::info!("Writeback is disabled: requires a signed-in session");
         cfg.storage_mode = StorageMode::Local;
     }
-    if let Some(rs) = cfg.remote_settings.as_ref()
-        && let Some(v) = rs.path_not_found_hints
-    {
-        cfg.path_not_found_hints = v;
-    }
     cfg
 }
-/// Initialize process-level singletons (deployment sync, built-in metadata,
-/// telemetry). `Once`-guarded: only the first call takes effect.
+/// Initialize process-level singletons (built-in metadata, telemetry).
+/// `Once`-guarded: only the first call takes effect.
 /// Telemetry user ID is updated separately via [`update_telemetry_config`].
 fn init_process(cfg: &AgentConfig, auth_manager: &AuthManager) {
     use std::sync::Once;
@@ -528,8 +242,6 @@ pub fn update_telemetry_config(config: &AgentConfig, auth_manager: &AuthManager)
     );
 }
 /// Assemble the default OTel layer config both `xai-grok-pager` and `xai-grok-tui` need at tracing init time.
-///
-/// Owns the endpoint and exporter assembly here in shell; the bootstrap credential provider comes from auth.
 pub fn build_default_otel_layer_config() -> xai_grok_telemetry::otel_layer::OtelLayerConfig {
     let endpoints = crate::agent::config::EndpointsConfig::default();
     let (credentials, token_header_value) =
@@ -549,31 +261,13 @@ pub fn build_default_otel_layer_config() -> xai_grok_telemetry::otel_layer::Otel
         exporter,
     }
 }
-/// Sync this principal's config now rather than waiting for the background tick.
-/// Stay quiet about absence or failure during login; confirm only when config was actually applied.
-/// Driven by the login callers here so auth does not reach into managed config.
+/// No-op: managed-config post-login sync was removed.
 pub async fn apply_post_login_config(
-    authenticated: xai_grok_login::GrokAuth,
+    _authenticated: xai_grok_login::GrokAuth,
 ) -> anyhow::Result<()> {
-    let outcome = crate::cloud_config::managed_config::post_login_sync(Some(authenticated)).await;
-    match outcome {
-        crate::cloud_config::managed_config::ManagedConfigSync::Updated { is_team: true } => {
-            eprintln!("Applied your team's managed configuration.");
-        }
-        crate::cloud_config::managed_config::ManagedConfigSync::Updated { is_team: false } => {
-            eprintln!("Applied your deployment's managed configuration.");
-        }
-        crate::cloud_config::managed_config::ManagedConfigSync::Staged => {
-            eprintln!(
-                "Managed configuration update verified; it takes effect the next time deepseek-build starts."
-            );
-        }
-        _ => {}
-    }
     Ok(())
 }
-/// `grok logout` CLI subcommand: clear the cached session and, when one was cleared, drop any orphaned synced files.
-/// The orphan cleanup runs here in shell so auth stays out of managed config.
+/// `grok logout` CLI subcommand: clear the cached session.
 pub fn run_cli_logout(grok_com_config: &xai_grok_login::GrokComConfig) -> anyhow::Result<()> {
     let grok_home = xai_grok_shell_base::util::grok_home::grok_home();
     let auth_manager = xai_grok_login::AuthManager::new_with_proxy_base_url(
@@ -581,12 +275,8 @@ pub fn run_cli_logout(grok_com_config: &xai_grok_login::GrokComConfig) -> anyhow
         grok_com_config.clone(),
         crate::agent::config::EndpointsConfig::from_effective_config().proxy_url(),
     );
-    let result = xai_grok_login::perform_logout(
-        &auth_manager,
-        None,
-        crate::cloud_config::managed_config::clear_orphan,
-    )
-    .map_err(|e| anyhow::anyhow!("Failed to clear auth: {e}"))?;
+    let result = xai_grok_login::perform_logout(&auth_manager, None, || {})
+        .map_err(|e| anyhow::anyhow!("Failed to clear auth: {e}"))?;
     if !result.was_logged_in {
         eprintln!("No cached session to log out of.");
         if result.api_key_still_set {

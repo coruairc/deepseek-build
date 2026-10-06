@@ -17,7 +17,7 @@ use super::schema_contract::{
     SCHEMA_CONTRACT_RETRIES, compile_contract_schema, contract_prompt, validate_contract_output,
 };
 use super::tracker::WorkflowTracker;
-use crate::agent::remote_config::task_model_policy::LatchedTaskModelSelection;
+use crate::agent::model_catalog::task_model_policy::LatchedTaskModelSelection;
 
 pub(crate) const WORKFLOW_MAX_AGENT_RUNS: u32 =
     (xai_workflow::MAX_AGENT_BUDGET as u32) * (SCHEMA_CONTRACT_RETRIES + 1);

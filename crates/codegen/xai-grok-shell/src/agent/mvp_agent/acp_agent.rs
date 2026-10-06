@@ -51,7 +51,7 @@ impl MvpAgent {
             return Err(
                 acp::Error::invalid_params()
                     .data(
-                        crate::agent::remote_config::allowlist_denied_message(
+                        crate::agent::model_catalog::allowlist_denied_message(
                                 &self.cfg.borrow(),
                             )
                             .to_string(),
@@ -532,21 +532,12 @@ impl acp::Agent for MvpAgent {
                 "startup.acp_initialize.model_state",
             );
             let _s = region!("startup.acp_initialize.model_state", Parent::Inherit);
-            if crate::agent::chat_modes::process_chat_mode_enabled() {
-                self.chat_modes.model_state().await
-            } else {
-                self.model_state(None)
-            }
+            self.model_state(None)
         };
         let session_capabilities = acp::SessionCapabilities::new()
-            .close(acp::SessionCloseCapabilities::new());
-        let session_capabilities = if crate::agent::chat_modes::process_chat_mode_enabled() {
-            session_capabilities
-        } else {
-            session_capabilities
-                    .list(acp::SessionListCapabilities::new())
-                    .resume(acp::SessionResumeCapabilities::new())
-        };
+            .close(acp::SessionCloseCapabilities::new())
+            .list(acp::SessionListCapabilities::new())
+            .resume(acp::SessionResumeCapabilities::new());
         Ok(
             acp::InitializeResponse::new(acp::ProtocolVersion::V1)
                 .agent_capabilities(
@@ -692,9 +683,6 @@ impl acp::Agent for MvpAgent {
                 self.set_auth_method(arguments.method_id.clone());
                 self.sync_process_static_api_key(None);
                 self.ensure_telemetry_client();
-                if crate::agent::chat_modes::process_chat_mode_enabled() {
-                    self.chat_modes.warm_in_background();
-                }
                 emit_login_span(true, "api_key", None, None);
                 log_event(xai_grok_telemetry::events::Login {
                     auth_method: "api_key".to_string(),
@@ -795,9 +783,6 @@ impl acp::Agent for MvpAgent {
                 }
                 self.set_auth_method(arguments.method_id.clone());
                 self.ensure_telemetry_client();
-                if crate::agent::chat_modes::process_chat_mode_enabled() {
-                    self.chat_modes.warm_in_background();
-                }
                 let uid = self.auth_manager.current().map(|a| a.user_id);
                 emit_login_span(true, "cached_token", uid.as_deref(), None);
                 log_event(xai_grok_telemetry::events::Login {
@@ -932,16 +917,8 @@ impl acp::Agent for MvpAgent {
                 }
                 self.auth_manager.hot_swap(auth.clone());
                 self.enforce_grok_code_access(&auth).await;
-                tokio::task::spawn_local(
-                    crate::cloud_config::managed_config::post_login_sync(
-                        Some(auth.clone()),
-                    ),
-                );
                 self.set_auth_method(arguments.method_id.clone());
                 self.models_manager.on_auth_changed().await;
-                if crate::agent::chat_modes::process_chat_mode_enabled() {
-                    self.chat_modes.warm_in_background();
-                }
                 emit_login_span(
                     true,
                     arguments.method_id.0.as_ref(),
@@ -1636,9 +1613,6 @@ impl acp::Agent for MvpAgent {
             | "deepseek-build/sessions/list" => {
                 crate::agent::handlers::session::handle(self, &args).await
             }
-            "deepseek-build/workspaces/list" => {
-                crate::agent::handlers::workspaces::handle(self, &args).await
-            }
             "deepseek-build/models/list" => {
                 crate::agent::handlers::models::handle(self, &args).await
             }
@@ -1692,207 +1666,6 @@ impl acp::Agent for MvpAgent {
             }
             "deepseek-build/interject" => crate::extensions::interject::handle(self, &args).await,
             "deepseek-build/recap" => crate::extensions::recap::handle(self, &args).await,
-            "deepseek-build/cloud/terminate" => {
-                crate::extensions::auth_gate::require_xai_auth(
-                    &self.auth_manager,
-                    "Authentication required",
-                    "Run `grok login` to authenticate.",
-                )?;
-                let params: serde_json::Value = serde_json::from_str(args.params.get())
-                    .map_err(|e| acp::Error::invalid_params().data(e.to_string()))?;
-                let sandbox_id = params
-                    .get("sandbox_id")
-                    .and_then(|v| v.as_str())
-                    .ok_or_else(|| {
-                        acp::Error::invalid_params().data("missing sandbox_id")
-                    })?;
-                let sandbox_client = crate::remote::SandboxClient::new(
-                    self.cli_chat_proxy_base_url(),
-                    self.auth_manager.clone(),
-                );
-                sandbox_client
-                    .terminate_session(
-                        sandbox_id,
-                        &crate::remote::SandboxTerminateRequest {
-                            environment_id: None,
-                        },
-                    )
-                    .await
-                    .map_err(|e| {
-                        acp::Error::internal_error()
-                            .data(format!("Failed to terminate sandbox: {e}"))
-                    })?;
-                crate::extensions::to_raw_response(&serde_json::json!({ "ok": true }))
-            }
-            "deepseek-build/cloud/env/list" => {
-                crate::extensions::auth_gate::require_xai_auth(
-                    &self.auth_manager,
-                    "Authentication required",
-                    "Run `grok login` to authenticate.",
-                )?;
-                let sandbox_client = crate::remote::SandboxClient::new(
-                    self.cli_chat_proxy_base_url(),
-                    self.auth_manager.clone(),
-                );
-                let resp = sandbox_client
-                    .list_environments(
-                        &crate::remote::SandboxListEnvironmentsRequest::default(),
-                    )
-                    .await
-                    .map_err(|e| {
-                        acp::Error::internal_error()
-                            .data(format!("Failed to list environments: {e}"))
-                    })?;
-                crate::extensions::to_raw_response(
-                    &serde_json::json!({
-                    "environments": resp.environments,
-                }),
-                )
-            }
-            "deepseek-build/cloud/env/create" => {
-                crate::extensions::auth_gate::require_xai_auth(
-                    &self.auth_manager,
-                    "Authentication required",
-                    "Run `grok login` to authenticate.",
-                )?;
-                let params: serde_json::Value = serde_json::from_str(args.params.get())
-                    .map_err(|e| acp::Error::invalid_params().data(e.to_string()))?;
-                let sandbox_client = crate::remote::SandboxClient::new(
-                    self.cli_chat_proxy_base_url(),
-                    self.auth_manager.clone(),
-                );
-                let resp = sandbox_client
-                    .create_environment(
-                        &crate::remote::SandboxCreateEnvironmentRequest {
-                            name: params
-                                .get("name")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            description: params
-                                .get("description")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            repository: params
-                                .get("repository")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            default_branch: params
-                                .get("default_branch")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            container_image: params
-                                .get("container_image")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            setup_script: params
-                                .get("setup_script")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            workspace_directory: Some("/workspace".to_string()),
-                            internet_enabled: Some(true),
-                            domain_allowlist_preset: Some("common".to_string()),
-                            allowed_http_methods: Some("all".to_string()),
-                            ..Default::default()
-                        },
-                    )
-                    .await
-                    .map_err(|e| {
-                        acp::Error::internal_error()
-                            .data(format!("Failed to create environment: {e}"))
-                    })?;
-                crate::extensions::to_raw_response(
-                    &serde_json::json!({
-                    "environment": resp.environment,
-                }),
-                )
-            }
-            "deepseek-build/cloud/env/update" => {
-                crate::extensions::auth_gate::require_xai_auth(
-                    &self.auth_manager,
-                    "Authentication required",
-                    "Run `grok login` to authenticate.",
-                )?;
-                let params: serde_json::Value = serde_json::from_str(args.params.get())
-                    .map_err(|e| acp::Error::invalid_params().data(e.to_string()))?;
-                let environment_id = params
-                    .get("environment_id")
-                    .and_then(|v| v.as_str())
-                    .ok_or_else(|| {
-                        acp::Error::invalid_params().data("missing environment_id")
-                    })?;
-                let sandbox_client = crate::remote::SandboxClient::new(
-                    self.cli_chat_proxy_base_url(),
-                    self.auth_manager.clone(),
-                );
-                let resp = sandbox_client
-                    .update_environment(
-                        environment_id,
-                        &crate::remote::SandboxUpdateEnvironmentRequest {
-                            name: params
-                                .get("name")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            description: params
-                                .get("description")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            repository: params
-                                .get("repository")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            default_branch: params
-                                .get("default_branch")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            container_image: params
-                                .get("container_image")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            setup_script: params
-                                .get("setup_script")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            ..Default::default()
-                        },
-                    )
-                    .await
-                    .map_err(|e| {
-                        acp::Error::internal_error()
-                            .data(format!("Failed to update environment: {e}"))
-                    })?;
-                crate::extensions::to_raw_response(
-                    &serde_json::json!({
-                    "environment": resp.environment,
-                }),
-                )
-            }
-            "deepseek-build/cloud/env/delete" => {
-                crate::extensions::auth_gate::require_xai_auth(
-                    &self.auth_manager,
-                    "Authentication required",
-                    "Run `grok login` to authenticate.",
-                )?;
-                let params: serde_json::Value = serde_json::from_str(args.params.get())
-                    .map_err(|e| acp::Error::invalid_params().data(e.to_string()))?;
-                let environment_id = params
-                    .get("environment_id")
-                    .and_then(|v| v.as_str())
-                    .ok_or_else(|| {
-                        acp::Error::invalid_params().data("missing environment_id")
-                    })?;
-                let sandbox_client = crate::remote::SandboxClient::new(
-                    self.cli_chat_proxy_base_url(),
-                    self.auth_manager.clone(),
-                );
-                sandbox_client
-                    .delete_environment(environment_id)
-                    .await
-                    .map_err(|e| {
-                        acp::Error::internal_error()
-                            .data(format!("Failed to delete environment: {e}"))
-                    })?;
-                crate::extensions::to_raw_response(&serde_json::json!({ "ok": true }))
-            }
             "deepseek-build/billing" => crate::extensions::billing::handle(self, &args).await,
             "deepseek-build/auto-topup-rule" => {
                 crate::extensions::billing::handle(self, &args).await

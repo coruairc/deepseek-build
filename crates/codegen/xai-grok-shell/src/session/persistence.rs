@@ -21,11 +21,8 @@ use std::sync::Arc;
 
 use crate::config::StorageMode;
 
-use crate::remote::RemoteSync;
-
 use crate::sampling::Client as OaiCompatClient;
 use crate::sampling::ConversationItem;
-use crate::session::export::ExportedMetadata;
 use xai_grok_workspace::session::file_state::RewindPoint;
 
 use crate::session::signals::SessionSignals;
@@ -267,8 +264,6 @@ pub enum PersistenceMsg {
         identity: SessionIdentity,
         respond_to: tokio::sync::oneshot::Sender<io::Result<SessionIdentity>>,
     },
-    /// Push a just-minted logical agent into the writeback cache.
-    SetRemoteAgentId(String),
     CurrentModel {
         model_id: acp::ModelId,
         /// The active agent, persisted so session resume doesn't depend on the mutable model catalog.
@@ -369,10 +364,6 @@ pub enum PersistenceMsg {
     /// Per-turn dashboard summary as `(text, prompt_id)`.
     /// Replaces (`Some`) or clears (`None`, on conversation rewind) the previous one in `summary.json`.
     LastTurnSummary(Option<(String, String)>),
-    /// Enable remote writeback for a session created `Local` before remote settings resolved (non-blocking startup); backfills its local history.
-    UpgradeToWriteback {
-        auth_manager: Arc<xai_grok_login::AuthManager>,
-    },
     Flush,
     /// Flush all pending writes AND fsync the session files, then signal the caller.
     /// Unlike `Flush` (fire-and-forget, page-cache only), this is a **sync barrier**.
@@ -1597,7 +1588,6 @@ struct SessionPersistence {
     /// Pending ACP notification for merging consecutive text chunks
     pending_notification: Option<acp::SessionNotification>,
     rx: mpsc::UnboundedReceiver<PersistenceMsg>,
-    remote_sync: Option<RemoteSync>,
     /// True only for sessions created this run (not resumed); gates the writeback backfill so a resumed, already-synced session isn't re-sent.
     created_fresh: bool,
     /// Session title generation lifecycle.
@@ -1838,58 +1828,7 @@ impl SessionPersistence {
         .map_err(io::Error::other)?
     }
 
-    fn queue_acp_sync(&self, notification: acp::SessionNotification) {
-        if let Some(sync) = &self.remote_sync {
-            sync.queue(notification.clone());
-        }
-    }
-
-    /// Enable writeback for a session created `Local` before settings resolved.
-    /// Build the sync and (for a fresh session) backfill its local-only history.
-    /// No-op once syncing, so a repeat upgrade is harmless.
-    async fn upgrade_to_writeback(&mut self, auth_manager: Arc<xai_grok_login::AuthManager>) {
-        if self.remote_sync.is_some() {
-            return;
-        }
-        // Flush the merge-pending notification so the backfill re-reads it.
-        let _ = self.flush_pending().await;
-        let persisted = match self.storage.load_session(&self.info).await {
-            Ok(persisted) => persisted,
-            Err(error) => {
-                tracing::warn!(%error, "writeback upgrade: failed to load session for backfill");
-                return;
-            }
-        };
-        let remote_sync = match init_remote_sync(
-            &persisted.summary,
-            StorageMode::Writeback,
-            Some(auth_manager),
-        ) {
-            Ok(Some(remote_sync)) => remote_sync,
-            // ZDR team, or nothing to do: leave the session local-only.
-            Ok(None) => return,
-            Err(error) => {
-                tracing::warn!(%error, "writeback upgrade: remote sync init failed");
-                return;
-            }
-        };
-        // Fresh-only backfill; see `backfill_updates_to_sync`.
-        let backfilled =
-            backfill_updates_to_sync(self.created_fresh, persisted.updates, &remote_sync);
-        if self.created_fresh {
-            tracing::info!(
-                session_id = %self.info.id,
-                backfilled,
-                "writeback enabled after settings arrival; backfilled local-only history",
-            );
-        } else {
-            tracing::info!(
-                session_id = %self.info.id,
-                "writeback enabled for resumed session; forward-only, no backfill",
-            );
-        }
-        self.remote_sync = Some(remote_sync);
-    }
+    fn queue_acp_sync(&self, _notification: acp::SessionNotification) {}
 
     fn finish_pending_append(
         notification: acp::SessionNotification,
@@ -1994,9 +1933,6 @@ impl SessionPersistence {
         if let Err(error) = &result {
             tracing::warn!(%error, "failed to write pending update");
         }
-        if let Some(sync) = &self.remote_sync {
-            sync.flush();
-        }
         result
     }
 
@@ -2014,9 +1950,6 @@ impl SessionPersistence {
     /// Called only after the title actually landed on disk, so a title rejected for racing a manual `/rename` is never announced.
     fn announce_adopted_title(&self, title: String) {
         crate::session::summary::notify_client(&self.gateway, &self.info, &title);
-        if let Some(sync) = &self.remote_sync {
-            sync.set_title(title.clone());
-        }
         if let Some(reg) = self.registry_title_sync.as_ref()
             && !reg.suppress_for_zdr
         {
@@ -2082,9 +2015,6 @@ impl SessionPersistence {
                 spawn_worktree_touch(&self.info);
             }
             match msg {
-                PersistenceMsg::UpgradeToWriteback { auth_manager } => {
-                    self.upgrade_to_writeback(auth_manager).await;
-                }
                 PersistenceMsg::Flush => {
                     let _ = self.flush_pending().await;
                 }
@@ -2220,17 +2150,7 @@ impl SessionPersistence {
                         .stamp_session_identity(&self.info, identity)
                         .await;
                     self.observe_io(&result);
-                    if let Ok(identity) = &result
-                        && let Some(sync) = &self.remote_sync
-                    {
-                        sync.set_agent_id(identity.agent_id.clone());
-                    }
                     let _ = respond_to.send(result);
-                }
-                PersistenceMsg::SetRemoteAgentId(agent_id) => {
-                    if let Some(sync) = &self.remote_sync {
-                        sync.set_agent_id(agent_id);
-                    }
                 }
                 PersistenceMsg::CurrentModel {
                     model_id,
@@ -2250,9 +2170,6 @@ impl SessionPersistence {
                         .await
                     {
                         tracing::warn!(?e, "failed to update current model");
-                    }
-                    if let Some(sync) = &self.remote_sync {
-                        sync.set_model_id(model_id.0.to_string());
                     }
                 }
                 PersistenceMsg::PlanState(state) => {
@@ -2373,16 +2290,9 @@ impl SessionPersistence {
                         tracing::warn!(?e, "failed to persist session recap");
                     }
                 }
-                PersistenceMsg::ManualTitleRenamed(title) => {
-                    if let Some(sync) = &self.remote_sync {
-                        sync.set_manual_title(title);
-                    }
-                }
+                PersistenceMsg::ManualTitleRenamed(_title) => {}
                 PersistenceMsg::ResetTitleToAuto => {
                     self.summary.reset();
-                    if let Some(sync) = &self.remote_sync {
-                        sync.clear_title();
-                    }
                 }
                 PersistenceMsg::LastTurnSummary(summary) => {
                     if let Err(e) = self
@@ -2692,93 +2602,6 @@ fn collect_session_files_recursive_inner(
     }
 }
 
-/// Queue a fresh session's local-only ACP history to `remote_sync` (xAI updates are never synced), returning the count.
-/// Resumed sessions are forward-only.
-/// Their prior history may already be on the backend (which appends by content, no per-message id), so re-sending would duplicate.
-fn backfill_updates_to_sync(
-    created_fresh: bool,
-    updates: Vec<SessionUpdate>,
-    remote_sync: &RemoteSync,
-) -> usize {
-    if !created_fresh {
-        return 0;
-    }
-    let mut backfilled = 0usize;
-    for update in updates {
-        if let SessionUpdate::Acp(notification) = update {
-            remote_sync.queue(*notification);
-            backfilled += 1;
-        }
-    }
-    remote_sync.flush();
-    backfilled
-}
-
-fn init_remote_sync(
-    summary: &Summary,
-    storage_mode: StorageMode,
-    auth_manager: Option<Arc<xai_grok_login::AuthManager>>,
-) -> io::Result<Option<RemoteSync>> {
-    match storage_mode {
-        StorageMode::Local => Ok(None),
-        StorageMode::Writeback => {
-            let auth_manager = auth_manager.ok_or_else(|| {
-                io::Error::new(
-                    io::ErrorKind::PermissionDenied,
-                    "Writeback storage mode requires authentication. Run 'grok login' first.",
-                )
-            })?;
-            if let Some(auth) = auth_manager.current_or_expired() {
-                if auth.is_zdr_team() {
-                    tracing::debug!("ZDR team: skipping remote sync");
-                    return Ok(None);
-                }
-            } else {
-                tracing::warn!(
-                    "writeback: no auth loaded yet, ZDR check skipped (backend enforces server-side)"
-                );
-            }
-            tracing::info!("Writeback mode enabled, syncing to backend");
-            let client =
-                crate::remote::BackendClient::new().with_auth_manager(auth_manager.clone());
-            let metadata = ExportedMetadata::from_summary(summary);
-            Ok(Some(RemoteSync::new(
-                summary.info.id.to_string(),
-                metadata,
-                client,
-            )))
-        }
-    }
-}
-
-/// Pull a session from the backend if not found locally.
-/// Returns the pulled session's [`Info`] (cwd may differ from caller's on different machines), or `None` if not found or on error.
-async fn try_pull_from_remote(info: &Info, client: &crate::remote::BackendClient) -> Option<Info> {
-    // BackendClient resolves auth internally via its auth_manager.
-    client.auth_manager.as_ref()?;
-
-    tracing::info!(session_id = %info.id, "Session not found locally, trying backend");
-
-    match crate::remote::pull_session_to_local(&info.id.0, client).await {
-        Ok(crate::remote::PullResult::Hydrated(pulled_info)) => {
-            tracing::info!(
-                session_id = %info.id,
-                pulled_cwd = %pulled_info.cwd,
-                "Pulled session from backend"
-            );
-            Some(pulled_info)
-        }
-        Ok(crate::remote::PullResult::NotFound) => {
-            tracing::debug!(session_id = %info.id, "Session not found on backend either");
-            None
-        }
-        Err(e) => {
-            tracing::warn!(session_id = %info.id, error = %e, "Backend pull failed");
-            None
-        }
-    }
-}
-
 pub(crate) fn is_disk_full_io_error(e: &io::Error) -> bool {
     if e.kind() == io::ErrorKind::StorageFull {
         return true;
@@ -2884,8 +2707,8 @@ pub(crate) async fn new(
 ) -> io::Result<(PersistenceHandle, SessionIdentity)> {
     let SessionDeps {
         sampling_client,
-        storage_mode,
-        auth_manager,
+        storage_mode: _,
+        auth_manager: _,
         gateway,
         session_summary_model,
         registry_title_sync,
@@ -2923,14 +2746,12 @@ pub(crate) async fn new(
 
     let info_clone = info.clone();
     let storage: Arc<dyn StorageAdapter> = Arc::new(storage);
-    let remote_sync = init_remote_sync(&summary, storage_mode, auth_manager)?;
     tokio::task::spawn(async move {
         let persistence = SessionPersistence {
             info: info_clone,
             storage: storage.clone(),
             pending_notification: None,
             rx,
-            remote_sync: remote_sync.clone(),
             created_fresh: true,
             summary: crate::session::summary::SummaryGenerator::new(
                 crate::session::summary::SummaryConfig {
@@ -3038,7 +2859,6 @@ pub(crate) async fn new_with_explicit_dir(
             storage: storage.clone(),
             pending_notification: None,
             rx,
-            remote_sync: None,
             created_fresh: false,
             summary: crate::session::summary::SummaryGenerator::new(
                 crate::session::summary::SummaryConfig {
@@ -3086,31 +2906,18 @@ pub struct PersistedInfo {
     pub workflow_runs: Vec<crate::session::workflow::store::RestoredWorkflowRun>,
 }
 
-/// On NotFound, try pulling from backend. Returns pulled info or the original error.
-async fn pull_on_miss(
-    info: &Info,
-    client: &crate::remote::BackendClient,
-    err: io::Error,
-) -> io::Result<Info> {
-    if err.kind() != io::ErrorKind::NotFound {
-        return Err(err);
-    }
-    try_pull_from_remote(info, client).await.ok_or(err)
-}
-
 /// Load a session without reading updates into memory.
 /// Instead, provides the path to the updates file for streaming reads.
 /// `starts_attempt` is false unless the caller already won cold actor creation.
 pub(crate) async fn load_light(
     info: &Info,
-    backend: Option<&crate::remote::BackendClient>,
     starts_attempt: bool,
     deps: SessionDeps,
 ) -> io::Result<(PersistedInfo, PersistenceHandle)> {
     let SessionDeps {
         sampling_client,
-        storage_mode,
-        auth_manager,
+        storage_mode: _,
+        auth_manager: _,
         gateway,
         session_summary_model,
         registry_title_sync,
@@ -3122,14 +2929,7 @@ pub(crate) async fn load_light(
 
     let (mut persisted, loaded_info) = match storage.load_session_without_updates(info).await {
         Ok(p) => (p, info.clone()),
-        Err(e) => match backend {
-            Some(client) => {
-                let pulled = pull_on_miss(info, client, e).await?;
-                let p = storage.load_session_without_updates(&pulled).await?;
-                (p, pulled)
-            }
-            None => return Err(e),
-        },
+        Err(e) => return Err(e),
     };
     // Touch on load too: resuming must reset the worktree's gc expiry clock.
     touch_worktree_for_session(&loaded_info).await;
@@ -3163,7 +2963,6 @@ pub(crate) async fn load_light(
     let (handle, rx, summary_tx, disk_full_tx) = actor_channel();
 
     let storage: Arc<dyn StorageAdapter> = Arc::new(storage);
-    let remote_sync = init_remote_sync(&persisted_info.summary, storage_mode, auth_manager)?;
 
     let has_title = !persisted_info.summary.display_title().is_empty();
     tokio::task::spawn(async move {
@@ -3182,7 +2981,6 @@ pub(crate) async fn load_light(
             storage: storage.clone(),
             pending_notification: None,
             rx,
-            remote_sync: remote_sync.clone(),
             created_fresh: false,
             summary: summary_gen,
             registry_title_sync,
@@ -3212,52 +3010,39 @@ pub async fn list_summaries(cwd: Option<&str>) -> io::Result<Vec<Summary>> {
 
 /// Failure modes of [`delete_session_history`].
 /// Kept distinct so callers can report a precise message.
-/// A remote failure is reported separately from a local-disk failure: the remote delete runs first and aborts the whole operation.
 #[derive(Debug, thiserror::Error)]
 pub enum DeleteSessionError {
     /// Listing local summaries (to resolve the on-disk session dir) failed.
     #[error("failed to list sessions: {0}")]
     List(#[source] io::Error),
-    /// The remote (writeback) copy could not be deleted; local bits were left untouched so the operation can be retried.
-    #[error("failed to delete remote session data: {0}")]
-    Remote(#[source] crate::remote::client::BackendError),
     /// The local on-disk session directory could not be removed.
     #[error("failed to delete session: {0}")]
     Local(#[source] io::Error),
 }
 
 /// Where a session copy was actually removed by [`delete_session_history`].
-/// Both fields are `false` when nothing existed to delete (still a success).
-/// Callers use [`Self::any_removed`] to decide between a "deleted" and a "not found" message without conflating a remote-only delete with a no-op.
+/// `false` when nothing existed to delete (still a success).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct SessionDeletion {
     /// A local on-disk session directory was found and removed.
     pub local_removed: bool,
-    /// A remote (writeback) copy was found and removed.
-    /// `false` when `needs_remote` was not set, or the remote copy was already absent (the backend returned `404`).
-    pub remote_removed: bool,
 }
 
 impl SessionDeletion {
     pub fn any_removed(self) -> bool {
-        self.local_removed || self.remote_removed
+        self.local_removed
     }
 }
 
 /// Idempotent: a session that is missing locally still succeeds.
-/// A remote `404` (copy already gone) is treated as success rather than an error.
-/// When `needs_remote` is set the remote delete runs *first* and is authoritative: only on its success (or a `404`) are the local bits removed.
 pub async fn delete_session_history(
     session_id: &str,
     cwd: Option<&str>,
-    needs_remote: bool,
-    auth_manager: Arc<xai_grok_login::AuthManager>,
     search_index: Option<&xai_grok_session_search::SearchIndexManager>,
 ) -> Result<SessionDeletion, DeleteSessionError> {
     let sid = acp::SessionId::new(Arc::from(session_id));
 
     // Resolve the local session info, scoping to cwd if provided
-    // A remote-only session won't be found here; that's fine, the remote delete (if applicable) still runs
     let summaries = list_summaries(cwd)
         .await
         .map_err(DeleteSessionError::List)?;
@@ -3265,19 +3050,6 @@ pub async fn delete_session_history(
         .iter()
         .find(|s| s.info.id == sid)
         .map(|s| s.info.clone());
-
-    // Remote delete first (authoritative for cloud history)
-    // A genuine failure aborts before any local mutation so the row does not reappear
-    // A `404` means the copy is already gone, so deletion stays idempotent and falls through to local cleanup
-    let remote_removed = if needs_remote {
-        let result = crate::remote::client::BackendClient::new()
-            .with_auth_manager(auth_manager)
-            .delete_session_data(session_id)
-            .await;
-        classify_remote_delete(result)?
-    } else {
-        false
-    };
 
     let removed = match local_info {
         Some(info) => {
@@ -3309,24 +3081,7 @@ pub async fn delete_session_history(
         );
     }
 
-    Ok(SessionDeletion {
-        local_removed,
-        remote_removed,
-    })
-}
-
-/// Classify a remote `delete_session_data` result, reporting whether a remote copy was actually removed.
-/// A `2xx` means a copy was deleted (`Ok(true)`); a `404` means it was already gone so deletion stays idempotent (`Ok(false)`).
-/// Any other backend error aborts the delete (`Err`) so local bits are left untouched and it can be retried.
-fn classify_remote_delete(
-    result: Result<(), crate::remote::client::BackendError>,
-) -> Result<bool, DeleteSessionError> {
-    use crate::remote::client::BackendError;
-    match result {
-        Ok(()) => Ok(true),
-        Err(BackendError::RequestFailed { status: 404, .. }) => Ok(false),
-        Err(e) => Err(DeleteSessionError::Remote(e)),
-    }
+    Ok(SessionDeletion { local_removed })
 }
 
 #[cfg(test)]

@@ -3315,7 +3315,7 @@ fn apply_requirements_allowed_models_clamps_catalog_and_names_source() {
         .unwrap();
     let mut cfg = crate::agent::config::Config::new_from_toml_cfg(&raw).unwrap();
     pin_allowed_models(&mut cfg, "[models]\nallowed_models = [\"deepseek-4\"]\n");
-    let catalog = crate::agent::remote_config::resolve_model_catalog(&cfg, None);
+    let catalog = crate::agent::model_catalog::resolve_model_catalog(&cfg, None);
     let selectable = |id| {
         catalog
             .get(id)
@@ -3331,7 +3331,7 @@ fn apply_requirements_allowed_models_clamps_catalog_and_names_source() {
             !selectable("deepseek-3"),
             "models outside the signed set must not be selectable"
         );
-    let err = crate::agent::remote_config::validate_selectable(&cfg, &catalog)
+    let err = crate::agent::model_catalog::validate_selectable(&cfg, &catalog)
         .unwrap_err();
     assert!(
             err.contains("administrator"),
@@ -3367,7 +3367,7 @@ fn apply_requirements_allowed_models_ignores_user_catalog_key() {
         .unwrap();
     let mut cfg = crate::agent::config::Config::new_from_toml_cfg(&raw).unwrap();
     pin_allowed_models(&mut cfg, "[models]\nallowed_models = [\"deepseek-4*\"]\n");
-    let catalog = crate::agent::remote_config::resolve_model_catalog(&cfg, None);
+    let catalog = crate::agent::model_catalog::resolve_model_catalog(&cfg, None);
     let selectable = |id| {
         catalog
             .get(id)
@@ -3404,7 +3404,7 @@ fn apply_requirements_malformed_allowed_models_fail_closes() {
         .unwrap();
     let mut cfg = crate::agent::config::Config::new_from_toml_cfg(&raw).unwrap();
     pin_allowed_models(&mut cfg, "[models]\nallowed_models = \"deepseek-4\"\n");
-    let catalog = crate::agent::remote_config::resolve_model_catalog(&cfg, None);
+    let catalog = crate::agent::model_catalog::resolve_model_catalog(&cfg, None);
     let Some(grok4) = catalog.get("deepseek-4") else {
         panic!("expected deepseek-4: {catalog:?}");
     };
@@ -3419,7 +3419,7 @@ fn apply_requirements_malformed_allowed_models_fail_closes() {
             ),
             "unreadable pin must be FailClosed, not a reserved glob"
         );
-    let err = crate::agent::remote_config::validate_selectable(&cfg, &catalog)
+    let err = crate::agent::model_catalog::validate_selectable(&cfg, &catalog)
         .unwrap_err();
     assert!(
             err.contains("administrator"),
@@ -3449,7 +3449,7 @@ fn apply_requirements_allowed_models_empty_array_is_unrestricted() {
         .unwrap();
     let mut cfg = crate::agent::config::Config::new_from_toml_cfg(&raw).unwrap();
     pin_allowed_models(&mut cfg, "[models]\nallowed_models = []\n");
-    let catalog = crate::agent::remote_config::resolve_model_catalog(&cfg, None);
+    let catalog = crate::agent::model_catalog::resolve_model_catalog(&cfg, None);
     let selectable = |id| {
         catalog
             .get(id)
@@ -3493,7 +3493,7 @@ fn apply_requirements_allowed_models_replaces_user_list() {
         .unwrap();
     let mut cfg = crate::agent::config::Config::new_from_toml_cfg(&raw).unwrap();
     pin_allowed_models(&mut cfg, "[models]\nallowed_models = [\"deepseek-4\"]\n");
-    let catalog = crate::agent::remote_config::resolve_model_catalog(&cfg, None);
+    let catalog = crate::agent::model_catalog::resolve_model_catalog(&cfg, None);
     let selectable = |id| {
         catalog
             .get(id)
@@ -3527,8 +3527,8 @@ fn validate_selectable_rejects_dash_m_outside_fleet_pin() {
     let mut cfg = crate::agent::config::Config::new_from_toml_cfg(&raw).unwrap();
     pin_allowed_models(&mut cfg, "[models]\nallowed_models = [\"deepseek-4\"]\n");
     cfg.default_model_override = Some("deepseek-3".into());
-    let catalog = crate::agent::remote_config::resolve_model_catalog(&cfg, None);
-    let err = crate::agent::remote_config::validate_selectable(&cfg, &catalog)
+    let catalog = crate::agent::model_catalog::resolve_model_catalog(&cfg, None);
+    let err = crate::agent::model_catalog::validate_selectable(&cfg, &catalog)
         .unwrap_err();
     assert!(err.contains("-m flag"), "must name the -m source: {err}");
     assert!(err.contains("administrator"), "fleet -m deny must be admin language: {err}");

@@ -39,7 +39,7 @@ use xai_acp_lib::AcpAgentGatewaySender as GatewaySender;
 use crate::agent::auth_method;
 use crate::agent::config::{self, Config as AgentConfig, ModelEntry, resolve_credentials};
 use crate::agent::folder_trust;
-use crate::agent::remote_config::{
+use crate::agent::model_catalog::{
     resolve_catalog_key, selectable_catalog_key_for_persisted,
 };
 use crate::agent::session_config;
@@ -624,9 +624,7 @@ pub struct MvpAgent {
     /// Per-session base_url is resolved at session creation time in `new_session` / `load_session`.
     pub(crate) sampling_config: RefCell<SamplingConfig>,
     pub(crate) auth_manager: Arc<AuthManager>,
-    pub(crate) models_manager: crate::agent::remote_config::ModelsManager,
-    /// api.deepseek.com chat-product catalog (`/rest/modes`) for chat sessions; distinct from `models_manager` (the build `/v1/models` catalog).
-    pub(crate) chat_modes: crate::agent::chat_modes::ChatModesManager,
+    pub(crate) models_manager: crate::agent::model_catalog::ModelsManager,
     /// Single-flight guard for interactive login (device poll / loopback wait).
     /// Owns the active attempt's cancel token and its code/url channels; a new `authenticate` or `deepseek-build/auth/cancel` cancels the prior attempt.
     pub(crate) interactive_auth: xai_grok_login::single_flight::AuthSingleFlight,
@@ -772,7 +770,6 @@ pub struct MvpAgent {
     /// Separate dedup guard for `spawn_post_auth_settings`.
     /// An in-flight reapply then can't coalesce away a freshly authenticated identity's gate and settings resolution.
     post_auth_settings_in_flight: std::rc::Rc<std::cell::Cell<bool>>,
-    settings_refresh: crate::agent::remote_config::SettingsRefresh,
     /// Test-only spy recording every session id whose cloud replica was finalized via `finalize_session_replica`.
     /// Lets the no-evict tests assert that `finalize()` does NOT fire on a mere client disconnect (only on a terminal/explicit close).
     #[cfg(test)]
@@ -1951,7 +1948,7 @@ impl Drop for TierRecheckInFlightGuard {
 /// Then refreshes the model catalog. Gate lift already happened; this only recovers the tier-targeted catalog. The flag is released by [`PostUnblockJwtRetryInFlightGuard`] (Drop), not only on the happy path after `execute_with_backoff`.
 fn spawn_post_unblock_jwt_and_catalog_retry(
     auth_manager: std::sync::Arc<xai_grok_login::AuthManager>,
-    models_manager: crate::agent::remote_config::ModelsManager,
+    models_manager: crate::agent::model_catalog::ModelsManager,
     in_flight: Arc<std::sync::atomic::AtomicBool>,
     user_id: String,
     new_tier: String,

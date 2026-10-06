@@ -5,7 +5,6 @@ use serde::Serialize;
 
 use super::envelope::{FacetMap, SessionKind, SessionMetaEnvelope};
 use super::facets::{FacetRegistry, NormalizedItem};
-use crate::remote::Conversation;
 use crate::session::merge::MergedSession;
 
 #[derive(Debug, Clone)]
@@ -72,46 +71,6 @@ pub fn merged_session_to_row(m: MergedSession, reg: &FacetRegistry) -> UnifiedRo
         legacy: m,
         title,
         updated_at,
-        facets,
-    }
-}
-
-pub fn conversation_to_row(c: Conversation, reg: &FacetRegistry) -> UnifiedRow {
-    let facets = reg.extract_all(&NormalizedItem::from_conversation(&c));
-    let Conversation {
-        conversation_id,
-        title,
-        modify_time,
-        create_time,
-        ..
-    } = c;
-    let legacy = MergedSession {
-        session_id: conversation_id,
-        summary: title.clone(),
-        first_prompt: None,
-        updated_at: modify_time.as_deref().unwrap_or_default().to_owned(),
-        created_at: create_time.unwrap_or_default(),
-        cwd: String::new(),
-        hostname: None,
-        source: "conversation".to_string(),
-        model_id: None,
-        num_messages: 0,
-        last_active_at: modify_time.clone(),
-        branch: None,
-        repo_name: None,
-        worktree_label: None,
-        git_root_dir: None,
-        git_remotes: Vec::new(),
-        source_workspace_dir: None,
-        last_turn_summary: None,
-        last_recap: None,
-        session_kind: None,
-    };
-    UnifiedRow {
-        kind: SessionKind::Chat,
-        legacy,
-        title,
-        updated_at: modify_time,
         facets,
     }
 }

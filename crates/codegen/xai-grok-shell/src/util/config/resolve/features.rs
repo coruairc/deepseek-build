@@ -52,7 +52,10 @@ fn compose_turn_transient_retry(
     .value
 }
 
-pub use xai_grok_config::resolve_remote_fetch_enabled;
+/// Remote model/settings fetching was removed from the shell; always `false`.
+pub fn resolve_remote_fetch_enabled() -> bool {
+    false
+}
 
 pub const REMOTE_FETCH_CONFIG_PATH: &str = "features.remote_fetch";
 

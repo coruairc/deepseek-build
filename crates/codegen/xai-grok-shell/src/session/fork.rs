@@ -1,9 +1,7 @@
 //! Forks a saved session to a new working directory with a new session ID.
 //! This creates new session files but does not start the session.
 
-use crate::remote::BackendClient;
 const FORK_LOG: &str = "xai_fork";
-use crate::session::export::ExportedMetadata;
 use crate::session::info::Info;
 use crate::session::storage::{CopySessionOptions, JsonlStorageAdapter};
 use crate::util::grok_home::grok_home;
@@ -55,7 +53,7 @@ fn generate_fork_session_id(_source_id: &str) -> String {
 pub async fn fork_session(
     request: ForkSessionRequest,
     agent_id: &str,
-    auth_manager: Option<std::sync::Arc<xai_grok_login::AuthManager>>,
+    _auth_manager: Option<std::sync::Arc<xai_grok_login::AuthManager>>,
 ) -> io::Result<ForkSessionResponse> {
     let t0 = std::time::Instant::now();
 
@@ -107,37 +105,6 @@ pub async fn fork_session(
 
     let copy_ms = t0.elapsed().as_millis() as u64;
 
-    // Register the fork with the backend from a spawned task
-    // The local fork works without it: all fork state is in session files on disk, and the backend learns of the session when the task completes
-    // Spawning keeps the network round-trip (~200-400ms) off the critical path
-    if let Some(am) = auth_manager {
-        let sid = new_session_id.clone();
-        let cwd = request.new_cwd.clone();
-        let parent = request.source_session_id.clone();
-        let model = request.new_model_id.clone();
-        let aid = agent_id.to_string();
-        let session_agent_id = result.agent_id.clone();
-        tokio::spawn(async move {
-            if let Err(e) = sync_forked_session_to_backend(
-                &sid,
-                &cwd,
-                parent,
-                model,
-                &aid,
-                session_agent_id.as_deref(),
-                am,
-            )
-            .await
-            {
-                tracing::warn!(
-                    session_id = %sid,
-                    error = %e,
-                    "Failed to register forked session with backend (background)"
-                );
-            }
-        });
-    }
-
     let total_ms = t0.elapsed().as_millis() as u64;
     tracing::info!(
         target: FORK_LOG,
@@ -159,46 +126,6 @@ pub async fn fork_session(
         parent_session_id: request.source_session_id,
         new_model_id: request.new_model_id,
     })
-}
-
-/// Sync a forked session to the backend (for writeback mode).
-async fn sync_forked_session_to_backend(
-    session_id: &str,
-    cwd: &str,
-    parent_session_id: String,
-    model_id: Option<String>,
-    agent_id: &str,
-    session_agent_id: Option<&str>,
-    auth_manager: std::sync::Arc<xai_grok_login::AuthManager>,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let client = BackendClient::new().with_auth_manager(auth_manager);
-    let metadata = ExportedMetadata {
-        title: None, // The title is generated later when the session runs
-        cwd: cwd.to_string(),
-        model_id,
-        created_at: Some(chrono::Utc::now().to_rfc3339()),
-        updated_at: Some(chrono::Utc::now().to_rfc3339()),
-        total_messages: Some(0),
-        parent_session_id: Some(parent_session_id),
-        agent_id: session_agent_id.map(str::to_owned),
-        session_kind: None,
-        subagent_type: None,
-        subagent_persona: None,
-        subagent_role: None,
-        fork_context_source: None,
-        subagent_depth: None,
-        title_is_manual: None,
-    };
-
-    client
-        .upsert_session(session_id, &metadata, agent_id)
-        .await?;
-    tracing::info!(
-        session_id = %session_id,
-        "Forked session registered with backend"
-    );
-
-    Ok(())
 }
 
 #[cfg(test)]

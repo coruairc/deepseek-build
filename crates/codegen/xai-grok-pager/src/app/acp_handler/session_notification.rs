@@ -1125,19 +1125,12 @@ pub(super) fn handle_session_notification_with_origin(
             use xai_grok_shell::sampling::types::ReasoningEffort;
             let new_model_id = acp::ModelId::new(model_id.clone());
             if !agent.session.models.available.contains_key(&new_model_id) {
-                if xai_grok_shell::agent::chat_modes::process_chat_mode_enabled() {
-                    agent.session.models.available.insert(
-                        new_model_id.clone(),
-                        acp::ModelInfo::new(new_model_id.clone(), model_id.clone()),
-                    );
-                } else {
-                    tracing::warn!(
-                        session_id = session_notif.session_id.0.as_ref(),
-                        model_id = %model_id,
-                        "ignoring ModelChanged broadcast — model not in local catalog"
-                    );
-                    return false;
-                }
+                tracing::warn!(
+                    session_id = session_notif.session_id.0.as_ref(),
+                    model_id = %model_id,
+                    "ignoring ModelChanged broadcast — model not in local catalog"
+                );
+                return false;
             }
             let effort = reasoning_effort
                 .as_deref()

@@ -254,22 +254,12 @@ async fn handle_session_list(
 ) -> Result<acp::ExtResponse, acp::Error> {
     use crate::session::unified_list;
 
-    // Under chat mode `parse_list_req` rewrites `kind` to conversations unless `local-workspace` is compiled in and the client sent chat or build
+    // Parse `session/list` params.
     let req = unified_list::parse_list_req(args.params.get())
         .map_err(|e| acp::Error::invalid_params().data(format!("invalid params: {e}")))?;
-    tracing::debug!(
-        chat_mode_forced_kind = crate::agent::chat_modes::process_chat_mode_enabled(),
-        "session/list"
-    );
 
     let registry_client = agent.session_registry_client();
-    let conversations_client = agent.conversations_client();
-    let result = unified_list::build_unified_list(
-        registry_client.as_ref(),
-        conversations_client.as_ref(),
-        req,
-    )
-    .await;
+    let result = unified_list::build_unified_list(registry_client.as_ref(), req).await;
 
     ExtMethodResult::success(unified_list::ext_list_response(result))
         .to_ext_response()
@@ -284,11 +274,6 @@ pub(crate) async fn handle_list_sessions(
 ) -> Result<acp::ListSessionsResponse, acp::Error> {
     use crate::session::unified_list;
 
-    // Chat mode also withholds the session capabilities at initialize, so refuse the method here to match
-    if crate::agent::chat_modes::process_chat_mode_enabled() {
-        return Err(acp::Error::method_not_found());
-    }
-
     let additional_directories = args.additional_directories.len();
     let cwd = args.cwd.map(|p| p.to_string_lossy().into_owned());
     let mut req = unified_list::ListReq {
@@ -301,13 +286,7 @@ pub(crate) async fn handle_list_sessions(
     unified_list::force_kind(&mut req, unified_list::SessionKind::Build);
 
     let registry_client = agent.session_registry_client();
-    let conversations_client = agent.conversations_client();
-    let result = unified_list::build_unified_list(
-        registry_client.as_ref(),
-        conversations_client.as_ref(),
-        req,
-    )
-    .await;
+    let result = unified_list::build_unified_list(registry_client.as_ref(), req).await;
 
     let meta = unified_list::acp_response_meta(&result);
     // `CwdScope::Only` already dropped rows the schema cannot represent

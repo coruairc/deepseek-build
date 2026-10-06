@@ -2474,7 +2474,7 @@ fn acp_model_meta_advertises_context_windows_menu() {
 }
 #[test]
 fn hidden_model_excluded_from_acp_but_kept_in_catalog() {
-    use crate::agent::remote_config::{available_models, resolve_model_catalog};
+    use crate::agent::model_catalog::{available_models, resolve_model_catalog};
     let raw_config: toml::Value = toml::from_str(
         r#"
             [model.visible-model]
@@ -2512,7 +2512,7 @@ fn hidden_model_excluded_from_acp_but_kept_in_catalog() {
 }
 #[test]
 fn disabled_models_removed_from_catalog() {
-    use crate::agent::remote_config::resolve_model_catalog;
+    use crate::agent::model_catalog::resolve_model_catalog;
     let raw: toml::Value = toml::from_str(
         r#"
             [models]
@@ -2529,7 +2529,7 @@ fn disabled_models_removed_from_catalog() {
 }
 #[test]
 fn hidden_models_kept_in_catalog_but_not_in_acp() {
-    use crate::agent::remote_config::{available_models, resolve_model_catalog};
+    use crate::agent::model_catalog::{available_models, resolve_model_catalog};
     let raw: toml::Value = toml::from_str(
         r#"
             [models]
@@ -2549,7 +2549,7 @@ fn hidden_models_kept_in_catalog_but_not_in_acp() {
 }
 #[test]
 fn allowed_models_marks_selectable_by_wildcard_key_or_model() {
-    use crate::agent::remote_config::resolve_model_catalog;
+    use crate::agent::model_catalog::resolve_model_catalog;
     let raw: toml::Value = toml::from_str(
         r#"
             [models]
@@ -2591,7 +2591,7 @@ fn allowed_models_marks_selectable_by_wildcard_key_or_model() {
 }
 #[test]
 fn allowed_models_empty_is_unrestricted() {
-    use crate::agent::remote_config::resolve_model_catalog;
+    use crate::agent::model_catalog::resolve_model_catalog;
     let raw: toml::Value = toml::from_str(
         r#"
             [models]
@@ -2611,7 +2611,7 @@ fn allowed_models_empty_is_unrestricted() {
 }
 #[test]
 fn invalid_glob_is_rejected_by_validation() {
-    use crate::agent::remote_config::ModelGlobSet;
+    use crate::agent::model_catalog::ModelGlobSet;
     assert!(ModelGlobSet::compile(Some(["grok[".to_string()].as_slice())).is_err());
     let raw: toml::Value = toml::from_str(
         r#"
@@ -2631,7 +2631,7 @@ fn invalid_glob_is_rejected_by_validation() {
 }
 #[test]
 fn supported_in_api_false_hides_from_api_key_users() {
-    use crate::agent::remote_config::{available_models, resolve_model_catalog};
+    use crate::agent::model_catalog::{available_models, resolve_model_catalog};
     let raw: toml::Value = toml::from_str(
         r#"
             [model.oauth-only-model]

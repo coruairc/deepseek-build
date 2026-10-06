@@ -17,7 +17,7 @@ use super::notify::WorkflowNotifySender;
 use super::registry::{ResolvedWorkflow, WorkflowSource, bundled_file_is_managed};
 use super::store::WorkflowRunStore;
 use super::tracker::{WorkflowRunState, WorkflowRunStatus, WorkflowTracker};
-use crate::agent::remote_config::task_model_policy::LatchedTaskModelSelection;
+use crate::agent::model_catalog::task_model_policy::LatchedTaskModelSelection;
 
 pub(crate) const WORKFLOW_MAX_ACTIVE_RUNS_PER_SESSION: usize = 4;
 pub(crate) const WORKFLOW_DEFAULT_AGENT_BUDGET: u64 = xai_workflow::DEFAULT_AGENT_BUDGET;

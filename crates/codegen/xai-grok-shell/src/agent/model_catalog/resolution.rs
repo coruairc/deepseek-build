@@ -1,7 +1,5 @@
 //! Model-id resolution: catalog keys, routing slugs, and selection.
 
-use std::collections::HashSet;
-
 use indexmap::IndexMap;
 
 use super::ModelGlobSet;
@@ -12,77 +10,10 @@ use xai_grok_sampling_types::ReasoningEffort;
 /// Which sources feed the model catalog.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CatalogSource {
-    /// Built-in defaults until the first fetch, then the fetched list, plus every `[model.<id>]` table.
+    /// The local bundled catalog plus every `[model.<id>]` table.
     Standard,
     /// External auth with a configured models endpoint. Built-in and bundled models never appear.
-    /// See [`EndpointScope`] for which entries stay.
     ModelsEndpoint,
-}
-
-/// What the models endpoint has listed, as the external-auth catalog sees it.
-enum EndpointListing {
-    /// No list has arrived, so the `[model.<id>]` tables are the whole catalog.
-    NotFetched,
-    /// The ids the endpoint listed, possibly none. An entry stays only when its `model` is one of them.
-    Listed(HashSet<String>),
-}
-
-/// Which entries the external-auth catalog keeps.
-/// An entry must pass the [`EndpointListing`] check and send requests only to hosts the models endpoint serves.
-struct EndpointScope {
-    listing: EndpointListing,
-    /// The models endpoint's inference host plus every host a listed row uses.
-    hosts: HashSet<String>,
-}
-
-impl EndpointScope {
-    fn new(cfg: &config::Config, prefetched: Option<&IndexMap<String, ModelEntry>>) -> Self {
-        let mut hosts = HashSet::from([url_host(&cfg.endpoints.resolve_inference_base_url())]);
-        let listing = match prefetched {
-            None => EndpointListing::NotFetched,
-            Some(rows) => {
-                hosts.extend(rows.values().flat_map(entry_hosts));
-                EndpointListing::Listed(
-                    rows.iter()
-                        .flat_map(|(key, entry)| [key.clone(), entry.info.model.clone()])
-                        .collect(),
-                )
-            }
-        };
-        EndpointScope { listing, hosts }
-    }
-
-    fn keeps(&self, entry: &ModelEntry) -> bool {
-        let listed = match &self.listing {
-            EndpointListing::NotFetched => true,
-            EndpointListing::Listed(ids) => ids.contains(&entry.info.model),
-        };
-        listed && entry_hosts(entry).all(|host| self.hosts.contains(&host))
-    }
-}
-
-/// The hosts `entry` sends requests to: its `base_url`, and its `api_base_url` when set.
-fn entry_hosts(entry: &ModelEntry) -> impl Iterator<Item = String> + '_ {
-    std::iter::once(entry.info.base_url.as_str())
-        .chain(entry.api_base_url.as_deref())
-        .map(url_host)
-}
-
-/// The URL's host, or the raw string when it does not parse, so an unparseable URL matches only itself.
-fn url_host(url: &str) -> String {
-    url::Url::parse(url)
-        .ok()
-        .and_then(|parsed| parsed.host_str().map(str::to_owned))
-        .unwrap_or_else(|| url.to_owned())
-}
-
-/// The id used when the catalog has no usable model.
-/// External auth with a models endpoint never names a bundled model. It keeps `preferred` or leaves the id empty.
-pub(crate) fn fallback_model_id(cfg: &config::Config, preferred: Option<&str>) -> String {
-    match CatalogSource::for_config(cfg) {
-        CatalogSource::Standard => crate::models::default_model().to_owned(),
-        CatalogSource::ModelsEndpoint => preferred.unwrap_or_default().to_owned(),
-    }
 }
 
 impl CatalogSource {
@@ -94,6 +25,14 @@ impl CatalogSource {
         } else {
             CatalogSource::Standard
         }
+    }
+}
+
+/// The id used when the catalog has no usable model.
+pub(crate) fn fallback_model_id(cfg: &config::Config, preferred: Option<&str>) -> String {
+    match CatalogSource::for_config(cfg) {
+        CatalogSource::Standard => crate::models::default_model().to_owned(),
+        CatalogSource::ModelsEndpoint => preferred.unwrap_or_default().to_owned(),
     }
 }
 
@@ -132,7 +71,7 @@ pub(crate) fn selectable_catalog_key_for_persisted(
     resolve_catalog_key(models, id).filter(|key| available.contains_key(key))
 }
 
-/// Pick the default model: CLI > env > config > remote-settings hint, falling back to the first visible model, then [`fallback_model_id`].
+/// Pick the default model: CLI > env > config, falling back to the first visible model, then [`fallback_model_id`].
 pub(crate) fn resolve_default_model(
     cfg: &config::Config,
     catalog: &IndexMap<String, ModelEntry>,
@@ -148,9 +87,7 @@ pub(crate) fn resolve_default_model(
         cfg.default_model_override.as_deref(),
         "GROK_DEFAULT_MODEL",
         cfg.models.default.as_deref(),
-        cfg.remote_settings
-            .as_ref()
-            .and_then(|rs| rs.default_model.as_deref()),
+        None,
     );
 
     let first_or_fallback = || -> (String, ModelEntry) {
@@ -200,29 +137,6 @@ pub(crate) fn resolve_default_model(
                         model_id = %pref.value, source = %pref.source,
                         "preferred model not in available models, falling back"
                     );
-                } else {
-                    tracing::debug!(
-                        model_id = %pref.value, source = %pref.source,
-                        "remote default_model not in available models, skipping"
-                    );
-                }
-                let campaign_pref_missing = cfg.models.default_is_campaign_driven
-                    && matches!(pref.source, config::ConfigSource::Config);
-                if campaign_pref_missing
-                    && let Some(prev) = cfg
-                        .models
-                        .pre_campaign_default
-                        .as_deref()
-                        .filter(|s| !s.is_empty())
-                    && let Some((key, entry)) = visible
-                        .get_key_value(prev)
-                        .or_else(|| visible.iter().find(|(_, m)| m.has_model_id(prev)))
-                {
-                    tracing::info!(
-                        unavailable = %pref.value, fallback = %prev,
-                        "campaign-driven default unavailable in catalog; recovering the pre-campaign default"
-                    );
-                    return (key.clone(), entry.clone(), config::ConfigSource::Config);
                 }
                 let (key, first) = first_or_fallback();
                 (key, first, config::ConfigSource::Default)
@@ -375,24 +289,7 @@ pub(crate) fn resolve_model_catalog(
     cfg: &config::Config,
     prefetched: Option<IndexMap<String, ModelEntry>>,
 ) -> IndexMap<String, ModelEntry> {
-    let scope = (CatalogSource::for_config(cfg) == CatalogSource::ModelsEndpoint)
-        .then(|| EndpointScope::new(cfg, prefetched.as_ref()));
     let mut catalog: IndexMap<String, ModelEntry> = config::resolve_model_list(cfg, prefetched);
-
-    if let Some(scope) = scope {
-        let unlisted: Vec<String> = catalog
-            .iter()
-            .filter(|(_, entry)| !scope.keeps(entry))
-            .map(|(key, _)| key.clone())
-            .collect();
-        if !unlisted.is_empty() {
-            tracing::warn!(
-                models = ?unlisted,
-                "external auth: dropping models the endpoint did not list or that use another host"
-            );
-            catalog.retain(|key, _| !unlisted.contains(key));
-        }
-    }
 
     if let Ok(Some(disabled)) = ModelGlobSet::compile(cfg.models.disabled_models.as_deref()) {
         let before = catalog.len();
@@ -463,27 +360,45 @@ pub(crate) fn allowlist_matches_nothing(
     !effective_allowlist(cfg).is_unrestricted() && !catalog.values().any(|e| e.info.user_selectable)
 }
 
-/// The message that blocks prompts when [`CatalogSource::ModelsEndpoint`] leaves the catalog empty.
-pub(crate) fn models_endpoint_empty_message(
-    cfg: &config::Config,
-    remote_fetch_enabled: bool,
-) -> String {
+/// The message that blocks prompts when the catalog is empty.
+pub(crate) fn models_endpoint_empty_message(cfg: &config::Config) -> String {
     let url = cfg.endpoints.resolve_models_list_url();
-    if remote_fetch_enabled {
-        format!(
-            "No models are available: {url} returned none or could not be reached. \
-             Check the endpoint and your login, then try again."
-        )
+    format!(
+        "No models are available: {url} returned none or could not be reached. \
+         Check the endpoint and your login, then try again."
+    )
+}
+
+/// The error a subagent `Task.model` slug produces when it is not a selectable catalog entry.
+pub(crate) fn task_model_error_for_catalog(
+    requested: &str,
+    available: &IndexMap<String, ModelEntry>,
+    is_session_auth: bool,
+) -> Option<String> {
+    let is_available = |entry: &ModelEntry| entry.info.is_picker_eligible(is_session_auth);
+    if config::find_model_by_id(available, requested).is_some_and(&is_available) {
+        return None;
+    }
+
+    let mut slugs = available
+        .iter()
+        .filter(|(_, entry)| is_available(entry))
+        .map(|(slug, _)| slug.as_str())
+        .collect::<Vec<_>>();
+    slugs.sort_unstable();
+    let guidance = if slugs.is_empty() {
+        "No valid model slugs are currently available. Omit `model` to inherit the parent model."
+            .to_string()
     } else {
         format!(
-            "No models are available: `[features] remote_fetch = false` stops deepseek-build from reading {url}. \
-             Add a `[model.<id>]` table that names an endpoint id, or turn remote_fetch on."
+            "Valid model slugs: {}. Omit `model` to inherit the parent model.",
+            slugs.join(", ")
         )
-    }
+    };
+    Some(format!("Unknown Task.model slug '{requested}'. {guidance}"))
 }
 
 /// Reject an `allowed_models` allowlist that leaves no selectable model, or excludes an explicitly configured default.
-/// Run only against a real catalog.
 pub(crate) fn validate_selectable(
     cfg: &config::Config,
     catalog: &IndexMap<String, ModelEntry>,

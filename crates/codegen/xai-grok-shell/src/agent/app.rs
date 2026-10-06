@@ -1,7 +1,6 @@
 use crate::agent::config::{Config as AgentConfig, ModelEntry};
 use crate::agent::init::{bootstrap_with_cancel, exit_on_config_error};
 use crate::agent::mvp_agent::MvpAgent;
-use crate::agent::remote_config::{ModelFetchAuth, prefetch_models_blocking};
 use crate::leader::CursorWorkerStartArgs;
 use crate::leader::protocol::InternalMethod;
 use crate::util::grok_home;
@@ -274,7 +273,6 @@ pub async fn run_stdio_agent(
             let auth_manager = Arc::new(agent_config.create_auth_manager());
             auth_manager.start_proactive_refresh(cancel_for_agent.clone());
             auth_manager.start_system_power_listener();
-            crate::cloud_config::managed_config::ensure_managed_policy_present(&auth_manager).await;
             let boot = crate::agent::init::resolve_boot_startup_settings(
                 &mut agent_config,
                 &cancel_for_agent,
@@ -545,8 +543,6 @@ pub async fn run_leader(
     let auth_manager_for_agent = shared_auth_manager.clone();
     let auth_manager_for_config = shared_auth_manager.clone();
     let auth_manager_for_mint = shared_auth_manager.clone();
-    crate::cloud_config::managed_config::ensure_managed_policy_present(&auth_manager_for_agent)
-        .await;
     let boot = crate::agent::init::resolve_boot_startup_settings(
         &mut agent_config_for_spawn,
         &cancel_clone,

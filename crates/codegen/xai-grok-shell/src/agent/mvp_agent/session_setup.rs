@@ -791,7 +791,7 @@ impl MvpAgent {
             let current = self.models_manager.current_model_id();
             let reason = format!(
                 "\"{requested}\": {}. This session is using \"{}\".",
-                crate::agent::remote_config::allowlist_denied_message(&self.cfg.borrow()),
+                crate::agent::model_catalog::allowlist_denied_message(&self.cfg.borrow()),
                 current.0
             );
             self.send_model_auto_switched(
@@ -846,7 +846,7 @@ impl MvpAgent {
         self.report_setup_phase(SessionSetupPhase::FinalizeResponse);
         let models = if is_chat_kind {
             chat_new_session_model_state(
-                self.chat_modes.model_state().await,
+                acp::SessionModelState::new(acp::ModelId::from(String::new()), Vec::new()),
                 session_initial_model.filter(|_| matches!(bridge_attach, BridgeAttach::Spawned)),
             )
         } else {
@@ -1010,15 +1010,9 @@ impl MvpAgent {
         let mut persistence_timer = crate::instrumentation_timer!("session.load");
         persistence_timer.with_field("session_id", session_id.0.as_ref());
         persistence_timer.with_subphase(xai_grok_telemetry::startup::Subphase::SessionLoad);
-        let backend = if self.build_registry_config().is_some() {
-            Some(crate::remote::BackendClient::new().with_auth_manager(self.auth_manager.clone()))
-        } else {
-            None
-        };
         let registry_title_sync = self.registry_title_sync();
         let (persistence_info, persistence) = crate::session::persistence::load_light(
             &session_info,
-            backend.as_ref(),
             false,
             crate::session::persistence::SessionDeps {
                 sampling_client: summary_client,
@@ -1183,11 +1177,6 @@ impl MvpAgent {
             let cold_root_identity = super::agent_directory::PendingRootIdentity::parse(
                 minted_identity.clone(),
                 crate::agent::roster::RosterOrigin::Local,
-            );
-            let _ = persistence.tx.send(
-                crate::session::persistence::PersistenceMsg::SetRemoteAgentId(
-                    minted_identity.agent_id.clone(),
-                ),
             );
             let mut spawn_timer = crate::instrumentation_timer!("session.spawn");
             spawn_timer.with_field("session_id", session_id.0.as_ref());
@@ -1972,9 +1961,8 @@ impl MvpAgent {
         if !args.additional_directories.is_empty() {
             return Err(acp::Error::invalid_params().data(RESUME_REFUSES_EXTRA_DIRS));
         }
-        if crate::agent::chat_modes::process_chat_mode_enabled()
-            || ChatKindClaim::from_meta(args.meta.as_ref()).resolve(self, &args.session_id)
-                == SessionKind::Chat
+        if ChatKindClaim::from_meta(args.meta.as_ref()).resolve(self, &args.session_id)
+            == SessionKind::Chat
         {
             return Err(acp::Error::invalid_params().data(RESUME_REFUSES_CHAT));
         }

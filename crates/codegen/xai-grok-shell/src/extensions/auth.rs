@@ -172,12 +172,9 @@ async fn handle_logout(agent: &MvpAgent, args: &acp::ExtRequest) -> ExtResult {
     // Stop any in-flight login so it cannot write credentials back after logout.
     agent.interactive_auth.cancel();
 
-    let result = xai_grok_login::perform_logout(
-        &agent.auth_manager,
-        params.scope.as_deref(),
-        crate::cloud_config::managed_config::clear_orphan,
-    )
-    .map_err(|e| acp::Error::internal_error().data(format!("failed to logout: {e}")))?;
+    let result =
+        xai_grok_login::perform_logout(&agent.auth_manager, params.scope.as_deref(), || {})
+            .map_err(|e| acp::Error::internal_error().data(format!("failed to logout: {e}")))?;
     // `auth.lifecycle` (not `auth`) avoids colliding with the pre-existing per-request `AuthManager::auth()` `#[instrument]` span
     xai_grok_telemetry::event_span!("auth.lifecycle", action = "logout", success = true);
 

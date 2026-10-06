@@ -12,7 +12,7 @@ use super::start_artifact_publication::{
     PreparedStartArtifacts, PublicationBoundary, StartArtifactPublication,
 };
 use super::*;
-use crate::agent::remote_config::task_model_policy::{
+use crate::agent::model_catalog::task_model_policy::{
     TaskModelSelection, selection_telemetry_kind,
 };
 use xai_grok_sampling_types::ReasoningEffort;
@@ -254,7 +254,7 @@ pub(super) fn admit_explicit_tool_model(
     match selection {
         TaskModelSelection::Inherited => Err(TaskModelAdmissionError::HiddenSelection),
         TaskModelSelection::Selectable => {
-            crate::agent::remote_config::task_model_error_for_catalog(
+            crate::agent::model_catalog::task_model_error_for_catalog(
                 requested,
                 available,
                 is_session_auth,

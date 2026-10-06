@@ -3,7 +3,7 @@
 
 use super::*;
 
-use crate::remote::DEFAULT_CONTEXT_WINDOW;
+use crate::agent::config::DEFAULT_CONTEXT_WINDOW;
 
 #[derive(Debug, PartialEq)]
 struct PromptCacheUsage {

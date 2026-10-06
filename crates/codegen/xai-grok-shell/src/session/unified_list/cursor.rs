@@ -42,26 +42,6 @@ impl CompositeCursor {
     }
 }
 
-pub(super) enum ConvLane {
-    Skipped,
-    Degraded(PartialReason),
-    Page {
-        rows: Vec<UnifiedRow>,
-        next_token: Option<String>,
-        frontier: Option<BoundaryKey>,
-    },
-}
-
-pub(super) fn conv_frontier(raw_rows: &[UnifiedRow], has_more: bool) -> Option<BoundaryKey> {
-    if !has_more {
-        return None;
-    }
-    raw_rows
-        .iter()
-        .max_by(|a, b| cmp_total_order(a, b))
-        .map(boundary_of)
-}
-
 pub(super) struct Paginated {
     pub candidates: Vec<UnifiedRow>,
     pub emit_count: usize,
@@ -71,23 +51,11 @@ pub(super) struct Paginated {
 
 pub(super) fn merge_and_paginate(
     local: Vec<UnifiedRow>,
-    conv: ConvLane,
     cursor: &CompositeCursor,
     limit: usize,
 ) -> Paginated {
-    let (conv_rows, conv_next_token, conv_fetched, conv_frontier, partial) = match conv {
-        ConvLane::Skipped => (Vec::new(), None, false, None, None),
-        ConvLane::Degraded(reason) => (Vec::new(), None, false, None, Some(reason)),
-        ConvLane::Page {
-            rows,
-            next_token,
-            frontier,
-        } => (rows, next_token, true, frontier, None),
-    };
-
     let mut keyed: Vec<(SortKey, UnifiedRow)> = local
         .into_iter()
-        .chain(conv_rows)
         .map(|row| (row_sort_key(&row), row))
         .collect();
 
@@ -98,15 +66,7 @@ pub(super) fn merge_and_paginate(
 
     keyed.sort_by(|(a, _), (b, _)| a.cmp(b));
 
-    let mut emit_count = keyed.len().min(limit);
-    if let Some(frontier) = &conv_frontier {
-        let fkey = boundary_sort_key(frontier);
-        let frontier_count = keyed
-            .iter()
-            .take_while(|(k, _)| k.cmp(&fkey) != Ordering::Greater)
-            .count();
-        emit_count = emit_count.min(frontier_count);
-    }
+    let emit_count = keyed.len().min(limit);
     let new_boundary = emit_count
         .checked_sub(1)
         .and_then(|i| keyed.get(i))
@@ -114,33 +74,11 @@ pub(super) fn merge_and_paginate(
 
     let tail = keyed.get(emit_count..).unwrap_or(&[]);
     let local_has_more = tail.iter().any(|(_, r)| r.kind == SessionKind::Build);
-    let conv_in_tail = tail.iter().any(|(_, r)| r.kind == SessionKind::Chat);
 
-    let (next_conv_token, next_conv_drained, conv_has_more) = if conv_fetched {
-        if conv_in_tail {
-            (cursor.conv_page_token.clone(), false, true)
-        } else {
-            let has_more = conv_next_token.is_some();
-            (conv_next_token, true, has_more)
-        }
-    } else if partial.is_some() && cursor.conv_page_token.is_some() && new_boundary.is_some() {
-        (
-            cursor.conv_page_token.clone(),
-            cursor.conv_page_drained,
-            true,
-        )
-    } else {
-        (
-            cursor.conv_page_token.clone(),
-            cursor.conv_page_drained,
-            false,
-        )
-    };
-
-    let next_cursor = (local_has_more || conv_has_more).then(|| CompositeCursor {
+    let next_cursor = local_has_more.then(|| CompositeCursor {
         boundary: new_boundary.or_else(|| cursor.boundary.clone()),
-        conv_page_token: next_conv_token,
-        conv_page_drained: next_conv_drained,
+        conv_page_token: cursor.conv_page_token.clone(),
+        conv_page_drained: cursor.conv_page_drained,
     });
 
     let candidates: Vec<UnifiedRow> = keyed.into_iter().map(|(_, row)| row).collect();
@@ -149,7 +87,7 @@ pub(super) fn merge_and_paginate(
         candidates,
         emit_count,
         next_cursor,
-        partial,
+        partial: None,
     }
 }
 

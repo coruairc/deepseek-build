@@ -1,5 +1,5 @@
 use super::*;
-use crate::remote::DEFAULT_CONTEXT_WINDOW;
+use crate::agent::config::DEFAULT_CONTEXT_WINDOW;
 use xai_chat_state::conversation_util::replace_or_insert_system_head;
 impl SessionActor {
     pub(super) async fn handle_set_session_model(
