@@ -10,7 +10,6 @@ use agent_client_protocol as acp;
 use xai_acp_lib::AcpAgentGatewaySender as GatewaySender;
 use xai_grok_login::AuthManager;
 
-use crate::agent::session_registry_client::SessionRegistryClient;
 use crate::extensions::code_nav::CodeNavEligibility;
 use crate::session::SessionHandle;
 use crate::session::worktree::BackgroundCopyContext;
@@ -51,8 +50,6 @@ pub trait AgentRuntime {
     ) -> Option<(Arc<xai_codebase_graph::IndexManagerHandle>, bool)>;
 
     fn background_copy_context(&self) -> BackgroundCopyContext;
-
-    fn session_registry_client(&self) -> Option<SessionRegistryClient>;
 
     fn resolve_workspace_ops(&self) -> Result<xai_grok_workspace::WorkspaceOps, acp::Error>;
 

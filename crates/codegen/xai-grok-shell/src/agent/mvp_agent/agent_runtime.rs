@@ -11,7 +11,6 @@ use xai_acp_lib::AcpAgentGatewaySender as GatewaySender;
 use xai_grok_login::AuthManager;
 
 use crate::agent::mvp_agent::MvpAgent;
-use crate::agent::session_registry_client::SessionRegistryClient;
 use crate::extensions::agent_runtime::AgentRuntime;
 use crate::extensions::code_nav::CodeNavEligibility;
 use crate::session::SessionHandle;
@@ -73,10 +72,6 @@ impl AgentRuntime for MvpAgent {
 
     fn background_copy_context(&self) -> BackgroundCopyContext {
         self.background_copy_context()
-    }
-
-    fn session_registry_client(&self) -> Option<SessionRegistryClient> {
-        self.session_registry_client()
     }
 
     fn resolve_workspace_ops(&self) -> Result<xai_grok_workspace::WorkspaceOps, acp::Error> {
