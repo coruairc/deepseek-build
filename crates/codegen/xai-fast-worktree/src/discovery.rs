@@ -661,7 +661,9 @@ mod tests {
 
     #[test]
     fn rebuild_nfs_under_managed_roots_is_not_labeled_linked() {
-        let _env = crate::db::GROK_HOME_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _env = crate::db::GROK_HOME_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let tmp = tempfile::TempDir::new().unwrap();
         let grok_home = tmp.path().join("grok");
         let data = tmp.path().join("grove");
@@ -734,7 +736,9 @@ mod tests {
 
     #[test]
     fn rebuild_registers_nfs_from_backing_marker() {
-        let _env = crate::db::GROK_HOME_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _env = crate::db::GROK_HOME_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let tmp = tempfile::TempDir::new().unwrap();
         let grok_home = tmp.path().join("grok");
         let data = tmp.path().join("grove");

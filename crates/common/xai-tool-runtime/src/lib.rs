@@ -11,6 +11,7 @@
 pub mod context;
 pub mod dispatch;
 pub mod error;
+pub mod local;
 pub mod mcp_structured_content;
 pub mod notification;
 pub mod render;
@@ -24,6 +25,7 @@ pub use context::{
 };
 pub use dispatch::ToolDispatch;
 pub use error::{ToolError, ToolErrorKind};
+pub use local::{LocalRegistry, ToolHarness};
 pub use mcp_structured_content::render_structured_content;
 pub use notification::{
     BashExecutionBackgrounded, BashExecutionComplete, BashExecutionFailed, BashExecutionTimeout,

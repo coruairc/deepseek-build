@@ -17,7 +17,6 @@ use serde_json::Value;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
-use xai_computer_hub_sdk::harness::ToolHarness;
 use xai_grok_workspace_types::rpc::agents_md::{AgentConfigFile, DiscoverAgentsMdReq};
 use xai_grok_workspace_types::rpc::code_nav::{
     CodeFindDefinitionsReq, CodeFindReferencesReq, CodeGotoDefinitionReq, CodeGotoReferencesReq,
@@ -60,6 +59,7 @@ use xai_grok_workspace_types::rpc::worktree::{
     WorktreeGcReq, WorktreeListReq, WorktreeShowReq,
 };
 use xai_grok_workspace_types::rpc::{RpcEnvelope, RpcError, WORKSPACE_RPC_TOOL_ID, WorkspaceRpc};
+use xai_tool_runtime::ToolHarness;
 use xai_tool_runtime::{ToolCallContext, ToolStreamItem, TypedToolOutput};
 #[derive(Debug, thiserror::Error)]
 pub enum WorkspaceClientError {
@@ -176,12 +176,10 @@ impl WorkspaceClient {
     pub fn harness(&self) -> &ToolHarness {
         &self.harness
     }
-    /// Server binary version from the hub bind report, read without an RPC round-trip.
-    /// Returns `None` before the first bind, or against servers that predate the field.
+    /// Server binary version, reported by the server bind contract. Local-only
+    /// harnesses (no server connection) always report `None`.
     pub fn server_binary_version(&self) -> Option<String> {
-        self.harness
-            .last_bind_report()
-            .and_then(|report| report.binary_version.clone())
+        None
     }
     /// Whether the hub connection is believed to be alive.
     pub fn is_connected(&self) -> bool {
@@ -584,10 +582,9 @@ mod tests {
     use super::*;
     use schemars::JsonSchema;
     use serde::Deserialize;
-    use xai_computer_hub_sdk::harness::LocalRegistry;
     use xai_grok_workspace_types::rpc::RpcActivityClass;
     use xai_tool_protocol::{SessionId, ToolId};
-    use xai_tool_runtime::{Tool, ToolError};
+    use xai_tool_runtime::{LocalRegistry, Tool, ToolError};
     use xai_tool_types::ToolDescription;
     #[derive(Debug, Deserialize, JsonSchema)]
     struct RpcArgs {

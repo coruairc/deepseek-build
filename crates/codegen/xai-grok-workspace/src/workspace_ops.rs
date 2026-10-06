@@ -25,7 +25,6 @@ use serde_json::Value;
 use std::io::Write;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use xai_computer_hub_sdk::ToolHarness;
 use xai_grok_tools::types::output::ToolRunResult;
 use xai_grok_tools::types::resources::SessionFolder;
 use xai_grok_workspace_client::{WorkspaceClient, is_transport_fatal};
@@ -75,6 +74,7 @@ pub use xai_grok_workspace_types::rpc::worktree::{
     WorktreeGcReq, WorktreeListReq, WorktreeSalvageReq, WorktreeShowReq,
 };
 pub use xai_grok_workspace_types::rpc::{RpcActivityClass, WorkspaceRpc};
+use xai_tool_runtime::ToolHarness;
 /// Implements [`WorkspaceRpc`] for request types whose responses reference crate-internal types and so cannot live in the types crate.
 /// The activity class is a required argument for the same reason the trait const has no default: every method's author must decide.
 macro_rules! workspace_rpc {

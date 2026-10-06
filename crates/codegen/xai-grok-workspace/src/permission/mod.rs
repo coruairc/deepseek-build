@@ -67,14 +67,11 @@ pub use auto_mode::{
 };
 pub use gate_preflight::GatePreflight;
 
+pub(crate) use hub_gate::SessionApproval;
 #[cfg(test)]
 pub(crate) use hub_gate::grant_store_access;
-pub(crate) use hub_gate::{SessionApproval, approve_hub_call};
 pub use hub_gate::{ToolApprovalGate, approval_gate_for};
-pub use hub_permission::{
-    PermissionHookTransport, ToolServerPermissionTransport, hitl_permission_live_enabled,
-    prompt_outcome_allows, request_permission_via_hub,
-};
+pub use hub_permission::{PermissionHookTransport, prompt_outcome_allows};
 pub(crate) use sandbox_gate::{
     SandboxPath, SettleContext, ViolationSettlement, refuse_mode_layer_write, settle_violation,
 };

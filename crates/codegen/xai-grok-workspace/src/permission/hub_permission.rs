@@ -3,8 +3,6 @@ use std::sync::LazyLock;
 use async_trait::async_trait;
 use prometheus::{HistogramVec, IntCounter, register_histogram_vec, register_int_counter};
 use serde_json::Value;
-use xai_computer_hub_sdk::harness::PERMISSION_REQUEST_KIND;
-use xai_computer_hub_sdk::{ToolServer, WeakToolServer};
 use xai_tool_protocol::SessionId;
 use xai_tool_runtime::ToolApprovalPolicy;
 
@@ -36,18 +34,6 @@ pub(crate) fn init_metrics() {
     PERMISSION_TIMEOUT_TOTAL.inc_by(0);
 }
 
-fn is_timeout_err(msg: &str) -> bool {
-    msg.contains("timed out")
-}
-
-/// Opt-in for the hub prompt path where it is not on by construction: the sandbox guest. Daemon hosts
-/// ignore it (see `approval_gate_for`).
-pub const HITL_PERMISSION_LIVE_ENV: &str = "GROK_HITL_PERMISSION_LIVE";
-
-pub fn hitl_permission_live_enabled() -> bool {
-    xai_grok_config::env_bool(HITL_PERMISSION_LIVE_ENV) == Some(true)
-}
-
 #[async_trait]
 pub trait PermissionHookTransport: Send + Sync {
     async fn request_permission(&self, payload: Value) -> Result<Value, String>;
@@ -57,69 +43,6 @@ pub trait PermissionHookTransport: Send + Sync {
     /// card; a transport that can take a card off the screen does so here, the default cannot.
     async fn withdraw_permission(&self, hold_id: &str) {
         let _ = hold_id;
-    }
-}
-
-pub struct ToolServerPermissionTransport {
-    server: WeakToolServer,
-    session_id: SessionId,
-}
-
-impl ToolServerPermissionTransport {
-    pub fn new(server: ToolServer, session_id: SessionId) -> Self {
-        Self {
-            server: server.downgrade(),
-            session_id,
-        }
-    }
-
-    pub fn from_session_id(server: ToolServer, session_id: &str) -> Option<Self> {
-        SessionId::new(session_id)
-            .ok()
-            .map(|sid| Self::new(server, sid))
-    }
-}
-
-#[async_trait]
-impl PermissionHookTransport for ToolServerPermissionTransport {
-    async fn request_permission(&self, payload: Value) -> Result<Value, String> {
-        let start = std::time::Instant::now();
-        let Some(server) = self.server.upgrade() else {
-            PERMISSION_REPLY_DURATION
-                .with_label_values(&["error"])
-                .observe(start.elapsed().as_secs_f64());
-            return Err("tool server gone (weak upgrade failed)".to_owned());
-        };
-        let reply_result = server
-            .request_hook(
-                self.session_id.clone(),
-                PERMISSION_REQUEST_KIND.to_owned(),
-                payload,
-            )
-            .await;
-        let outcome = match &reply_result {
-            Ok(_) => "ok",
-            Err(e) => {
-                if is_timeout_err(&e.to_string()) {
-                    PERMISSION_TIMEOUT_TOTAL.inc();
-                }
-                "error"
-            }
-        };
-        PERMISSION_REPLY_DURATION
-            .with_label_values(&[outcome])
-            .observe(start.elapsed().as_secs_f64());
-        reply_result.map_err(|e| e.to_string())
-    }
-
-    /// The hub's permission channel carries no frame that takes a card back, so the desktop
-    /// shows this card until its deadline; logged so the gap is visible.
-    async fn withdraw_permission(&self, hold_id: &str) {
-        tracing::debug!(
-            hold_id,
-            session = ?self.session_id,
-            "sandbox card withdrawn on the daemon; the hub has no frame to take it off the screen"
-        );
     }
 }
 
@@ -260,36 +183,6 @@ pub fn prompt_outcome_allows(outcome: &PromptOutcome) -> bool {
             | PromptOutcome::AllowAlwaysMcpTool(_)
             | PromptOutcome::AllowAlwaysMcpServer(_)
     )
-}
-
-pub async fn request_permission_via_hub(
-    transport: &dyn PermissionHookTransport,
-    access: &AccessKind,
-    tool_call_id: &str,
-    hook_ask: Option<&HookAsk>,
-    policy: ToolApprovalPolicy,
-) -> PromptOutcome {
-    let payload = build_permission_payload(access, tool_call_id, hook_ask, policy);
-    match transport.request_permission(payload).await {
-        Ok(reply) => match reply_to_outcome(&reply, access) {
-            PromptOutcome::AllowAlways if matches!(access, AccessKind::Edit(_)) => {
-                PromptOutcome::AllowEditsForSession
-            }
-            PromptOutcome::AllowAlways
-                if matches!(
-                    access,
-                    AccessKind::AgentMessage { .. } | AccessKind::Tool(_)
-                ) =>
-            {
-                PromptOutcome::AllowOnce
-            }
-            other => other,
-        },
-        Err(e) => {
-            tracing::error!(error = %e, "hub permission request failed; rejecting");
-            PromptOutcome::Error(format!("hub permission request failed: {e}"))
-        }
-    }
 }
 
 #[cfg(test)]

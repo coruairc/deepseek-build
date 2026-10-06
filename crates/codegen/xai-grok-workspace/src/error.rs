@@ -1,5 +1,4 @@
 use crate::capability::CapabilityMode;
-use xai_computer_hub_sdk::RefusalCode;
 /// Errors surfaced by the workspace public API.
 /// `#[non_exhaustive]` so new variants are non-breaking; match variants rather than scraping `Display`.
 #[derive(Debug, thiserror::Error)]
@@ -45,7 +44,7 @@ pub enum WorkspaceError {
     #[error("hub error: handshake auth failed: HTTP {status}")]
     HubRefused {
         status: u16,
-        refusal: Option<RefusalCode>,
+        refusal: Option<String>,
     },
     #[error("unknown workspace method: {0}")]
     UnknownMethod(String),

@@ -251,10 +251,6 @@ pub struct SessionContext {
     /// per-request from this provider instead of using the key baked into their config at
     /// construction time. Prevents 401 failures when a session outlives the initial token lifetime.
     pub api_key_provider: Option<crate::types::SharedApiKeyProvider>,
-    /// Auth provider which returns a xai_computer_hub_sdk::AuthCredential. Can be used by tools
-    /// that need to authenticate with services. Not to be confused with the api_key_provider, which
-    /// is a legacy provider used by the shell's auth manager.
-    pub auth_provider: Option<xai_computer_hub_sdk::SharedAuthProvider>,
     /// Optional 401-attribution callback for tool HTTP clients. Hosts can wire this to the same
     /// attribution sink used for inference-side 401s so tool and chat auth failures share one path.
     pub attribution_callback: Option<crate::SharedAttributionCallback>,
@@ -329,7 +325,7 @@ type OutputConverter =
 /// so none of this is held across `.await`.
 struct DispatchParts {
     /// Resolved `LocalRegistry` handle to dispatch through.
-    lr_handle: Arc<dyn xai_computer_hub_core::ToolHandle>,
+    lr_handle: Arc<dyn xai_tool_runtime::ToolDyn>,
     /// Runtime context built for the call (resources, renderer, cwd,
     /// behavior version, inner-dispatch).
     ctx: xai_tool_runtime::ToolCallContext,
@@ -370,7 +366,7 @@ struct ToolEntry {
     >,
     /// Registers this tool into a `LocalRegistry` using the concrete type.
     /// Captured at `register::<T>()` time when T is known.
-    register_in_local: Box<dyn Fn(&xai_computer_hub_sdk::LocalRegistry) + Send + Sync>,
+    register_in_local: Box<dyn Fn(&xai_tool_runtime::LocalRegistry) + Send + Sync>,
 }
 /// Per-reminder metadata stored in the builder.
 struct ReminderEntry {
@@ -429,7 +425,7 @@ pub struct FinalizedToolset {
     scheduler_cancel: Option<tokio_util::sync::CancellationToken>,
     /// Shared local registry for in-process dispatch.
     /// Contains only config-enabled tools. Can be shared with ToolHarness.
-    local_registry: xai_computer_hub_sdk::LocalRegistry,
+    local_registry: xai_tool_runtime::LocalRegistry,
     /// Lock-free access to the template renderer for tool name/param resolution.
     /// Cloned into `ToolCallContext::extensions` on each `call()` so tools
     /// can resolve names without acquiring the `resources` mutex.
@@ -498,7 +494,7 @@ impl RequirementError {
 pub struct ToolRegistryBuilder {
     tools: HashMap<String, ToolEntry>,
     reminders: Vec<ReminderEntry>,
-    shared_local_registry: Option<xai_computer_hub_sdk::LocalRegistry>,
+    shared_local_registry: Option<xai_tool_runtime::LocalRegistry>,
     /// Whether the client delivers system reminders (completion notifications for backgrounded commands/subagents) to the
     /// model. Exposed to description templates as `system_reminders_enabled` so "you are notified on completion" promises
     /// are only rendered when the client actually delivers them.
@@ -598,7 +594,7 @@ impl ToolRegistryBuilder {
                     let typed = serde_json::from_value::<T::Args>(json)?;
                     Ok(typed.into())
                 }),
-                register_in_local: Box::new(|lr: &xai_computer_hub_sdk::LocalRegistry| {
+                register_in_local: Box::new(|lr: &xai_tool_runtime::LocalRegistry| {
                     lr.register(T::default());
                 }),
             },
@@ -776,7 +772,7 @@ impl ToolRegistryBuilder {
         }
         b
     }
-    pub fn with_local_registry(mut self, registry: xai_computer_hub_sdk::LocalRegistry) -> Self {
+    pub fn with_local_registry(mut self, registry: xai_tool_runtime::LocalRegistry) -> Self {
         self.shared_local_registry = Some(registry);
         self
     }
@@ -1091,9 +1087,6 @@ impl ToolRegistryBuilder {
         if let Some(memory_backend) = ctx.memory_backend {
             resources.insert(memory_backend);
         }
-        if let Some(auth_provider) = ctx.auth_provider.clone() {
-            resources.insert(auth_provider);
-        }
         if let Some(lsp) = ctx.lsp {
             resources.insert(lsp);
         }
@@ -1380,7 +1373,7 @@ impl FinalizedToolset {
             )),
             resources_persistence: Arc::new(ResourcesPersistence::noop()),
             scheduler_cancel: None,
-            local_registry: xai_computer_hub_sdk::LocalRegistry::new(),
+            local_registry: xai_tool_runtime::LocalRegistry::new(),
             renderer: Arc::new(TemplateRenderer::new(
                 std::collections::HashMap::new(),
                 std::collections::HashMap::new(),
@@ -1389,7 +1382,7 @@ impl FinalizedToolset {
             workspace_viewer_ctx: None,
         }
     }
-    pub fn local_registry(&self) -> &xai_computer_hub_sdk::LocalRegistry {
+    pub fn local_registry(&self) -> &xai_tool_runtime::LocalRegistry {
         &self.local_registry
     }
     /// Whether the server must await this tool's in-process cancellation cleanup.
@@ -2342,7 +2335,6 @@ mod tests {
             app_builder_deployer_config:
                 crate::implementations::grok_build::app_builder::AppBuilderDeployerConfig::default(),
             api_key_provider: None,
-            auth_provider: None,
             attribution_callback: None,
             system_reminder_tag: crate::reminders::DEFAULT_REMINDER_TAG,
         }
@@ -2781,7 +2773,7 @@ mod tests {
             .tools
             .iter()
             .filter_map(|(name, entry)| {
-                let lr = xai_computer_hub_sdk::LocalRegistry::new();
+                let lr = xai_tool_runtime::LocalRegistry::new();
                 (entry.register_in_local)(&lr);
                 let id = xai_tool_protocol::ToolId::new(&entry.id)
                     .unwrap_or_else(|_| panic!("{name}: invalid tool id {:?}", entry.id));

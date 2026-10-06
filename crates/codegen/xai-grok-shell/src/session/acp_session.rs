@@ -1077,8 +1077,10 @@ pub(crate) struct SessionActor {
     pub(crate) plugin_registry_handle: Option<xai_grok_agent::plugins::SharedPluginRegistryHandle>,
     /// Centralized event tracking: event log, turn-end guard, active tool, doom loop terminate flag.
     pub(crate) events: crate::session::events::EventTracker,
-    /// Optional hub-side session event emitter (always constructed without a harness client in the agent; methods no-op with `None` transport).
-    pub(crate) observability_bridge: xai_computer_hub_sdk::ObservabilityBridge,
+    /// Inert session-event sink. Retained so turn/phase lifecycle call sites
+    /// keep a single place to emit; without a tool-server connection it is a
+    /// no-op (the local `EventTracker` above is the authoritative sink).
+    pub(crate) observability_bridge: ObservabilityBridge,
     /// Turn number captured at the start of each turn (before prompt index increment).
     /// Used by `ToolCallStarted` bridge emissions so they report the same turn number as `TurnStarted` / `TurnEnded`.
     pub(crate) current_turn_number: std::cell::Cell<u64>,
@@ -1672,6 +1674,28 @@ mod managed_gateway_descriptor_tests {
         assert!(!names.contains("linear__create_issue"));
         assert!(!names.contains("slack__search"));
     }
+}
+/// Inert session-event sink for the shell. There is no tool-server connection
+/// in this process, so emission is a no-op; the local [`EventTracker`]
+/// (`crate::session::events::EventTracker`) is the authoritative sink. Kept as
+/// a distinct type so turn/phase lifecycle call sites retain a single emit
+/// point without a hub dependency.
+#[derive(Debug)]
+pub(crate) struct ObservabilityBridge {
+    session_id: xai_tool_protocol::SessionId,
+}
+
+impl ObservabilityBridge {
+    pub(crate) fn new(session_id: xai_tool_protocol::SessionId) -> Self {
+        Self { session_id }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn session_id(&self) -> &xai_tool_protocol::SessionId {
+        &self.session_id
+    }
+
+    pub(crate) async fn emit(&self, _event: xai_tool_protocol::session_event::SessionEvent) {}
 }
 /// ToolBridge must route file operations through the injected FileSystem, not direct disk I/O.
 /// When `.with_fs()` is dropped from the builder, tools fall back to LocalFs and ACP client-side enforcement stops working.

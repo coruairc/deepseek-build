@@ -371,27 +371,25 @@ pub(crate) async fn spawn_session_actor(
                 WebFetchConfig::Disabled => vec![],
             };
             let project_trusted = if prefetch.scan().is_gathered() {
-                prefetch
-                    .resolve_trust(tool_context.cwd.as_path(), remote_settings.as_ref())
+                prefetch.resolve_trust(tool_context.cwd.as_path(), remote_settings.as_ref())
             } else {
-                crate::agent::folder_trust::project_scope_allowed(
-                        tool_context.cwd.as_path(),
-                    )
+                crate::agent::folder_trust::project_scope_allowed(tool_context.cwd.as_path())
             };
             let yolo_lock = permission_resolution::yolo_policy_lock();
             let yolo_pin = yolo_lock.as_ref().map(|lock| lock.reason.message());
-            let mut permission_config = permission_resolution::resolve_permission_config_with_fallback_pinned(
+            let mut permission_config =
+                permission_resolution::resolve_permission_config_with_fallback_pinned(
                     tool_context.cwd.as_path(),
                     project_trusted,
                     yolo_lock.as_ref(),
                 )
                 .instrument(tracing::info_span!("spawn.permission_config_load"))
                 .await;
-            let (cli_permission_rules, dropped_catchalls) = drop_cli_catchall_allows(
-                cli_permission_rules,
-                yolo_pin,
-            );
-            if let Some(reason) = yolo_pin && !dropped_catchalls.is_empty() {
+            let (cli_permission_rules, dropped_catchalls) =
+                drop_cli_catchall_allows(cli_permission_rules, yolo_pin);
+            if let Some(reason) = yolo_pin
+                && !dropped_catchalls.is_empty()
+            {
                 tracing::warn!(
                     reason,
                     dropped = dropped_catchalls.len(),
@@ -426,46 +424,22 @@ pub(crate) async fn spawn_session_actor(
                 .as_ref()
                 .map(permission_resolution::deny_read_globs_from_config)
                 .unwrap_or_default();
-            let hub_permission = if xai_grok_workspace::permission::hitl_permission_live_enabled() {
-                let server = match workspace_ops.workspace_handle() {
-                    Some(handle) => handle.hub_server_blocking().await,
-                    None => None,
-                };
-                let transport = server
-                    .and_then(|server| xai_grok_workspace::permission::ToolServerPermissionTransport::from_session_id(
-                        server,
-                        session_info.id.0.as_ref(),
-                    ))
-                    .map(|t| {
-                        std::sync::Arc::new(t)
-                            as std::sync::Arc<
-                                dyn xai_grok_workspace::permission::PermissionHookTransport,
-                            >
-                    });
-                if transport.is_none() {
-                    tracing::debug!(
-                        session_id = %session_info.id.0,
-                        "hitl permission live enabled but no remote transport available; using local prompt"
-                    );
-                }
-                transport
-            } else {
-                None
-            };
-            let (permissions, permission_events_rx) = xai_grok_workspace::permission::spawn_permission_manager_with_pin(
-                session_info.id.clone(),
-                gateway.clone(),
-                tool_context.cwd.clone(),
-                client_type,
-                permission_config,
-                deny_read_globs.clone(),
-                web_fetch_allowed_domains,
-                session_yolo_mode,
-                session_client_identifier.clone(),
-                crate::util::config::remember_tool_approvals_from_disk(),
-                yolo_pin,
-                hub_permission,
-            );
+            let hub_permission = None;
+            let (permissions, permission_events_rx) =
+                xai_grok_workspace::permission::spawn_permission_manager_with_pin(
+                    session_info.id.clone(),
+                    gateway.clone(),
+                    tool_context.cwd.clone(),
+                    client_type,
+                    permission_config,
+                    deny_read_globs.clone(),
+                    web_fetch_allowed_domains,
+                    session_yolo_mode,
+                    session_client_identifier.clone(),
+                    crate::util::config::remember_tool_approvals_from_disk(),
+                    yolo_pin,
+                    hub_permission,
+                );
             if crate::util::config::auto_mode_session_active(
                 crate::util::config::auto_permission_mode_enabled_from_disk(),
                 session_auto_mode,
@@ -477,8 +451,8 @@ pub(crate) async fn spawn_session_actor(
             (permissions, permission_events_rx, deny_read_globs)
         }
     }
-        .instrument(permission_setup_span)
-        .await;
+    .instrument(permission_setup_span)
+    .await;
     drop(permission_setup_timer);
     let history_scan = spawn_step!(
         "history_scan",
@@ -1637,7 +1611,7 @@ pub(crate) async fn spawn_session_actor(
     let obs_bridge = {
         let sid = xai_tool_protocol::SessionId::new(&*session_info.id.0)
             .unwrap_or_else(|_| xai_tool_protocol::SessionId::new("unknown").expect("valid"));
-        xai_computer_hub_sdk::ObservabilityBridge::new(None, sid)
+        crate::session::acp_session::ObservabilityBridge::new(sid)
     };
     let config_load = spawn_step!("config_load");
     let mut effective_config = crate::config::load_effective_config()

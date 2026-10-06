@@ -12,8 +12,7 @@ use xai_tool_runtime::{ToolError, ToolErrorKind, ToolStream, ToolStreamItem};
 
 use crate::handle::WorkspaceHandle;
 use crate::permission::{
-    PermissionHookTransport, SettleContext, ToolServerPermissionTransport, ViolationSettlement,
-    settle_violation,
+    PermissionHookTransport, SettleContext, ViolationSettlement, settle_violation,
 };
 use crate::sandbox::{CallOwner, Finished, SandboxMode, WorkspaceSandbox};
 use crate::session::WorkspaceSession;
@@ -57,22 +56,13 @@ pub(crate) const PIN_LOST_TEXT: &str = "the command was not run: it skipped its 
      the sandbox enforced, and the sandbox no longer holds it to that; run it again";
 
 /// The transport a sandbox card for `session` travels: the sandbox's own when a host answers
-/// cards itself, the hub's permission channel otherwise (`None` with no hub connected).
+/// cards itself; `None` otherwise (there is no hub connection anymore).
 pub(crate) async fn card_transport(
-    workspace: &WorkspaceHandle,
-    session: &WorkspaceSession,
+    _workspace: &WorkspaceHandle,
+    _session: &WorkspaceSession,
     sandbox: &WorkspaceSandbox,
 ) -> Option<Arc<dyn PermissionHookTransport>> {
-    if let Some(transport) = sandbox.card_transport() {
-        return Some(transport);
-    }
-    workspace
-        .hub_server_blocking()
-        .await
-        .and_then(|server| {
-            ToolServerPermissionTransport::from_session_id(server, session.session_id())
-        })
-        .map(|transport| Arc::new(transport) as Arc<dyn PermissionHookTransport>)
+    sandbox.card_transport()
 }
 
 /// The hub's pre-dispatch step: remember who dispatched `call_id`, so a connection the proxy

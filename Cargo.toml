@@ -90,9 +90,6 @@ members = [
     "crates/codegen/xai-tty-utils",
     "crates/codegen/xai-workflow",
     "crates/common/xai-circuit-breaker",
-    "crates/common/xai-computer-hub-core",
-    "crates/common/xai-computer-hub-mcp-adapter",
-    "crates/common/xai-computer-hub-sdk",
     "crates/common/xai-grok-compaction",
     "crates/common/xai-interjection-core",
     "crates/common/xai-message-delivery-core",
@@ -322,8 +319,6 @@ xai-acp-lib = { path = "crates/codegen/xai-acp-lib" }
 xai-agent-lifecycle = { path = "crates/codegen/xai-agent-lifecycle" }
 xai-circuit-breaker = { path = "crates/common/xai-circuit-breaker" }
 xai-compaction-transcript = { path = "crates/codegen/xai-compaction-transcript" }
-xai-computer-hub-core = { path = "crates/common/xai-computer-hub-core" }
-xai-computer-hub-sdk = { path = "crates/common/xai-computer-hub-sdk" }
 xai-dirs = { path = "crates/codegen/xai-dirs" }
 xai-fuzzy-file-search = { path = "crates/codegen/xai-fuzzy-file-search" }
 xai-gix-status = { path = "crates/codegen/xai-gix-status" }

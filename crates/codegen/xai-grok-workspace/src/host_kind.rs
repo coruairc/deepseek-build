@@ -1,13 +1,9 @@
-//! Which host runs a workspace server, and what its credential lets the server do.
+//! Which host runs a workspace server.
 //!
-//! A sandbox's credential reaches the deepseek-build API; every other host's only serves the hub. The
-//! catalog table is shared with the sandbox, so the tools that would call the API with the
+//! The catalog table is shared with the sandbox, so the tools that would call the API with the
 //! server's own credential are cut per host here and nowhere else.
 
-use xai_computer_hub_sdk::SharedAuthProvider;
 use xai_grok_tools::registry::types::ToolServerConfig;
-
-use crate::session::tool_config::WorkspaceSessionContextFactory;
 
 /// The host running a workspace server. The sandbox binary announces [`Self::as_wire_str`] as the
 /// registration's `host_kind`; `grok-workspaced` announces its own kind and takes the default here.
@@ -61,20 +57,6 @@ impl WorkspaceHostKind {
             catalog.tools.retain(|tool| !api_backed.contains(&tool.id));
         }
         catalog
-    }
-
-    /// The session-context factory for this host: only one whose credential reaches the API hands
-    /// `auth` to the gen and search tool configs and to the session `Resources`.
-    pub(crate) fn session_context_factory(
-        self,
-        auth: SharedAuthProvider,
-        api_base_url: String,
-    ) -> WorkspaceSessionContextFactory {
-        if self.is_hub_only() {
-            WorkspaceSessionContextFactory::hub_only()
-        } else {
-            WorkspaceSessionContextFactory::with_auth(auth, api_base_url)
-        }
     }
 }
 

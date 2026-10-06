@@ -966,10 +966,16 @@ pub(crate) fn sweep_orphaned_staging(ws: &WorkspaceHandle) -> WorkspaceResult<us
 /// Returns `(sweep, gc)`: the sweep resolves to the number of files removed; the GC ticker runs until the workspace is dropped.
 /// `None` when `WORKSPACE_CLIENT_FS_QUERIES` disables the client-fs ops: nothing is swept and no ticker runs.
 /// The GC task holds a `Weak` handle and exits when the workspace is dropped; the sweep holds a strong one for its bounded run.
+fn client_fs_queries_enabled() -> bool {
+    !matches!(
+        std::env::var("WORKSPACE_CLIENT_FS_QUERIES").as_deref(),
+        Ok("0") | Ok("false")
+    )
+}
 pub(crate) fn spawn_staged_upload_maintenance(
     ws: &WorkspaceHandle,
 ) -> Option<(tokio::task::JoinHandle<usize>, tokio::task::JoinHandle<()>)> {
-    if !crate::hub_server::client_fs_queries_enabled() {
+    if !client_fs_queries_enabled() {
         tracing::info!("client-fs staged upload maintenance disabled with the client-fs ops");
         return None;
     }

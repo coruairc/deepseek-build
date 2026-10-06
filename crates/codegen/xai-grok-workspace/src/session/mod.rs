@@ -9,14 +9,11 @@ pub mod tool_config;
 use crate::capability::CapabilityMode;
 use crate::config::{MemoryConfig, SessionContextFactory};
 use crate::file_system::{AsyncFsWrapper, LocalFs};
-use crate::hub::{HubConfig, HubHandle};
 use crate::session::file_state::FileStateTracker;
 use parking_lot::RwLock;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
-use xai_computer_hub_mcp_adapter::McpBridgeHandle;
-use xai_grok_mcp::servers::McpState;
 use xai_grok_tools::notification::AcknowledgedToolNotification;
 use xai_grok_tools::notification::types::ToolNotificationHandle;
 use xai_grok_tools::registry::types::{FinalizedToolset, ToolConfig, ToolServerConfig};
@@ -47,67 +44,6 @@ pub mod result {
         pub error: Option<serde_json::Value>,
     }
 }
-/// One MCP server running for a session.
-pub(crate) struct SessionMcpServer {
-    pub(crate) bridge: McpBridgeHandle,
-    /// The ids this server contributed to the session's advertised tool set, i.e. Dropping the server unregisters exactly these, so a native tool that shadowed a same-named MCP tool is never torn down along with it.
-    pub(crate) tool_ids: Vec<ToolId>,
-    /// Fixed for the server's life from the bind config it started under:
-    /// re-claims after a reload rank it the same way its start did.
-    pub(crate) tier: crate::mcp_claim::McpServerTier,
-}
-/// The MCP servers a session is running.
-pub(crate) struct ActiveMcp {
-    /// Config server name → live server. Empty is meaningful: it marks a
-    /// session that is in the configured set but currently runs nothing, so
-    /// a later reload can add servers to it.
-    pub(crate) servers: HashMap<String, SessionMcpServer>,
-    /// Servers stopped while they stay configured: a reload leaves them
-    /// stopped, and the session's next bind starts them again.
-    pub(crate) stopped: HashSet<String>,
-}
-/// Whether a session takes part in the workspace's configured MCP set. `Uninitialized` is a session that never joined: unbound, an `rpc_only` bind, or a bind whose toolset failed to resolve.
-pub(crate) enum WorkspaceMcpBinding {
-    Uninitialized,
-    Active(ActiveMcp),
-    Closed,
-}
-impl WorkspaceMcpBinding {
-    /// The session's servers, or `None` if it has not joined the set.
-    pub(crate) fn active(&self) -> Option<&ActiveMcp> {
-        match self {
-            Self::Active(active) => Some(active),
-            Self::Uninitialized | Self::Closed => None,
-        }
-    }
-    /// Mutable [`Self::active`]. Does **not** enrol a session that has not
-    /// joined — pushing servers into an `rpc_only` bind would hand it tools
-    /// it opted out of.
-    pub(crate) fn active_mut(&mut self) -> Option<&mut ActiveMcp> {
-        match self {
-            Self::Active(active) => Some(active),
-            Self::Uninitialized | Self::Closed => None,
-        }
-    }
-    /// Enrol this session in the configured set, or return its existing
-    /// servers. The only accessor that promotes, and `None` only once torn
-    /// down — a reload must never resurrect a session the hub has ended.
-    pub(crate) fn join(&mut self) -> Option<&mut ActiveMcp> {
-        if matches!(self, Self::Uninitialized) {
-            *self = Self::Active(ActiveMcp {
-                servers: HashMap::new(),
-                stopped: HashSet::new(),
-            });
-        }
-        self.active_mut()
-    }
-}
-/// How one of a session's MCP servers fared once its start settled.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum McpServerOutcome {
-    Connected,
-    Failed,
-}
 /// Per-session state held in [`WorkspaceShared::sessions`].
 ///
 /// The `effective_tool_config` baseline and the resolved `toolset` are kept under a single `RwLock` so a hot reload swaps both atomically.
@@ -135,23 +71,6 @@ pub struct WorkspaceSession {
     inner: RwLock<WorkspaceSessionInner>,
     /// Per-session lock that serialises `update_tool_config` calls.
     pub(crate) update_lock: tokio::sync::Mutex<()>,
-    /// Canonical MCP client/configuration runtime state.
-    pub(crate) mcp_state: Arc<tokio::sync::Mutex<McpState>>,
-    /// Workspace hub publication state for MCP bridges and registered aliases.
-    pub(crate) mcp_binding: tokio::sync::Mutex<WorkspaceMcpBinding>,
-    /// Cancels the session's in-flight MCP server starts. Teardown flips the binding to `Closed` for everything that COMPLETES afterwards, but a start still connecting holds its child process inside a pending future — cancelling drops those futures, killing the children now instead of at the discovery deadline.
-    /// A revive bind (re-opening a `Closed` binding) swaps in a fresh token.
-    pub(crate) mcp_cancel: parking_lot::Mutex<tokio_util::sync::CancellationToken>,
-    /// MCP life counter, only ever bumped under `mcp_binding`: an enrolment that TRANSITIONS the binding to Active starts a life, teardown ends one.
-    /// A soft rebind of an already-Active binding continues the life — its cancel token and its hub registrations' life tags are the life's, and must stay coherent with this counter.
-    /// Two fences read it: - A bind snapshots it when its resolution starts, and enrolment refuses a stale snapshot — so a stale soft rebind landing just after a genuine session-end teardown cannot re-open the binding and start servers nothing will ever tear down.
-    pub(crate) mcp_epoch: std::sync::atomic::AtomicU64,
-    /// Accepted-bind counter, bumped under `mcp_binding` by every bind the resolver accepts (enrolments, soft rebinds, re-opens — anything that returns bind success).
-    /// A hub unbind's DEFERRED teardown snapshots it beside the epoch and re-checks both: a soft rebind continues the life (same epoch — wave 13), so the epoch alone cannot distinguish "before the unbind" from "after the reconnect bind"; a bind accepted after the unbind arrived must invalidate the pending teardown, or it would close MCP under the accepted bind with nothing to re-open it.
-    pub(crate) mcp_bind_generation: std::sync::atomic::AtomicU64,
-    /// The native tool ids the session's last bind advertised (including the RPC handler), recorded by the bind resolver.
-    /// `claim_tools` refuses an MCP tool whose id collides with one of these, and only the bind knows them — the hub snapshot also holds already-advertised MCP tools.
-    pub(crate) mcp_native_tool_ids: parking_lot::Mutex<std::collections::HashSet<ToolId>>,
     /// Per-user feature-flag bag resolved at session-bind time, frozen for
     /// the session lifetime. `None` → tools use their safe defaults.
     pub(crate) viewer_ctx: Option<WorkspaceViewerContext>,
@@ -306,12 +225,6 @@ impl WorkspaceSession {
             update_lock: tokio::sync::Mutex::new(()),
             bind_tool_config_fingerprint: std::sync::Mutex::new(None),
             stale_resolve: std::sync::atomic::AtomicBool::new(false),
-            mcp_state: Arc::new(tokio::sync::Mutex::new(McpState::new(vec![]))),
-            mcp_binding: tokio::sync::Mutex::new(WorkspaceMcpBinding::Uninitialized),
-            mcp_cancel: parking_lot::Mutex::new(tokio_util::sync::CancellationToken::new()),
-            mcp_epoch: std::sync::atomic::AtomicU64::new(0),
-            mcp_bind_generation: std::sync::atomic::AtomicU64::new(0),
-            mcp_native_tool_ids: parking_lot::Mutex::new(std::collections::HashSet::new()),
             viewer_ctx,
             yolo_mode: std::sync::atomic::AtomicBool::new(false),
             approval: crate::permission::SessionApproval::default(),
@@ -414,30 +327,6 @@ impl WorkspaceSession {
     }
     /// The server's settled start outcome, or `None` while it is still starting. Never waits: a
     /// status probe reads past a start that holds the lock and reports it as unsettled.
-    pub fn mcp_server_outcome(&self, name: &str) -> Option<McpServerOutcome> {
-        let state = self.mcp_state.try_lock().ok()?;
-        if state.owned_clients.contains_key(name) {
-            Some(McpServerOutcome::Connected)
-        } else if state.init_failed.contains_key(name) {
-            Some(McpServerOutcome::Failed)
-        } else {
-            None
-        }
-    }
-    /// Settles `name` as a start would, for host-crate tests that read the outcome without a server.
-    #[doc(hidden)]
-    pub async fn settle_mcp_server_for_test(&self, name: &str, outcome: McpServerOutcome) {
-        let mut state = self.mcp_state.lock().await;
-        match outcome {
-            McpServerOutcome::Connected => {
-                state.owned_clients.insert(
-                    name.to_owned(),
-                    Arc::new(xai_grok_mcp::servers::McpClient::stub(name)),
-                );
-            }
-            McpServerOutcome::Failed => state.record_init_failure(name, false, None),
-        }
-    }
     pub fn cwd(&self) -> &Path {
         self.cwd_override.get().map_or(&self.cwd, PathBuf::as_path)
     }
@@ -643,15 +532,6 @@ pub struct WorkspaceShared {
     /// Plugin discovery configuration (CLI dirs, config paths, disabled/enabled lists).
     /// Used by `discover_plugins` via the `discovery` module.
     pub(crate) plugin_discovery_config: crate::discovery::PluginDiscoveryConfig,
-    /// Live server connection handle. `None` until [`WorkspaceHandle::connect_hub`](crate::handle::WorkspaceHandle::connect_hub) is called (or if no [`HubConfig`] was provided).
-    /// Uses `tokio::sync::Mutex` so the guard can be held across the async `HubHandle::connect()` call, preventing TOCTOU races.
-    pub(crate) hub_handle: tokio::sync::Mutex<Option<HubHandle>>,
-    /// Remote-origin tool configs (consumer direction), updated by the notification listener.
-    pub(crate) hub_tools_snapshot: arc_swap::ArcSwap<Vec<ToolConfig>>,
-    /// Server config stashed at construction time for deferred connect.
-    pub(crate) hub_config: Option<HubConfig>,
-    /// Auth provider for xAI service calls.
-    pub(crate) auth_provider: Option<xai_computer_hub_sdk::SharedAuthProvider>,
     /// Connection-level sink feeding the `ActivityTracker` (drained by `run_activity_feed`); not a network egress.
     /// `None` until `connect_hub()` sets it.
     pub(crate) activity_notify_handle:
@@ -660,7 +540,7 @@ pub struct WorkspaceShared {
     /// Mode-agnostic: the shell wires it to the agent gateway in local mode, and to the server in proxy mode.
     /// `None` until set via [`WorkspaceHandle::set_client_ext_sink`](crate::handle::WorkspaceHandle::set_client_ext_sink).
     pub(crate) client_ext_sink: arc_swap::ArcSwap<Option<ClientExtSink>>,
-    pub(crate) local_registry: xai_computer_hub_sdk::LocalRegistry,
+    pub(crate) local_registry: xai_tool_runtime::LocalRegistry,
     pub(crate) activity_tracker: std::sync::Arc<crate::activity::ActivityTracker>,
     /// True after the scheduler-liveness poll task started; reconnects must not start a second one.
     pub(crate) scheduler_poll_started: std::sync::atomic::AtomicBool,
@@ -758,14 +638,6 @@ impl WorkspaceShared {
     pub(crate) fn identity(&self) -> &crate::identity::WorkspaceIdentity {
         &self.identity
     }
-    /// Stable hub server id (`--server-id`), if a hub config is present.
-    pub(crate) fn server_id(&self) -> Option<String> {
-        self.hub_config.as_ref().and_then(|c| c.server_id.clone())
-    }
-    /// Auth provider used for xAI service calls.
-    pub fn auth_provider(&self) -> Option<&xai_computer_hub_sdk::SharedAuthProvider> {
-        self.auth_provider.as_ref()
-    }
     /// Parse the opaque [`server_metadata`](Self::server_metadata) blob into the typed subset the workspace needs (currently `sandbox_id`).
     /// [`from_metadata`](crate::config::WorkspaceServerMetadata::from_metadata) salvages every well-known key independently.
     /// A wrong-typed sibling therefore cannot drop `sandbox_id` from the environment artifacts.
@@ -786,26 +658,6 @@ impl WorkspaceShared {
     }
     pub fn mcp_tools_snapshot(&self) -> Arc<Vec<ToolConfig>> {
         self.mcp_tools_snapshot.load_full()
-    }
-    /// The tool server, if a server connection is active. Uses `try_lock` to avoid blocking on the async mutex from synchronous contexts.
-    pub fn hub_server(&self) -> Option<xai_computer_hub_sdk::ToolServer> {
-        self.hub_handle
-            .try_lock()
-            .ok()
-            .and_then(|guard| guard.as_ref().map(|h| h.server.clone()))
-    }
-    /// Like [`Self::hub_server`] but awaits the `hub_handle` lock instead of returning `None` on contention.
-    /// Use from async contexts that must not confuse a transient `connect_hub` lock-hold with "no hub connected"; `None` means no hub is connected.
-    pub async fn hub_server_blocking(&self) -> Option<xai_computer_hub_sdk::ToolServer> {
-        self.hub_handle
-            .lock()
-            .await
-            .as_ref()
-            .map(|h| h.server.clone())
-    }
-    /// Current snapshot of hub-provided tool configs (consumer direction).
-    pub fn hub_tools_snapshot(&self) -> Arc<Vec<ToolConfig>> {
-        self.hub_tools_snapshot.load_full()
     }
     /// Compose a session's tool `ctx.notification_handle` as a fan-out of the connection-level activity feed and the opt-in `system.notify` sender.
     /// Only the `system.notify` leg reaches a client, so the fan-out cannot wake the client twice.
@@ -861,7 +713,7 @@ impl WorkspaceShared {
         };
         let trigger = SwapTrigger::from_rebuild_source(source);
         let mcp_snap = self.mcp_tools_snapshot.load_full();
-        let hub_snap = self.hub_tools_snapshot.load_full();
+        let hub_snap: Vec<ToolConfig> = vec![];
         let sessions: Vec<(String, Arc<WorkspaceSession>)> = {
             let guard = self.sessions.read();
             guard

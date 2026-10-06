@@ -273,7 +273,8 @@ fn remote_settings_malformed_consent_gate_does_not_poison() {
 }
 #[test]
 fn remote_settings_goal_planner_model_round_trip() {
-    let json = r#"{"goal_planner_model": {"model": "deepseek-4", "agent_type": "general-purpose"}}"#;
+    let json =
+        r#"{"goal_planner_model": {"model": "deepseek-4", "agent_type": "general-purpose"}}"#;
     let s: RemoteSettings = serde_json::from_str(json).unwrap();
     assert_eq!(
         s.goal_planner_model,

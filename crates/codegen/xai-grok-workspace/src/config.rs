@@ -1,6 +1,5 @@
 //! Workspace and session configuration types.
 use crate::capability::CapabilityMode;
-use crate::hub::HubConfig;
 use crate::permission::ToolApprovalGate;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -796,7 +795,7 @@ pub struct BindMcpConfig {
     /// [`Self::with_first_party_servers`].
     first_party: std::sync::Arc<std::collections::HashSet<String>>,
     /// The call gate for each server name, set with [`Self::with_call_gate`].
-    call_gates: Arc<crate::mcp::McpCallGates>,
+    call_gates: Arc<crate::mcp_config::McpCallGates>,
 }
 impl BindMcpConfig {
     pub const DEFAULT_DISCOVERY_TIMEOUT: Duration = Duration::from_secs(30);
@@ -810,8 +809,8 @@ impl BindMcpConfig {
     pub const MAX_SERVERS: usize = 64;
     pub fn new(servers: impl IntoIterator<Item = agent_client_protocol::McpServer>) -> Self {
         let mut servers: Vec<_> = servers.into_iter().collect();
-        crate::mcp::dedupe_servers_last_wins(&mut servers);
-        crate::mcp::cap_servers(&mut servers);
+        crate::mcp_config::dedupe_servers_last_wins(&mut servers);
+        crate::mcp_config::cap_servers(&mut servers);
         Self {
             servers: servers.into(),
             discovery_timeout: Self::DEFAULT_DISCOVERY_TIMEOUT,
@@ -838,12 +837,12 @@ impl BindMcpConfig {
     pub fn with_call_gate(
         mut self,
         server: impl Into<String>,
-        gate: Arc<dyn crate::mcp::McpCallGate>,
+        gate: Arc<dyn crate::mcp_config::McpCallGate>,
     ) -> Self {
         Arc::make_mut(&mut self.call_gates).insert(server.into(), gate);
         self
     }
-    pub fn call_gates(&self) -> &crate::mcp::McpCallGates {
+    pub fn call_gates(&self) -> &crate::mcp_config::McpCallGates {
         &self.call_gates
     }
     pub fn servers(&self) -> &[agent_client_protocol::McpServer] {
@@ -893,11 +892,6 @@ pub struct WorkspaceConfig {
     pub skills_config: crate::discovery::SkillsConfig,
     /// CLI plugin dirs, config paths, and disabled/enabled lists. Stored on `WorkspaceShared` for `discover_plugins` calls.
     pub plugin_discovery_config: crate::discovery::PluginDiscoveryConfig,
-    /// When `Some`, the workspace can connect to the server after construction via [`connect_hub`](crate::handle::WorkspaceHandle::connect_hub).
-    pub hub_config: Option<HubConfig>,
-    /// Auth provider for xAI service calls made from workspace-scoped code.
-    /// `None` for workspaces that do not configure service auth.
-    pub auth_provider: Option<xai_computer_hub_sdk::SharedAuthProvider>,
     /// Metadata attached to the tool server registration.
     /// Propagated through the server to `ServerInfo.metadata` in `servers.list` responses.
     /// Harness clients use it to identify the sandbox that started the tool server.
@@ -955,12 +949,10 @@ pub fn merge_host_identity_metadata(
     .merge_into(metadata)
 }
 impl WorkspaceConfig {
-    /// Construct a minimal config suitable for proxy-mode workspaces where the workspace is used primarily as a ToolServer host.
+    /// Construct a minimal config suitable for local workspaces.
     pub fn new_for_proxy(
         root_cwd: PathBuf,
         session_factory: Arc<dyn SessionContextFactory>,
-        hub_config: HubConfig,
-        auth_provider: xai_computer_hub_sdk::SharedAuthProvider,
         server_metadata: Option<serde_json::Value>,
         status_config: crate::status_config::StatusConfig,
         tool_config: ToolServerConfig,
@@ -976,8 +968,6 @@ impl WorkspaceConfig {
             hook_project_sources: vec![],
             skills_config: Default::default(),
             plugin_discovery_config: Default::default(),
-            auth_provider: Some(auth_provider),
-            hub_config: Some(hub_config),
             server_metadata,
             project_lsp_trusted: true,
             require_explicit_toolset: false,

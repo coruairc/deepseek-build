@@ -23,15 +23,12 @@ pub(crate) mod git_odb;
 pub mod handle;
 pub mod hook_inputs;
 pub mod host_kind;
-pub mod hub;
-pub mod hub_auth;
 pub mod hub_channel;
 pub mod hub_ids;
-pub mod hub_server;
 pub mod identity;
 pub mod image_capabilities;
-pub mod mcp;
 pub(crate) mod mcp_claim;
+pub(crate) mod mcp_config;
 pub(crate) mod path_virtualization;
 pub mod permission;
 pub mod plugins;
@@ -67,14 +64,13 @@ pub use handle::{
     connect_local_workspace, resolve_workspace_home, termination_grace_from_env,
 };
 pub use host_kind::WorkspaceHostKind;
-pub use hub::HubConfig;
 pub use identity::WorkspaceIdentity;
 pub use path_virtualization::{
     ARTIFACTS_ALIAS, BindLifecycleCtx, BindMountError, BindMountHook, PathVirtualization,
     VISIBLE_ROOT,
 };
 pub use permission::*;
-pub use session::{McpServerOutcome, WorkspaceSession, WorkspaceShared};
+pub use session::{WorkspaceSession, WorkspaceShared};
 pub use session::{file_state, git, jj};
 pub use workspace_ops::{WorkspaceOp, WorkspaceOps};
 pub use xai_grok_workspace_client::WorkspaceClient;
@@ -88,8 +84,6 @@ pub fn init_metrics() {
     session::swap_policy::init_metrics();
     permission::init_metrics();
     sandbox::metrics::init_metrics();
-    hub_server::init_metrics();
-    hub_auth::init_metrics();
 }
 /// Crate-wide lock serializing every test that mutates the process-global environment (`GROK_HOME`, `HOME`, …).
 /// nextest isolates each test in its own process, but `cargo test --lib` shares ONE process across threads.
