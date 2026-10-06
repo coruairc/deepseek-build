@@ -6,8 +6,16 @@
 //!    [`open_at_startup`] re-opened it when nothing would deliver a fleet policy.
 //! 2. After auth or a refresh, per leader: [`OtelGate::resolve`] drove the gate from the
 //!    [`SettingsFetch`] outcome for the still-live identity.
-use crate::remote::SettingsFetch;
 use crate::util::config::RemoteSettings;
+
+/// Vestigial settings-fetch outcome, kept only so [`OtelGate::resolve`] retains its shape.
+/// Remote settings fetch was removed, so this is never constructed outside tests.
+#[derive(Debug)]
+pub(crate) enum SettingsFetch {
+    Fetched(Box<RemoteSettings>),
+    Rejected,
+    Retry,
+}
 
 /// Closes the gate. It is process-global, idempotent, and callable before any `AgentConfig` exists.
 pub(crate) fn suppress() {}

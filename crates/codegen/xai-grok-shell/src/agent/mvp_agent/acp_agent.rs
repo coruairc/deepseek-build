@@ -1193,9 +1193,6 @@ impl acp::Agent for MvpAgent {
             }
         };
         let prompt_blocks = arguments.prompt.clone();
-        let artifact_upload_ctx = trace_context
-            .as_ref()
-            .map(|ctx| ctx.artifact_upload_context());
         let traceparent: Option<String> = None;
         let dispatch_result: Result<(), acp::Error> = if send_now {
             handle
