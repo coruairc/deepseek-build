@@ -2,23 +2,34 @@
 
 Honest list of what is incomplete or broken at this revision. Nothing here is
 hidden behind a "temporary" flag; where code remains it is called out. Claims are
-against the tree on `dsb/integration` at `bd468965` (= `main`).
+against the tree on `dsb/integration` at `b19276ba`.
 
 ## Build & tests
 
-- **The workspace test suite compiles.** `cargo test --workspace --no-run`
-  (Rust 1.94.0) exits 0. Per-crate suites have been run green where checked:
-  `xai-grok-shell` (6638), `xai-grok-workspace` (2018), `xai-grok-tools` (3310),
-  `xai-grok-pager` (9976), `xai-grok-pager-render` (1209), `xai-grok-sampling-types`,
-  `xai-grok-sampler`, `xai-grok-agent` (576), `xai-chat-state` (391),
-  `xai-grok-status-line` (22), `xai-grok-telemetry` (164), `xai-fast-worktree` (333), etc.
-- **A full `cargo test --workspace` run is not yet clean end-to-end.** It compiles,
-  but four upstream Grove/NFS tests in `xai-fast-worktree` flake under whole-workspace
-  parallelism (they pass in isolation and under CPU load; two were serialized against
-  the env lock). A single full green run has not been confirmed because the run is
-  long and was interrupted.
+- **REGRESSION at `b19276ba`: `cargo test --workspace --no-run` does not compile.**
+  The deletion branches (`dsb/del-upload`, `dsb/del-cloud`, `dsb/del-hub`,
+  `dsb/del-ui`) removed production code that many *test-only* modules still
+  reference: `crate::hub` / `crate::hub_server` / `crate::mcp`,
+  `xai_computer_hub_sdk`, `build_session_routed_handlers`, `SharedAuthProvider`,
+  the MCP session bridge types (`WorkspaceMcpBinding`, `McpServerOutcome`,
+  `FakeHubRegistry`), donation/observability methods, and more. Affected test
+  files include `xai-grok-workspace/src/{handle_tests,host_kind_tests}.rs`,
+  `sandbox/real_wiring_tests.rs`, `permission/hub_gate_tests.rs`,
+  `permission/hub_permission.rs` (test-gated), and others across the workspace.
+- **Last known-good tag:** `last-known-good-2026-10-06` at `b3847ff8` — the last
+  commit where `cargo test --workspace --no-run` exited 0 and the per-crate
+  suites passed (`xai-grok-shell` 6638, `xai-grok-workspace` 2018,
+  `xai-grok-tools` 3310, `xai-grok-pager` 9976, `xai-grok-pager-render` 1209,
+  `xai-grok-agent` 576, `xai-chat-state` 391, `xai-grok-status-line` 22,
+  `xai-grok-telemetry` 164, `xai-fast-worktree` 333, …). `main` currently points
+  at `b19276ba`, which holds the deletion commits but a broken test compile.
+- **Non-test build is green:** `cargo check -p xai-grok-pager-bin` and
+  `cargo build --release` succeed at `b19276ba`; the binary runs.
 - **`cargo clippy` / `cargo fmt` were only run on crates touched per slice**, not
-  workspace-wide, after the large deletions.
+  workspace-wide.
+- A `syn`-based item stripper was prototyped at `/tmp/opencode/synstrip` to remove
+  top-level test items referencing deleted symbols; it works but the test fallout
+  is large enough that a per-crate iterative pass is still required.
 
 ## Network / egress
 
