@@ -1,0 +1,12 @@
+[package]
+name = "synstrip"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+syn = { version = "2", features = ["full", "parsing", "printing", "extra-traits"] }
+quote = "1"
+proc-macro2 = { version = "1", features = ["span-locations"] }
+
+[profile.dev]
+debug = false
