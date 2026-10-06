@@ -688,9 +688,6 @@ pub struct MvpAgent {
     pub(crate) worktree_type: crate::util::config::WorktreeType,
     /// Restore codebase state on worktree resume (resolved: local config, then remote, then default false).
     pub(crate) restore_code: bool,
-    /// Local session-registry override: `GROK_SESSION_REGISTRY` env, else `[cli] session_registry`.
-    /// `Some(true)` enables, `Some(false)` disables, `None` defers to remote settings.
-    session_registry_local: Option<bool>,
     /// Managed MCP configs and gateway tool catalog; lazily fetched.
     managed_mcp_cache: crate::session::managed_mcp::ManagedMcpStateHandle,
     /// Agent-level MCP server state. LEADER-SAFE(shared): MCP servers are agent-scoped, not per-client.

@@ -1116,16 +1116,6 @@ async fn restore_session_from_remote(
     cwd: &str,
     progress_on_stdout: bool,
 ) -> anyhow::Result<ResolvedExisting> {
-    let raw_config = xai_grok_shell::config::load_effective_config()
-        .map_err(|e| anyhow::anyhow!("Failed to load config: {}", e))?;
-    if let Some((false, source)) =
-        xai_grok_shell::util::config::session_registry_local_override_sourced(Some(&raw_config))
-    {
-        anyhow::bail!(
-            "Session does not exist locally (session registry is disabled by {})",
-            source.label()
-        );
-    }
     emit_pre_tui_restore_line(
         progress_on_stdout,
         &format!(

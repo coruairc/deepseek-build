@@ -1799,9 +1799,6 @@ impl MvpAgent {
             raw,
             cfg.remote_settings.as_ref(),
         );
-        let session_registry_local = crate::util::config::session_registry_local_override(
-            config_root.as_ref(),
-        );
         tracing::info!(
             worktree_type = ?worktree_type,
             source = wt_source,
@@ -1859,7 +1856,6 @@ impl MvpAgent {
             search_index: crate::session::storage::search::SharedSearchIndex::default(),
             worktree_type,
             restore_code,
-            session_registry_local,
             managed_mcp_cache: Default::default(),
             agent_mcp_state: std::sync::Arc::new(
                 tokio::sync::Mutex::new(
