@@ -494,15 +494,6 @@ pub(crate) struct ClientFsConfig {
     pub fs: FsConfig,
     pub mode: ClientFsMode,
 }
-/// Proxy config for the session registry client.
-/// Shared between `acp_session` (slash commands) and `persistence` (title generation).
-#[derive(Clone)]
-pub(crate) struct RegistryConfig {
-    pub base_url: String,
-    pub user_token: String,
-    pub deployment_key: Option<String>,
-    pub alpha_test_key: Option<String>,
-}
 pub mod acp_conversion;
 pub(crate) mod acp_mcp;
 pub(crate) mod acp_session;
