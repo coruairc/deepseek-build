@@ -18,7 +18,6 @@ use xai_grok_workspace_daemon::preview_supervisor::{
 };
 /// OTLP `service.name` for this binary's exported traces/logs/metrics and direct-OTLP fastrace export.
 /// Single source so the call sites can't drift.
-const SERVICE_NAME: &str = "prod_grok_workspace";
 const EXIT_SERVER_ID_INVALID: i32 = 3;
 const INVALID_SERVER_ID_MARKER: &str = "workspace-server: invalid --server-id";
 const WORKSPACE_HUB_AUTH_FAILED_MARKER: &str = "workspace hub auth failed";
@@ -341,21 +340,6 @@ async fn run(
     } else {
         tracing::info!("kernel OOM-kill protection not active");
     }
-    let _direct_otlp = match std::env::var("GROK_WORKSPACE_OTLP_ENDPOINT") {
-        Ok(endpoint) if !endpoint.is_empty() => {
-            match xai_tracing::init_fastrace(endpoint.clone(), SERVICE_NAME.to_owned(), None) {
-                Ok(()) => {
-                    tracing::info!(%endpoint, "trace export enabled (direct OTLP)");
-                    true
-                }
-                Err(e) => {
-                    tracing::warn!(error = %e, "direct OTLP trace export init failed");
-                    false
-                }
-            }
-        }
-        _ => false,
-    };
     {
         use xai_grok_sandbox::{ProfileName, SandboxManager};
         let profile = match std::env::var("GROK_SANDBOX_PROFILE").ok() {

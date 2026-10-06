@@ -96,7 +96,6 @@ members = [
     "crates/common/xai-tool-protocol",
     "crates/common/xai-tool-runtime",
     "crates/common/xai-tool-types",
-    "crates/common/xai-tracing",
     "prod/mc/model-api-types",
     "third_party/dagre_rust",
     "third_party/graphlib_rust",
@@ -374,7 +373,6 @@ xai-token-estimation = { path = "crates/codegen/xai-token-estimation" }
 xai-tool-protocol = { path = "crates/common/xai-tool-protocol" }
 xai-tool-runtime = { path = "crates/common/xai-tool-runtime" }
 xai-tool-types = { path = "crates/common/xai-tool-types" }
-xai-tracing = { path = "crates/common/xai-tracing" }
 xai-tty-utils = { path = "crates/codegen/xai-tty-utils" }
 zbus = { version = "5" }
 zip = "3"
