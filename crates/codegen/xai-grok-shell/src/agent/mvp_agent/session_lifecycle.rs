@@ -138,14 +138,6 @@ impl MvpAgent {
     pub(super) fn finalize_session_replica(&self, id: &acp::SessionId) {
         #[cfg(test)]
         self.finalize_spy.borrow_mut().push(id.0.to_string());
-        if let Some(client) = self.session_registry_client() {
-            let sid = id.0.to_string();
-            tokio::spawn(async move {
-                if let Err(e) = client.finalize(&sid).await {
-                    tracing::warn!(error = %e, "session registry finalize failed (non-fatal)");
-                }
-            });
-        }
     }
     /// Clone of the hosted handle, if any.
     /// Callers must not hold a registry borrow across an await: clone the handle out first.
