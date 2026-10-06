@@ -1133,39 +1133,13 @@ async fn restore_session_from_remote(
             session_id
         ),
     );
-    let agent_config = xai_grok_shell::agent::config::Config::new_from_toml_cfg(&raw_config)
-        .map_err(|e| anyhow::anyhow!("Failed to create agent config: {}", e))?;
-    use xai_grok_login::{AuthManager, ensure_authenticated_or_noninteractive};
-    use xai_grok_shell::agent::session_registry_client::SessionRegistryClient;
     use xai_grok_shell::session::restore::{RestoreSessionOpts, restore_session_with_progress};
-    use xai_grok_shell::util::grok_home::grok_home;
-    let deployment_key = agent_config.endpoints.deployment_key.clone();
-    ensure_authenticated_or_noninteractive(
-        &agent_config.grok_com_config,
-        agent_config.login_device_flow,
-        agent_config.endpoints.proxy_url(),
-        deployment_key.is_some(),
-        None,
-    )
-    .await
-    .map_err(|e| anyhow::anyhow!("Failed to authenticate for session restore: {}", e))?;
-    let auth_manager = std::sync::Arc::new(AuthManager::new_with_proxy_base_url(
-        &grok_home(),
-        agent_config.grok_com_config.clone(),
-        agent_config.endpoints.proxy_url(),
-    ));
-    let registry_client =
-        SessionRegistryClient::new(agent_config.endpoints.proxy_url(), String::new())
-            .with_deployment_key(deployment_key.clone())
-            .with_alpha_test_key(agent_config.endpoints.alpha_test_key.clone())
-            .with_auth(auth_manager.clone());
     let progress: xai_grok_shell::session::restore::ProgressCallback = Box::new(move |event| {
         emit_pre_tui_restore_line(progress_on_stdout, &format!("  {}", event.display_line()));
     });
     let timed = tokio::time::timeout(
         REMOTE_RESTORE_TIMEOUT,
         restore_session_with_progress(
-            &registry_client,
             session_id,
             cwd,
             RestoreSessionOpts {

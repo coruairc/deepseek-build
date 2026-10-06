@@ -1045,7 +1045,6 @@ pub(crate) fn execute(
                 });
         }
         Effect::RestoreAndLoadSession { agent_id, session_id, session_cwd: _ } => {
-            use xai_grok_shell::agent::session_registry_client::SessionRegistryClient;
             use xai_grok_shell::session::restore::{
                 ensure_available, restore_session_with_progress,
             };
@@ -1061,26 +1060,12 @@ pub(crate) fn execute(
             }
             let setup_started = std::time::Instant::now();
             let raw_config = xai_grok_shell::config::load_effective_config();
-            let setup = raw_config
-                .ok()
-                .and_then(|raw| {
-                    let cfg = xai_grok_shell::agent::config::Config::new_from_toml_cfg(
-                            &raw,
-                        )
-                        .ok()?;
-                    let proxy_base = cfg.endpoints.proxy_url();
-                    let deployment_key = cfg.endpoints.deployment_key.clone();
-                    let alpha_test_key = cfg.endpoints.alpha_test_key.clone();
-                    let auth_manager = crate::app::session_startup::pre_acp_auth_manager(
-                        &cfg,
-                    );
-                    let registry = SessionRegistryClient::new(&proxy_base, String::new())
-                        .with_deployment_key(deployment_key.clone())
-                        .with_alpha_test_key(alpha_test_key.clone())
-                        .with_session_id(session_id.clone())
-                        .with_auth(auth_manager.clone());
-                    Some((auth_manager, registry))
-                });
+            let setup = raw_config.ok().and_then(|raw| {
+                let cfg =
+                    xai_grok_shell::agent::config::Config::new_from_toml_cfg(&raw).ok()?;
+                let auth_manager = crate::app::session_startup::pre_acp_auth_manager(&cfg);
+                Some(auth_manager)
+            });
             tracing::info!(
                 elapsed_ms = setup_started.elapsed().as_millis() as u64,
                 ok = setup.is_some(),
@@ -1090,7 +1075,7 @@ pub(crate) fn execute(
             let ptx = progress_tx.clone();
             tasks
                 .spawn(async move {
-                    let Some((auth_manager, registry_client)) = setup
+                    let Some(auth_manager) = setup
                     else {
                         return TaskResult::SessionRestoreFailed {
                             agent_id,
@@ -1164,7 +1149,6 @@ pub(crate) fn execute(
                     };
                     let cwd_str = target_cwd.to_string_lossy().to_string();
                     match restore_session_with_progress(
-                            &registry_client,
                             &session_id,
                             &cwd_str,
                             xai_grok_shell::session::restore::RestoreSessionOpts {

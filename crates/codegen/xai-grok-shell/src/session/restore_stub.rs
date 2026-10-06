@@ -2,8 +2,6 @@ use std::time::Duration;
 
 use anyhow::{Result, bail};
 
-use crate::agent::session_registry_client::{SessionRecord, SessionRegistryClient};
-
 const UNAVAILABLE: &str = "Remote session restore is not available in this build";
 
 #[derive(Debug)]
@@ -126,15 +124,6 @@ impl SessionStateRestoreResult {
     }
 }
 
-pub(crate) async fn restore_session(
-    _client: &SessionRegistryClient,
-    _session_id: &str,
-    _target_cwd: &str,
-    _turn_override: Option<i32>,
-) -> Result<RestoreResult> {
-    bail!(UNAVAILABLE)
-}
-
 pub struct RestoreSessionOpts {
     pub turn_override: Option<i32>,
     pub progress: Option<ProgressCallback>,
@@ -152,7 +141,6 @@ impl RestoreSessionOpts {
 }
 
 pub async fn restore_session_with_progress(
-    _client: &SessionRegistryClient,
     _session_id: &str,
     _target_cwd: &str,
     _opts: RestoreSessionOpts,
@@ -162,60 +150,4 @@ pub async fn restore_session_with_progress(
 
 pub fn ensure_available() -> Result<()> {
     bail!(UNAVAILABLE)
-}
-
-pub(crate) fn resolve_restore_turn(record: &SessionRecord, turn_override: Option<i32>) -> i32 {
-    turn_override.unwrap_or_else(|| {
-        record
-            .restorable_turn_number
-            .unwrap_or(record.last_turn_number)
-    })
-}
-
-pub(crate) async fn download_to_tempfile(
-    _client: &SessionRegistryClient,
-    _session_id: &str,
-    _filename: &str,
-    _turn: i32,
-) -> anyhow::Result<tempfile::NamedTempFile> {
-    bail!(UNAVAILABLE)
-}
-
-pub(crate) async fn apply_memory_download(
-    _download: anyhow::Result<tempfile::NamedTempFile>,
-    _target_cwd: &str,
-) -> MemoryRestoreResult {
-    MemoryRestoreResult::skipped(UNAVAILABLE)
-}
-
-pub(crate) async fn apply_session_state_download(
-    _download: anyhow::Result<tempfile::NamedTempFile>,
-    _session_id: &str,
-    _target_cwd: &str,
-) -> (SessionStateRestoreResult, String) {
-    (SessionStateRestoreResult::skipped(), String::new())
-}
-
-pub fn format_session_line(r: &SessionRecord) -> String {
-    r.session_id.clone()
-}
-
-pub fn format_search_results(sessions: &[SessionRecord]) -> String {
-    if sessions.is_empty() {
-        "No sessions found.".to_string()
-    } else {
-        sessions
-            .iter()
-            .map(format_session_line)
-            .collect::<Vec<_>>()
-            .join("\n")
-    }
-}
-
-pub(crate) async fn apply_session_state_in_place(
-    _download: anyhow::Result<tempfile::NamedTempFile>,
-    _session_id: &str,
-    _target_cwd: &str,
-) -> SessionStateRestoreResult {
-    SessionStateRestoreResult::skipped()
 }
