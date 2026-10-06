@@ -9,7 +9,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use futures::StreamExt;
 use serde_json::{Value, json};
-use xai_computer_hub_sdk::ToolServerHandler;
 use xai_grok_paths::AbsPathBuf;
 use xai_grok_sandbox::command::backend::{
     BackendCapabilities, CommandTag, OriginalArgv, RenderedPolicy, SandboxBackend,
@@ -38,12 +37,45 @@ use crate::capability::CapabilityMode;
 use crate::handle::WorkspaceHandle;
 use crate::handle::tests::{BASH_CCO_STUB_NAME, BASH_CCO_STUB_STDOUT};
 use crate::host_kind::WorkspaceHostKind;
-use crate::hub::SessionRoutedToolHandler;
 use crate::permission::{
     StateFileAccess, ToolApprovalGate, approval_gate_for, grant_store_access, load_state_from_disk,
     persist_state,
 };
 use crate::session::tool_config::test_support::tc;
+
+/// Test-only replacement for the deleted `crate::hub::SessionRoutedToolHandler`.
+///
+/// The old hub handler dispatched a tool call to the workspace session's `FinalizedToolset`
+/// over the hub RPC transport. The hub is deleted, so this dispatches through the in-process
+/// local harness, which resolves the same live `FinalizedToolset` and runs the tool in-process
+/// (`ToolHarness::call` -> `SessionToolHandle::execute` -> `FinalizedToolset::call_streaming`).
+/// Sandbox and permission wiring are unchanged; only the hub RPC transport is gone.
+struct SessionRoutedToolHandler {
+    handle: WorkspaceHandle,
+    tool: String,
+}
+impl SessionRoutedToolHandler {
+    fn new(
+        tool: String,
+        _desc: ToolDescription,
+        _unused: Option<()>,
+        handle: WorkspaceHandle,
+    ) -> Result<Self, xai_tool_protocol::IdError> {
+        Ok(Self { handle, tool })
+    }
+    async fn handle_call(
+        &self,
+        ctx: ToolCallContext,
+        args: Value,
+    ) -> ToolStream<TypedToolOutput> {
+        let harness = self
+            .handle
+            .create_local_harness("main")
+            .expect("local harness for the main session");
+        let tool_id = xai_tool_protocol::ToolId::new(self.tool.clone()).expect("tool id");
+        harness.call(tool_id, args, ctx).await
+    }
+}
 
 /// Everything the stub kernel refuses lives under this tree: outside the workspace, `/tmp` and
 /// every build cache.
