@@ -1,5 +1,4 @@
 //! Per-session resources and the registry that owns them.
-//! Distinct from `agent::session_registry_client`, which talks to the remote registry.
 use super::*;
 use xai_grok_tools::registry::types::FinalizedToolset;
 /// The map stays private so every caller goes through a named operation.

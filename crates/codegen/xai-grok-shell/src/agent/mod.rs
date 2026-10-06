@@ -18,7 +18,6 @@ pub(crate) mod restore_code;
 pub mod roster;
 pub mod session_config;
 pub(crate) mod session_metrics;
-pub mod session_registry_client;
 pub(crate) mod subagent;
 pub(crate) mod subscription_check;
 #[cfg(feature = "test-support")]
