@@ -632,47 +632,6 @@ impl MvpAgent {
             );
         }
     }
-    /// Build a `RegistryConfig` if the feature is enabled (for passing to persistence actor).
-    pub(super) fn build_registry_config(
-        &self,
-    ) -> Option<crate::session::RegistryConfig> {
-        let remote = self
-            .cfg
-            .borrow()
-            .remote_settings
-            .as_ref()
-            .and_then(|s| s.session_registry_enabled);
-        if !self.session_registry_local.or(remote).unwrap_or(false) {
-            return None;
-        }
-        let auth = self.auth_manager.current_or_expired()?;
-        if !auth.is_xai_auth() {
-            return None;
-        }
-        let key = auth.key.clone();
-        let cfg = self.cfg.borrow();
-        Some(crate::session::RegistryConfig {
-            base_url: cfg.endpoints.proxy_url(),
-            user_token: key,
-            deployment_key: cfg.endpoints.deployment_key.clone(),
-            alpha_test_key: cfg.endpoints.alpha_test_key.clone(),
-        })
-    }
-    /// Delegates to `build_registry_config()` for the enabled check and config.
-    pub(crate) fn session_registry_client(
-        &self,
-    ) -> Option<crate::agent::session_registry_client::SessionRegistryClient> {
-        let cfg = self.build_registry_config()?;
-        Some(
-            crate::agent::session_registry_client::SessionRegistryClient::new(
-                    cfg.base_url,
-                    cfg.user_token,
-                )
-                .with_deployment_key(cfg.deployment_key)
-                .with_alpha_test_key(cfg.alpha_test_key)
-                .with_auth(self.auth_manager.clone()),
-        )
-    }
     /// Pre-session command availability snapshot. Used by the `deepseek-build/commands/list` ext method and the `InitializeResponse._meta` path (`builtin_commands()`). Both fire before any session exists.
     /// The eventual agent's toolset is unknown (it depends on the model the user picks). So runtime/tool-dependent gates (`/flush`, `/loop`, `/memory`, …) fail closed.
     /// The session-scoped `available_commands_update` in `acp_session.rs` fills in the real per-model gating as soon as a session starts.
