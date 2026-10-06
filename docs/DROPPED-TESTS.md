@@ -43,3 +43,25 @@ and local resume coverage remain.
 - `session::merge::tests::remote_session_has_none_metadata_fields` — asserted serialization defaults for remote-only list rows.
 - `session::merge::tests::limit_applied_after_merge_not_per_source` — asserted limiting across remote and local listing lanes; local scan truncation remains covered by `limit_applied_after_local_scan`.
 - `session::unified_list::tests::relaxed_scan_drops_headless_remote_twin` — asserted that a remote twin could not reintroduce a headless session in the relaxed listing.
+
+## `xai-grok-shell` agent-side registry writers
+
+The agent no longer registers, updates, finalizes, restores, or downloads
+session replicas over the remote session registry. Local git-head persistence,
+local session persistence/list/search/resume, and local worktree discovery/resume
+remain. These tests asserted removed remote-registry behavior.
+
+- `agent::session_registry_client::tests::immediate_turn_update_omits_restorable_field` — asserted the wire shape of a remote `UpdateRequest`.
+- `agent::session_registry_client::tests::restorable_turn_update_omits_last_turn_and_head_fields` — asserted the remote update wire shape.
+- `agent::session_registry_client::tests::summary_update_omits_all_turn_fields` — asserted the remote update wire shape.
+- `agent::session_registry_client::tests::empty_summary_is_sent_not_omitted` — asserted remote replica title unpinning.
+- `agent::session_registry_client::tests::register_request_serializes_device_id_as_camel_case` — asserted the remote register wire shape.
+- `agent::session_registry_client::tests::register_request_serializes_empty_device_id_as_present` — asserted the remote register wire shape.
+- `agent::session_registry_client::tests::register_request_omits_device_id_when_none` — asserted the remote register wire shape.
+- `agent::session_registry_client::tests::session_record_without_restorable_turn_deserializes_as_none` — asserted `SessionRecord` deserialization for the remote registry.
+- `agent::session_registry_client::tests::session_record_with_restorable_turn_deserializes_correctly` — asserted `SessionRecord` deserialization for the remote registry.
+- `agent::session_registry_client::tests::session_registry_client_uses_active_auth_for_each_request` — asserted remote client auth token refresh.
+- `agent::session_registry_client::tests::session_record_allows_last_turn_ahead_of_restorable` — asserted remote `SessionRecord` field semantics.
+- `agent::mvp_agent::turn_end::tests::dropped_claim_keeps_later_turn_ordered` — exercised `RegistryWriteOrder` turn-end serialization, which is removed.
+- `session::worktree::tests::remote_worktree_codebase_follows_request_then_default` — exercised `remote_worktree_restores_codebase`, removed with the remote worktree restore path.
+- `util::config::mcp::tests::session_registry_local_override_precedence` — asserted the removed `[cli] session_registry` / `GROK_SESSION_REGISTRY` gate.
