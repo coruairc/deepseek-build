@@ -2,34 +2,30 @@
 
 Honest list of what is incomplete or broken at this revision. Nothing here is
 hidden behind a "temporary" flag; where code remains it is called out. Claims are
-against the tree on `dsb/integration` at `b19276ba`.
+against the tree on `dsb/integration` (post deletion-branches; fmt commit
+`20f47c7d`).
 
 ## Build & tests
 
-- **REGRESSION at `b19276ba`: `cargo test --workspace --no-run` does not compile.**
-  The deletion branches (`dsb/del-upload`, `dsb/del-cloud`, `dsb/del-hub`,
-  `dsb/del-ui`) removed production code that many *test-only* modules still
-  reference: `crate::hub` / `crate::hub_server` / `crate::mcp`,
+- **`cargo test --workspace` does not compile.** The only failing crate is
+  **`xai-grok-workspace`** (all other crates' test targets compile). Its
+  `#[cfg(test)]` modules still reference production code removed by the
+  deletion branches: `crate::hub` / `crate::hub_server` / `crate::mcp`,
   `xai_computer_hub_sdk`, `build_session_routed_handlers`, `SharedAuthProvider`,
   the MCP session bridge types (`WorkspaceMcpBinding`, `McpServerOutcome`,
-  `FakeHubRegistry`), donation/observability methods, and more. Affected test
-  files include `xai-grok-workspace/src/{handle_tests,host_kind_tests}.rs`,
-  `sandbox/real_wiring_tests.rs`, `permission/hub_gate_tests.rs`,
-  `permission/hub_permission.rs` (test-gated), and others across the workspace.
-- **Last known-good tag:** `last-known-good-2026-10-06` at `b3847ff8` — the last
-  commit where `cargo test --workspace --no-run` exited 0 and the per-crate
-  suites passed (`xai-grok-shell` 6638, `xai-grok-workspace` 2018,
-  `xai-grok-tools` 3310, `xai-grok-pager` 9976, `xai-grok-pager-render` 1209,
-  `xai-grok-agent` 576, `xai-chat-state` 391, `xai-grok-status-line` 22,
-  `xai-grok-telemetry` 164, `xai-fast-worktree` 333, …). `main` currently points
-  at `b19276ba`, which holds the deletion commits but a broken test compile.
+  `FakeHubRegistry`), and donation/observability methods. Affected files:
+  `xai-grok-workspace/src/{handle_tests,host_kind_tests}.rs`,
+  `sandbox/real_wiring_tests.rs` (now repaired via the local harness),
+  `permission/hub_gate_tests.rs` (deleted), `permission/hub_permission.rs`
+  (test module).
 - **Non-test build is green:** `cargo check -p xai-grok-pager-bin` and
-  `cargo build --release` succeed at `b19276ba`; the binary runs.
-- **`cargo clippy` / `cargo fmt` were only run on crates touched per slice**, not
-  workspace-wide.
-- A `syn`-based item stripper was prototyped at `/tmp/opencode/synstrip` to remove
-  top-level test items referencing deleted symbols; it works but the test fallout
-  is large enough that a per-crate iterative pass is still required.
+  `cargo build --release -p xai-grok-pager-bin` succeed; the binary runs
+  (`target/release/deepseek-build`, ~147 MB, `deepseek-build 1.0.45`).
+- **Tags:** `last-known-good-2026-10-06` (`b3847ff8`, last green test compile;
+  still contains egress code — not safe to run) and `parked-test-repair-2026-10-06`
+  (`c7d7f7e4`, current parked state).
+- `scripts/synstrip/` (a `syn`-based item stripper) and `scripts/line_loop.py`
+  (compiler-driven repair loop) are committed for the future test-repair pass.
 
 ## Network / egress
 
@@ -41,37 +37,34 @@ against the tree on `dsb/integration` at `b19276ba`.
   connect-logger because `strace` and network namespaces were unavailable in the
   dev environment; reproduce with `strace -f -e trace=connect` where available.
   The same `LD_PRELOAD` approach is what `scripts/sandbox-run.sh` ships.
-- **Live smoke test not run.** No real `DEEPSEEK_API_KEY` was provided, so the
-  end-to-end chat / streamed chat / 3-turn thinking tool-call chain / usage-cache
-  assertions against the live API are unverified. The request path was verified
-  as far as a 401 response (dummy key) allows.
+- **Live smoke test skipped.** `DEEPSEEK_API_KEY` is not exported in the agent
+  shell, so the end-to-end chat / streamed chat / 3-turn thinking tool-call chain /
+  usage-cache assertions are unverified. The request path is verified as far as a
+  401 (dummy key) allows.
+- **Extended runtime egress not exercised.** With no key the model cannot drive
+  tools / MCP / compaction / resume, so the extended session test could not run.
+  Measured (LD_PRELOAD connect-logger; `strace` absent): `--version` = no connects;
+  a headless turn = only `api.deepseek.com:443` + one local AF_UNIX socket.
 
-## Phase 1 cleanup — remaining stubs / undeleted code
+## Phase 1 cleanup — stubs
 
-These contain **no network egress** but were not fully deleted:
+All previously-listed stubs are now **deleted**: `xai-grok-shell/src/{upload,cloud_config,remote}`,
+`session/repo_changes`, `xai-grok-telemetry/src/{external.rs,otel_layer.rs,trace_context.rs}`,
+`xai-grok-pager/src/views/announcements.rs`, `xai-grok-feedback`, the pager
+feedback/voice UI, and all `xai-computer-hub-{core,sdk,mcp-adapter}` crates +
+consumers. `xai-grok-telemetry` remains but is inert (no `track`/`send`).
 
-- `xai-grok-shell/src/upload/**` — restored inert, routed to
-  `file_utils_compat` (no storage HTTP).
-- `xai-grok-shell/src/session/repo_changes/mod.rs` — pure serde types only.
-- The pager feedback modal UI remains, but the shell feedback manager was deleted;
-  `/feedback` is inert (no upload).
-- `xai-grok-shell/src/cloud_config/**` — the former `xai-grok-cloud-config`
-  crate, vendored inert into the shell.
-- `xai-grok-telemetry/src/{external.rs,otel_layer.rs,trace_context.rs}` — no-op
-  OTLP/trace stubs.
-- `xai-grok-pager/src/views/announcements.rs` — no-op.
-- `xai-computer-hub-{core,sdk,mcp-adapter}` crates (under `crates/common/`) and
-  their consumers (`xai-grok-workspace`, `xai-grok-workspace-{client,daemon}`,
-  `xai-grok-tools`, `xai-grok-mcp`, shell) — present, de-egressed but **not
-  deleted**.
-- `xai-grok-shell/src/remote/**` — remote model/agent clients, present with
-  neutralized hosts. The relay/WebSocket layer and `agent/relay.rs` were deleted.
-- `prod/mc/model-api-types` storage wire types remain (used by the inert upload
-  shim).
+Remaining **network-capable code not justified** by provider/MCP/web_fetch (recommend removal):
 
-**Removed since the earlier handoff:** xAI voice dictation (the pager
-`xai_grok_voice.rs` stub and capture subprocess), session share, and the remote
-WebSocket relay / agent-serve subcommands.
+- `xai-grok-shell/src/agent/session_registry_client.rs` (~678 lines) — a reqwest
+  client posting to `{proxy}/sessions/*` (`{proxy}` is `api.deepseek.com`). Gated
+  off for API-key auth, so it does not run, but the code is present.
+- `common/xai-tracing` — a real OTLP gRPC exporter (`fastrace.rs::init_fastrace`;
+  `opentelemetry-otlp` / `tonic` / `fastrace-opentelemetry`). Invoked only from the
+  standalone `xai-workspace-server` binary when `GROK_WORKSPACE_OTLP_ENDPOINT` is
+  set; **not** called by the TUI. Still compiled into dependents.
+- `xai-grok-http::shared_upload_client()` — dead helper, no callers.
+- `xai-grok-hooks` HTTP handlers — user-configured HTTPS hook URLs.
 
 ## Phase 2 — adapter
 

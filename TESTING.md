@@ -2,10 +2,13 @@
 
 A 20–30 minute manual test plan for the personal `deepseek-build` agent.
 
-> Status caveat: `cargo test --workspace` is a separate, slower verification (see
-> the "Test suite" note at the end). The interactive product path — DeepSeek chat,
-> tools, permissions, plan mode, sessions, headless, MCP — is testable today.
-> See [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) for what is unfinished.
+> Status caveat: **`cargo test --workspace` does not compile** — the failing crate
+> is `xai-grok-workspace` (its `#[cfg(test)]` modules reference code deleted in the
+> Phase-1 cleanup). The non-test build (`cargo build --release -p xai-grok-pager-bin`)
+> is green and the binary runs. The interactive product path — DeepSeek chat, tools,
+> permissions, plan mode, sessions, headless, MCP — is testable today.
+> See [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) for what is unfinished (including the
+> live smoke test, which is skipped without `DEEPSEEK_API_KEY`).
 
 ## 1. Build
 
