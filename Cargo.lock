@@ -13474,7 +13474,6 @@ dependencies = [
  "mid",
  "obfstr",
  "parking_lot",
- "reqwest 0.12.24",
  "serde",
  "serde_json",
  "strum 0.27.2",

@@ -629,7 +629,6 @@ impl MvpAgent {
                 self.origin_client_info_from_meta(None),
                 xai_grok_version::VERSION.to_owned(),
                 subscription_tier,
-                crate::http::shared_client(),
             );
         }
     }

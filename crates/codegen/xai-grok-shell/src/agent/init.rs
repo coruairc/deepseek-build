@@ -238,7 +238,6 @@ pub fn update_telemetry_config(config: &AgentConfig, auth_manager: &AuthManager)
         crate::http::origin_client_info_from_env(),
         xai_grok_version::VERSION.to_owned(),
         subscription_tier,
-        crate::http::shared_client(),
     );
 }
 /// Sync this principal's config now rather than waiting for the background tick.

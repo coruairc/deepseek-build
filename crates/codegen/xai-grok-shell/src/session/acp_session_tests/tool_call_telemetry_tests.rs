@@ -163,7 +163,6 @@ impl Drop for ResetTelemetry {
             None,
             "test".into(),
             None,
-            crate::http::shared_client(),
         );
     }
 }
@@ -176,23 +175,7 @@ fn init_product(server: &xai_grok_test_support::MockInferenceServer, mode: Telem
         mixpanel_token: None,
         ..xai_grok_telemetry::config::TelemetryConfig::default()
     };
-    // `shared_client` keeps idle sockets process-wide. `TcpListener::bind` can
-    // recycle a loopback port onto a dead connection, and `track` drops that error.
-    let client = xai_grok_extra_ca::build_reqwest_client(|builder| {
-        builder.http1_only().pool_max_idle_per_host(0)
-    })
-    .expect("telemetry test client");
-    xai_grok_telemetry::init(
-        config,
-        mode,
-        None,
-        None,
-        None,
-        None,
-        "test".into(),
-        None,
-        client,
-    );
+    xai_grok_telemetry::init(config, mode, None, None, None, None, "test".into(), None);
 }
 
 fn tool_call(

@@ -29,7 +29,6 @@ chrono = { workspace = true }
 git2 = { version = "0.20", default-features = false, features = [
     "vendored-libgit2",
 ] }
-reqwest = { workspace = true }
 url = { workspace = true }
 xai-grok-secrets = { workspace = true }
 xai-grok-config = { workspace = true }

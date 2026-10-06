@@ -41,7 +41,6 @@ pub struct TelemetryClient {
     client_type: Option<String>,
     client_version: Option<String>,
     subscription_tier: Option<String>,
-    http_client: reqwest::Client,
 }
 impl std::fmt::Debug for TelemetryClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -68,7 +67,6 @@ impl TelemetryClient {
         origin_client: Option<OriginClientInfo>,
         shell_version: String,
         subscription_tier: Option<String>,
-        http_client: reqwest::Client,
     ) -> Self {
         if xai_grok_version::IS_DEV_BUILD
             && env_bool(ALLOW_DEV_BUILD_ENV) != Some(true)
@@ -99,7 +97,6 @@ impl TelemetryClient {
             client_type,
             client_version,
             subscription_tier: subscription_tier.map(|t| normalize_tier(&t)),
-            http_client,
         }
     }
 }
@@ -322,7 +319,6 @@ pub fn init(
     origin_client: Option<OriginClientInfo>,
     shell_version: String,
     subscription_tier: Option<String>,
-    http_client: reqwest::Client,
 ) {
     let lock = TELEMETRY_CLIENT.get_or_init(|| Mutex::new(None));
     let mut guard = lock.lock().unwrap_or_else(|err| err.into_inner());
@@ -338,7 +334,6 @@ pub fn init(
             origin_client,
             shell_version,
             subscription_tier,
-            http_client,
         ))
     };
     drop(guard);
@@ -355,7 +350,6 @@ pub fn init_if_needed(
     origin_client: Option<OriginClientInfo>,
     shell_version: String,
     subscription_tier: Option<String>,
-    http_client: reqwest::Client,
 ) {
     if mode.is_disabled() {
         return;
@@ -372,7 +366,6 @@ pub fn init_if_needed(
             origin_client,
             shell_version,
             subscription_tier,
-            http_client,
         ));
         drop(guard);
         sync_profile();
@@ -427,7 +420,6 @@ mod tests {
             None,
             "0.0.0-test".into(),
             None,
-            reqwest::Client::new(),
         );
         sync_profile();
         assert!(
