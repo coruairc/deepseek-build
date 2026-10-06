@@ -6,7 +6,6 @@ use ratatui::text::{Line, Span};
 use unicode_width::UnicodeWidthStr;
 
 use super::animation::{Animation, NEEDS_INPUT_BLINK_DIVISOR, PaintedAnimations, SPINNER_DIVISOR};
-pub use super::chrome::HeaderUpgradeCta;
 use super::layout::MIN_DASHBOARD_WIDTH;
 use super::row::{DashboardRow, build_rows_with_roster, build_rows_with_workspace};
 use super::state::{
@@ -58,13 +57,10 @@ pub(crate) fn render_dashboard(
     // When true and there's nothing to show yet, the empty body reads "Loading sessions…" instead of the "no agents yet" hint
     // That way a fresh open doesn't flash an empty-looking screen
     dashboard_sessions_loading: bool,
-    upgrade_cta: Option<HeaderUpgradeCta<'_>>,
     // App-level billing mirror the `/usage` modal renders its allowance from
     credit_balance: Option<&crate::views::credit_bar::CreditBalance>,
 ) -> Option<(u16, u16)> {
     state.workspace_membership_mode = workspace_dashboard_enabled;
-    // Cache whether a pinned (non-dismissible) promo CTA is live so the key handler can steal Ctrl+O for it; the dispatch re-resolves the gate
-    state.pinned_upgrade_cta_live = upgrade_cta.is_some_and(|cta| cta.pinned);
     state.clear_chrome_hit_areas();
     // Re-anchor selection BEFORE we build the rows so that the visible set drives selection clamping
     let theme = Theme::current();
@@ -142,15 +138,7 @@ pub(crate) fn render_dashboard(
         }
     }
 
-    super::chrome::render_header(
-        buf,
-        layout.header,
-        &theme,
-        &rows,
-        state,
-        registry,
-        upgrade_cta,
-    );
+    super::chrome::render_header(buf, layout.header, &theme, &rows, state, registry);
     super::chrome::render_actions_row(
         buf,
         layout.actions,

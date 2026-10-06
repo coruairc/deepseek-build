@@ -369,8 +369,6 @@ pub enum PaletteCommand {
     OpenSettings,
     /// Open the Agents modal (listing all agent definitions).
     OpenAgentsModal,
-    /// Open the feedback modal directly (every screen mode).
-    OpenFeedbackModal,
 }
 /// Build the default set of palette entries with section grouping.
 pub(crate) fn default_palette_entries(slash: &crate::slash::SlashController) -> Vec<PaletteEntry> {
@@ -420,11 +418,6 @@ pub(crate) fn default_palette_entries(slash: &crate::slash::SlashController) -> 
             label: "Session Info".into(),
             shortcut: "/session-info".into(),
             command: PaletteCommand::SlashCommand("/session-info".into()),
-        },
-        PaletteEntry {
-            label: "Send Feedback".into(),
-            shortcut: "/feedback".into(),
-            command: PaletteCommand::OpenFeedbackModal,
         },
         PaletteEntry {
             label: "Context".into(),

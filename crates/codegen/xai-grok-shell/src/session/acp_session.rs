@@ -1293,7 +1293,6 @@ impl SessionActor {
             goal_slash_and_harness_available(self.goal_enabled, tool_names)
         };
         slash_commands::CommandAvailability {
-            feedback: false,
             memory: self.memory.is_enabled() && can_read_memory,
             memory_configured: !self.memory.process_disabled
                 && (self.memory.backend_params.is_some()

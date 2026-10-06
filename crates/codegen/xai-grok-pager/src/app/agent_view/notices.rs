@@ -75,7 +75,6 @@ impl AgentView {
     /// Their TTL burns only while the row can paint, so an occluder pauses them rather than expiring them off-screen.
     pub(crate) fn ephemeral_tip_needs_tick(&self) -> bool {
         self.ephemeral_tip.is_active()
-            && !self.session_banner_active
             && !self.privacy_banner.active
             && (!self.ephemeral_tip.active_is_ambient() || self.ephemeral_tip_can_render())
     }
@@ -131,8 +130,7 @@ impl AgentView {
             || (self.show_goal_detail && self.goal_state.is_some())
             || self.show_workflows
             // Prompt dropdowns (@/slash/completion/history) render in the row directly above the prompt (the banner row), clearing it
-            || self.prompt.any_dropdown_open()
-            || self.session_banner_active;
+            || self.prompt.any_dropdown_open();
         !self.terminal_size_stale && crate::tips::tip_row_renderable(occluded, screen_height)
     }
 

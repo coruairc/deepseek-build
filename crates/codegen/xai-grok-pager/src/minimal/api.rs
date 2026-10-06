@@ -35,7 +35,6 @@ use crate::scrollback::state::ScrollbackState;
 use crate::theme::Theme;
 use crate::views::elicitation_view::ElicitationViewState;
 use crate::views::extensions_modal::{ExtensionsModalState, StatusFilter};
-use crate::views::feedback_modal::FeedbackModalState;
 use crate::views::mcps_modal::{McpServerDisplayStatus, McpServerInfo};
 use crate::views::modal::CancelTurnViewState;
 use crate::views::picker::{PickerEntry, PickerField, PickerState};
@@ -261,8 +260,8 @@ pub fn minimal_ctrl_o_opens_transcript(app: &AppView) -> bool {
         .registry
         .matches_id(crate::actions::ActionId::InterjectPrompt, &ctrl_o)
     {
-        // Not the interject chord: transcript unless a pinned upgrade CTA owns it.
-        return !agent.pinned_upgrade_cta_live;
+        // Not the interject chord.
+        return true;
     }
     // Editing a queued row: the interject key saves (idle) or interjects (running) the edited text; never steal it mid-edit
     if matches!(
@@ -276,7 +275,7 @@ pub fn minimal_ctrl_o_opens_transcript(app: &AppView) -> bool {
     if crate::actions::ActionRegistry::interjection_possible(agent.can_send_now(), has_payload) {
         return false;
     }
-    !agent.pinned_upgrade_cta_live
+    true
 }
 
 /// `AppView::minimal_state.committed_plan_tool_call_id` (write).
@@ -303,17 +302,6 @@ pub fn extensions_modal(v: &AgentView) -> Option<&ExtensionsModalState> {
 /// Minimal reuses the full-TUI modal renderer; it takes `&mut ExtensionsModalState` and updates picker row state stored during render.
 pub fn extensions_modal_mut(v: &mut AgentView) -> Option<&mut ExtensionsModalState> {
     v.extensions_modal.as_mut()
-}
-
-/// `AgentView::feedback_modal`.
-pub fn feedback_modal(v: &AgentView) -> Option<&FeedbackModalState> {
-    v.feedback_modal.as_ref()
-}
-
-/// `AgentView::feedback_modal` (mutable).
-/// Minimal reuses the full-TUI modal renderer; it takes `&mut FeedbackModalState` and updates tab/label-row state stored during render.
-pub fn feedback_modal_mut(v: &mut AgentView) -> Option<&mut FeedbackModalState> {
-    v.feedback_modal.as_mut()
 }
 
 /// `AgentView::question_view`.
@@ -381,7 +369,6 @@ pub fn minimal_btw_surface_available(v: &AgentView) -> bool {
         && !(v.show_goal_detail && v.goal_state.is_some())
         && v.line_viewer.is_none()
         && v.extensions_modal.is_none()
-        && v.feedback_modal.is_none()
         && v.persona_detail.is_none()
         && v.agents_modal.is_none()
         && v.block_viewer.is_none()
@@ -799,12 +786,6 @@ pub fn test_agent_view(session_id: Option<&str>, cwd: std::path::PathBuf) -> Age
 #[cfg(any(test, feature = "test-support"))]
 pub fn set_extensions_modal(v: &mut AgentView, val: Option<ExtensionsModalState>) {
     v.extensions_modal = val;
-}
-
-/// Test-only setter for `AgentView::feedback_modal`.
-#[cfg(any(test, feature = "test-support"))]
-pub fn set_feedback_modal(v: &mut AgentView, val: Option<FeedbackModalState>) {
-    v.feedback_modal = val;
 }
 
 /// Test-only setter for `AgentView::question_view`.

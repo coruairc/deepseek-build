@@ -530,11 +530,6 @@ pub struct DashboardState {
     /// Painted by `render_header` and consumed by the mouse handler to open the location picker.
     /// `None` when the header is too narrow to paint it.
     pub location_hit: crate::app::agent_view::HitArea,
-    /// Hit area for the header's promo upgrade CTA `[label]` button (a click dispatches `AnnouncementsOpenCta(Dashboard)`).
-    /// `None` when no CTA is shown.
-    pub upgrade_cta_hit: crate::app::agent_view::HitArea,
-    /// A pinned (non-dismissible) promo CTA is live this frame (cached by `render_dashboard`); `Ctrl+O` opens it instead of falling through.
-    pub pinned_upgrade_cta_live: bool,
     /// When `true`, agents dispatched from the dashboard are created in a fresh git worktree (rooted at
     /// the current cwd) instead of in the cwd directly: creating an agent first opens
     /// [`Self::worktree_dialog`] to collect a label.
@@ -1186,8 +1181,6 @@ impl DashboardState {
             models: crate::acp::model_state::ModelState::default(),
             location_picker: None,
             location_hit: crate::app::agent_view::HitArea::default(),
-            upgrade_cta_hit: crate::app::agent_view::HitArea::default(),
-            pinned_upgrade_cta_live: false,
             dispatch_worktree: false,
             cwd_has_git_ancestor: false,
             cwd: std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")),
@@ -1260,7 +1253,6 @@ impl DashboardState {
     /// `set(None)` keeps mouse-driven `hovered` flags.
     pub fn clear_chrome_hit_areas(&mut self) {
         self.location_hit.set(None);
-        self.upgrade_cta_hit.set(None);
         self.new_agent_button_hit.set(None);
         self.open_session_button_hit.set(None);
         self.worktree_toggle_hit.set(None);
@@ -3003,15 +2995,6 @@ impl DashboardState {
             return outcome;
         }
 
-        // Free-tier override: Ctrl+O opens the pinned upgrade CTA (when one is live) instead of falling
-        // through to the dispatch input. Matched on the chord directly; `ToggleYolo` is
-        // `When::AgentScreen`-scoped and never resolves here.
-        if self.pinned_upgrade_cta_live && key!('o', CONTROL).matches(key) {
-            return InputOutcome::Action(Action::AnnouncementsOpenCta(
-                xai_grok_telemetry::events::AnnouncementCtaSurface::Keyboard,
-            ));
-        }
-
         if crate::input::key::is_paste_key(key) {
             let clipboard_text = crate::app::actions::ClipboardTextRead::from_result(
                 crate::clipboard::system_clipboard_read_text(),
@@ -3374,7 +3357,6 @@ impl DashboardState {
                 .worktree_toggle_hit
                 .update_hover(mouse.column, mouse.row);
             changed |= self.location_hit.update_hover(mouse.column, mouse.row);
-            changed |= self.upgrade_cta_hit.update_hover(mouse.column, mouse.row);
 
             // Slash / @-file dropdown hover wins over row hover so the completion list
             // tracks the pointer while open (mirrors agent-view mouse handling in `app/mouse.rs`)
@@ -3652,13 +3634,6 @@ impl DashboardState {
             if self.worktree_toggle_hit.contains(mouse.column, mouse.row) {
                 self.focus_action(ActionsFocus::Worktree);
                 return InputOutcome::Action(Action::DashboardToggleWorktree);
-            }
-
-            // A click on the header upgrade CTA `[label]` opens the promo url (resolved through the slot gate at dispatch time)
-            if self.upgrade_cta_hit.contains(mouse.column, mouse.row) {
-                return InputOutcome::Action(Action::AnnouncementsOpenCta(
-                    xai_grok_telemetry::events::AnnouncementCtaSurface::Dashboard,
-                ));
             }
 
             // A click on the header location label opens the location picker

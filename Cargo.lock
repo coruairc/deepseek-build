@@ -12752,25 +12752,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xai-grok-feedback"
-version = "0.1.0"
-dependencies = [
- "flate2",
- "fs2",
- "libc",
- "same-file",
- "schemars 1.0.4",
- "serde",
- "serde_json",
- "strum 0.27.2",
- "tar",
- "tempfile",
- "thiserror 2.0.18",
- "uuid",
- "walkdir",
-]
-
-[[package]]
 name = "xai-grok-file-lock"
 version = "0.1.0"
 dependencies = [
@@ -13157,7 +13138,6 @@ dependencies = [
  "xai-grok-dashboard-store",
  "xai-grok-external-agent-migration",
  "xai-grok-extra-ca",
- "xai-grok-feedback",
  "xai-grok-foreign-sessions",
  "xai-grok-gboom",
  "xai-grok-hooks",
@@ -13659,7 +13639,6 @@ dependencies = [
  "xai-grok-env",
  "xai-grok-external-agent-migration",
  "xai-grok-extra-ca",
- "xai-grok-feedback",
  "xai-grok-file-lock",
  "xai-grok-foreign-sessions",
  "xai-grok-hooks",

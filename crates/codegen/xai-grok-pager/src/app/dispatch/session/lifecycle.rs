@@ -790,7 +790,6 @@ fn configure_agent_composer(app: &mut AppView, agent_id: AgentId) {
     let usage_command_visible = !app.has_external_auth_provider;
     let chat_mode = app.chat_mode;
     let screen_mode = app.screen_mode;
-    let announcements = app.active_announcements.clone();
     let restricted = app.tier_restricted_commands.clone();
     let plugins_visible = !app.appearance.disable_plugins;
     let Some(agent) = app.agents.get_mut(&agent_id) else {
@@ -806,7 +805,6 @@ fn configure_agent_composer(app: &mut AppView, agent_id: AgentId) {
         usage_command_visible,
         chat_mode,
         screen_mode,
-        &announcements,
         &restricted,
     );
     agent
@@ -1269,7 +1267,6 @@ pub(in crate::app::dispatch) fn dispatch_new_worktree_session(
             !app.has_external_auth_provider,
             app.chat_mode,
             app.screen_mode,
-            &app.active_announcements,
             &app.tier_restricted_commands,
         );
         agent.chat_kind = chat_kind;

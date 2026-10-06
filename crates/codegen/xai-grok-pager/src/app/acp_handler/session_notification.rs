@@ -657,9 +657,6 @@ pub(super) fn handle_session_notification_with_origin(
                 child_view.set_input_mode(InputMode::Vim);
                 child_view.set_billing_surface_visible(agent.billing_surface_visible);
                 child_view.set_usage_command_visible(agent.usage_command_visible);
-                child_view.set_has_session_announcements(
-                    agent.prompt.slash_controller.has_session_announcements(),
-                );
                 child_view
                     .prompt
                     .set_screen_mode(agent.prompt.slash_controller.screen_mode());

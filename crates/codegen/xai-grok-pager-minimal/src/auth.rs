@@ -469,7 +469,10 @@ mod tests {
         };
         render_auth(&mut buf, area, &theme, &hint);
         let text = crate::buffer_text(&buf);
-        assert!(text.contains("Sign in to deepseek-build"), "header: {text:?}");
+        assert!(
+            text.contains("Sign in to deepseek-build"),
+            "header: {text:?}"
+        );
         assert!(text.contains("api.deepseek.com/device"), "url: {text:?}");
         assert!(text.contains("ABCD-EFGH"), "device code: {text:?}");
         assert!(

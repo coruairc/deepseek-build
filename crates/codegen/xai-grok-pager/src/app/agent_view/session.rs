@@ -290,10 +290,7 @@ impl AgentView {
             hit_cancel_button: Default::default(),
             hit_watching_cue: Default::default(),
             watching_cue_toast_shown: false,
-            hit_announcement_hide: Default::default(),
-            hit_announcement_cta: Default::default(),
             privacy_banner: Default::default(),
-            hit_upgrade_cta: Default::default(),
             hit_voice_stop_button: Default::default(),
             hit_scrollbar: Default::default(),
             scrollbar_dragging: false,
@@ -324,9 +321,6 @@ impl AgentView {
             terminal_size_stale: false,
             inline_media_hits: InlineMediaHitAreas::default(),
             extensions_modal: None,
-            feedback_modal: None,
-            pending_feedback_trace_uploads: Default::default(),
-            parked_feedback_trace_consents: Default::default(),
             agents_modal: None,
             persona_detail: None,
             btw_state: None,
@@ -340,8 +334,6 @@ impl AgentView {
             export_copy_detector: Default::default(),
             sticky_toast: None,
             mode_switch_banner: None,
-            session_banner_active: false,
-            pinned_upgrade_cta_live: false,
             block_viewer: None,
             block_viewer_resume: None,
             scrollback_search: None,
@@ -1347,12 +1339,6 @@ impl AgentView {
             .registry_mut()
             .set_dashboard_visible(visible);
     }
-    /// Offer `/announcements` when session announcements (critical or promo) exist.
-    pub fn set_has_session_announcements(&mut self, has: bool) {
-        self.prompt
-            .slash_controller
-            .set_has_session_announcements(has);
-    }
     /// One place for the app-scoped gates a new/adopted session inherits so the session-creation sites cannot drift.
     pub(crate) fn apply_app_scoped_gates(
         &mut self,
@@ -1360,7 +1346,6 @@ impl AgentView {
         usage_command_visible: bool,
         chat_mode: bool,
         screen_mode: crate::app::ScreenMode,
-        announcements: &[xai_grok_shell::util::config::RemoteAnnouncement],
         restricted_commands: &[String],
     ) {
         self.set_billing_surface_visible(billing_surface_visible);
@@ -1368,9 +1353,6 @@ impl AgentView {
         self.app_chat_mode = chat_mode;
         self.prompt.set_screen_mode(screen_mode);
         self.set_dashboard_visible(crate::views::dashboard::dashboard_enabled());
-        self.set_has_session_announcements(crate::views::announcements::has_session_announcements(
-            announcements,
-        ));
         self.set_restricted_commands(restricted_commands);
     }
     /// ACP `kind` for `deepseek-build/session/rename`: which list (Chat or Build) this session opened on.

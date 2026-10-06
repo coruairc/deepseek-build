@@ -123,7 +123,6 @@ pub use crate::views::agent::{ActivePane, AgentViewLayout, InputMode, PaneAreas}
 use crate::views::block_viewer::{BlockViewerPane, ViewerKind};
 use crate::views::elicitation_view::ElicitationViewState;
 use crate::views::extensions_modal::ExtensionsModalState;
-use crate::views::feedback_modal::FeedbackModalState;
 use crate::views::file_search::line_viewer::LineViewerState;
 use crate::views::modal::{self, ActiveModal, ModalButtonHit};
 use crate::views::permission_view::{PermissionViewState, SubagentInfo};
@@ -290,8 +289,6 @@ impl PrivacyBannerState {
 pub struct BannerSlotParams<'a> {
     /// Reserved slot height (0 = no slot this frame).
     pub(crate) height: u16,
-    pub(crate) announcements: &'a [xai_grok_shell::util::config::RemoteAnnouncement],
-    pub(crate) hidden_ids: &'a std::collections::BTreeSet<String>,
     /// Privacy upsell banner owns the slot (highest banner precedence
     /// below critical announcements; gated by the caller).
     pub(crate) privacy_banner: bool,
@@ -303,11 +300,8 @@ pub struct BannerSlotParams<'a> {
 impl BannerSlotParams<'static> {
     /// No banner slot this frame.
     pub fn none() -> Self {
-        static EMPTY_IDS: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
         Self {
             height: 0,
-            announcements: &[],
-            hidden_ids: &EMPTY_IDS,
             privacy_banner: false,
             mouse_pos: None,
             tip: None,
@@ -1088,17 +1082,9 @@ pub struct AgentView {
     pub hit_watching_cue: HitArea,
     /// One-time Ctrl+G toast already fired for a watching-cue click.
     pub(crate) watching_cue_toast_shown: bool,
-    /// `[hide]` button on the announcement banner (click runs `/announcements hide`).
-    pub hit_announcement_hide: HitArea,
-    /// `[label]` CTA button on the promo banner row (click opens its link).
-    pub hit_announcement_cta: HitArea,
     /// Privacy upsell banner state: slot ownership and click targets
     /// (packaged like [`Self::plugin_cta`]).
     pub privacy_banner: PrivacyBannerState,
-    /// `[label]` upgrade CTA appended after the cwd path in the status bar
-    /// (click opens its link; nulled under dropdowns / occluders like the
-    /// banner CTA).
-    pub hit_upgrade_cta: HitArea,
     /// Stop button in the voice record indicator row (`[stop]`), far right.
     pub hit_voice_stop_button: HitArea,
     /// Scrollbar track for the scrollback pane (for click-to-jump / drag).
@@ -1181,17 +1167,6 @@ pub struct AgentView {
     /// Active hooks/plugins modal popup. When `Some`, blocks all input and renders as a centered overlay. Opened by `/hooks`, `/plugins`, or `/mcps`.
     /// renders as a centered overlay. Opened by `/hooks`, `/plugins`, or `/mcps`.
     pub(crate) extensions_modal: Option<ExtensionsModalState>,
-    /// Active feedback composer modal. When `Some`, blocks all input and renders as a centered overlay with its own composer.
-    /// renders as a centered overlay with its own composer.
-    pub(crate) feedback_modal: Option<FeedbackModalState>,
-    /// One-shot trace uploads in flight, keyed by the submission id of the POST that earned them.
-    pub(crate) pending_feedback_trace_uploads:
-        std::collections::VecDeque<crate::views::feedback_modal::FeedbackSubmissionId>,
-    /// Consent parked at modal submit time (the modal closes at submit), keyed by the POST attempt.
-    pub(crate) parked_feedback_trace_consents: std::collections::VecDeque<(
-        crate::views::feedback_modal::FeedbackSubmissionId,
-        crate::views::feedback_modal::ParkedFeedbackTraceConsent,
-    )>,
     /// Active agents modal popup. When `Some`, blocks all input and renders as a centered overlay. Opened by `/config-agents` or `/agents`.
     /// renders as a centered overlay. Opened by `/config-agents` or `/agents`.
     pub(crate) agents_modal: Option<crate::views::agents_modal::AgentsModalState>,
@@ -1226,10 +1201,6 @@ pub struct AgentView {
     /// Shift+Tab. (message, remaining_ticks). Full brightness for 2 s, then
     /// fades out over the final 0.3 s.
     pub(crate) mode_switch_banner: Option<(String, u8)>,
-    /// Session announcement banner (critical or promo) is showing (set at start of `draw`). Ephemeral-tip occluder: unlike short-lived mode-switch, an announcement can last the session, so tips must not burn TTL/seen counts while hidden.
-    pub(crate) session_banner_active: bool,
-    /// A pinned (non-dismissible) promo upgrade CTA is live this frame (set at the start of `draw` from the same slot gate as the header CTA). When true, `Ctrl+O` opens that CTA instead of toggling YOLO; the dispatch re-resolves through the gate so a stale-by-one-frame value stays safe.
-    pub(crate) pinned_upgrade_cta_live: bool,
     /// Fullscreen block viewer. When `Some`, replaces the scrollback area.
     pub(crate) block_viewer: Option<BlockViewerPane>,
     pub(crate) block_viewer_resume: Option<BlockViewerResume>,
