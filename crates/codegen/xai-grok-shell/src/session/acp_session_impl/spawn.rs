@@ -2294,7 +2294,6 @@ pub(crate) async fn spawn_session_actor(
         cmd_tx,
         persistence_tx: persistence.tx.clone(),
         current_prompt_id,
-        registry_write_order: Default::default(),
         pending_interactions,
         active_work: active_work.clone(),
         info: session_info,
