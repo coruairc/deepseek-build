@@ -67,9 +67,9 @@ pub use auto_mode::{
 };
 pub use gate_preflight::GatePreflight;
 
+pub(crate) use hub_gate::SessionApproval;
 #[cfg(test)]
 pub(crate) use hub_gate::grant_store_access;
-pub(crate) use hub_gate::SessionApproval;
 pub use hub_gate::{ToolApprovalGate, approval_gate_for};
 pub use hub_permission::{PermissionHookTransport, prompt_outcome_allows};
 pub(crate) use sandbox_gate::{

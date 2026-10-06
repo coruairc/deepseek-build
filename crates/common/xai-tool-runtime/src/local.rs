@@ -1,9 +1,8 @@
 //! In-process tool dispatch.
 //!
 //! A [`LocalRegistry`] holds type-erased tool implementations; a local-only
-//! [`ToolHarness`] resolves and runs them with no network transport. This is
-//! the post-hub replacement for the computer-hub SDK's local dispatch surface:
-//! tools registered here execute directly in the calling process.
+//! [`ToolHarness`] resolves and runs them with no network transport. Tools
+//! registered here execute directly in the calling process.
 
 use std::sync::Arc;
 
@@ -29,7 +28,9 @@ pub struct LocalRegistry {
 
 impl std::fmt::Debug for LocalRegistry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LocalRegistry").field("len", &self.len()).finish()
+        f.debug_struct("LocalRegistry")
+            .field("len", &self.len())
+            .finish()
     }
 }
 

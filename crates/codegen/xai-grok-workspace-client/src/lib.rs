@@ -17,7 +17,6 @@ use serde_json::Value;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
-use xai_tool_runtime::ToolHarness;
 use xai_grok_workspace_types::rpc::agents_md::{AgentConfigFile, DiscoverAgentsMdReq};
 use xai_grok_workspace_types::rpc::code_nav::{
     CodeFindDefinitionsReq, CodeFindReferencesReq, CodeGotoDefinitionReq, CodeGotoReferencesReq,
@@ -60,6 +59,7 @@ use xai_grok_workspace_types::rpc::worktree::{
     WorktreeGcReq, WorktreeListReq, WorktreeShowReq,
 };
 use xai_grok_workspace_types::rpc::{RpcEnvelope, RpcError, WORKSPACE_RPC_TOOL_ID, WorkspaceRpc};
+use xai_tool_runtime::ToolHarness;
 use xai_tool_runtime::{ToolCallContext, ToolStreamItem, TypedToolOutput};
 #[derive(Debug, thiserror::Error)]
 pub enum WorkspaceClientError {

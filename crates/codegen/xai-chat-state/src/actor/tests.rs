@@ -4739,7 +4739,10 @@ fn assert_prefix_stable_pair(
     let base_body = serialize_via_public_api(base);
     let ext_body = serialize_via_public_api(extended);
 
-    let base_input = base_body.get("messages").and_then(|v| v.as_array()).unwrap();
+    let base_input = base_body
+        .get("messages")
+        .and_then(|v| v.as_array())
+        .unwrap();
     let ext_input = ext_body.get("messages").and_then(|v| v.as_array()).unwrap();
 
     assert!(

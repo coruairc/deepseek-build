@@ -6,7 +6,6 @@
 use clap::Parser;
 use std::path::PathBuf;
 use std::time::Duration;
-use url::Url;
 use xai_grok_diag_server::{self as diag_server, DiagHandle, ErrorClass};
 use xai_grok_workspace::WorkspaceHostKind;
 use xai_grok_workspace::config::{
@@ -331,11 +330,9 @@ async fn run(
     use tracing_subscriber::util::SubscriberInitExt as _;
     let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
-    let donating = xai_computer_hub_sdk::DonatingLogLayer::new_inert();
     tracing_subscriber::registry()
         .with(env_filter)
         .with(tracing_subscriber::fmt::layer())
-        .with(donating.clone())
         .init();
     if oom_protect_log_active(oom_protect_applied, oom_protection.is_ok()) {
         tracing::info!("kernel OOM-kill protection active");
@@ -344,7 +341,7 @@ async fn run(
     } else {
         tracing::info!("kernel OOM-kill protection not active");
     }
-    let direct_otlp = match std::env::var("GROK_WORKSPACE_OTLP_ENDPOINT") {
+    let _direct_otlp = match std::env::var("GROK_WORKSPACE_OTLP_ENDPOINT") {
         Ok(endpoint) if !endpoint.is_empty() => {
             match xai_tracing::init_fastrace(endpoint.clone(), SERVICE_NAME.to_owned(), None) {
                 Ok(()) => {
@@ -359,7 +356,6 @@ async fn run(
         }
         _ => false,
     };
-    let url = Url::parse(&args.hub_url).map_err(|e| anyhow::anyhow!("invalid --hub-url: {e}"))?;
     {
         use xai_grok_sandbox::{ProfileName, SandboxManager};
         let profile = match std::env::var("GROK_SANDBOX_PROFILE").ok() {
@@ -405,13 +401,7 @@ async fn run(
     }
     let mut status_config = xai_grok_workspace::StatusConfig::from_env();
     status_config.preview_control_port = args.preview.preview_control_port;
-    let auth_provider = xai_grok_workspace::hub_auth::provider(
-        &url,
-        args.auth_config.as_deref(),
-        &status_config.oidc_refresh,
-    )?;
     tracing::info!(
-        hub_url = %url,
         cwd = %cwd.display(),
         "Starting workspace server"
     );
@@ -509,7 +499,6 @@ async fn run(
         cwd = %cwd_display,
         "Workspace server starting — sessions created dynamically via server bind"
     );
-    let server_id = args.server_id.clone();
     let preview_shutdown = if args.preview.preview_enabled {
         let control_port = args.preview.preview_control_port;
         let cfg = args
@@ -525,19 +514,13 @@ async fn run(
     xai_grok_workspace::init_metrics();
     let ws_handle = match xai_grok_workspace::handle::connect_local_workspace(
         cwd,
-        url,
-        auth_provider,
         xai_grok_workspace::LocalWorkspaceConnectOptions {
             metadata,
-            server_id: server_id.clone(),
-            alpha_test_key: None,
-            allow_insecure_ws: args.allow_insecure_ws,
             status_config,
             project_lsp_trusted: args.project_lsp_trusted,
             diag: Some(diag_handle.clone()),
             require_explicit_toolset: args.require_explicit_toolset,
             confine_fs_to_workspace_root: args.confine_fs_to_workspace_root,
-            on_handshake_refused: None,
             bind_mcp: None,
             host_kind,
             sandbox: None,
@@ -559,46 +542,7 @@ async fn run(
             tx.subscribe(),
         ));
     }
-    let mut donation_pump = None;
-    if !direct_otlp {
-        match ws_handle.trace_donation_reporter(SERVICE_NAME).await {
-            Some((reporter, pump)) => {
-                fastrace::set_reporter(reporter, fastrace::collector::Config::default());
-                donation_pump = Some(pump);
-                tracing::info!("trace export enabled");
-            }
-            None => tracing::info!("trace export disabled (not connected)"),
-        }
-    }
-    let mut log_donation_pump = None;
-    match ws_handle.log_donation_layer(SERVICE_NAME).await {
-        Some((sender, pump)) => {
-            donating.activate(sender);
-            log_donation_pump = Some(pump);
-            tracing::info!("log export enabled");
-        }
-        None => tracing::info!("log export disabled (not connected)"),
-    }
-    let mut metric_donation_pump = None;
-    match ws_handle.metric_donation_reporter(SERVICE_NAME).await {
-        Some(pump) => {
-            metric_donation_pump = Some(pump);
-            tracing::info!("metric export enabled");
-        }
-        None => tracing::info!("metric export disabled (not connected)"),
-    }
-    if metric_donation_pump.is_some()
-        && let Some((tx, control_port)) = &preview_shutdown
-    {
-        tokio::spawn(preview_supervisor::supervise_preview_metrics(
-            *control_port,
-            tx.subscribe(),
-        ));
-    }
-    tracing::info!(
-        server_id = ?server_id,
-        "Workspace server connected to hub. Serving tools."
-    );
+    tracing::info!("Workspace server ready. Serving tools locally.");
     #[cfg(unix)]
     {
         use tokio::signal::unix::{SignalKind, signal};
@@ -626,17 +570,6 @@ async fn run(
     tracker.set_shutting_down();
     tracing::info!("Shutting down...");
     fastrace::flush();
-    if let Some(pump) = &donation_pump {
-        pump.drain().await;
-    }
-    xai_computer_hub_sdk::flush_log_layer();
-    if let Some(pump) = &log_donation_pump {
-        pump.drain().await;
-    }
-    if let Some(pump) = &metric_donation_pump {
-        pump.drain().await;
-    }
-    ws_handle.shutdown_hub().await;
     xai_grok_sandbox::flush();
     Ok(())
 }

@@ -28,7 +28,6 @@ use parking_lot::Mutex;
 use tokio::sync::{mpsc, watch};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, trace, warn};
-use xai_computer_hub_sdk::{AuthCredential, AuthIdentity, AuthProvider};
 use xai_grok_login::AuthManager;
 use xai_grok_workspace::WorkspaceHandle;
 const REGISTRATION_TIMEOUT: Duration = Duration::from_secs(30);
@@ -223,9 +222,6 @@ impl LeaderServerControlState {
 }
 pub struct WorkspaceControl {
     default_hub_url: Option<String>,
-    /// Hub credential, wired to the leader's `AuthManager` once auth is ready.
-    /// A `watch` so a starting leader (socket up, auth pending) can be awaited instead of failing the command.
-    auth: tokio::sync::watch::Sender<Option<Arc<dyn AuthProvider>>>,
     /// Serializes mutating commands (start/pause/resume/stop) so their long awaits (drain, reconnect) never interleave.
     lock: tokio::sync::Mutex<()>,
     /// Current exposure, published for lock-free reads so `status` never blocks behind an in-flight drain/reconnect.
@@ -235,18 +231,12 @@ impl WorkspaceControl {
     fn new(default_hub_url: Option<String>) -> Self {
         Self {
             default_hub_url,
-            auth: tokio::sync::watch::channel(None).0,
             lock: tokio::sync::Mutex::new(()),
             exposure: arc_swap::ArcSwapOption::empty(),
         }
     }
-    /// Wire the hub credential to the leader's shared `AuthManager` (sole owner of refresh and persistence).
-    pub(crate) fn set_auth_manager(&self, auth_manager: Arc<AuthManager>) {
-        self.auth.send_replace(Some(Arc::new(LeaderAuthProvider {
-            auth_manager,
-            refresh_in_flight: Arc::new(std::sync::atomic::AtomicBool::new(false)),
-        })));
-    }
+    /// Hub credentials no longer exist; retained as a no-op for the wiring call site.
+    pub(crate) fn set_auth_manager(&self, _auth_manager: Arc<AuthManager>) {}
 }
 impl std::fmt::Debug for WorkspaceControl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -255,123 +245,12 @@ impl std::fmt::Debug for WorkspaceControl {
             .finish_non_exhaustive()
     }
 }
-/// Hub [`AuthProvider`] backed by the leader's `AuthManager`: returns the current token at each connect/reconnect; never writes auth.json.
-struct LeaderAuthProvider {
-    auth_manager: Arc<AuthManager>,
-    /// One background refresh at a time. `current()` is called by a reconnect loop that can spin fast while offline. A `refresh_lock` would serialize those tasks but not collapse them.
-    /// Each queued one would still issue its own IdP call once the previous released.
-    refresh_in_flight: Arc<std::sync::atomic::AtomicBool>,
-}
-impl std::fmt::Debug for LeaderAuthProvider {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LeaderAuthProvider").finish_non_exhaustive()
-    }
-}
-impl AuthProvider for LeaderAuthProvider {
-    fn current(&self) -> AuthCredential {
-        use std::sync::atomic::Ordering;
-        let cached = self.auth_manager.current();
-        if cached.is_none()
-            && self.auth_manager.is_expired()
-            && self
-                .refresh_in_flight
-                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-                .is_ok()
-        {
-            struct ClaimGuard(Arc<std::sync::atomic::AtomicBool>);
-            impl Drop for ClaimGuard {
-                fn drop(&mut self) {
-                    self.0.store(false, std::sync::atomic::Ordering::Release);
-                }
-            }
-            let guard = ClaimGuard(Arc::clone(&self.refresh_in_flight));
-            if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                let am = Arc::clone(&self.auth_manager);
-                handle.spawn(async move {
-                    let _guard = guard;
-                    if let Err(e) = am.auth().await {
-                        tracing::debug!(error = %e, "leader hub auth: background refresh failed");
-                    }
-                });
-            }
-        }
-        let token = cached
-            .or_else(|| self.auth_manager.current_or_expired())
-            .map(|a| a.key)
-            .unwrap_or_default();
-        AuthCredential::bearer(token)
-    }
-    /// Owner identity from the leader's `AuthManager`. The workspace derives `WorkspaceIdentity` from this provider instead of a separate auth.json read. Mirrors the in-process path (`mvp_agent`).
-    /// Prefer `GrokAuth.team_id` (what shell telemetry/snapshot use) mapped onto a `"Team"` principal so team attribution is derived. Otherwise pass principal fields through.
-    /// `None` when no credential is available (identity resolution never blocks).
-    fn identity(&self) -> Option<AuthIdentity> {
-        let a = self.auth_manager.current_or_expired()?;
-        Some(match a.team_id.filter(|t| !t.is_empty()) {
-            Some(team) => AuthIdentity {
-                user_id: a.user_id,
-                principal_type: Some("Team".to_string()),
-                principal_id: Some(team),
-            },
-            None => AuthIdentity {
-                user_id: a.user_id,
-                principal_type: a.principal_type,
-                principal_id: a.principal_id,
-            },
-        })
-    }
-}
 struct WorkspaceExposure {
     handle: WorkspaceHandle,
     hub_url: String,
     cwd: PathBuf,
     started_at: Instant,
     paused: std::sync::atomic::AtomicBool,
-    /// Drained before the hub connection closes and re-armed on resume, since the pump is
-    /// bound to one hub connection. `None` when the connect left no hub handle.
-    metric_donation: Mutex<Option<xai_computer_hub_sdk::MetricDonationPump>>,
-}
-/// Service name the hub allowlists for the leader's metric donation.
-const LEADER_METRIC_SERVICE: &str = "grok_leader";
-/// Bound on arming and draining the metric pump: both wait on the hub connection, and pause,
-/// stop, resume, start, and shutdown hold the workspace lock while they do.
-const METRIC_DONATION_TIMEOUT: Duration = Duration::from_secs(5);
-/// Start exporting the process-wide Prometheus registry (workspace and worker families)
-/// over the hub connection `handle` just opened. Only runs while that connection is up.
-async fn arm_metric_donation(
-    handle: &WorkspaceHandle,
-) -> Option<xai_computer_hub_sdk::MetricDonationPump> {
-    let pump = match tokio::time::timeout(
-        METRIC_DONATION_TIMEOUT,
-        handle.metric_donation_reporter(LEADER_METRIC_SERVICE),
-    )
-    .await
-    {
-        Ok(pump) => pump,
-        Err(_elapsed) => {
-            warn!(
-                timeout_secs = METRIC_DONATION_TIMEOUT.as_secs(),
-                "leader metric export not armed: the hub connection did not answer in time"
-            );
-            return None;
-        }
-    };
-    if pump.is_none() {
-        debug!("leader metric export not armed: workspace has no hub connection");
-    }
-    pump
-}
-/// Flush what the pump has queued before its hub connection closes; an unresponsive hub is
-/// abandoned after [`METRIC_DONATION_TIMEOUT`] so teardown never waits on it.
-async fn drain_metric_donation(pump: xai_computer_hub_sdk::MetricDonationPump) {
-    if tokio::time::timeout(METRIC_DONATION_TIMEOUT, pump.drain())
-        .await
-        .is_err()
-    {
-        warn!(
-            timeout_secs = METRIC_DONATION_TIMEOUT.as_secs(),
-            "leader metric export drain timed out; disconnecting hub anyway"
-        );
-    }
 }
 /// Rewrite JSON-RPC request ID **in place** by prefixing with client ID to avoid collisions. Only rewrites IDs for **requests** (messages with a "method" field).
 /// Responses (messages with "result" or "error" but no "method") are left untouched so the agent can match them to its pending requests. Returns `None` otherwise (no mutation).
@@ -1005,28 +884,6 @@ fn workspace_err(message: impl Into<String>) -> ControlError {
         details: None,
     }
 }
-/// Resolve the hub credential, waiting if the leader is still wiring auth (the IPC socket comes up first).
-/// Resolves the instant auth is wired or the leader cancels; event-driven, no timeout.
-async fn wait_for_leader_auth(
-    ws: &WorkspaceControl,
-    cancel: &CancellationToken,
-) -> Result<Arc<dyn AuthProvider>, ControlError> {
-    let mut rx = ws.auth.subscribe();
-    let result = tokio::select! {
-        result = rx.wait_for(|v| v.is_some()) => result,
-        _ = cancel.cancelled() => {
-            return Err(workspace_err(
-                "leader is shutting down; cannot expose workspace to the hub",
-            ));
-        }
-    };
-    match result {
-        Ok(guard) => Ok(guard.clone().expect("waited for Some")),
-        Err(_) => Err(workspace_err(
-            "leader is shutting down; cannot expose workspace to the hub",
-        )),
-    }
-}
 fn workspace_server_id() -> String {
     let raw = gethostname::gethostname()
         .to_string_lossy()
@@ -1056,16 +913,8 @@ async fn drain_and_disconnect(exposure: &WorkspaceExposure) {
         .await
         .is_err()
     {
-        warn!(
-            active = tracker.total_active(),
-            "workspace drain timed out; disconnecting hub anyway"
-        );
+        warn!(active = tracker.total_active(), "workspace drain timed out");
     }
-    let metric_donation = exposure.metric_donation.lock().take();
-    if let Some(pump) = metric_donation {
-        drain_metric_donation(pump).await;
-    }
-    handle.shutdown_hub().await;
 }
 fn build_workspace_status(
     metadata: &LeaderServerMetadata,
@@ -1092,7 +941,7 @@ fn build_workspace_status(
                     "running"
                 }
                 .to_string(),
-                hub_url: Some(exp.hub_url.clone()),
+                hub_url: None,
                 cwd: Some(exp.cwd.display().to_string()),
                 uptime_ms: exp.started_at.elapsed().as_millis() as u64,
                 active_tool_calls: snapshot.active_tool_calls,
@@ -1104,70 +953,41 @@ fn build_workspace_status(
 }
 async fn handle_workspace_start(
     control_state: LeaderServerControlState,
-    hub_url: Option<String>,
+    _hub_url: Option<String>,
     cwd: String,
-    cancel: CancellationToken,
+    _cancel: CancellationToken,
 ) -> Result<ControlPayload, ControlError> {
     let ws = &control_state.workspace;
-    let url_str = hub_url
-        .filter(|u| !u.trim().is_empty())
-        .or_else(|| ws.default_hub_url.clone())
-        .ok_or_else(|| workspace_err("no hub url configured for workspace exposure"))?;
-    let url = url::Url::parse(&url_str)
-        .map_err(|e| workspace_err(format!("invalid hub url {url_str}: {e}")))?;
     let cwd_path = PathBuf::from(&cwd);
     let _serialize = ws.lock.lock().await;
     if let Some(existing) = ws.exposure.load_full()
         && !existing.paused.load(Ordering::Relaxed)
         && existing.cwd == cwd_path
-        && existing.hub_url == url_str
     {
         return Ok(build_workspace_status(
             &control_state.metadata,
             Some(existing.as_ref()),
         ));
     }
-    let allow_insecure_ws =
-        url.scheme() == "ws" && matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "::1"));
     let status_config = xai_grok_workspace::StatusConfig::from_env();
-    let alpha_test_key = None;
-    let auth = wait_for_leader_auth(ws, &cancel).await?;
-    let server_id = workspace_server_id();
-    let device_id = xai_grok_telemetry::id::agent_id_async().await;
-    let metadata = serde_json::json!({
-        "source": "grok-workspace",
-        "hostname": gethostname::gethostname().to_string_lossy(),
-        "cwd": cwd_path.display().to_string(),
-        "device_id": device_id,
-        "host_kind": xai_tool_protocol::HOST_KIND_DAEMON,
-        "platform": std::env::consts::OS,
-    });
     crate::agent::folder_trust::resolve_and_record(&cwd_path, None, false);
     let project_lsp_trusted = crate::agent::folder_trust::project_scope_allowed(&cwd_path);
     let handle = xai_grok_workspace::connect_local_workspace(
         cwd_path.clone(),
-        url,
-        auth,
         xai_grok_workspace::LocalWorkspaceConnectOptions {
-            metadata: Some(metadata),
-            server_id: Some(server_id),
-            alpha_test_key,
-            allow_insecure_ws,
             status_config,
             project_lsp_trusted,
             ..Default::default()
         },
     )
     .await
-    .map_err(|e| workspace_err(format!("failed to connect workspace to hub: {e}")))?;
-    let metric_donation = arm_metric_donation(&handle).await;
+    .map_err(|e| workspace_err(format!("failed to start local workspace: {e}")))?;
     let exposure = Arc::new(WorkspaceExposure {
         handle,
-        hub_url: url_str,
+        hub_url: String::new(),
         cwd: cwd_path,
         started_at: Instant::now(),
         paused: AtomicBool::new(false),
-        metric_donation: Mutex::new(metric_donation),
     });
     let payload = build_workspace_status(&control_state.metadata, Some(exposure.as_ref()));
     if let Some(old) = ws.exposure.swap(Some(exposure)) {
@@ -1202,12 +1022,6 @@ async fn handle_workspace_resume(
     };
     if exp.paused.load(Ordering::Relaxed) {
         exp.handle.activity_tracker().set_active();
-        if let Err(e) = exp.handle.connect_hub().await {
-            exp.handle.activity_tracker().set_draining();
-            return Err(workspace_err(format!("failed to reconnect to hub: {e}")));
-        }
-        let metric_donation = arm_metric_donation(&exp.handle).await;
-        *exp.metric_donation.lock() = metric_donation;
         exp.paused.store(false, Ordering::Relaxed);
     }
     Ok(build_workspace_status(

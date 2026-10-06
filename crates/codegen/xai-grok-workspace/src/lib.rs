@@ -70,7 +70,7 @@ pub use path_virtualization::{
     VISIBLE_ROOT,
 };
 pub use permission::*;
-pub use session::{McpServerOutcome, WorkspaceSession, WorkspaceShared};
+pub use session::{WorkspaceSession, WorkspaceShared};
 pub use session::{file_state, git, jj};
 pub use workspace_ops::{WorkspaceOp, WorkspaceOps};
 pub use xai_grok_workspace_client::WorkspaceClient;

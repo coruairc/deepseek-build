@@ -440,7 +440,9 @@ mod tests {
             "the resolved proxy default matches the unresolved fallback"
         );
         assert_eq!(
-            image_budget_limits(Some(ApiBackend::ChatCompletions.default_max_request_bytes())),
+            image_budget_limits(Some(
+                ApiBackend::ChatCompletions.default_max_request_bytes()
+            )),
             image_budget_limits(Some(
                 ApiBackend::ChatCompletions.default_max_request_bytes()
             ))

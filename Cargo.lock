@@ -13930,6 +13930,7 @@ dependencies = [
  "rand 0.9.5",
  "regex",
  "reqwest 0.12.24",
+ "rmcp",
  "rustc-hash 2.1.1",
  "serde",
  "serde_json",

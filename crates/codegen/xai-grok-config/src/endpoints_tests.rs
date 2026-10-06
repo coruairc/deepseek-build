@@ -16,7 +16,10 @@ fn endpoints(
 #[test]
 fn inference_url_defaults_to_proxy() {
     let ep = endpoints("https://api.deepseek.com/v1", None, None);
-    assert_eq!(ep.resolve_inference_base_url(), "https://api.deepseek.com/v1");
+    assert_eq!(
+        ep.resolve_inference_base_url(),
+        "https://api.deepseek.com/v1"
+    );
 }
 
 #[test]
@@ -61,7 +64,10 @@ fn list_url_derived_from_base_url() {
         Some("https://inference.acme.com/v1"),
         None,
     );
-    assert_eq!(ep.resolve_models_list_url(), "https://inference.acme.com/v1/models");
+    assert_eq!(
+        ep.resolve_models_list_url(),
+        "https://inference.acme.com/v1/models"
+    );
 }
 
 #[test]

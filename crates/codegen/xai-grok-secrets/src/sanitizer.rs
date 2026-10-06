@@ -334,7 +334,10 @@ mod tests {
             redact_secrets("just a normal log line"),
             Cow::Borrowed(_)
         ));
-        assert!(matches!(redact_secrets("model=deepseek-3"), Cow::Borrowed(_)));
+        assert!(matches!(
+            redact_secrets("model=deepseek-3"),
+            Cow::Borrowed(_)
+        ));
     }
 
     /// Joins fixture fragments at runtime so realistic-looking fake tokens never appear whole in the source text.
@@ -456,7 +459,8 @@ mod tests {
 
     #[test]
     fn redacts_sensitive_url_query_params() {
-        let out = redact_secrets("callback https://deepseek-build/cb?code=ABC123XYZ&state=xyz789 failed");
+        let out =
+            redact_secrets("callback https://deepseek-build/cb?code=ABC123XYZ&state=xyz789 failed");
         assert!(!out.contains("ABC123XYZ"), "OAuth code leaked: {out}");
         assert!(!out.contains("xyz789"), "state leaked: {out}");
     }

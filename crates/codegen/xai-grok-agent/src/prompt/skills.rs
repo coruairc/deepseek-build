@@ -1045,7 +1045,8 @@ mod tests {
 
     #[test]
     fn parse_model_and_effort() {
-        let content = "---\nname: my-skill\ndescription: test\nmodel: deepseek-3\neffort: high\n---\n";
+        let content =
+            "---\nname: my-skill\ndescription: test\nmodel: deepseek-3\neffort: high\n---\n";
         let parsed = parse_skill_frontmatter(content, None).unwrap();
         assert_eq!(parsed.model.as_deref(), Some("deepseek-3"));
         assert_eq!(parsed.effort.as_deref(), Some("high"));
