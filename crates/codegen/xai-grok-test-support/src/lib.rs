@@ -77,15 +77,9 @@ mod loopback;
 #[cfg(test)]
 mod loopback_client;
 mod managed_gateway_endpoint;
-mod mock_otel_server;
 pub mod mock_server;
 mod mock_server_tls;
 mod model_reply;
-mod otel_decode;
-mod otel_event;
-#[cfg(test)]
-mod otel_fixtures;
-mod otel_recorder;
 pub mod process;
 mod request_log;
 pub mod resources;
@@ -136,7 +130,6 @@ pub use inference_override::{
 pub use inference_request::{DEFAULT_MODEL, InferenceEndpoint};
 #[cfg(unix)]
 pub use leader::LeaderFixture;
-pub use mock_otel_server::MockOtelServer;
 pub use mock_server::{
     FeedbackPost, GatedUploadProxy, ManagedGatewayCall, MockCanAdministerTeam, MockInferenceServer,
     MockModelEntry, MockUserTeam, ScriptedResponse, SseEvent, StorageUpload,
@@ -145,12 +138,6 @@ pub use model_reply::{
     ModelEvent, ev_assistant_message, ev_completed, ev_completed_with_tokens, ev_function_call,
     ev_reasoning_item,
 };
-pub use otel_event::{
-    OtelAttributes, OtelBody, OtelDecodeError, OtelEvent, OtelExport, OtelFault, OtelLogRecord,
-    OtelMetricData, OtelMetricPoint, OtelNumber, OtelSignal, OtelSpan, OtelTemporality,
-    OtelUnreadBody,
-};
-pub use otel_recorder::{OtelRecorder, OtelRecorderError};
 #[cfg(unix)]
 pub use process::process_has_exited_without_reap;
 pub use process::{

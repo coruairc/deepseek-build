@@ -292,22 +292,6 @@ pub fn with_auth_retry(
         .build()
 }
 
-pub fn shared_upload_client() -> reqwest::Client {
-    static UPLOAD_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
-    UPLOAD_CLIENT
-        .get_or_init(|| {
-            xai_grok_extra_ca::build_reqwest_client(|builder| {
-                builder
-                    .http1_only()
-                    .pool_max_idle_per_host(2)
-                    .pool_idle_timeout(std::time::Duration::from_secs(10))
-                    .user_agent(process_user_agent_string())
-            })
-            .expect("failed to build shared upload HTTP client")
-        })
-        .clone()
-}
-
 pub(crate) fn fresh_http1_client() -> reqwest::Result<reqwest::Client> {
     xai_grok_extra_ca::build_reqwest_client(|builder| {
         builder
