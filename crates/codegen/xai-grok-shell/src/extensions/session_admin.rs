@@ -165,13 +165,6 @@ async fn handle_session_rename(agent: &MvpAgent, args: &acp::ExtRequest) -> ExtR
     // Send a SessionSummaryGenerated notification so the TUI updates its title
     notify_session_title(agent, session_id, &title).await;
 
-    // Hook 2: update session replica with summary (fire-and-forget)
-    spawn_registry_title_update(
-        agent,
-        &req.session_id,
-        registry_title_for_agent(agent, Some(title.clone())),
-    );
-
     tracing::info!(session_id = %req.session_id, %title, "Session renamed");
 
     to_raw_response(&serde_json::json!({ "success": true }))
@@ -223,12 +216,6 @@ async fn reset_session_title_to_auto(
         // Non-resident sessions have no persistence actor.
         // `titleIsManual: false` is distinct from absent meta (absent means a racing auto title)
         notify_session_title_unpinned(agent, session_id_acp).await;
-        // Empty string, not None: `UpdateRequest.summary` omits `None` and the replica would keep advertising the old manual title
-        spawn_registry_title_update(
-            agent,
-            session_id,
-            registry_title_for_agent(agent, Some(String::new())),
-        );
     }
 
     crate::session::storage::search::notify_session_updated(
@@ -240,40 +227,6 @@ async fn reset_session_title_to_auto(
     tracing::info!(session_id = %session_id, cleared, "Session title reset to auto");
 
     to_raw_response(&serde_json::json!({ "success": true }))
-}
-
-/// ZDR teams omit the title on the wire (`None`); everyone else sends `title`.
-fn registry_title_for_agent(agent: &MvpAgent, title: Option<String>) -> Option<String> {
-    if agent
-        .auth_manager
-        .current_or_expired()
-        .is_some_and(|a| a.is_zdr_team())
-    {
-        None
-    } else {
-        title
-    }
-}
-
-/// Fire-and-forget session-registry summary update.
-/// `title = None` omits the field (no-op on a merge replica); `Some("")` clears a prior pin.
-fn spawn_registry_title_update(agent: &MvpAgent, session_id: &str, title: Option<String>) {
-    let Some(client) = agent.session_registry_client() else {
-        return;
-    };
-    let sid = session_id.to_string();
-    tokio::spawn(async move {
-        let update = crate::agent::session_registry_client::UpdateRequest {
-            summary: title,
-            first_prompt: None,
-            last_turn_number: None,
-            repo_head_at_end: None,
-            restorable_turn_number: None,
-        };
-        if let Err(e) = client.update(&sid, &update).await {
-            tracing::warn!(error = %e, "session registry summary update failed (non-fatal)");
-        }
-    });
 }
 
 /// Unpin fan-out: `SessionSummaryGenerated` with empty text and `_meta.deepseek-build/titleIsManual: false`.
