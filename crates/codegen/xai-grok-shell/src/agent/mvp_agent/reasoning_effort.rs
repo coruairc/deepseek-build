@@ -4,7 +4,7 @@ use agent_client_protocol as acp;
 use xai_grok_sampler::SamplerConfig;
 use xai_grok_sampling_types::ReasoningEffort;
 
-use crate::agent::remote_config::ModelsManager;
+use crate::agent::model_catalog::ModelsManager;
 use crate::sampling::EffortTarget;
 
 impl ModelsManager {

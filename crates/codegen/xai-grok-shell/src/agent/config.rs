@@ -2,7 +2,6 @@ use crate::agent::auth_method::ModelByok;
 use crate::agent::model_providers::{
     ModelProviderConfig, auth_config_issues, model_provider_auth_name, parse_model_providers,
 };
-use crate::remote::DEFAULT_CONTEXT_WINDOW;
 use crate::{config::StorageMode, sampling::ApiBackend, tools::config::ShellToolsetConfig};
 use agent_client_protocol as acp;
 use indexmap::IndexMap;
@@ -22,6 +21,8 @@ use xai_grok_sampling_types::{
     reasoning_effort_meta_value, reasoning_efforts_meta_value,
 };
 use xai_grok_tools::types::compat::{CompatConfig, CompatConfigToml};
+/// Default context window for models that do not declare one.
+pub(crate) const DEFAULT_CONTEXT_WINDOW: u64 = 256_000;
 /// Determines behavior like relay sync enablement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AgentMode {
@@ -1334,7 +1335,7 @@ impl Config {
             ("disabled_models", &self.models.disabled_models),
             ("hidden_models", &self.models.hidden_models),
         ] {
-            if let Err(bad) = crate::agent::remote_config::ModelGlobSet::compile(list.as_deref()) {
+            if let Err(bad) = crate::agent::model_catalog::ModelGlobSet::compile(list.as_deref()) {
                 return Err(format!(
                     "{field} has an invalid pattern: {}. Patterns use * and ? wildcards.",
                     bad.join(", ")
@@ -2550,8 +2551,8 @@ fn managed_settings_env_flag(key: &str) -> Option<bool> {
 fn drop_model_tables_under_external_auth(config: &mut Config) {
     static LOGGED: std::sync::Once = std::sync::Once::new();
     if (config.config_models.is_empty() && config.models.allowed_models.is_none())
-        || crate::agent::remote_config::CatalogSource::for_config(config)
-            != crate::agent::remote_config::CatalogSource::ModelsEndpoint
+        || crate::agent::model_catalog::CatalogSource::for_config(config)
+            != crate::agent::model_catalog::CatalogSource::ModelsEndpoint
     {
         return;
     }

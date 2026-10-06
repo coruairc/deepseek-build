@@ -2124,7 +2124,7 @@ fn ctx_with_parent_chat_state(
         .and_then(|entry| entry.info.rate_limit_retry_threshold);
     parent_chat_state.update_sampling_config(parent_sampling_config);
     ctx.parent_chat_state = Some(parent_chat_state);
-    ctx.models_manager = crate::agent::remote_config::ModelsManager::new(
+    ctx.models_manager = crate::agent::model_catalog::ModelsManager::new(
         None,
         available_models.clone(),
         acp::ModelId::new(global_model_id),
@@ -2174,7 +2174,7 @@ async fn read_parent_sampling_config_fallback_uses_session_model_id() {
     ctx.parent_chat_state = None;
     ctx.sampling_config.model = "composer-2-fast".to_string();
     ctx.available_models = models;
-    ctx.models_manager = crate::agent::remote_config::ModelsManager::new(
+    ctx.models_manager = crate::agent::model_catalog::ModelsManager::new(
         None,
         indexmap::IndexMap::new(),
         acp::ModelId::new("auto"),
@@ -2373,7 +2373,7 @@ async fn read_parent_sampling_config_fallback_resolves_compactions_remaining_fro
     ctx.parent_chat_state = None;
     ctx.sampling_config.model = "deepseek-4.5".to_string();
     ctx.sampling_config.compactions_remaining = None;
-    ctx.models_manager = crate::agent::remote_config::ModelsManager::new(
+    ctx.models_manager = crate::agent::model_catalog::ModelsManager::new(
         None,
         models,
         acp::ModelId::new("auto"),

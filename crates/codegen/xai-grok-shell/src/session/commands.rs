@@ -27,7 +27,7 @@ pub struct CancellationContext {
 #[derive(Debug, Clone)]
 pub struct ForkedToolSnapshot {
     pub specs: Vec<xai_grok_sampling_types::ToolSpec>,
-    pub task_model_selection: crate::agent::remote_config::task_model_policy::TaskModelSelection,
+    pub task_model_selection: crate::agent::model_catalog::task_model_policy::TaskModelSelection,
 }
 /// The ways a `/btw` side question can fail.
 /// Kept typed until the ACP boundary so model errors keep their typed rate-limit and auth codes instead of flattening to a string.

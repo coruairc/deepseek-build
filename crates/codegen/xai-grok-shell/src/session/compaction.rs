@@ -3,8 +3,8 @@
 //! These methods form a second `impl SessionActor` block that lives alongside the primary one in `acp_session.rs`.
 use super::SessionActor;
 use super::is_project_instructions;
+use crate::agent::config::DEFAULT_CONTEXT_WINDOW;
 use crate::extensions::notification::MODEL_FAMILY_SWITCH_COMPACT_BANNER;
-use crate::remote::DEFAULT_CONTEXT_WINDOW;
 use crate::session::compaction_config::{
     AsyncCompactionCache, SUPPRESS_AUTH, SUPPRESS_NONE, SUPPRESS_STICKY, SUPPRESS_TURN,
     SUPPRESS_UNTIL_SUCCESS,

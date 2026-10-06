@@ -4,10 +4,10 @@
 //! The chat+local `own` supervisor lives on `MvpAgent` (started in `session/new`), not `SessionActor`; crash-restart reaches it through the bridge slot seeded here.
 #![allow(clippy::items_after_test_module)]
 use super::*;
-use crate::agent::remote_config::task_model_policy::{
+use crate::agent::config::DEFAULT_CONTEXT_WINDOW;
+use crate::agent::model_catalog::task_model_policy::{
     LatchedTaskModelSelection, TaskModelPolicyInputs,
 };
-use crate::remote::DEFAULT_CONTEXT_WINDOW;
 use tracing::Instrument;
 use xai_grok_telemetry::region;
 use xai_grok_telemetry::region::Parent as SpanParent;
@@ -312,7 +312,7 @@ pub(crate) async fn spawn_session_actor(
     tool_params_json: crate::session::agent_rebuild::ResolvedToolParamsJson,
     mut prefetch: crate::session::session_create_prefetch::SessionCreatePrefetch,
     plugin_registry_handle: Option<xai_grok_agent::plugins::SharedPluginRegistryHandle>,
-    models_manager: crate::agent::remote_config::ModelsManager,
+    models_manager: crate::agent::model_catalog::ModelsManager,
     inherited_permission_handle: Option<xai_grok_workspace::permission::PermissionHandle>,
     api_key_provider: Option<xai_grok_tools::types::SharedApiKeyProvider>,
     image_description_model: String,
@@ -2538,7 +2538,7 @@ pub(crate) async fn spawn_session_on_thread(
     tool_params_json: crate::session::agent_rebuild::ResolvedToolParamsJson,
     prefetch: crate::session::session_create_prefetch::SessionCreatePrefetch,
     plugin_registry_handle: Option<xai_grok_agent::plugins::SharedPluginRegistryHandle>,
-    models_manager: crate::agent::remote_config::ModelsManager,
+    models_manager: crate::agent::model_catalog::ModelsManager,
     parent_traceparent: Option<String>,
     inherited_permission_handle: Option<xai_grok_workspace::permission::PermissionHandle>,
     api_key_provider: Option<xai_grok_tools::types::SharedApiKeyProvider>,

@@ -13,7 +13,7 @@ use xai_grok_tools::implementations::grok_build::task::model_policy::{
 };
 
 use crate::agent::config::Resolved;
-use crate::agent::remote_config::ModelsManager;
+use crate::agent::model_catalog::ModelsManager;
 pub(crate) use xai_grok_tools::implementations::grok_build::task::model_policy::TaskModelSelection;
 
 const FIRST_PARTY_FAMILY: &str = "xai";
@@ -34,8 +34,6 @@ pub(crate) struct TaskModelCatalogSnapshot {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CatalogAuthority {
     Complete,
-    /// Remote discovery is expected but has not produced a catalog yet.
-    Provisional,
 }
 
 #[derive(Debug, Clone)]
@@ -48,7 +46,6 @@ pub(crate) struct TaskModelPolicyInputs {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TaskCatalogClassification {
-    Provisional,
     Empty,
     UnknownFamily,
     FirstPartyOnly,
@@ -64,9 +61,6 @@ pub(crate) struct TaskModelPresentation {
 }
 
 fn classify(snapshot: &TaskModelCatalogSnapshot) -> TaskCatalogClassification {
-    if snapshot.authority == CatalogAuthority::Provisional {
-        return TaskCatalogClassification::Provisional;
-    }
     if snapshot.eligible.is_empty() {
         return TaskCatalogClassification::Empty;
     }
@@ -116,16 +110,11 @@ pub(crate) fn resolve_presentation(
     }
 }
 
-/// Only an enabled, unpinned construction waits for the first remote catalog.
+/// Resolve the task-model presentation for the local (always-complete) catalog.
 pub(crate) async fn latch_task_model_presentation(
     models_manager: &ModelsManager,
     inputs: &TaskModelPolicyInputs,
 ) -> TaskModelPresentation {
-    if inputs.inheritance.value && inputs.forked_selection.is_none() {
-        models_manager
-            .wait_for_first_catalog(inputs.remote_fetch_enabled)
-            .await;
-    }
     let snapshot = models_manager.task_model_catalog_snapshot(inputs.remote_fetch_enabled);
     let mut presentation = resolve_presentation(inputs.inheritance.value, snapshot);
     if let Some(selection) = inputs.forked_selection {
@@ -193,7 +182,6 @@ pub(crate) fn selection_telemetry_kind(
 impl From<TaskCatalogClassification> for SubagentModelCatalogKind {
     fn from(classification: TaskCatalogClassification) -> Self {
         match classification {
-            TaskCatalogClassification::Provisional => Self::Provisional,
             TaskCatalogClassification::Empty => Self::Empty,
             TaskCatalogClassification::UnknownFamily => Self::UnknownFamily,
             TaskCatalogClassification::FirstPartyOnly => Self::FirstPartyOnly,
@@ -202,7 +190,3 @@ impl From<TaskCatalogClassification> for SubagentModelCatalogKind {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "task_model_policy_tests.rs"]
-mod tests;

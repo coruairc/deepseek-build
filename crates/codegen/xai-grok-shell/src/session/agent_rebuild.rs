@@ -28,7 +28,7 @@
 //! The subagent channels are wrapped in a `ChannelBackend` behind `SubagentBackendResource`.
 //! On rebuild, we must reuse the **same** senders so the existing coordinator keeps receiving requests.
 //! A fresh channel would orphan the running coordinator.
-use crate::agent::remote_config::task_model_policy::{
+use crate::agent::model_catalog::task_model_policy::{
     LatchedTaskModelSelection, TaskModelPolicyInputs, latch_task_model_presentation,
     presentation_applied_event, rejection_sink,
 };
@@ -94,7 +94,7 @@ pub(crate) struct AgentRebuildSpec {
     pub tools_notification_handle: ToolNotificationHandle,
     pub bridge_state_path: PathBuf,
     pub session_env: Arc<HashMap<String, String>>,
-    pub models_manager: crate::agent::remote_config::ModelsManager,
+    pub models_manager: crate::agent::model_catalog::ModelsManager,
     pub task_model_policy: TaskModelPolicyInputs,
     pub task_model_selection: LatchedTaskModelSelection,
     pub compaction_policy: CompactionPolicy,
@@ -467,7 +467,7 @@ pub(crate) fn test_rebuild_spec_default() -> Arc<AgentRebuildSpec> {
         tools_notification_handle: ToolNotificationHandle::noop(),
         bridge_state_path: std::env::temp_dir().join("test_tool_state.json"),
         session_env: Arc::new(HashMap::new()),
-        models_manager: crate::agent::remote_config::ModelsManager::default(),
+        models_manager: crate::agent::model_catalog::ModelsManager::default(),
         task_model_policy: TaskModelPolicyInputs {
             inheritance: crate::agent::config::Resolved::new(
                 false,

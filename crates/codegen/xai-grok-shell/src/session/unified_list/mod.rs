@@ -3,11 +3,10 @@ mod envelope;
 mod facets;
 mod row;
 use crate::agent::session_registry_client::SessionRegistryClient;
-use crate::remote::{ConvError, ConvQuery, ConversationsClient};
 pub use crate::session::merge::CwdScope;
 pub use crate::session::visibility::HeadlessPolicy;
 use agent_client_protocol as acp;
-use cursor::{CompositeCursor, ConvLane, Paginated, merge_and_paginate};
+use cursor::{CompositeCursor, Paginated, merge_and_paginate};
 pub use envelope::{FacetMap, FacetValue, SessionKind, SessionMetaEnvelope};
 pub use facets::{
     BRANCH_FACET_KEY, BranchFacet, CWD_FACET_KEY, CwdFacet, FacetProvider, FacetRegistry,
@@ -16,9 +15,7 @@ pub use facets::{
     SOURCE_WORKSPACE_FACET_KEY, STARRED_FACET_KEY, SourceQuery, SourceWorkspaceFacet, StarredFacet,
     WORKSPACE_FACET_KEY, WORKTREE_FACET_KEY, WorkspaceFacet, WorktreeFacet, build_facet_registry,
 };
-pub use row::{
-    ExtSupersetRow, RowMeta, SessionInfo, UnifiedRow, conversation_to_row, merged_session_to_row,
-};
+pub use row::{ExtSupersetRow, RowMeta, SessionInfo, UnifiedRow, merged_session_to_row};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
@@ -39,23 +36,14 @@ pub(crate) fn facet_registry() -> &'static FacetRegistry {
 pub(crate) fn conversations_lane_enabled() -> bool {
     false
 }
-/// Env lane (desktop `GROK_SESSION_LIST_CONVERSATIONS`) OR process-wide `--chat` (`GROK_CHAT_MODE`); hard-off in release builds.
+/// Env lane (desktop `GROK_SESSION_LIST_CONVERSATIONS`); hard-off in release builds.
 /// The single predicate `MvpAgent::conversations_client()` keys on.
 pub fn conversations_lane_active() -> bool {
-    conversations_lane_enabled() || crate::agent::chat_modes::process_chat_mode_enabled()
+    conversations_lane_enabled()
 }
-/// Parse `deepseek-build/session/list` params and, under process-wide chat mode, force the conversations-only `kind` facet.
-/// Client-sent `kind` of `chat`/`build` is honored only behind `feature = "local-workspace"` (pager welcome Local history).
-/// Chat-only Desktop/ACP agents keep the force-rewrite so `kind: ["build"]` cannot surface Build rows.
+/// Parse `deepseek-build/session/list` params.
 pub fn parse_list_req(raw: &str) -> Result<ListReq, serde_json::Error> {
-    let mut req: ListReq = serde_json::from_str(raw)?;
-    if crate::agent::chat_modes::process_chat_mode_enabled() {
-        let honor_client_kind = cfg!(feature = "local-workspace") && client_sent_kind_filter(&req);
-        if !honor_client_kind {
-            force_kind_chat(&mut req);
-        }
-    }
-    Ok(req)
+    serde_json::from_str(raw)
 }
 fn cwd_scope_from_allow_relax<'de, D>(deserializer: D) -> Result<CwdScope, D::Error>
 where
@@ -207,12 +195,8 @@ pub(crate) fn force_kind(req: &mut ListReq, kind: SessionKind) {
 }
 pub async fn build_unified_list(
     registry_client: Option<&SessionRegistryClient>,
-    conversations_client: Option<&ConversationsClient>,
     mut req: ListReq,
 ) -> UnifiedListResult {
-    if crate::agent::chat_modes::process_chat_mode_enabled() && !client_sent_kind_filter(&req) {
-        force_kind_chat(&mut req);
-    }
     let reg = facet_registry();
     let ParsedMeta {
         facet_filters,
@@ -225,7 +209,6 @@ pub async fn build_unified_list(
     let mut source_query = SourceQuery::default();
     reg.apply_pushdown(&facet_filters, &mut source_query);
     let headless = HeadlessPolicy::from_wire(req.headless.as_deref());
-    let exclude_conversations = excludes_conversations(&facet_filters, headless);
     let exclude_build = excludes_build(&facet_filters);
     let over = crate::session::merge::over_fetch(limit);
     let cwd_scope = req.cwd_scope;
@@ -284,91 +267,18 @@ pub async fn build_unified_list(
             }
         }
     };
-    let conv_fut = async {
-        if exclude_conversations {
-            return ConvLane::Skipped;
-        }
-        let Some(client) = conversations_client else {
-            return ConvLane::Skipped;
-        };
-        let q = ConvQuery {
-            page_size: (limit + CONV_PAGE_HEADROOM) as i64,
-            page_token: cursor.conv_page_token.clone(),
-            search_query: query.clone(),
-            workspace_id: source_query.workspace_id.clone(),
-        };
-        match tokio::time::timeout(
-            crate::session::merge::REMOTE_TIMEOUT,
-            client.list_conversations(&q),
-        )
-        .await
-        {
-            Ok(Ok(page)) => {
-                let next_token = page.next_page_token;
-                let rows: Vec<UnifiedRow> = page
-                    .conversations
-                    .into_iter()
-                    .map(|c| conversation_to_row(c, reg))
-                    .collect();
-                let frontier = cursor::conv_frontier(&rows, next_token.is_some());
-                ConvLane::Page {
-                    rows,
-                    next_token,
-                    frontier,
-                }
-            }
-            Ok(Err(ConvError::NoOauth)) => ConvLane::Degraded(PartialReason::NoOauth),
-            Ok(Err(e)) => {
-                tracing::warn!("conversation list failed: {e}");
-                ConvLane::Degraded(PartialReason::Error)
-            }
-            Err(_) => {
-                tracing::warn!("conversation list timed out");
-                ConvLane::Degraded(PartialReason::Timeout)
-            }
-        }
-    };
-    let (
-        LocalLane {
-            rows: local_rows,
-            relax,
-        },
-        conv_lane,
-    ) = tokio::join!(local_fut, conv_fut);
+    let LocalLane {
+        rows: local_rows,
+        relax,
+    } = local_fut.await;
     let (local_rows, scope) = maybe_relax(local_rows, relax, over, reg, headless).await;
-    {
-        let (conv_lane_status, conv_rows) = match &conv_lane {
-            ConvLane::Skipped => ("skipped", 0),
-            ConvLane::Degraded(reason) => (reason.as_ref(), 0),
-            ConvLane::Page { rows, .. } => ("ok", rows.len()),
-        };
-        tracing::debug!(
-            local_lane_skipped = exclude_build,
-            local_rows = local_rows.len(),
-            conv_lane = conv_lane_status,
-            conv_rows,
-            "session list lanes"
-        );
-    }
     let local_rows = reg.apply_in_memory_filters(&facet_filters, local_rows);
-    let conv_lane = match conv_lane {
-        ConvLane::Page {
-            rows,
-            next_token,
-            frontier,
-        } => ConvLane::Page {
-            rows: reg.apply_in_memory_filters(&facet_filters, rows),
-            next_token,
-            frontier,
-        },
-        other => other,
-    };
     let Paginated {
         candidates,
         emit_count,
         next_cursor,
         partial,
-    } = merge_and_paginate(local_rows, conv_lane, &cursor, limit);
+    } = merge_and_paginate(local_rows, &cursor, limit);
     let mut rows = candidates;
     rows.truncate(emit_count);
     let facets = reg.summarize_window(&rows);

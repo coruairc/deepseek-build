@@ -291,7 +291,7 @@ fn resolve_capture_reasoning_effort(
 }
 
 pub(super) fn resolve_memory_model_and_effort(
-    models_manager: &crate::agent::remote_config::ModelsManager,
+    models_manager: &crate::agent::model_catalog::ModelsManager,
     model: String,
 ) -> (String, Option<ReasoningEffort>) {
     let reasoning_effort = resolve_capture_reasoning_effort(

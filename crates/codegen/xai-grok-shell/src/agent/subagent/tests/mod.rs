@@ -20,7 +20,7 @@ use super::handle_request::{
     reparent_surviving_child_tasks, resolve_child_model, take_child_streaming_partial,
     take_child_turn_messages,
 };
-use crate::agent::remote_config::task_model_policy::TaskModelSelection;
+use crate::agent::model_catalog::task_model_policy::TaskModelSelection;
 use crate::test_support::lsp_runtime::{ctx_with_toggle, test_gateway_with_receiver};
 use xai_grok_subagent_resolution::resolve_effective_overrides;
 use xai_grok_tools::implementations::grok_build::task::coordinator::{

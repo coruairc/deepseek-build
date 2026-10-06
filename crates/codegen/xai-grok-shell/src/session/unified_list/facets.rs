@@ -4,7 +4,6 @@ use serde::Serialize;
 
 use super::envelope::{FacetMap, FacetValue, SessionKind};
 use super::row::UnifiedRow;
-use crate::remote::Conversation;
 use crate::session::merge::MergedSession;
 
 pub const KIND_FACET_KEY: &str = "kind";
@@ -42,25 +41,6 @@ impl NormalizedItem {
             source_workspace_dir: m.source_workspace_dir.clone(),
             workspace_ids: Vec::new(),
             starred: false,
-        }
-    }
-
-    pub(crate) fn from_conversation(c: &Conversation) -> Self {
-        Self {
-            kind: SessionKind::Chat,
-            cwd: String::new(),
-            repo_name: None,
-            branch: None,
-            worktree_label: None,
-            git_root_dir: None,
-            source_workspace_dir: None,
-            workspace_ids: c
-                .workspaces
-                .iter()
-                .map(|w| w.workspace_id.clone())
-                .filter(|id| !id.is_empty())
-                .collect(),
-            starred: c.starred,
         }
     }
 }

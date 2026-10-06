@@ -111,10 +111,6 @@ async fn handle_session_rename(agent: &MvpAgent, args: &acp::ExtRequest) -> ExtR
         ValidatedRenameTitle::Manual(title) => title,
     };
 
-    if req.kind == SessionKind::Chat {
-        return rename_chat_conversation(agent, &req.session_id, &title).await;
-    }
-
     let session_id = acp::SessionId::new(Arc::from(req.session_id.as_str()));
 
     // Find the session info, scoping to cwd if provided
@@ -168,26 +164,6 @@ async fn handle_session_rename(agent: &MvpAgent, args: &acp::ExtRequest) -> ExtR
 
     // Send a SessionSummaryGenerated notification so the TUI updates its title
     notify_session_title(agent, session_id, &title).await;
-
-    if agent.is_writeback_storage()
-        && let Some(auth) = agent.current_auth()
-        && !auth.is_zdr_team()
-    {
-        use crate::remote::client::BackendClient;
-        use crate::session::export::ExportedMetadata;
-
-        let mut metadata = ExportedMetadata::from_summary(summary);
-        metadata.title = Some(title.clone());
-        metadata.title_is_manual = Some(true);
-        metadata.updated_at = Some(chrono::Utc::now().to_rfc3339());
-        if let Err(e) = BackendClient::new()
-            .with_auth_manager(agent.auth_manager.clone())
-            .save_session_data(&req.session_id, &[], Some(&metadata))
-            .await
-        {
-            tracing::warn!(?e, session_id = %req.session_id, "failed to sync renamed title to backend");
-        }
-    }
 
     // Hook 2: update session replica with summary (fire-and-forget)
     spawn_registry_title_update(
@@ -244,31 +220,7 @@ async fn reset_session_title_to_auto(
                 0,
             );
         }
-        // Non-resident sessions have no persistence actor / RemoteSync.
-        // Mirror the rename writeback path so a dormant unpin cannot leave the remote pin for a later pull to restore
-        if agent.is_writeback_storage()
-            && let Some(auth) = agent.current_auth()
-            && !auth.is_zdr_team()
-        {
-            use crate::remote::client::BackendClient;
-            use crate::session::export::ExportedMetadata;
-
-            let mut metadata = ExportedMetadata::from_summary(summary);
-            metadata.title = Some(String::new());
-            metadata.title_is_manual = Some(false);
-            metadata.updated_at = Some(chrono::Utc::now().to_rfc3339());
-            if let Err(e) = BackendClient::new()
-                .with_auth_manager(agent.auth_manager.clone())
-                .save_session_data(session_id, &[], Some(&metadata))
-                .await
-            {
-                tracing::warn!(
-                    ?e,
-                    session_id = %session_id,
-                    "failed to clear remote title on unpin"
-                );
-            }
-        }
+        // Non-resident sessions have no persistence actor.
         // `titleIsManual: false` is distinct from absent meta (absent means a racing auto title)
         notify_session_title_unpinned(agent, session_id_acp).await;
         // Empty string, not None: `UpdateRequest.summary` omits `None` and the replica would keep advertising the old manual title
@@ -371,49 +323,6 @@ async fn notify_session_title(agent: &MvpAgent, session_id: acp::SessionId, titl
     }
 }
 
-async fn rename_chat_conversation(
-    agent: &MvpAgent,
-    conversation_id: &str,
-    title: &str,
-) -> ExtResult {
-    use crate::remote::{ConvError, UpdateConversationBody};
-
-    let Some(client) = agent.conversations_client() else {
-        return Err(acp::Error::invalid_request()
-            .data("chat session rename requires the conversations lane (OIDC + chat feature)"));
-    };
-
-    let body = UpdateConversationBody {
-        title: Some(title.to_owned()),
-        starred: None,
-    };
-    client
-        .update_conversation(conversation_id, &body)
-        .await
-        .map_err(|e| match e {
-            ConvError::NoOauth => acp::Error::invalid_request()
-                .data("chat session rename requires xAI OAuth credentials"),
-            ConvError::Http { status: 404 } => acp::Error::invalid_request()
-                .data(format!("conversation not found: {conversation_id}")),
-            other => acp::Error::internal_error()
-                .data(format!("chat conversation rename failed: {other}")),
-        })?;
-
-    // If this conversation is open live, notify clients of the new title.
-    let session_id = acp::SessionId::new(Arc::from(conversation_id));
-    if agent.is_resident(&session_id) {
-        notify_session_title(agent, session_id, title).await;
-    }
-
-    tracing::info!(
-        session_id = %conversation_id,
-        title = %title,
-        "Chat conversation renamed"
-    );
-
-    to_raw_response(&serde_json::json!({ "success": true }))
-}
-
 // session/delete
 
 /// Delete a session from history.
@@ -431,67 +340,27 @@ async fn handle_session_delete(agent: &MvpAgent, args: &acp::ExtRequest) -> ExtR
     let req: DeleteRequest = parse_params(args)?;
 
     if req.kind == SessionKind::Chat {
-        return soft_delete_chat_conversation(agent, &req.session_id).await;
+        return Err(acp::Error::invalid_request()
+            .data("chat session delete requires the conversations lane (removed)"));
     }
 
     let session_id = acp::SessionId::new(Arc::from(req.session_id.as_str()));
-
-    // For writeback storage (non-ZDR): remote delete is authoritative for the cloud history and runs first
-    // On failure no local bits are touched, so the pager does not remove the row or toast success
-    let needs_remote =
-        agent.is_writeback_storage() && agent.current_auth().is_some_and(|a| !a.is_zdr_team());
 
     // Always drain: even a non-resident session can still have coordinator children finishing after an earlier fire-and-forget TeardownSession
     // That happens on e.g. idle unload. hard_stop / kill_all no-op when not resident.
     agent.teardown_live_session_before_delete(&session_id).await;
 
-    // Shared delete: remote-first, then local disk and FTS eviction
+    // Shared delete: local disk and FTS eviction.
     // Mirrored by the `grok sessions delete <id>` CLI path.
     crate::session::persistence::delete_session_history(
         &req.session_id,
         req.cwd.as_deref(),
-        needs_remote,
-        agent.auth_manager.clone(),
         agent.search_index().writer(),
     )
     .await
-    .map_err(|e| {
-        if let crate::session::persistence::DeleteSessionError::Remote(_) = &e {
-            tracing::warn!(?e, session_id = %req.session_id, "failed to delete remote session data");
-        }
-        acp::Error::internal_error().data(e.to_string())
-    })?;
+    .map_err(|e| acp::Error::internal_error().data(e.to_string()))?;
 
     tracing::info!(session_id = %req.session_id, "Session deleted");
-
-    to_raw_response(&serde_json::json!({ "success": true }))
-}
-
-async fn soft_delete_chat_conversation(agent: &MvpAgent, conversation_id: &str) -> ExtResult {
-    use crate::remote::ConvError;
-
-    let Some(client) = agent.conversations_client() else {
-        return Err(acp::Error::invalid_request()
-            .data("chat session delete requires the conversations lane (OIDC + chat feature)"));
-    };
-
-    client
-        .soft_delete_conversation(conversation_id)
-        .await
-        .map_err(|e| match e {
-            ConvError::NoOauth => acp::Error::invalid_request()
-                .data("chat session delete requires xAI OAuth credentials"),
-            other => acp::Error::internal_error()
-                .data(format!("chat conversation soft-delete failed: {other}")),
-        })?;
-
-    let session_id = acp::SessionId::new(Arc::from(conversation_id));
-    if agent.is_resident(&session_id) {
-        agent.request_session_shutdown(&session_id);
-        agent.remove_session(&session_id);
-    }
-
-    tracing::info!(session_id = %conversation_id, "Chat conversation soft-deleted");
 
     to_raw_response(&serde_json::json!({ "success": true }))
 }

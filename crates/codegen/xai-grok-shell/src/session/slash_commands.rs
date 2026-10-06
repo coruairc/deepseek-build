@@ -992,88 +992,11 @@ pub(crate) fn clear_product_skills_cache_for_test() {
 }
 /// Shared by `list_commands(kind=chat)`, chat-session `available_commands_update`, and turn/interjection skill resolution.
 /// Never substitutes Build disk skills.
-/// ACU and shell-side resolve share one process-local source without a gateway bridge.
+/// The remote product-skills catalog fetch was removed; there are no product skills to return.
 pub(crate) async fn product_skill_infos(
-    auth: Option<std::sync::Arc<xai_grok_login::AuthManager>>,
+    _auth: Option<std::sync::Arc<xai_grok_login::AuthManager>>,
 ) -> Option<Vec<SkillInfo>> {
-    let Some(auth) = auth else {
-        tracing::warn!("product skills: no auth — catalog unavailable");
-        return None;
-    };
-    let grok_auth = match auth.auth().await {
-        Ok(a) => a,
-        Err(err) => {
-            tracing::warn!(error = %err, "product skills: auth unavailable");
-            return None;
-        }
-    };
-    if let Some(skills) = product_skills_cache_lookup(&grok_auth) {
-        return skills;
-    }
-    let _gate = product_skills_fetch_gate().lock().await;
-    if let Some(skills) = product_skills_cache_lookup(&grok_auth) {
-        return skills;
-    }
-    let client = crate::remote::SkillsClient::new(auth);
-    match client.try_list_catalog(PRODUCT_SKILLS_LOCALE).await {
-        Ok((catalog, used_untagged_recovery)) if catalog.user_list_failed => {
-            let skills = catalog.to_skill_infos();
-            {
-                let guard = PRODUCT_SKILLS_CACHE.lock();
-                if let Some(entry) = guard.as_ref()
-                    && product_skills_cache_matches(entry, &grok_auth)
-                {
-                    tracing::warn!(
-                        skill_count = entry.skills.len(),
-                        "product skills: user list failed — reusing last successful catalog"
-                    );
-                    return Some(entry.skills.clone());
-                }
-            }
-            *PRODUCT_SKILLS_DEGRADED_CACHE.lock() = Some(product_skills_cache_entry_after_fetch(
-                &grok_auth,
-                skills.clone(),
-                used_untagged_recovery,
-            ));
-            clear_negative_cache_for_auth(&grok_auth);
-            tracing::warn!(
-                skill_count = skills.len(),
-                used_untagged_recovery,
-                "product skills: user list failed — caching degraded catalog briefly"
-            );
-            Some(skills)
-        }
-        Ok((catalog, used_untagged_recovery)) => {
-            let skills = catalog.to_skill_infos();
-            *PRODUCT_SKILLS_CACHE.lock() = Some(product_skills_cache_entry_after_fetch(
-                &grok_auth,
-                skills.clone(),
-                used_untagged_recovery,
-            ));
-            clear_degraded_cache_for_auth(&grok_auth);
-            clear_negative_cache_for_auth(&grok_auth);
-            Some(skills)
-        }
-        Err(err) => {
-            let cached = PRODUCT_SKILLS_CACHE.lock().clone();
-            if let Some(entry) = cached
-                && product_skills_cache_matches(&entry, &grok_auth)
-            {
-                tracing::warn!(
-                    error = %err,
-                    skill_count = entry.skills.len(),
-                    "product skills: catalog unavailable — reusing last successful catalog"
-                );
-                return Some(entry.skills);
-            }
-            *PRODUCT_SKILLS_NEGATIVE_CACHE.lock() = Some(product_skills_negative_stamp(&grok_auth));
-            tracing::warn!(
-                error = %err,
-                "product skills: catalog unavailable after retries — negative cache"
-            );
-            None
-        }
-    }
+    None
 }
 /// `Some(Some(skills))` success/degraded hit, `Some(None)` negative hit, `None` miss.
 fn product_skills_cache_lookup(

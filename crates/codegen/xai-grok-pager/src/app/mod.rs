@@ -534,13 +534,12 @@ async fn bounded_connect(
                 });
             }
             () = tokio::time::sleep(slice) => {
-                let profile = xai_grok_shell::managed_config::startup_profile();
-                let floor = connect_timeout::resolve(connect_ui_timeout_env, profile);
+                let floor = connect_timeout::resolve(connect_ui_timeout_env);
                 let escalated = started + floor;
                 if escalated > deadline {
                     tracing::info!(
                         timeout_secs = floor.as_secs(),
-                        "connect budget extended after launch profile escalated to managed"
+                        "connect budget extended"
                     );
                     deadline = escalated;
                 }
@@ -606,54 +605,12 @@ pub async fn run(mut args: PagerArgs) -> anyhow::Result<bool> {
         args.force_login = false;
     }
     xai_tty_utils::redirect_native_stderr();
-    let refreshed_auth = tokio::time::timeout(
-        xai_grok_shell::http::STARTUP_AUTH_REFRESH_TIMEOUT,
-        xai_grok_login::try_ensure_fresh_auth(&grok_com_config, proxy_base_url),
-    )
-    .await
-    .unwrap_or(None);
-    let settings_query = xai_grok_shell::agent::remote_config::settings_get::SettingsQuery::resolve(
-        refreshed_auth,
-        Some(grok_com_config.clone()),
-    );
-    let had_prefetch =
-        xai_grok_shell::agent::remote_config::settings_get::is_eligible(&settings_query);
-    if had_prefetch {
-        xai_grok_shell::agent::remote_config::settings_get::warm_startup_settings(
-            settings_query.clone(),
-        );
-    }
     xai_grok_shell::agent::mvp_agent::warm_async_http_client();
     tokio::task::spawn_blocking(|| {});
     if let Ok(cwd) = std::env::current_dir() {
         crate::git_info::populate_from_cwd_async(cwd);
     }
-    let prefetch_wait_started = std::time::Instant::now();
-    let remote_settings = if had_prefetch {
-        let _wait_span = region!("startup.prefetch_join_wait", Parent::Inherit);
-        let warmed_auth = settings_query.auth().cloned();
-        let wait = {
-            let _settings = region!(
-                "startup.prefetch_join_wait.settings",
-                Parent::Explicit(_wait_span.span())
-            );
-            xai_grok_shell::agent::remote_config::settings_get::await_startup_settings(
-                settings_query,
-                EARLY_PREFETCH_WAIT,
-                &tokio_util::sync::CancellationToken::new(),
-            )
-            .await
-        };
-        let settings = xai_grok_shell::agent::remote_config::settings_get::consume_wait(
-            wait,
-            warmed_auth.as_ref(),
-            &grok_com_config,
-        );
-        xai_grok_telemetry::startup::record_prefetch_wait(prefetch_wait_started.elapsed());
-        settings
-    } else {
-        None
-    };
+    let remote_settings: Option<xai_grok_shell::util::config::RemoteSettings> = None;
     seed_remote_ui_caches(remote_settings.as_ref());
     let raw_config = xai_grok_shell::config::load_effective_config()
         .map_err(|e| anyhow::anyhow!("Failed to load config: {e}"))?;
@@ -920,10 +877,7 @@ pub async fn run(mut args: PagerArgs) -> anyhow::Result<bool> {
         set_terminal_title(t);
     }
     let connect_ui_timeout_env = std::env::var(connect_timeout::CONNECT_UI_TIMEOUT_ENV).ok();
-    let connect_ui_timeout = connect_timeout::resolve(
-        connect_ui_timeout_env.as_deref(),
-        xai_grok_shell::managed_config::startup_profile(),
-    );
+    let connect_ui_timeout = connect_timeout::resolve(connect_ui_timeout_env.as_deref());
     if let Some(ref raw) = connect_ui_timeout_env {
         crate::unified_log::write_direct_info(
             "startup connect budget from env",

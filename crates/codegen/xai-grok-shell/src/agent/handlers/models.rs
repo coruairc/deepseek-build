@@ -5,15 +5,12 @@ use agent_client_protocol::{self as acp};
 use super::super::mvp_agent::MvpAgent;
 use crate::session::ExtMethodResult;
 
-/// Returns the model state after a bounded wait for the first catalog.
-/// Process chat mode serves the chat catalog, as `initialize` does.
+/// Returns the model state from the local catalog.
 pub(crate) async fn handle(
     agent: &MvpAgent,
     _args: &acp::ExtRequest,
 ) -> Result<acp::ExtResponse, acp::Error> {
-    let state = if crate::agent::chat_modes::process_chat_mode_enabled() {
-        agent.chat_modes.model_state().await
-    } else {
+    let state = {
         agent
             .models_manager
             .wait_for_first_catalog(agent.models_manager.is_models_fetch_enabled())

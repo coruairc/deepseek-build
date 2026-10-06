@@ -223,76 +223,11 @@ fn init_tracing_simple(app_entrypoint: &'static str) {
         ));
     xai_grok_telemetry::debug_log::install_firehose(registry, app_entrypoint);
 }
-/// `json` prints the managed configuration without installing it.
+/// Managed configuration was removed from deepseek-build.
 #[tracing::instrument(level = "debug", skip_all)]
-async fn run_setup_command(json: bool) {
-    use xai_grok_shell::managed_config::{self, SetupOutcome};
-    if !managed_config::has_principal() {
-        eprintln!("No deployment key or team sign-in found.");
-        eprintln!();
-        eprintln!(
-            "To install managed configuration, sign in with a team using `deepseek-build login`,"
-        );
-        eprintln!("or set a deployment key:");
-        eprintln!();
-        if cfg!(unix) {
-            eprintln!("  export GROK_DEPLOYMENT_KEY=<your-key>");
-        } else {
-            eprintln!("  $env:GROK_DEPLOYMENT_KEY=\"<your-key>\"");
-        }
-        eprintln!("  deepseek-build setup");
-        eprintln!();
-        eprintln!("Or add the key to ~/.deepseek-build/config.toml:");
-        eprintln!();
-        eprintln!("  [endpoints]");
-        eprintln!("  deployment_key = \"<your-key>\"");
-        eprintln!();
-        eprintln!(
-            "If you don't have a deployment key, contact your organization's deepseek-build administrator."
-        );
-        std::process::exit(1);
-    }
-    if json {
-        match managed_config::fetch_setup_report().await {
-            Ok(report) => {
-                let out = serde_json::to_string_pretty(&report)
-                    .expect("setup report has no non-serializable values");
-                println!("{out}");
-                if !report.configured {
-                    eprintln!(
-                        "Your team doesn't have a managed configuration yet. A team admin can set one up at console.x.ai."
-                    );
-                }
-            }
-            Err(e) => {
-                eprintln!("Couldn't fetch managed configuration. {e}");
-                std::process::exit(1);
-            }
-        }
-        return;
-    }
-    match managed_config::run_setup().await {
-        SetupOutcome::Installed => eprintln!("Applied managed configuration."),
-        SetupOutcome::NothingConfigured => {
-            eprintln!(
-                "Your team doesn't have a managed configuration yet. A team admin can set one up at console.x.ai."
-            );
-        }
-        SetupOutcome::Skipped => {
-            eprintln!(
-                "Managed configuration was not applied this run (another process held the apply lock, or the credential changed during the fetch). Run `deepseek-build setup` again."
-            );
-        }
-        SetupOutcome::Staged => {
-            eprintln!(
-                "Managed configuration update verified; it takes effect the next time deepseek-build starts."
-            );
-        }
-        SetupOutcome::Failed(e) => {
-            eprintln!("Couldn't apply managed configuration. {e}");
-            std::process::exit(1);
-        }
-    }
+async fn run_setup_command(_json: bool) {
+    eprintln!("Managed configuration is no longer supported.");
+    std::process::exit(1);
 }
 #[tracing::instrument(level = "debug", skip_all)]
 async fn run_leader_mgmt(args: LeaderMgmtArgs) -> Result<()> {
@@ -524,19 +459,9 @@ fn load_grok_com_config_for_settings() -> xai_grok_shell::auth::GrokComConfig {
 /// value, so it would fall open and let workspace refuse the command before the
 /// load could complete.
 async fn fetch_remote_settings(
-    grok_com_config: &xai_grok_shell::auth::GrokComConfig,
+    _grok_com_config: &xai_grok_shell::auth::GrokComConfig,
 ) -> Option<xai_grok_shell::util::config::RemoteSettings> {
-    let query = xai_grok_shell::agent::remote_config::settings_get::SettingsQuery::resolve(
-        None,
-        Some(grok_com_config.clone()),
-    );
-    let wait = xai_grok_shell::agent::remote_config::settings_get::await_startup_settings(
-        query,
-        EARLY_PREFETCH_WAIT,
-        &tokio_util::sync::CancellationToken::new(),
-    )
-    .await;
-    xai_grok_shell::agent::remote_config::settings_get::consume_wait(wait, None, grok_com_config)
+    None
 }
 #[tracing::instrument(level = "debug", skip_all)]
 async fn run_workspace_mgmt(args: WorkspaceMgmtArgs) -> Result<()> {
@@ -1216,18 +1141,6 @@ async fn run_agent_command(
             }
         }
     }
-    let grok_com_config = load_grok_com_config_for_settings();
-    let settings_query = xai_grok_shell::agent::remote_config::settings_get::SettingsQuery::resolve(
-        None,
-        Some(grok_com_config.clone()),
-    );
-    let had_prefetch =
-        xai_grok_shell::agent::remote_config::settings_get::is_eligible(&settings_query);
-    if had_prefetch {
-        xai_grok_shell::agent::remote_config::settings_get::warm_startup_settings(
-            settings_query.clone(),
-        );
-    }
     let is_stdio = matches!(agent_args.mode, Some(AgentCmd::Stdio));
     let is_leader = matches!(agent_args.mode, Some(AgentCmd::Leader(_)));
     if !is_stdio && !is_leader {
@@ -1239,21 +1152,7 @@ async fn run_agent_command(
             )
         );
     }
-    let remote_settings = if had_prefetch {
-        let wait = xai_grok_shell::agent::remote_config::settings_get::await_startup_settings(
-            settings_query,
-            EARLY_PREFETCH_WAIT,
-            &tokio_util::sync::CancellationToken::new(),
-        )
-        .await;
-        xai_grok_shell::agent::remote_config::settings_get::consume_wait(
-            wait,
-            None,
-            &grok_com_config,
-        )
-    } else {
-        None
-    };
+    let remote_settings: Option<xai_grok_shell::util::config::RemoteSettings> = None;
     xai_grok_shell::util::config::set_remote_campaigns_from_settings(remote_settings.as_ref());
     let raw_config = xai_grok_shell::config::load_effective_config()
         .map_err(|e| anyhow::anyhow!("Failed to load config: {}", e))?;
@@ -1605,7 +1504,7 @@ fn configure_process_env(mut args: PagerArgs) -> Result<PagerArgs> {
             std::env::set_var("GROK_COMPACTION_DETAIL", detail);
         }
         if args.chat() {
-            std::env::set_var(xai_grok_shell::agent::chat_modes::GROK_CHAT_MODE_ENV, "1");
+            // chat mode (`--chat`) was removed; no env lane to set.
         }
         if let Some(socket) = args.leader_socket.as_deref() {
             std::env::set_var(xai_grok_shell::leader::LEADER_SOCKET_ENV, socket);
@@ -1989,27 +1888,7 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
         }
     }
     if command_needs_pre_sandbox_policy_heal(args.command.as_ref()) {
-        match xai_grok_shell::config::load_agent_config_disk_only() {
-            Ok(agent_cfg) => {
-                let auth_manager =
-                    std::sync::Arc::new(xai_grok_login::AuthManager::new_with_proxy_base_url(
-                        &xai_grok_shell::util::grok_home::grok_home(),
-                        agent_cfg.grok_com_config.clone(),
-                        agent_cfg.endpoints.proxy_url(),
-                    ));
-                auth_manager.configure_refresher(
-                    agent_cfg.grok_com_config.auth_provider_command.clone(),
-                    None,
-                );
-                xai_grok_shell::managed_config::ensure_managed_policy_present(&auth_manager).await;
-            }
-            Err(e) => {
-                tracing::warn!(
-                    error = %e,
-                    "managed policy: skipped session-start heal (disk config load failed)"
-                );
-            }
-        }
+        // Managed-policy heal was removed; no pre-sandbox policy repair runs.
     }
     xai_grok_shell::config::apply_sandbox(
         None,

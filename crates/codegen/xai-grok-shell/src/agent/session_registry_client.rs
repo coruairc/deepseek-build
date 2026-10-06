@@ -196,7 +196,7 @@ impl SessionRegistryClient {
                     auth_manager.clone(),
                     self.credentials.deployment_key.clone(),
                     self.credentials.alpha_test_key.clone(),
-                    std::sync::Arc::new(crate::cloud_config::managed_config::resolve_deployment_id),
+                    std::sync::Arc::new(crate::agent::model_catalog::resolve_deployment_id),
                 ),
             );
         self.credentials = self.credentials.with_auth_manager(auth_manager);

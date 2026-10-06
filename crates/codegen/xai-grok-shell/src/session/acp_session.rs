@@ -897,7 +897,7 @@ pub(crate) struct SessionActor {
     /// Live rather than fixed at spawn, because a resident session outlives the client that created it.
     pub(crate) status_line_enabled: Arc<std::sync::atomic::AtomicBool>,
     /// Shared models manager for etag-triggered refresh from response headers.
-    pub(crate) models_manager: crate::agent::remote_config::ModelsManager,
+    pub(crate) models_manager: crate::agent::model_catalog::ModelsManager,
     /// The system prompt's `Workspace Path` is set at build time via `AgentBuilder::with_prompt_working_directory()`.
     /// Set once at session spawn from the `prompt_display_cwd` parameter.
     /// Uses `OnceLock` for lock-free reads, a set-once guarantee, and `&self` mutability (SessionActor is behind `Arc`).
