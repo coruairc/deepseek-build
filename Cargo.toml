@@ -168,7 +168,6 @@ fs2 = "0.4"
 futures = "0.3"
 futures-util = "0.3"
 fuzzy-matcher = "0.3.7"
-gcloud-storage = { version = "1.3.0", default-features = false, features = ["auth", "jwt-aws-lc-rs", "external-account"] }
 gethostname = "1"
 git2 = "0.20"
 gix = { version = "0.83", default-features = false, features = ["sha1"] }
@@ -384,6 +383,8 @@ zstd = "0.13"
 [profile.release]
 incremental = true
 panic = "abort"
+# Personal-tool trim: drop debug symbols from the default release build.
+strip = "symbols"
 
 # Hardened release profile for shipping to end users (alpha + stable).
 # Use `cargo build --profile release-dist` for distribution builds.
