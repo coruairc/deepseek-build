@@ -211,16 +211,7 @@ fn init_tracing_simple(app_entrypoint: &'static str) {
         .with(xai_grok_telemetry::sampling_log::layer())
         .with(xai_grok_telemetry::span_profile::layer(app_entrypoint))
         .with(xai_grok_telemetry::instrumentation::layer())
-        .with(xai_grok_telemetry::hooks_log::layer())
-        .with(xai_grok_telemetry::otel_layer::build_otel_layer(
-            xai_grok_telemetry::otel_layer::OtelClientInfo {
-                client_name: xai_grok_brand::NAME,
-                client_version: xai_grok_version::VERSION,
-                service_version: env!("VERSION_WITH_COMMIT"),
-                app_entrypoint,
-            },
-            xai_grok_shell::agent::init::build_default_otel_layer_config(),
-        ));
+        .with(xai_grok_telemetry::hooks_log::layer());
     xai_grok_telemetry::debug_log::install_firehose(registry, app_entrypoint);
 }
 /// `json` prints the managed configuration without installing it.
@@ -1140,7 +1131,6 @@ fn shutdown_and_flush_telemetry(exit_code: i32) -> ! {
     {
         let _exit_span = tracing::info_span!("teardown.process_exit").entered();
     }
-    xai_grok_telemetry::otel_layer::shutdown_otel();
     xai_grok_telemetry::debug_log::flush();
     finalize_span_profile();
     std::process::exit(exit_code);
@@ -1201,7 +1191,6 @@ async fn run_agent_command(
         xai_grok_shell::agent::app::suppress_otel();
     }
     init_tracing_simple("agent");
-    let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
     xai_grok_telemetry::instrumentation::install_panic_hook();
     if trust {
         use xai_grok_workspace::folder_trust::{grant_folder_trust, report_cli_trust_grant};
@@ -2067,7 +2056,6 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
             }
             Command::Setup { json } => {
                 init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
                 run_setup_command(json).await;
                 return Ok(());
             }
@@ -2077,24 +2065,20 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
             }
             Command::Plugin(plugin_args) => {
                 init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
                 return xai_grok_pager::plugin_cmd::run(plugin_args).await;
             }
             Command::Models => {
                 init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
                 let agent_config = xai_grok_shell::config::load_agent_config_disk_only()
                     .map_err(|e| anyhow::anyhow!("Failed to create agent config: {e}"))?;
                 return xai_grok_pager::models::list_available_models(&agent_config).await;
             }
             Command::Leader(leader_args) => {
                 init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
                 return run_leader_mgmt(leader_args).await;
             }
             Command::Worktree(worktree_args) => {
                 init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
                 let agent_config = xai_grok_shell::config::load_agent_config_disk_only()
                     .map_err(|e| anyhow::anyhow!("Failed to create agent config: {e}"))?;
                 let result = xai_grok_pager::worktree_cmd::run(worktree_args, &agent_config).await;
@@ -2102,24 +2086,20 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
             }
             Command::DiskUsage(disk_usage_args) => {
                 init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
                 return xai_grok_pager::disk_usage_cmd::run(disk_usage_args);
             }
             Command::Workspace(workspace_args) => {
                 init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
                 return run_workspace_mgmt(workspace_args).await;
             }
             Command::Sessions(sessions_args) => {
                 init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
                 let agent_config = xai_grok_shell::config::load_agent_config_disk_only()
                     .map_err(|e| anyhow::anyhow!("Failed to create agent config: {e}"))?;
                 return xai_grok_pager::sessions_cmd::run(sessions_args, &agent_config).await;
             }
             Command::Usage(usage_args) => {
                 init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
                 return xai_grok_pager::usage_cmd::run(usage_args);
             }
             Command::Export(export_args) => {
@@ -2128,7 +2108,6 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
             }
             Command::Trace(trace_args) => {
                 init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
                 let mut agent_config = xai_grok_shell::config::load_agent_config_disk_only()
                     .map_err(|e| anyhow::anyhow!("Failed to create agent config: {e}"))?;
                 if !trace_args.local {
@@ -2160,7 +2139,6 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
                 devbox,
             } => {
                 init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
                 let config = xai_grok_shell::config::load_agent_config_disk_only()
                     .map_err(|e| anyhow::anyhow!("Failed to create agent config: {e}"))?;
                 let authenticated = xai_grok_login::run_cli_login(
@@ -2214,7 +2192,6 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
             anyhow::bail!("--memory-flush without a prompt requires --resume/-r or --continue/-c");
         }
         init_tracing_simple(HEADLESS_ENTRYPOINT);
-        let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
         let launch_yolo = xai_grok_shell::util::config::effective_yolo_for_launch(
             args.yolo,
             args.permission_mode_flag.as_deref(),
@@ -2276,7 +2253,6 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
         )
         .await;
     }
-    let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
     let result = xai_grok_pager::app::run(args).await;
     xai_grok_sandbox::flush();
     result.map(|_| ())

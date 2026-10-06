@@ -487,8 +487,7 @@ pub(crate) struct InitializedAgent {
 }
 /// Send InitializeRequest and parse the response.
 async fn initialize(tx: &AcpAgentTx, flags: &ConnectFlags) -> Result<InitializedAgent> {
-    let mut meta = build_initialize_meta(flags).as_object().cloned();
-    crate::app::session_startup::stamp_phase_traceparent(&mut meta);
+    let meta = build_initialize_meta(flags).as_object().cloned();
     let req = acp::InitializeRequest::new(acp::ProtocolVersion::V1)
         .client_capabilities(
             acp::ClientCapabilities::new()

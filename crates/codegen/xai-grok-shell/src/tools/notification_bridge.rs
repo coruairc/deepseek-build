@@ -451,7 +451,7 @@ async fn handle_notification(
                         client_identifier: None,
                         screen_mode: None,
                         verbatim: true,
-                        traceparent: xai_grok_telemetry::current_traceparent(),
+                        traceparent: None,
                         json_schema: None,
                         send_now: false,
                         tool_overrides_update: None,

@@ -222,10 +222,7 @@ impl BackendClient {
         builder: reqwest::RequestBuilder,
     ) -> Result<reqwest::Response, BackendError> {
         let headers = self.auth_header_map().await?;
-        let builder = xai_grok_telemetry::inject_trace_context_into_request(
-            // Per-request timeout so the bound holds on any stored client (the shared_client fallback has no client-level timeout)
-            builder.timeout(DEFAULT_TIMEOUT).headers(headers),
-        );
+        let builder = builder.timeout(DEFAULT_TIMEOUT).headers(headers);
         let request = builder.build()?;
         self.client.execute(request).await.map_err(|e| match e {
             reqwest_middleware::Error::Reqwest(e) => BackendError::Network(e),

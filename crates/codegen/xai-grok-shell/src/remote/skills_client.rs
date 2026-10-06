@@ -412,7 +412,7 @@ impl SkillsClient {
         if let Some(email) = email {
             builder = builder.header("x-email", email);
         }
-        xai_grok_telemetry::inject_trace_context_into_request(builder)
+        builder
     }
 
     /// api.deepseek.com product Skills require first-party session auth (the same gate as managed MCP and sibling first-party backend clients), not plain BYOK API keys.

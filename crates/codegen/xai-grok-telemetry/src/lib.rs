@@ -16,15 +16,12 @@ pub mod config;
 pub mod context;
 pub mod enums;
 pub mod events;
-pub mod external;
 pub mod http;
 pub mod id;
 mod logs;
-pub mod otel_layer;
 mod process;
 mod session;
 mod spans;
-pub mod trace_context;
 pub use client::{
     Metadata, TelemetryClient, UserContext, init, init_if_needed, is_enabled,
     is_session_metrics_enabled,
@@ -39,6 +36,5 @@ pub use session::session_ctx::{
 };
 pub use session::{activity, session_ctx, session_end, session_metrics, subagent_spawn};
 pub use spans::{instrumentation, prompt_timing, region, span_profile, startup, turn_phases};
-pub use trace_context::*;
 pub mod redact_common;
 pub use redact_common::redact_error_detail;

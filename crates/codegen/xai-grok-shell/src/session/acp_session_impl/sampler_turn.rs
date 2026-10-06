@@ -629,28 +629,6 @@ impl SessionActor {
     /// Reconstruct a full `SamplerConfig` (with credentials) by combining the actor's `SamplingConfig` and `Credentials`.
     /// Folds in the URL-derived headers (model-proxy auth, the staging auth header) so the sampler crate stays URL-agnostic.
     pub(super) async fn reconstruct_full_config(&self) -> SamplingConfig {
-        #[allow(clippy::items_after_statements)]
-        #[derive(Debug)]
-        struct TraceContextInjector;
-        impl xai_grok_sampler::HeaderInjector for TraceContextInjector {
-            fn inject(&self, headers: &mut reqwest::header::HeaderMap) {
-                if let Some(tp) = xai_grok_telemetry::current_traceparent()
-                    && let Ok(v) = reqwest::header::HeaderValue::from_str(&tp)
-                {
-                    headers.insert("traceparent", v);
-                }
-            }
-
-            fn set_span_parent(&self, span: &tracing::Span, traceparent: &str) {
-                if !xai_grok_telemetry::set_parent_from_traceparent(span, traceparent) {
-                    tracing::debug!(
-                        traceparent = %traceparent,
-                        "HTTP span did not adopt its trace parent"
-                    );
-                }
-            }
-        }
-
         let cfg = self
             .chat_state_handle
             .get_sampling_config()
@@ -794,7 +772,7 @@ impl SessionActor {
             compaction_at_tokens: self.compaction_at_tokens.get(),
             // The sampler sends the opt-in header itself when this is set.
             doom_loop_recovery: self.doom_loop_recovery,
-            header_injector: Some(std::sync::Arc::new(TraceContextInjector)),
+            header_injector: None,
         }
     }
 
@@ -1800,10 +1778,7 @@ impl SessionActor {
             let gate_span = region!("turn.sampling_gate", Parent::Inherit);
             let _permit = acquire_subagent_sampling_permit(&self.sampling_gate).await;
             gate_span.close();
-            let sampling_span = region!("turn.sampling", Parent::Inherit);
-            // The sampler task has no tracing ancestor; this parents its HTTP span under the region
-            // without holding it open.
-            request.traceparent = xai_grok_telemetry::span_traceparent(sampling_span.span());
+            let _sampling_span = region!("turn.sampling", Parent::Inherit);
             self.sampler_handle
                 .submit_and_collect_with_metadata(request_id.clone(), request)
                 .await

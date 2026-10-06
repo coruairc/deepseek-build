@@ -146,7 +146,7 @@ fn spawn_agent_local(remote: Option<xai_grok_shell::util::config::RemoteSettings
         });
     tokio::task::spawn_local(
         GatewayReceiver::new(gw_rx, agent_conn)
-            .with_on_meta(xai_grok_telemetry::span_from_meta_traceparent)
+            .with_on_meta(|_meta| tracing::info_span!("acp_dispatch"))
             .run(),
     );
     tokio::task::spawn_local(agent_io);
@@ -327,7 +327,6 @@ impl RestoreProcessGlobals {
         {
             xai_grok_shell::managed_config::clear_startup_profile_for_tests();
         }
-        xai_grok_telemetry::external::mark_external_otel_settings_resolved();
     }
 }
 

@@ -1,18 +1,16 @@
-//! The single owner of the fail-closed gate that decides whether customer-owned OTEL telemetry may ship.
-//! It drives the process-global flag in [`xai_grok_telemetry::external`]:
+//! The single owner of the fail-closed gate that used to decide whether customer-owned OTEL
+//! telemetry may ship. The external OTEL stream was removed, so every entry point below is a
+//! no-op kept so the settings-fetch flow (and its call sites) still compile unchanged.
 //!
-//! 1. Startup (no leader instance yet): [`suppress`] closes the gate before telemetry init.
-//!    [`open_at_startup`] re-opens it when nothing will deliver a fleet policy to this process ([`should_open_at_startup`]).
-//! 2. After auth or a refresh, per leader: [`OtelGate::resolve`] drives the gate from the [`SettingsFetch`] outcome for the still-live identity.
+//! 1. Startup (no leader instance yet): [`suppress`] was a no-op gate close before telemetry init.
+//!    [`open_at_startup`] re-opened it when nothing would deliver a fleet policy.
+//! 2. After auth or a refresh, per leader: [`OtelGate::resolve`] drove the gate from the
+//!    [`SettingsFetch`] outcome for the still-live identity.
 use crate::remote::SettingsFetch;
 use crate::util::config::RemoteSettings;
-use std::time::Duration;
-pub(crate) const SETTINGS_GATE_MAX_WAIT: Duration = crate::http::SETTINGS_REAPPLY_TIMEOUT;
+
 /// Closes the gate. It is process-global, idempotent, and callable before any `AgentConfig` exists.
-pub(crate) fn suppress() {
-    xai_grok_telemetry::external::set_settings_gate_max_wait(SETTINGS_GATE_MAX_WAIT);
-    xai_grok_telemetry::external::suppress_external_otel_until_settings();
-}
+pub(crate) fn suppress() {}
 /// Whether an xAI fleet policy can govern this process.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PolicyChannel {
@@ -74,9 +72,7 @@ pub(crate) fn is_session_pending(
     grok_com_config.auth_provider_command.is_some()
 }
 /// Opens the gate at startup once [`should_open_at_startup`] holds; a later session re-resolves via [`OtelGate::resolve`].
-pub(crate) fn open_at_startup() {
-    xai_grok_telemetry::external::mark_external_otel_settings_resolved();
-}
+pub(crate) fn open_at_startup() {}
 /// Remembers, per leader, which credential identity the process-global external-OTEL gate was resolved for.
 #[derive(Default)]
 pub(crate) struct OtelGate {
@@ -116,28 +112,21 @@ impl OtelGate {
     }
     /// Applies the tighten-only fleet policy from `settings` (`None` on a `401`), then opens the gate and records `identity`.
     fn apply_and_open(&self, identity: &str, _settings: Option<&RemoteSettings>) {
-        xai_grok_telemetry::external::mark_external_otel_settings_resolved();
         *self.resolved_for.borrow_mut() = Some(identity.to_owned());
     }
     #[cfg(test)]
     pub(crate) fn set_resolved_for(&self, identity: &str) {
         *self.resolved_for.borrow_mut() = Some(identity.to_owned());
     }
+    #[cfg(test)]
+    pub(crate) fn resolved_for(&self) -> Option<String> {
+        self.resolved_for.borrow().clone()
+    }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
-    use xai_grok_telemetry::external::{
-        is_settings_gate_open, mark_external_otel_settings_resolved,
-        suppress_external_otel_until_settings,
-    };
-    /// Re-opens the process-global gate on drop so a closed gate never leaks out of a test.
-    struct RestoreGate;
-    impl Drop for RestoreGate {
-        fn drop(&mut self) {
-            mark_external_otel_settings_resolved();
-        }
-    }
+
     fn fetched() -> SettingsFetch {
         SettingsFetch::Fetched(Box::default())
     }
@@ -196,74 +185,35 @@ mod tests {
         );
     }
     #[test]
-    #[serial_test::serial]
-    fn resolve_opens_on_every_definitive_outcome_for_the_live_identity() {
-        let _restore = RestoreGate;
+    fn resolve_returns_settings_only_for_the_live_identity() {
         let gate = OtelGate::default();
-        suppress_external_otel_until_settings();
+        assert!(gate.resolve("alice", fetched(), Some("alice")).is_some());
+        assert_eq!(gate.resolved_for().as_deref(), Some("alice"));
         assert!(
             gate.resolve("alice", SettingsFetch::Retry, Some("alice"))
                 .is_none(),
             "a failed fetch yields no settings"
         );
         assert!(
-            is_settings_gate_open(),
-            "an exhausted fetch must open the gate rather than mute the stream"
-        );
-        suppress_external_otel_until_settings();
-        assert!(
             gate.resolve("alice", SettingsFetch::Rejected, Some("alice"))
                 .is_none()
         );
-        assert!(
-            is_settings_gate_open(),
-            "a rejected credential opens the gate"
-        );
-        suppress_external_otel_until_settings();
-        assert!(gate.resolve("alice", fetched(), Some("alice")).is_some());
-        assert!(
-            is_settings_gate_open(),
-            "a fetched outcome opens for the live identity"
-        );
-    }
-    #[test]
-    #[serial_test::serial]
-    fn resolve_skips_open_for_a_stale_identity() {
-        let _restore = RestoreGate;
-        let gate = OtelGate::default();
-        suppress_external_otel_until_settings();
+        assert_eq!(gate.resolved_for().as_deref(), Some("alice"));
         assert!(
             gate.resolve("alice", fetched(), Some("bob")).is_none(),
             "a stale identity must not return settings"
         );
-        assert!(
-            !is_settings_gate_open(),
-            "a stale identity must not open the gate"
-        );
+        assert_eq!(gate.resolved_for().as_deref(), Some("alice"));
     }
     #[test]
-    #[serial_test::serial]
-    fn rearm_re_closes_for_an_empty_identity() {
-        let _restore = RestoreGate;
-        let gate = OtelGate::default();
-        gate.set_resolved_for("");
-        mark_external_otel_settings_resolved();
-        gate.rearm_on_switch("", PolicyChannel::Applies);
-        assert!(
-            !is_settings_gate_open(),
-            "an empty identity must always re-close (cannot prove same credential)"
-        );
-    }
-    #[test]
-    #[serial_test::serial]
     fn rearm_never_re_closes_when_no_policy_can_arrive() {
-        let _restore = RestoreGate;
         let gate = OtelGate::default();
+        gate.set_resolved_for("alice");
         for reason in [NoPolicy::RemoteFetchDisabled, NoPolicy::ProxyRepointed] {
-            mark_external_otel_settings_resolved();
-            gate.rearm_on_switch("alice", PolicyChannel::Unavailable(reason));
-            assert!(
-                is_settings_gate_open(),
+            gate.rearm_on_switch("bob", PolicyChannel::Unavailable(reason));
+            assert_eq!(
+                gate.resolved_for().as_deref(),
+                Some("alice"),
                 "{reason:?}: re-closing would wait on a policy that cannot arrive"
             );
         }

@@ -36,7 +36,6 @@ use actions::{
     WorkspaceMutation, WorkspaceMutationFailure, WorkspaceWriteCompletion,
 };
 use actions::PermissionModeKind;
-use crate::app::session_startup::stamp_span_traceparent;
 use crate::views::usage_modal::SessionInfoField;
 #[cfg(test)]
 use actions::PermissionModePersist;
@@ -116,7 +115,6 @@ async fn create_session_in_backend_rpc(
         )
         }
     };
-    stamp_span_traceparent(&mut meta, rpc_span.span());
     helpers::acp_send_bounded(request.meta(meta), tx, action).await
 }
 pub(crate) fn execute(

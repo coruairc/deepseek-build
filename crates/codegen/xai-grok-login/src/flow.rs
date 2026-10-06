@@ -948,10 +948,6 @@ pub fn perform_logout(
         })),
     );
     if was_logged_in {
-        xai_grok_telemetry::external::set_identity(
-            xai_grok_telemetry::external::IdentityAttrs::default(),
-        );
-        xai_grok_telemetry::external::flush();
         if let Some(scope) = scope {
             auth_manager.remove_scope(scope)?;
         } else {
