@@ -246,10 +246,10 @@ fn summaries_to_overview_response(summaries: Vec<Summary>) -> Result<acp::ExtRes
 
     Ok(acp::ExtResponse::new(value))
 }
-// ── Merged session list (local + remote) ─────────────────────────────
+// ── Local merged session list ────────────────────────────────────────
 
 async fn handle_session_list(
-    agent: &MvpAgent,
+    _agent: &MvpAgent,
     args: &acp::ExtRequest,
 ) -> Result<acp::ExtResponse, acp::Error> {
     use crate::session::unified_list;
@@ -258,8 +258,7 @@ async fn handle_session_list(
     let req = unified_list::parse_list_req(args.params.get())
         .map_err(|e| acp::Error::invalid_params().data(format!("invalid params: {e}")))?;
 
-    let registry_client = agent.session_registry_client();
-    let result = unified_list::build_unified_list(registry_client.as_ref(), req).await;
+    let result = unified_list::build_unified_list(req).await;
 
     ExtMethodResult::success(unified_list::ext_list_response(result))
         .to_ext_response()
@@ -269,7 +268,7 @@ async fn handle_session_list(
 /// Build sessions in exactly the requested directory.
 /// A page walk cannot reach past `over_fetch(limit)` rows per cwd: the local scan re-reads that window each page instead of seeking to the cursor.
 pub(crate) async fn handle_list_sessions(
-    agent: &MvpAgent,
+    _agent: &MvpAgent,
     args: acp::ListSessionsRequest,
 ) -> Result<acp::ListSessionsResponse, acp::Error> {
     use crate::session::unified_list;
@@ -285,8 +284,7 @@ pub(crate) async fn handle_list_sessions(
     };
     unified_list::force_kind(&mut req, unified_list::SessionKind::Build);
 
-    let registry_client = agent.session_registry_client();
-    let result = unified_list::build_unified_list(registry_client.as_ref(), req).await;
+    let result = unified_list::build_unified_list(req).await;
 
     let meta = unified_list::acp_response_meta(&result);
     // `CwdScope::Only` already dropped rows the schema cannot represent

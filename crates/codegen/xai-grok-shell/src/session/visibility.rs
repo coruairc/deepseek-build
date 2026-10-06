@@ -1,8 +1,5 @@
 //! Visibility policy for `session_kind`, shared by the local session list and search.
 
-use std::collections::HashMap;
-
-use crate::agent::session_registry_client::SessionRecord;
 use crate::session::persistence::Summary;
 
 pub const SESSION_KIND_HEADLESS: &str = "headless";
@@ -65,24 +62,8 @@ pub(crate) fn policy_admits(policy: HeadlessPolicy, kind: ClassifiedSessionKind)
     }
 }
 
-/// Filters local rows and the remote rows that share their session ids; returns whether a local row was removed.
-/// Remote rows with no local twin have no known kind: Exclude and Include keep them, and Only drops them without reporting a removal.
-pub(crate) fn retain_session_lanes(
-    local: &mut Vec<Summary>,
-    remote: &mut Vec<SessionRecord>,
-    policy: HeadlessPolicy,
-) -> bool {
-    let local_kind_by_id: HashMap<&str, bool> = local
-        .iter()
-        .map(|summary| (summary.info.id.0.as_ref(), summary.is_headless()))
-        .collect();
-    remote.retain(|row| {
-        local_kind_by_id
-            .get(row.session_id.as_str())
-            .map_or(policy != HeadlessPolicy::Only, |is_headless| {
-                policy.admits(*is_headless)
-            })
-    });
+/// Filters local rows and returns whether any were removed.
+pub(crate) fn retain_local_sessions(local: &mut Vec<Summary>, policy: HeadlessPolicy) -> bool {
     let local_before = local.len();
     local.retain(|summary| policy.admits(summary.is_headless()));
     local.len() < local_before
@@ -91,6 +72,37 @@ pub(crate) fn retain_session_lanes(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn local_listing_applies_headless_policy() {
+        let interactive = Summary::new(
+            &crate::session::info::Info {
+                id: agent_client_protocol::SessionId::new("interactive"),
+                cwd: "/work".into(),
+            },
+            agent_client_protocol::ModelId::new("m"),
+        )
+        .expect("interactive summary");
+        let mut headless = Summary::new(
+            &crate::session::info::Info {
+                id: agent_client_protocol::SessionId::new("headless"),
+                cwd: "/work".into(),
+            },
+            agent_client_protocol::ModelId::new("m"),
+        )
+        .expect("headless summary");
+        headless.session_kind = Some(SESSION_KIND_HEADLESS.into());
+        let mut rows = vec![interactive.clone(), headless.clone()];
+
+        assert!(retain_local_sessions(&mut rows, HeadlessPolicy::Exclude));
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].info.id.0.as_ref(), "interactive");
+
+        rows = vec![interactive, headless];
+        assert!(retain_local_sessions(&mut rows, HeadlessPolicy::Only));
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].info.id.0.as_ref(), "headless");
+    }
 
     #[test]
     fn unknown_kind_is_excluded_from_classified_views_but_included_in_inventory() {

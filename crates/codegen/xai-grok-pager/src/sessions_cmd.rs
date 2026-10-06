@@ -38,7 +38,6 @@ pub async fn run(args: SessionsArgs, agent_config: &AgentConfig) -> Result<()> {
     match args.command {
         SessionsCommand::List { limit } => {
             let sessions = xai_grok_shell::session::merge::fetch_merged(
-                None,
                 cwd.to_str(),
                 xai_grok_shell::session::merge::CwdScope::WithSiblings,
                 None,

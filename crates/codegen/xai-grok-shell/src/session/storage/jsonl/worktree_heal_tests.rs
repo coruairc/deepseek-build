@@ -77,7 +77,7 @@ async fn list_sessions_repairs_untagged_worktree_summary_in_rows_and_on_disk() {
         listed.first().and_then(|x| x.worktree_label.as_deref()),
         Some("fix-bug")
     );
-    let rows = crate::session::merge::merge(Vec::new(), listed, None, &[], 20);
+    let rows = crate::session::merge::merge(listed, None, 20);
     assert_eq!(
         rows.first().and_then(|x| x.session_kind.as_deref()),
         Some("worktree")
@@ -131,7 +131,7 @@ async fn list_sessions_fills_missing_label_on_kinded_fork_without_changing_kind(
             .and_then(|x| x.source_workspace_dir.as_deref()),
         Some("/home/user/repo")
     );
-    let rows = crate::session::merge::merge(Vec::new(), listed, None, &[], 20);
+    let rows = crate::session::merge::merge(listed, None, 20);
     assert_eq!(
         rows.first().and_then(|x| x.session_kind.as_deref()),
         Some("fork")
