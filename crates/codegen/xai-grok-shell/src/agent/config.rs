@@ -358,8 +358,6 @@ pub struct CliConfig {
     pub show_tips: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub worktree_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub session_registry: Option<bool>,
     /// Env `GROK_MINIMUM_VERSION`.
     /// See [`crate::util::config::VersionPolicy`] for the version-policy knobs.
     /// (Unrelated to `version_overrides[].maximum_version`, which gates config patches.)

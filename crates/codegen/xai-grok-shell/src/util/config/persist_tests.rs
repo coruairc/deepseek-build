@@ -829,7 +829,6 @@ const CLI_CONFIG_OPTION_FIELDS: &[&str] = &[
     "use_leader",
     "show_tips",
     "worktree_type",
-    "session_registry",
     "minimum_version",
     "maximum_version",
     "required_minimum_version",
