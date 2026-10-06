@@ -50,16 +50,6 @@ pub(crate) struct NotificationBridgeConfig {
     pub task_completion_reservations:
         xai_grok_tools::reminders::task_completion::TaskCompletionReservations,
     pub task_wake_suppressed: xai_grok_tools::reminders::task_completion::TaskWakeSuppressed,
-    /// Channel for requesting trace uploads for synthetic auto-wake turns.
-    /// Wrapped in `Arc<Mutex<..>>` because the coordinator creates the channel after the notification bridge is spawned.
-    /// The bridge reads the latest value on each notification.
-    pub(crate) synthetic_trace_tx: Arc<
-        std::sync::Mutex<
-            Option<
-                tokio::sync::mpsc::UnboundedSender<crate::upload::turn::SyntheticTurnTraceRequest>,
-            >,
-        >,
-    >,
     /// Resolved name of the `BackgroundTaskAction` tool. Written exactly once after the agent's toolset is finalized. Read many times thereafter from the notification bridge and the session actor's between-turn drain.
     /// `None` means no such tool is registered in this toolset, which is a valid resolved state.
     pub task_output_tool_name: Arc<std::sync::OnceLock<Option<String>>>,
@@ -428,12 +418,7 @@ async fn handle_notification(
                 let message = xai_grok_tools::reminders::wrap_reminder(&body);
                 let prompt_id = format!("task-completed-{task_id}");
                 let prompt_blocks = vec![acp::ContentBlock::Text(acp::TextContent::new(message))];
-                let synthetic_trace_tx = config
-                    .synthetic_trace_tx
-                    .lock()
-                    .unwrap_or_else(|e| e.into_inner())
-                    .clone();
-                let (respond_to, completion_rx) = tokio::sync::oneshot::channel();
+                let (respond_to, _completion_rx) = tokio::sync::oneshot::channel();
                 let (admission_tx, admission_rx) = tokio::sync::oneshot::channel();
                 tracing::info!(
                     task_id = %task_id,
@@ -447,7 +432,6 @@ async fn handle_notification(
                         prompt_id: prompt_id.clone(),
                         prompt_blocks,
                         prompt_mode: crate::session::plan_mode::PromptMode::Agent,
-                        artifact_upload_ctx: None,
                         client_identifier: None,
                         screen_mode: None,
                         verbatim: true,
@@ -515,38 +499,6 @@ async fn handle_notification(
                                 .send(SessionCommand::DropMonitorNotifications {
                                     task_id: task_id.clone(),
                                 });
-                    }
-                    if let Some(trace_tx) = synthetic_trace_tx {
-                        let (before_copy_tx, before_session_copy_rx) =
-                            tokio::sync::oneshot::channel();
-                        let copy_requested = config
-                            .session_cmd_tx
-                            .send(SessionCommand::CopyFile {
-                                respond_to: before_copy_tx,
-                            })
-                            .is_ok();
-                        if copy_requested {
-                            tracing::info!(
-                                task_id = %task_id,
-                                "auto-wake: sending synthetic turn trace request"
-                            );
-                            let _ = trace_tx.send(crate::upload::turn::SyntheticTurnTraceRequest {
-                                session_id: config.session_id.clone(),
-                                prompt_id,
-                                completion_rx,
-                                before_session_copy_rx,
-                            });
-                        } else {
-                            tracing::debug!(
-                                task_id = %task_id,
-                                "auto-wake: session snapshot request failed, skipping trace request"
-                            );
-                        }
-                    } else {
-                        tracing::debug!(
-                            task_id = %task_id,
-                            "auto-wake: no synthetic trace consumer, skipping trace request"
-                        );
                     }
                 }
             } else {

@@ -1153,7 +1153,7 @@ async fn restore_session_from_remote(
         .map_err(|e| anyhow::anyhow!("Failed to create agent config: {}", e))?;
     use xai_grok_login::{AuthManager, ensure_authenticated_or_noninteractive};
     use xai_grok_shell::agent::session_registry_client::SessionRegistryClient;
-    use xai_grok_shell::session::restore::{RestoreSessionOpts, restore_session_with_storage};
+    use xai_grok_shell::session::restore::{RestoreSessionOpts, restore_session_with_progress};
     use xai_grok_shell::util::grok_home::grok_home;
     let deployment_key = agent_config.endpoints.deployment_key.clone();
     ensure_authenticated_or_noninteractive(
@@ -1175,23 +1175,13 @@ async fn restore_session_from_remote(
             .with_deployment_key(deployment_key.clone())
             .with_alpha_test_key(agent_config.endpoints.alpha_test_key.clone())
             .with_auth(auth_manager.clone());
-    let storage_client = xai_grok_shell::credential_factory::build_storage_client_for_proxy(
-        &agent_config.endpoints.proxy_url(),
-        deployment_key,
-        agent_config.endpoints.alpha_test_key.clone(),
-        Some(auth_manager),
-        None,
-        None,
-        "grok-pager",
-    );
     let progress: xai_grok_shell::session::restore::ProgressCallback = Box::new(move |event| {
         emit_pre_tui_restore_line(progress_on_stdout, &format!("  {}", event.display_line()));
     });
     let timed = tokio::time::timeout(
         REMOTE_RESTORE_TIMEOUT,
-        restore_session_with_storage(
+        restore_session_with_progress(
             &registry_client,
-            &storage_client,
             session_id,
             cwd,
             RestoreSessionOpts {

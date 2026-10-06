@@ -3,10 +3,8 @@
 //! Inherent [`MvpAgent`] helpers (MCP/clients/gateway, settings/models, session ops, spawn).
 //! Co-located child of `mvp_agent` (`use super::*`).
 use super::*;
-use crate::agent::config::TraceUploadEndpoints;
 use crate::sampling::EffortTarget;
 use xai_grok_login::PreferredAuthMethod;
-use crate::upload::trace::PromptMetadataParams;
 use xai_grok_tools::implementations::grok_build::task::backend::SubagentBackend;
 use xai_tty_utils::ProcessScope;
 struct SessionConfigInputs {
@@ -704,31 +702,11 @@ impl MvpAgent {
     pub(crate) fn is_data_collection_disabled(&self) -> bool {
         self.auth_manager.is_data_collection_disabled()
     }
-    /// Privacy half of the trace-upload gate; see [`TraceUploadEndpoints::is_trace_upload_blocked_for`].
-    /// Like [`Self::is_data_collection_disabled`], a missing credential does not block.
-    fn is_trace_upload_blocked(&self) -> bool {
-        use crate::agent::config::TraceUploadEndpoints;
-        self.auth_manager
-            .current_or_expired()
-            .is_some_and(|auth| {
-                self.cfg.borrow().endpoints.is_trace_upload_blocked_for(&auth)
-            })
-    }
     /// Telemetry enabled and not ZDR. Same gate as session `telemetry_enabled`.
     pub(crate) fn product_analytics_enabled(&self) -> bool {
         self.cfg
             .borrow()
             .product_analytics_enabled(self.auth_manager.current_or_expired().as_ref())
-    }
-    /// Re-sync the `Send` mirror of `cfg.is_trace_upload_enabled()` that the per-session collection gates read.
-    /// `cfg` is `!Send`; the gates run on the tokio pool.
-    /// Must be called after any mid-session config change that can flip the switch, i.e. every `remote_settings` rewrite.
-    pub(super) fn sync_collection_config_gate(&self) {
-        self.trace_upload_live
-            .store(
-                self.cfg.borrow().is_trace_upload_enabled(),
-                std::sync::atomic::Ordering::Relaxed,
-            );
     }
     /// Current client type as set by the most recent `initialize()` call.
     pub(crate) fn client_type(&self) -> ClientType {
@@ -1525,7 +1503,6 @@ impl MvpAgent {
                 self.models_manager.apply_config(cfg_snapshot);
             }
         }
-        self.sync_collection_config_gate();
         self.emit_settings_update_notification();
     }
     /// Re-evaluates the official-marketplace auto-register gate now that remote settings exist.
@@ -1758,7 +1735,6 @@ impl MvpAgent {
                 toml::Value::Table(toml::map::Map::new())
             });
         self.re_resolve_runtime_fields_and_sync_memory(&raw_config);
-        self.sync_collection_config_gate();
         self.emit_settings_update_notification();
     }
     /// Spawns a background task coalesced on `in_flight`: a request while one is in flight is dropped.
@@ -2120,7 +2096,6 @@ impl MvpAgent {
                     byok_from_models(&models, None, current.0.as_ref()),
                 );
         }
-        crate::upload::trace::spawn_purge_stale_upload_scratch();
         let storage_mode = cfg.storage_mode;
         let default_yolo_mode = cfg.default_yolo_mode;
         let default_auto_mode = cfg.default_auto_mode;
@@ -2194,10 +2169,6 @@ impl MvpAgent {
             otel_gate: crate::agent::otel_gate::OtelGate::default(),
             default_yolo_mode,
             default_auto_mode,
-            trace_upload_live: Arc::new(
-                std::sync::atomic::AtomicBool::new(cfg.is_trace_upload_enabled()),
-            ),
-            feedback_trace_upload_grants: RefCell::new(VecDeque::new()),
             memory_config: RefCell::new(None),
             config_watcher_path_tx: None,
             buffering_settings: RefCell::new(None),
@@ -2264,7 +2235,7 @@ impl MvpAgent {
             .auth_manager
             .configure_refresher(
                 instance.cfg.borrow().grok_com_config.auth_provider_command.clone(),
-                instance.diagnostic_upload_config(),
+                None,
             );
         xai_grok_login::credential_provider::wire_otel_auth_manager(
             instance.auth_manager.clone(),
@@ -2662,27 +2633,6 @@ impl MvpAgent {
             .query(subagent_id, block, timeout_ms)
             .await
     }
-    pub(super) async fn spawned_subagent_refs_for_prompt(
-        &self,
-        parent_session_id: &str,
-        prompt_id: &str,
-    ) -> Vec<crate::upload::trace::SubagentSpawnedRef> {
-        xai_grok_tools::implementations::grok_build::task::backend::ChannelBackend::new(
-                self.subagent_event_tx.event_sender().0,
-            )
-            .spawned_refs_for_prompt(parent_session_id, prompt_id)
-            .await
-            .into_iter()
-            .map(|child| crate::upload::trace::SubagentSpawnedRef {
-                subagent_id: child.subagent_id,
-                child_session_id: child.child_session_id,
-                subagent_type: child.subagent_type,
-                description: child.description,
-                persona: child.persona,
-                resumed_from: child.resumed_from,
-            })
-            .collect()
-    }
     /// List all background tasks for a session.
     /// Routes through the session's tool bridge to the TerminalBackend.
     pub async fn list_tasks(
@@ -2785,151 +2735,6 @@ impl MvpAgent {
         self.plugin_registry_handle.snapshot()
     }
     /// Returns an upload method, or `None` when trace uploads are disabled.
-    pub(crate) async fn trace_upload_config(
-        &self,
-    ) -> Option<crate::session::repo_changes::UploadMethod> {
-        let (method, _reason) = self.trace_upload_config_with_reason().await;
-        method
-    }
-    pub(super) fn trace_upload_config_snapshot(
-        &self,
-    ) -> Option<crate::session::repo_changes::UploadMethod> {
-        if self.is_trace_upload_blocked() || !self.cfg.borrow().is_trace_upload_enabled()
-        {
-            return None;
-        }
-        let cfg = self.cfg.borrow();
-        let auth_token = if cfg.endpoints.deployment_key.is_none() {
-            self.auth_manager
-                .current_or_expired()
-                .filter(|auth| auth.is_xai_auth())
-                .map(|auth| auth.key)
-        } else {
-            None
-        };
-        cfg.endpoints.resolve_upload_method(auth_token)
-    }
-    pub(super) fn diagnostic_upload_config(
-        &self,
-    ) -> Option<xai_grok_login::DiagnosticUploader> {
-        self.sync_collection_config_gate();
-        let cfg = self.cfg.borrow();
-        if !cfg.is_trace_upload_enabled() {
-            return None;
-        }
-        let proxy_base_url = cfg.endpoints.resolve_trace_upload_url();
-        let deployment_key = cfg.endpoints.deployment_key.clone();
-        let alpha_test_key = cfg.endpoints.alpha_test_key.clone();
-        let auth_manager = self.auth_manager.clone();
-        let trace_upload_live = self.trace_upload_live.clone();
-        Some(
-            std::sync::Arc::new(move |
-                log_bytes: Vec<u8>,
-                auth_token: String,
-                user_id: String|
-            {
-                let proxy_base_url = proxy_base_url.clone();
-                let deployment_key = deployment_key.clone();
-                let alpha_test_key = alpha_test_key.clone();
-                let auth_manager = auth_manager.clone();
-                let trace_upload_live = trace_upload_live.clone();
-                Box::pin(async move {
-                    if !auth_manager.allows_data_collection()
-                        || !trace_upload_live.load(std::sync::atomic::Ordering::Relaxed)
-                    {
-                        tracing::debug!(
-                            "skipping auth-diagnostics upload: data collection disabled"
-                        );
-                        return;
-                    }
-                    let upload_method = crate::session::repo_changes::UploadMethod::Proxy {
-                        proxy_base_url,
-                        user_token: auth_token,
-                        deployment_key,
-                        alpha_test_key,
-                    };
-                    crate::upload::gcs::upload_to_auth_diagnostics(
-                            &log_bytes,
-                            &user_id,
-                            &upload_method,
-                            auth_manager,
-                        )
-                        .await;
-                })
-            }),
-        )
-    }
-    /// Like `trace_upload_config`, but also returns the reason why uploads are enabled or disabled for structured session events.
-    async fn trace_upload_config_with_reason(
-        &self,
-    ) -> (
-        Option<crate::session::repo_changes::UploadMethod>,
-        crate::upload::turn::TraceUploadReason,
-    ) {
-        use crate::upload::turn::TraceUploadReason;
-        if self.is_trace_upload_blocked() {
-            crate::upload::trace::spawn_startup_spill_reconcile(
-                crate::util::grok_home::grok_home(),
-                None,
-            );
-            return (None, TraceUploadReason::ZdrTeam);
-        }
-        if self.cfg.borrow().remote_settings.is_none()
-            && let Ok(auth) = self.auth_manager.auth().await
-        {
-            self.refresh_remote_settings(&auth).await;
-        }
-        let (direct_method, has_deployment_key, endpoints) = {
-            let cfg = self.cfg.borrow();
-            if !cfg.is_trace_upload_enabled() {
-                return (None, TraceUploadReason::FeatureOff);
-            }
-            (
-                cfg.endpoints.resolve_direct_upload_method(),
-                cfg.endpoints.deployment_key.is_some(),
-                cfg.endpoints.clone(),
-            )
-        };
-        let service_account_key = crate::util::config::load_gcs_service_account_key_sync();
-        let method = if let Some(method) = direct_method {
-            Some(method)
-        } else {
-            let auth_token = if has_deployment_key {
-                None
-            } else {
-                self.auth_manager
-                        .auth()
-                        .await
-                        .ok()
-                        .filter(|auth| auth.is_xai_auth())
-                        .map(|auth| auth.key)
-            };
-            if auth_token.is_some() || has_deployment_key {
-                endpoints.resolve_upload_method(auth_token)
-            } else if service_account_key.is_some() {
-                Some(crate::session::repo_changes::UploadMethod::Direct {
-                    service_account_key,
-                })
-            } else {
-                None
-            }
-        };
-        let reason = match &method {
-            Some(crate::session::repo_changes::UploadMethod::Proxy { .. }) => {
-                crate::upload::turn::TraceUploadReason::Proxy
-            }
-            Some(crate::session::repo_changes::UploadMethod::S3 { .. }) => {
-                crate::upload::turn::TraceUploadReason::DirectS3
-            }
-            Some(crate::session::repo_changes::UploadMethod::Direct { .. }) => {
-                crate::upload::turn::TraceUploadReason::DirectGcs
-            }
-            None => crate::upload::turn::TraceUploadReason::NoCredentials,
-        };
-        (method, reason)
-    }
-    /// Resolve client version: prefer the value from the initialize request _meta.
-    /// Fall back to the agent's own version (VERSION_WITH_COMMIT set by the TUI launcher).
     pub(crate) fn client_version(&self) -> Option<String> {
         self.initialize_request
             .get()
@@ -3193,170 +2998,7 @@ impl MvpAgent {
             }
         }
     }
-    /// Build a `TraceExportConfig` for uploading JSON artifacts under a given prefix.
-    ///
-    /// Shared by comment uploads (`{session_id}/comments/...`), comparison metadata (`{session_id}/turn_{N}/...`), etc.
-    pub(crate) async fn build_gcs_config(
-        &self,
-        gcs_prefix: String,
-    ) -> Option<crate::session::repo_changes::TraceExportConfig> {
-        let upload_method = self.trace_upload_config().await?;
-        let bucket_url = {
-            let cfg = self.cfg.borrow();
-            match &upload_method {
-                crate::session::repo_changes::UploadMethod::Direct { .. } => {
-                    match cfg.endpoints.resolve_trace_bucket_url() {
-                        Some(resolved) => Some(resolved.value),
-                        None => {
-                            tracing::debug!(
-                                "no trace bucket configured; skipping direct GCS upload"
-                            );
-                            return None;
-                        }
-                    }
-                }
-                crate::session::repo_changes::UploadMethod::S3 { bucket, .. } => {
-                    Some(format!("file://{bucket}"))
-                }
-                crate::session::repo_changes::UploadMethod::Proxy { .. } => None,
-            }
-        };
-        Some(crate::session::repo_changes::TraceExportConfig {
-            bucket_url,
-            service_account_key: None,
-            prefix_dir: None,
-            gcs_prefix: Some(gcs_prefix),
-            absolute_paths: false,
-            archive_name_override: None,
-            upload_method,
-        })
-    }
-    pub(crate) fn team_blocks_one_shot_trace_upload(&self) -> bool {
-        self.auth_manager
-            .current_or_expired()
-            .is_some_and(|auth| auth.team_name.is_some())
-    }
-    pub(crate) fn issue_feedback_trace_upload_grant(
-        &self,
-        session_id: acp::SessionId,
-    ) -> String {
-        const MAX_PENDING_GRANTS: usize = 8;
-        let token = uuid::Uuid::new_v4().to_string();
-        let mut grants = self.feedback_trace_upload_grants.borrow_mut();
-        if grants.len() == MAX_PENDING_GRANTS {
-            let _ = grants.pop_front();
-        }
-        grants.push_back((token.clone(), session_id));
-        token
-    }
-    pub(crate) fn consume_feedback_trace_upload_grant(
-        &self,
-        token: &str,
-        session_id: &acp::SessionId,
-    ) -> bool {
-        let mut grants = self.feedback_trace_upload_grants.borrow_mut();
-        let Some(position) = grants
-            .iter()
-            .position(|(grant, granted_session)| {
-                grant == token && granted_session == session_id
-            }) else {
-            return false;
-        };
-        let _ = grants.remove(position);
-        true
-    }
-    /// Whether `/feedback` may offer to turn trace upload on.
-    /// An individual coding-data opt-out still asks: the card is how opted-out users switch sharing back on.
-    /// ZDR has no self-serve way back, so it never asks.
-    pub(crate) fn feedback_trace_offer(&self) -> bool {
-        if self.auth_manager.current_or_expired().is_some_and(|a| a.is_zdr_team()) {
-            return false;
-        }
-        if self.team_blocks_one_shot_trace_upload() {
-            return false;
-        }
-        let cfg = self.cfg.borrow();
-        if !cfg.is_feature_enabled(crate::agent::config::Feature::FeedbackTraceCard) {
-            return false;
-        }
-        if !Self::trace_upload_posture_allows_offer(&cfg) {
-            return false;
-        }
-        if cfg.is_trace_upload_enabled() {
-            return false;
-        }
-        if Self::has_custom_trace_destination(&cfg) {
-            return false;
-        }
-        cfg.endpoints.deployment_key.is_none()
-            && self.auth_manager.current_or_expired().is_some_and(|a| a.is_xai_auth())
-    }
-    /// Trace upload being off as *policy* (an MDM/requirements pin or a telemetry-disabled posture) must suppress the card. It must not invite the user to override the policy.
-    /// The accepted consent persists at the config tier, which those postures cannot outrank. Trace upload being off via the remote `trace_upload_enabled` default is different: that is the card's audience.
-    /// Individual consent overriding a fleet default is the feature (its own kill switch is `feedback_trace_card_enabled`).
-    fn trace_upload_posture_allows_offer(cfg: &crate::agent::config::Config) -> bool {
-        cfg.requirements.trace_upload.pinned() != Some(false)
-            && cfg.is_telemetry_enabled()
-    }
-    fn has_custom_trace_destination(cfg: &crate::agent::config::Config) -> bool {
-        cfg.endpoints.trace_upload_url.is_some()
-            || cfg.endpoints.trace_upload_bucket.is_some()
-            || cfg.endpoints.trace_upload_endpoint_url.is_some()
-    }
-    /// Upload method for a user-consented feedback trace archive. Blocks ZDR and custom destinations. Deliberately ignores the live `trace_upload` flag and the cached coding-data opt-out.
-    /// The consent just granted may not have reached either cache yet. Fails closed on unknown privacy state.
-    /// With no credential (and no deployment key) the ZDR / team predicates can't be evaluated, so nothing may leave the machine.
-    pub(crate) async fn one_shot_feedback_gcs_config(
-        &self,
-        gcs_prefix: String,
-    ) -> Option<crate::session::repo_changes::TraceExportConfig> {
-        let cached_auth = self.auth_manager.current_or_expired()?;
-        if cached_auth.is_zdr_team() {
-            return None;
-        }
-        if self.team_blocks_one_shot_trace_upload() {
-            return None;
-        }
-        {
-            let cfg = self.cfg.borrow();
-            if cfg.endpoints.deployment_key.is_some() {
-                return None;
-            }
-            if !Self::trace_upload_posture_allows_offer(&cfg) {
-                return None;
-            }
-            if Self::has_custom_trace_destination(&cfg) {
-                return None;
-            }
-        }
-        let auth_token = self
-            .auth_manager
-            .auth()
-            .await
-            .ok()
-            .filter(|auth| auth.is_xai_auth())
-            .map(|auth| auth.key);
-        let cfg = self.cfg.borrow();
-        let upload_method = cfg.endpoints.resolve_upload_method(auth_token)?;
-        if !matches!(
-            upload_method,
-            crate::session::repo_changes::UploadMethod::Proxy { .. }
-        ) {
-            return None;
-        }
-        Some(crate::session::repo_changes::TraceExportConfig {
-            bucket_url: None,
-            service_account_key: None,
-            prefix_dir: None,
-            gcs_prefix: Some(gcs_prefix),
-            absolute_paths: false,
-            archive_name_override: None,
-            upload_method,
-        })
-    }
-    /// Allocate the next monotonic telemetry turn number for a session. The counter is intentionally monotonic even across rewinds to avoid overwriting older telemetry docs in cloud storage.
-    /// For sessions sharing a parent's trace counter, call this once with the **root session ID** and reuse the result. That way the root's counter does not advance more than once per logical turn.
-    /// The cloud storage layout writes to `{session_id}/turn_{N}/`.
+    /// Allocate the next monotonic telemetry turn number for a session. The counter is intentionally monotonic even across rewinds.
     pub(crate) fn allocate_turn_number(&self, session_id: &acp::SessionId) -> u64 {
         let turn = self.peek_turn_number(session_id);
         self.set_turn_number(session_id, turn.saturating_add(1));
@@ -3376,218 +3018,6 @@ impl MvpAgent {
     /// Upload each drained harness trace turn as its own `turn_{N}` artifact.
     /// Numbered from the same counter as model turns so subagents interleave correctly in remote clients.
     /// Best-effort and non-blocking.
-    pub(super) async fn upload_harness_trace_turns(
-        &self,
-        session_id: &acp::SessionId,
-        info: &crate::session::info::Info,
-        cmd_tx: &tokio::sync::mpsc::UnboundedSender<crate::session::SessionCommand>,
-        model: &str,
-        turns: Vec<Vec<xai_grok_sampling_types::conversation::ConversationItem>>,
-    ) {
-        use crate::upload::manifest::{
-            build_manifest, resolve_upload_method, write_upload_manifest,
-        };
-        let base = self.peek_turn_number(session_id);
-        let uploads = self
-            .build_harness_trace_uploads(session_id, info, model, base, turns)
-            .await;
-        if uploads.is_empty() {
-            return;
-        }
-        let next_trace_turn = base.saturating_add(uploads.len() as u64);
-        self.set_turn_number(session_id, next_trace_turn);
-        let _ = cmd_tx
-            .send(crate::session::SessionCommand::SetNextTraceTurn {
-                next_trace_turn,
-                request_id: None,
-            });
-        for (ctx, metadata, capture) in uploads {
-            spawn_upload_task(
-                "harness_trace_turn",
-                async move {
-                    let (session_state, capture) = build_chat_history_then_move_capture(
-                            capture,
-                        )
-                        .await;
-                    futures::join!(
-                    upload_metadata(&ctx, metadata, UploadWait::Confirm),
-                    upload_turn_messages(&ctx, capture, UploadWait::Confirm),
-                    upload_harness_session_archive(&ctx, session_state),
-                );
-                    let upload_method = resolve_upload_method(&ctx.gcs_config);
-                    write_upload_manifest(
-                            &ctx,
-                            &build_manifest(&ctx.artifact_tracker, upload_method, None),
-                        )
-                        .await;
-                },
-            );
-        }
-    }
-    /// Number the drained harness turns `base, base+1, …` and build their `(trace context, metadata, capture)` upload payloads.
-    /// Stops at the first turn whose trace context is `None`: uploads are disabled (or the session is gone). That state is uniform across the batch since all turns share one `session_id`.
-    /// A `None` *after* a `Some` would be a broken invariant, so it is logged rather than dropped silently.
-    pub(super) async fn build_harness_trace_uploads(
-        &self,
-        session_id: &acp::SessionId,
-        info: &crate::session::info::Info,
-        model: &str,
-        base: u64,
-        turns: Vec<Vec<xai_grok_sampling_types::conversation::ConversationItem>>,
-    ) -> Vec<(PromptTraceContext, PromptMetadata, xai_chat_state::TurnCapture)> {
-        let mut uploads = Vec::with_capacity(turns.len());
-        for (offset, items) in turns.into_iter().enumerate() {
-            let turn_number = base.saturating_add(offset as u64);
-            let Some(ctx) = self.get_trace_context(info, turn_number).await else {
-                if offset > 0 {
-                    tracing::warn!(
-                        turn_number,
-                        "harness trace: trace context unexpectedly None mid-batch; \
-                         dropping the remaining drained turns"
-                    );
-                }
-                break;
-            };
-            let metadata = PromptMetadata::new(PromptMetadataParams {
-                schema_version: GCS_SCHEMA_VERSION.to_string(),
-                session_id: session_id.0.to_string(),
-                turn_number,
-                request_id: format!("harness-trace-{turn_number}"),
-                turn_started_at: chrono::Utc::now().to_rfc3339(),
-                model: model.to_string(),
-                reasoning_effort: ctx
-                    .session_handle
-                    .reasoning_effort
-                    .map(|e| e.as_ref().to_string()),
-                host_os: std::env::consts::OS.to_string(),
-                host_arch: std::env::consts::ARCH.to_string(),
-                prompt_has_image: Some(false),
-                prompt_was_truncated: Some(false),
-                prompt_verbatim: Some(true),
-                cwd: Some(info.cwd.clone()),
-                shell_version: Some(xai_grok_version::VERSION.to_string()),
-                sandbox: local_sandbox_telemetry(),
-                ..Default::default()
-            });
-            let capture = xai_chat_state::TurnCapture {
-                messages: items,
-                compaction_occurred: false,
-            };
-            uploads.push((ctx, metadata, capture));
-        }
-        uploads
-    }
-    pub(crate) async fn get_trace_context(
-        &self,
-        session_info: &crate::session::info::Info,
-        turn_number: u64,
-    ) -> Option<PromptTraceContext> {
-        let (upload_method, upload_reason) = self
-            .trace_upload_config_with_reason()
-            .await;
-        {
-            let mut decision = self.cfg.borrow().trace_upload_decision_debug();
-            if let Some(obj) = decision.as_object_mut() {
-                obj.insert(
-                    "uploads_enabled".into(),
-                    serde_json::json!(upload_method.is_some()),
-                );
-                obj.insert(
-                    "upload_reason".into(),
-                    serde_json::json!(upload_reason.as_ref()),
-                );
-                obj.insert(
-                    "data_collection_disabled".into(),
-                    serde_json::json!(self.is_data_collection_disabled()),
-                );
-                obj.insert("turn_number".into(), serde_json::json!(turn_number));
-            }
-            xai_grok_telemetry::unified_log::info(
-                "trace.upload.decision",
-                Some(session_info.id.0.as_ref()),
-                Some(decision),
-            );
-        }
-        let upload_method = match upload_method {
-            Some(method) => method,
-            None => {
-                xai_grok_telemetry::session_ctx::log_session_event(crate::agent::session_metrics::TraceUploadSkipped {
-                    session_id: session_info.id.0.to_string(),
-                    turn_number,
-                    reason: upload_reason.as_ref().to_owned(),
-                });
-                return None;
-            }
-        };
-        let bucket_url = {
-            let cfg = self.cfg.borrow();
-            match &upload_method {
-                crate::session::repo_changes::UploadMethod::Direct { .. } => {
-                    match cfg.endpoints.resolve_trace_bucket_url() {
-                        Some(resolved) => Some(resolved.value),
-                        None => {
-                            xai_grok_telemetry::session_ctx::log_session_event(crate::agent::session_metrics::TraceUploadSkipped {
-                                session_id: session_info.id.0.to_string(),
-                                turn_number,
-                                reason: "no_trace_bucket_configured".to_owned(),
-                            });
-                            return None;
-                        }
-                    }
-                }
-                crate::session::repo_changes::UploadMethod::S3 { bucket, .. } => {
-                    Some(format!("file://{bucket}"))
-                }
-                crate::session::repo_changes::UploadMethod::Proxy { .. } => None,
-            }
-        };
-        let gcs_config = crate::session::repo_changes::TraceExportConfig {
-            bucket_url,
-            service_account_key: None,
-            prefix_dir: None,
-            gcs_prefix: Some(format!("{}/turn_{}", session_info.id.0, turn_number)),
-            absolute_paths: false,
-            archive_name_override: None,
-            upload_method,
-        };
-        let session_handle = self.resident_handle(&session_info.id)?;
-        let queue = session_handle
-            .upload_queue
-            .get_or_init(|| {
-                let grok_home = crate::util::grok_home::grok_home();
-                let queue = crate::upload::trace::spawn_upload_queue(
-                    &grok_home,
-                    &gcs_config,
-                    Some(xai_grok_version::VERSION),
-                    self.auth_manager.clone(),
-                );
-                crate::upload::trace::spawn_startup_spill_reconcile(
-                    grok_home,
-                    Some(queue.clone()),
-                );
-                queue
-            });
-        let upload_queue = Some(queue.clone());
-        let session_registry_enabled = self.build_registry_config().is_some();
-        Some(PromptTraceContext {
-            gcs_config,
-            session_info: session_info.clone(),
-            turn_number,
-            attempt_id: None,
-            memory_mode: session_handle
-                .spawn_snapshot
-                .memory_mode
-                .or_else(|| self.memory_config_snapshot().map(|memory| memory.mode)),
-            session_handle,
-            session_registry_enabled,
-            upload_queue,
-            artifact_tracker: crate::upload::manifest::new_artifact_tracker(),
-            auth_manager: self.auth_manager.clone(),
-        })
-    }
-    /// Resolve the agent definition for a session. Priority (highest to lowest): Model `agent_type` if it names a strict harness (codex, …). `acp_agent_profile` from ACP `_meta.agentProfile` (remote clients).
-    /// `agent_profile_path` from CLI `--agent-profile`. `agent_config` from config.toml `[agent]`. `GROK_AGENT` env var. Built-in default agent. `GROK_AGENT` and an explicit `[agent] name` bypass step 1.
-    /// Strict-harness classification is structural; see [`xai_grok_agent::config::is_strict_harness_agent_type`]. Harness inheritance for a profile that pins its own model is applied by the caller via [`inherited_harness_template`], not here.
     pub fn resolve_agent_definition(
         cwd: &std::path::Path,
         agent_profile_path: Option<&std::path::Path>,
@@ -4054,18 +3484,6 @@ impl MvpAgent {
             })?;
         tool_ctx.subagent_event_tx = Some(self.subagent_event_tx.event_sender().0);
         tool_ctx.subagent_coordinator_sender = Some(self.subagent_event_tx.clone());
-        tool_ctx.synthetic_trace_tx = self
-            .subagent_presentation
-            .borrow()
-            .synthetic_trace_tx
-            .clone();
-        if let Some(ref shared) = tool_ctx.synthetic_trace_tx_shared {
-            *shared.lock().unwrap_or_else(|e| e.into_inner()) = self
-                .subagent_presentation
-                .borrow()
-                .synthetic_trace_tx
-                .clone();
-        }
         tool_ctx.is_turn_active = Some(
             self.subagent_presentation.borrow().turn_active_flag(),
         );
@@ -4358,7 +3776,7 @@ impl MvpAgent {
             .borrow()
             .workflow_max_concurrent_agents;
         let media_gen_batch_limits = self.cfg.borrow().media_gen_batch_limits;
-        let ask_user_question_enabled = crate::upload::turn::parse_ask_user_question_from_meta(
+        let ask_user_question_enabled = parse_ask_user_question_from_meta(
                 session_meta,
             )
             .unwrap_or_else(|| {

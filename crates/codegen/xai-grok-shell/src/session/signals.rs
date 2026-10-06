@@ -294,31 +294,6 @@ pub struct SessionSignals {
     #[serde(default)]
     pub inference_idle_timeout_configured_secs: Option<u64>,
 
-    // === GCS Upload Queue ===
-    /// Total items enqueued for background upload.
-    #[serde(default)]
-    pub gcs_queue_enqueued: u64,
-    /// Successful background uploads.
-    #[serde(default)]
-    pub gcs_queue_uploaded: u64,
-    /// Items that exhausted retry budget (superset of expired).
-    #[serde(default)]
-    pub gcs_queue_failed: u64,
-    /// Enqueue failures that fell back to inline upload.
-    #[serde(default)]
-    pub gcs_queue_fallbacks: u64,
-    #[serde(default)]
-    pub gcs_queue_circuit_breaker_trips: u64,
-    /// Current queue depth (snapshot gauge).
-    #[serde(default)]
-    pub gcs_queue_pending: u64,
-    /// Current disk usage of queue temp dir in bytes (snapshot gauge).
-    #[serde(default)]
-    pub gcs_queue_pending_bytes: u64,
-    /// Orphaned temp files cleaned up at startup.
-    #[serde(default)]
-    pub gcs_queue_orphans_cleaned: u64,
-
     // === Ratings ===
     /// Number of positive ratings (thumbs-up / stars >= 4)
     pub positive_ratings: u32,
@@ -467,19 +442,6 @@ pub enum SignalEvent {
     /// Called once at session construction; preserved on the backend when unset.
     SetTracingConfig {
         inference_idle_timeout_configured_secs: u64,
-    },
-
-    /// Snapshot GCS upload queue stats into signals.
-    /// The actor reads the atomics once and stores plain u64 values; the Arc is not retained in actor state.
-    RecordGcsQueueSnapshot {
-        enqueued: u64,
-        uploaded: u64,
-        failed: u64,
-        fallbacks: u64,
-        circuit_breaker_trips: u64,
-        pending: u64,
-        pending_bytes: u64,
-        orphans_cleaned: u64,
     },
 
     // === Rating Events ===
@@ -724,26 +686,6 @@ impl SessionSignalsHandle {
     pub(crate) fn set_tracing_config(&self, inference_idle_timeout_secs: u64) {
         let _ = self.tx.send(SignalEvent::SetTracingConfig {
             inference_idle_timeout_configured_secs: inference_idle_timeout_secs,
-        });
-    }
-
-    /// Snapshot GCS upload queue stats into signals.
-    ///
-    /// Reads the atomics from `UploadQueueStats` once and sends plain u64 values to the actor; the Arc is NOT retained in the signal event.
-    pub(crate) fn snapshot_gcs_queue(
-        &self,
-        stats: &crate::file_utils_compat::queue::UploadQueueStats,
-    ) {
-        use std::sync::atomic::Ordering;
-        let _ = self.tx.send(SignalEvent::RecordGcsQueueSnapshot {
-            enqueued: stats.enqueued.load(Ordering::Relaxed),
-            uploaded: stats.uploaded.load(Ordering::Relaxed),
-            failed: stats.failed.load(Ordering::Relaxed),
-            fallbacks: stats.enqueue_fallbacks.load(Ordering::Relaxed),
-            circuit_breaker_trips: stats.circuit_breaker_trips.load(Ordering::Relaxed),
-            pending: stats.pending.load(Ordering::Relaxed),
-            pending_bytes: stats.pending_bytes.load(Ordering::Relaxed),
-            orphans_cleaned: crate::file_utils_compat::queue::last_orphans_cleaned(),
         });
     }
 
@@ -1116,25 +1058,6 @@ impl SessionSignalsActor {
                 } => {
                     self.signals.inference_idle_timeout_configured_secs =
                         Some(inference_idle_timeout_configured_secs);
-                }
-                SignalEvent::RecordGcsQueueSnapshot {
-                    enqueued,
-                    uploaded,
-                    failed,
-                    fallbacks,
-                    circuit_breaker_trips,
-                    pending,
-                    pending_bytes,
-                    orphans_cleaned,
-                } => {
-                    self.signals.gcs_queue_enqueued = enqueued;
-                    self.signals.gcs_queue_uploaded = uploaded;
-                    self.signals.gcs_queue_failed = failed;
-                    self.signals.gcs_queue_fallbacks = fallbacks;
-                    self.signals.gcs_queue_circuit_breaker_trips = circuit_breaker_trips;
-                    self.signals.gcs_queue_pending = pending;
-                    self.signals.gcs_queue_pending_bytes = pending_bytes;
-                    self.signals.gcs_queue_orphans_cleaned = orphans_cleaned;
                 }
 
                 // === Tool Events ===

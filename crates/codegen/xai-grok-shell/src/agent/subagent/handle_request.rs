@@ -15,7 +15,6 @@ use super::*;
 use crate::agent::remote_config::task_model_policy::{
     TaskModelSelection, selection_telemetry_kind,
 };
-use crate::upload::trace::PromptMetadataParams;
 use xai_grok_sampling_types::ReasoningEffort;
 use xai_grok_telemetry::events::{SubagentModelOverrideRejected, SubagentModelRejectionReason};
 use xai_grok_telemetry::region;
@@ -111,85 +110,6 @@ pub(super) async fn mark_child_usage_not_applied_with_fallback(
             let _ = ack.await;
         }
     }
-}
-/// Bounded turn-message take from the child's chat state. A take the actor never answers — wedged (timeout) or gone (dropped channel) — is a recorded miss; `complete_prompt_trace` must not mistake it for a genuinely empty turn.
-pub(super) async fn take_child_turn_messages(
-    cmd_tx: &mpsc::UnboundedSender<SessionCommand>,
-    upload_deadline: tokio::time::Instant,
-) -> crate::upload::turn::TurnMessages {
-    use crate::upload::turn::{MissingTurnMessages, TurnMessages};
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    if cmd_tx
-        .send(SessionCommand::TakeTurnMessages { respond_to: tx })
-        .is_err()
-    {
-        return TurnMessages::Missing(MissingTurnMessages::ChannelDropped);
-    }
-    match tokio::time::timeout(
-        crate::upload::trace::blocking_attempt_budget(upload_deadline),
-        rx,
-    )
-    .await
-    {
-        Ok(Ok(taken)) => taken.into(),
-        Ok(Err(_)) => {
-            tracing::warn!("TakeTurnMessages responder dropped; recording the miss");
-            TurnMessages::Missing(MissingTurnMessages::ChannelDropped)
-        }
-        Err(_) => {
-            tracing::warn!("TakeTurnMessages not answered in time; recording the miss");
-            TurnMessages::Missing(MissingTurnMessages::TakeTimedOut)
-        }
-    }
-}
-/// Bounded out-of-band streaming-capture take: a wedged child actor skips the
-/// capture instead of parking teardown.
-pub(super) async fn take_child_streaming_partial(
-    cmd_tx: &mpsc::UnboundedSender<SessionCommand>,
-    upload_deadline: tokio::time::Instant,
-    prompt_id: String,
-    committed: bool,
-    model_id: Option<String>,
-) -> Option<crate::session::acp_session::StreamingTurnCapture> {
-    tokio::time::timeout(
-        crate::upload::trace::blocking_attempt_budget(upload_deadline),
-        crate::upload::turn::take_streaming_partial(cmd_tx, prompt_id, committed, model_id),
-    )
-    .await
-    .unwrap_or_else(|_| {
-        tracing::warn!("TakeStreamingCapture not answered in time; skipping capture");
-        None
-    })
-}
-/// Bounded conversation-global resolved-model read for `turn_result.json`,
-/// falling back to `configured` when the child actor is wedged or has served
-/// no assistant turn.
-pub(super) async fn resolve_child_model(
-    cmd_tx: &mpsc::UnboundedSender<SessionCommand>,
-    upload_deadline: tokio::time::Instant,
-    configured: Option<String>,
-) -> Option<String> {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let resolved = if cmd_tx
-        .send(SessionCommand::GetModelMetadata { responds_to: tx })
-        .is_ok()
-    {
-        match tokio::time::timeout(
-            crate::upload::trace::blocking_attempt_budget(upload_deadline),
-            rx,
-        )
-        .await
-        {
-            Ok(meta) => meta.unwrap_or_default().resolved_model_id,
-            Err(_) => {
-                tracing::warn!("GetModelMetadata not answered in time; using configured model");
-                None
-            }
-        }
-    } else {
-        None
-    };
-    resolved.or(configured)
 }
 /// Snapshot goal-internal task ids, tag them goal-turn origin, then reparent surviving background tasks (monitors, bg commands) from the child to the parent's notification bridge. Both awaits ride the parent terminal actor's channel and are bounded so the child Shutdown stays reachable behind a starved actor.
 pub(super) async fn reparent_surviving_child_tasks(
@@ -1022,22 +942,6 @@ pub(crate) async fn run_shell_child(
         snapshot_ref: None,
         effective_model_id: Some(effective_model_id.0.to_string()),
     };
-    let gcs_upload_ctx = GcsUploadContext {
-        bucket_url: ctx.gcs_bucket_url.clone(),
-        upload_method: ctx.gcs_upload_method.clone(),
-        model_id: Some(effective_model_id.0.to_string()),
-        cwd: Some(child_session_info.cwd.clone()),
-        reasoning_effort: effective_runtime.reasoning_effort.clone(),
-        role_name: effective_runtime.role_name.clone(),
-        parent_prompt_id: request.parent_prompt_id.clone(),
-        auth_manager: ctx.auth_manager.clone(),
-        isolation_mode: Some(format!("{:?}", effective_runtime.isolation)),
-        capability_mode: effective_runtime
-            .capability_mode
-            .as_ref()
-            .map(|m| format!("{m:?}")),
-        depth: child_depth,
-    };
     let advertised_address = xai_message_delivery_core::advertised_address(
         agent_address.as_ref().map(|address| address.as_str()),
         request.owner.is_workflow(),
@@ -1090,19 +994,6 @@ pub(crate) async fn run_shell_child(
     if !is_wake {
         completion_data.mark_spawned_notification_emitted();
     }
-    let early_gcs_ctx = GcsUploadContext {
-        bucket_url: ctx.gcs_bucket_url.clone(),
-        upload_method: ctx.gcs_upload_method.clone(),
-        model_id: None,
-        cwd: None,
-        isolation_mode: None,
-        capability_mode: None,
-        reasoning_effort: effective_runtime.reasoning_effort.clone(),
-        role_name: effective_runtime.role_name.clone(),
-        parent_prompt_id: request.parent_prompt_id.clone(),
-        depth: 0,
-        auth_manager: ctx.auth_manager.clone(),
-    };
     #[cfg(test)]
     if matches!(
         ctx.setup_failure,
@@ -1113,7 +1004,6 @@ pub(crate) async fn run_shell_child(
             &request,
             &child_session_id,
             &subagent_meta_dir,
-            &early_gcs_ctx,
             start_artifacts.terminal_persistence_allowed(),
             completion_data,
         );
@@ -1127,7 +1017,6 @@ pub(crate) async fn run_shell_child(
                 &request,
                 &child_session_id,
                 &subagent_meta_dir,
-                &early_gcs_ctx,
                 start_artifacts.terminal_persistence_allowed(),
                 completion_data,
             );
@@ -1152,7 +1041,6 @@ pub(crate) async fn run_shell_child(
                     &request,
                     &child_session_id,
                     &subagent_meta_dir,
-                    &early_gcs_ctx,
                     start_artifacts.terminal_persistence_allowed(),
                     completion_data,
                 );
@@ -1191,7 +1079,6 @@ pub(crate) async fn run_shell_child(
                 &request,
                 &child_session_id,
                 &subagent_meta_dir,
-                &early_gcs_ctx,
                 start_artifacts.terminal_persistence_allowed(),
                 completion_data,
             );
@@ -1664,7 +1551,6 @@ pub(crate) async fn run_shell_child(
                     &child_session_id,
                     &subagent_meta_dir,
                     start.elapsed().as_millis() as u64,
-                    &gcs_upload_ctx,
                 )
             } else {
                 failure_result(&request, &msg)
@@ -1713,8 +1599,6 @@ pub(crate) async fn run_shell_child(
         task_prompt_text: &task_prompt_text,
         prompt_id: child_prompt_id,
         inherited_tool_overrides: ctx.inherited_tool_overrides.clone(),
-        gcs_bucket_url: ctx.gcs_bucket_url.as_deref(),
-        gcs_upload_method: ctx.gcs_upload_method.as_ref(),
         turn_number,
         cancel_token: cancel_token.clone(),
         child_run_started_at: start,
@@ -1899,7 +1783,6 @@ pub(crate) async fn run_shell_child(
             worktree_path.as_deref(),
             worktree_freshly_created,
             start.elapsed().as_millis() as u64,
-            &gcs_upload_ctx,
             UNPROMOTED_SESSION_THREAD_EXIT_TIMEOUT,
             unpromoted_disposition,
             start_artifacts.terminal_persistence_allowed(),
@@ -1940,16 +1823,9 @@ pub(crate) async fn run_shell_child(
     crate::waterfall::mark(&request.id, crate::waterfall::stage::TURN_DONE);
     let OneTurnAttemptOutcome {
         mut result,
-        trace,
+        trace: _,
         mut cancellation_may_hide_usage,
     } = attempt_outcome;
-    let OneTurnTraceCapture {
-        before_copy_rx,
-        child_prompt_id,
-        turn_started_at,
-        turn_token_totals,
-        turn_number,
-    } = trace;
     let admission = if promoted && !reporter.finalizing().await {
         AdmissionSettlement::Uncertain
     } else {
@@ -1957,38 +1833,17 @@ pub(crate) async fn run_shell_child(
     };
     let receipt_settlement = receipt_drain.settle(admission).await;
     let receipt_disposition = receipt_settlement.disposition;
-    let mut final_prompt_id = child_prompt_id;
-    let mut final_turn_tokens = turn_token_totals;
     let mut final_receipt = None;
     let mut final_receipt_telemetry = None;
     if let Some(FinalPromptTurnReceipt {
-        prompt_id,
-        outcome,
-        telemetry,
+        outcome, telemetry, ..
     }) = receipt_settlement.final_receipt
     {
-        final_prompt_id = prompt_id;
         final_receipt_telemetry = Some(telemetry);
         if let PromptTurnReceiptOutcome::Settled(receipt) = outcome {
             final_receipt = Some(*receipt);
         }
     }
-    if let Some(Ok(Ok(crate::session::commands::PromptTurnOk {
-        turn_snapshot: Some(snapshot),
-        ..
-    }))) = final_receipt.as_ref()
-    {
-        final_turn_tokens = Some((
-            snapshot.turn_input_tokens,
-            snapshot.turn_cached_input_tokens,
-            snapshot.turn_output_tokens,
-        ));
-    }
-    let child_stop_reason: Option<acp::StopReason> = final_receipt
-        .as_ref()
-        .and_then(|r| r.as_ref().ok())
-        .and_then(|r| r.as_ref().ok())
-        .map(|ok| ok.stop_reason);
     let final_text = if final_receipt.is_some() {
         child_actor_query(
             "trailing_assistant_report",
@@ -2034,178 +1889,11 @@ pub(crate) async fn run_shell_child(
     result.tool_calls = tool_calls;
     result.turns = turns;
     result.duration_ms = start.elapsed().as_millis() as u64;
-    if let Some(trace_gcs_config) = gcs_upload_ctx.upload_method.as_ref().map(|method| {
-        crate::session::repo_changes::TraceExportConfig {
-            bucket_url: gcs_upload_ctx.bucket_url.clone(),
-            service_account_key: None,
-            prefix_dir: None,
-            gcs_prefix: Some(super::attempt_runner::subagent_trace_prefix(
-                child_session_id.0.as_ref(),
-                turn_number,
-            )),
-            absolute_paths: false,
-            archive_name_override: None,
-            upload_method: method.clone(),
-        }
-    }) {
-        let upload_deadline =
-            tokio::time::Instant::now() + crate::util::config::load_upload_wait_config_sync().1;
-        let upload_wait = crate::upload::turn::UploadWait::Defer {
-            deadline: upload_deadline,
-        };
-        let (copy_tx, session_copy_rx) = tokio::sync::oneshot::channel();
-        let _ = child_handle.cmd_tx.send(SessionCommand::CopyFile {
-            respond_to: copy_tx,
-        });
-        let turn_messages = take_child_turn_messages(&child_handle.cmd_tx, upload_deadline).await;
-        let child_committed = child_stop_reason
-            .map(crate::upload::turn::stop_reason_commits_turn)
-            .unwrap_or(result.success);
-        let streaming_partial = take_child_streaming_partial(
-            &child_handle.cmd_tx,
-            upload_deadline,
-            final_prompt_id.clone(),
-            child_committed,
-            gcs_upload_ctx.model_id.clone(),
-        )
-        .await
-        .map(|mut cap| {
-            cap.reason = Some(if result.cancelled {
-                "subagent_cancel".to_string()
-            } else {
-                "subagent_non_completed".to_string()
-            });
-            cap
-        });
-        let mut permission_events = Vec::new();
-        while let Ok(event) = permission_rx.try_recv() {
-            permission_events.push(event);
-        }
-        let trace_ctx = PromptTraceContext {
-            gcs_config: trace_gcs_config,
-            session_info: child_handle.info.clone(),
-            turn_number,
-            attempt_id: Some(attempt_identity.to_string()),
-            memory_mode: child_handle.spawn_snapshot.memory_mode,
-            session_handle: child_handle.clone(),
-            session_registry_enabled: false,
-            upload_queue: None,
-            artifact_tracker: crate::upload::manifest::new_artifact_tracker(),
-            auth_manager: ctx.auth_manager.clone(),
-        };
-        let session_dir = crate::session::persistence::session_dir(&child_handle.info);
-        if let Ok(prompt_bytes) = std::fs::read(session_dir.join("system_prompt.txt")) {
-            let gcs_path = format!("{}/system_prompt.txt", child_session_id.0);
-            crate::upload::trace::upload_small_artifact(
-                &trace_ctx,
-                &prompt_bytes,
-                &gcs_path,
-                "text/plain",
-                "system_prompt",
-                upload_wait,
-            )
-            .await;
-        }
-        if let Ok(ctx_bytes) = std::fs::read(session_dir.join("prompt_context.json")) {
-            let gcs_path = format!("{}/prompt_context.json", child_session_id.0);
-            crate::upload::trace::upload_small_artifact(
-                &trace_ctx,
-                &ctx_bytes,
-                &gcs_path,
-                "application/json",
-                "prompt_context",
-                upload_wait,
-            )
-            .await;
-        }
-        upload_session_state(&trace_ctx, "before", before_copy_rx, upload_wait).await;
-        let subagent_auth = ctx.auth_manager.current();
-        let metadata = PromptMetadata::new(PromptMetadataParams {
-            schema_version: GCS_SCHEMA_VERSION.to_string(),
-            session_id: child_session_id.0.to_string(),
-            turn_number,
-            request_id: final_prompt_id.clone(),
-            attempt_id: trace_ctx.attempt_id.clone(),
-            turn_started_at: turn_started_at.clone(),
-            user_id: subagent_auth.as_ref().map(|a| a.user_id.clone()),
-            user_email: subagent_auth.as_ref().and_then(|a| a.email.clone()),
-            team_id: subagent_auth.as_ref().and_then(|a| a.team_id.clone()),
-            client_source: Some("subagent".to_string()),
-            client_version: ctx.sampling_config.client_version.clone(),
-            model: gcs_upload_ctx.model_id.clone().unwrap_or_default(),
-            reasoning_effort: child_handle
-                .reasoning_effort
-                .map(|e| e.as_ref().to_string()),
-            host_os: std::env::consts::OS.to_string(),
-            host_arch: std::env::consts::ARCH.to_string(),
-            prompt_has_image: Some(false),
-            prompt_was_truncated: Some(false),
-            prompt_verbatim: Some(true),
-            cwd: Some(child_handle.info.cwd.clone()),
-            agent_type: Some(request.subagent_type.clone()),
-            shell_version: Some(xai_grok_version::VERSION.to_string()),
-            sandbox: local_sandbox_telemetry(),
-            ..Default::default()
-        });
-        upload_metadata(&trace_ctx, metadata, upload_wait).await;
-        let resolved_model = resolve_child_model(
-            &child_handle.cmd_tx,
-            upload_deadline,
-            gcs_upload_ctx.model_id.clone(),
-        )
-        .await;
-        let turn_result_meta = TurnResultMetadata {
-            schema_version: "1",
-            request_id: final_prompt_id,
-            completed: child_committed,
-            stop_reason: child_stop_reason.map(|sr| format!("{sr:?}")),
-            total_tokens: trace_token_totals
-                .as_ref()
-                .map(xai_chat_state::UsageTotals::total_tokens),
-            input_tokens: final_turn_tokens.map(|tokens| tokens.0),
-            cached_input_tokens: final_turn_tokens.map(|tokens| tokens.1),
-            output_tokens: final_turn_tokens.map(|tokens| tokens.2),
-            error: result.error.clone(),
-            finished_at: chrono::Utc::now().to_rfc3339(),
-            signals: None,
-            turn_delta: None,
-            start_prompt_mode: Some(crate::session::plan_mode::PromptMode::Agent.to_string()),
-            end_prompt_mode: Some(crate::session::plan_mode::PromptMode::Agent.to_string()),
-            resolved_model,
-            subagents_spawned: vec![],
-        };
-        upload_turn_result(&trace_ctx, &turn_result_meta, upload_wait).await;
-        match complete_prompt_trace(
-            trace_ctx,
-            permission_events,
-            session_copy_rx,
-            turn_messages,
-            streaming_partial,
-            upload_wait,
-        )
-        .await
-        {
-            Ok(_) => {
-                tracing::debug!(
-                    subagent_id = %request.id,
-                    child_session_id = %child_session_id.0,
-                    "Subagent trace artifacts uploaded"
-                );
-            }
-            Err(e) => {
-                tracing::warn!(
-                    subagent_id = %request.id,
-                    error = %e,
-                    "Subagent trace upload failed (non-fatal)"
-                );
-            }
-        }
-    }
     let terminal_persistence_allowed = start_artifacts.terminal_persistence_allowed();
     if terminal_persistence_allowed {
         completion_data
             .set_persisted_output_dir(persist_subagent_output(&subagent_meta_dir, &result));
-        persist_subagent_completion(&subagent_meta_dir, &result, &gcs_upload_ctx);
+        persist_subagent_completion(&subagent_meta_dir, &result);
     }
     let final_status = result.status().to_string();
     let snapshot_dispose_enabled =

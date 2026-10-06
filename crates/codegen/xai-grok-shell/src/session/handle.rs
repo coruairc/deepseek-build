@@ -3,7 +3,6 @@
 //! Callers hold a `SessionHandle` and send `SessionCommand` messages via the internal channel.
 use super::commands::SessionCommand;
 use super::persistence::{LocalFeedbackEntry, PersistenceMsg};
-use crate::file_utils_compat::queue::UploadQueue;
 use agent_client_protocol as acp;
 use std::collections::{HashMap, HashSet};
 use tokio::sync::{mpsc, oneshot};
@@ -88,13 +87,6 @@ pub struct SessionHandle {
     /// When set, the hunk tracker extension handler rewrites worktree paths in API responses to this path.
     /// The client UI then shows the original project path, not the worktree path.
     pub display_cwd: Option<String>,
-    /// Session-scoped upload queue. Lazily initialized on the first turn that enables trace uploads.
-    /// `Arc<OnceLock<_>>` ensures all `SessionHandle` clones share the same underlying queue instance.
-    pub(crate) upload_queue: std::sync::Arc<std::sync::OnceLock<UploadQueue>>,
-    /// Consecutive upload failures with no confirmed upload in between, driving this session's upload-failure log suppression.
-    /// Shared across handle clones but per-session, so one session's bucket outage cannot mute another session's first-failure log.
-    /// Each session's unified_log artifact must carry evidence of its own failures.
-    pub(crate) upload_failures_since_success: std::sync::Arc<std::sync::atomic::AtomicU64>,
     /// Session context captured at spawn time so callers can inherit shared runtime state.
     pub tool_context: crate::tools::ToolContext,
     /// The model this session was created with (or switched to via setModel).

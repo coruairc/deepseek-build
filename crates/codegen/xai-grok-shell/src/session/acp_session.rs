@@ -281,8 +281,6 @@ pub(crate) struct InputItem {
     pub(crate) prompt_id: String,
     pub(crate) prompt_blocks: Vec<ContentBlock>,
     pub(crate) prompt_mode: PromptMode,
-    pub(crate) trace_gcs_config: Option<crate::session::repo_changes::TraceExportConfig>,
-    pub(crate) artifact_tracker: Option<crate::upload::manifest::ArtifactTracker>,
     /// Optional client identifier from the prompt request meta (overrides session-level one)
     pub(crate) client_identifier: Option<String>,
     /// See [`SessionCommand::Prompt::screen_mode`]. Telemetry-only.
@@ -881,8 +879,6 @@ pub(crate) struct SessionActor {
     pub(crate) origin_client: Option<crate::http::OriginClientInfo>,
     /// Session signals handle for turn-delta snapshots and telemetry.
     pub(crate) signals_handle: SessionSignalsHandle,
-    pub(crate) upload_queue:
-        std::sync::Arc<std::sync::OnceLock<crate::file_utils_compat::queue::UploadQueue>>,
     /// The fully-built Agent: owns the ToolBridge, system prompt, policies, and the AgentDefinition.
     /// Replaces the old `tool_bridge` and `agent_definition` fields.
     /// Wrapped in `RefCell` for mid-session mutation (skill refresh, prompt regen).
@@ -1158,9 +1154,6 @@ pub(crate) struct SessionActor {
     /// Per-subagent token state keyed by `subagent_id`; sums into goal totals via [`Self::goal_tokens`].
     pub(crate) subagent_token_records: parking_lot::Mutex<HashMap<String, SubagentTokenRecord>>,
     pub(crate) workspace_ops: xai_grok_workspace::WorkspaceOps,
-    /// Template for building trace configs on synthetic auto-wake turns.
-    /// Captured from the first real user prompt's trace config so synthetic turns can upload artifacts using the same bucket/method.
-    pub(crate) trace_config_template: std::cell::RefCell<Option<TraceConfigTemplate>>,
     /// Generation counter bumped on each fresh user prompt so the laziness check can detect input without a stored-permit wake.
     /// A `Notify` fired before the classifier spawns would abort the first idle wait; an `AtomicU64` snapshot has no such hazard.
     /// One consumer only, so a lock-bearing `watch` channel is unnecessary (model-switch still uses `watch` because the main loop must wake).
@@ -1172,14 +1165,6 @@ pub(crate) struct SessionActor {
     /// Last live-orphan disk scan.
     /// SessionActor is `!Send`, so a `Cell` is enough to throttle mid-turn ticks without a lock.
     pub(crate) last_live_orphan_reconcile: std::cell::Cell<Option<std::time::Instant>>,
-}
-/// Template for building trace configs on synthetic auto-wake turns.
-/// Captured from the first real user prompt's `TraceExportConfig`.
-/// Synthetic turns can then upload artifacts to the same GCS bucket using the same upload method (direct / proxy).
-#[derive(Clone)]
-pub(crate) struct TraceConfigTemplate {
-    pub(crate) bucket_url: Option<String>,
-    pub(crate) upload_method: crate::session::repo_changes::UploadMethod,
 }
 impl SessionActor {
     fn signals_handle(&self) -> SessionSignalsHandle {

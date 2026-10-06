@@ -5,7 +5,6 @@
 use std::path::PathBuf;
 
 use xai_acp_lib::AcpAgentGatewaySender as GatewaySender;
-use xai_grok_telemetry::instrument_task;
 
 use super::{
     ShellChildRuntime, SpawnerAddressTarget, SubagentMeta, SubagentSpawnContext,
@@ -41,10 +40,7 @@ pub(super) struct StartArtifactPublication {
     parent_session_id: String,
     parent_cmd_tx: Option<tokio::sync::mpsc::UnboundedSender<SessionCommand>>,
     spawner_address_target: Option<SpawnerAddressTarget>,
-    bucket_url: Option<String>,
-    upload_method: Option<crate::session::repo_changes::UploadMethod>,
     metadata_parent: Option<tracing::Span>,
-    auth_manager: std::sync::Arc<crate::auth::AuthManager>,
     #[cfg(test)]
     fail_metadata_write: bool,
 }
@@ -69,10 +65,7 @@ impl StartArtifactPublication {
             parent_session_id: ctx.parent_session_id.clone(),
             parent_cmd_tx: ctx.parent_cmd_tx.clone(),
             spawner_address_target: ctx.spawner_address_target.clone(),
-            bucket_url: ctx.gcs_bucket_url.clone(),
-            upload_method: ctx.gcs_upload_method.clone(),
             metadata_parent,
-            auth_manager: ctx.auth_manager.clone(),
             #[cfg(test)]
             fail_metadata_write: ctx.fail_start_metadata_write,
         }
@@ -116,39 +109,6 @@ impl StartArtifactPublication {
         let metadata_written = write_subagent_meta(&self.prepared.meta_dir, &self.prepared.meta);
         self.durable_publication = metadata_written;
         metadata_persist_span.close();
-        if self.durable_publication
-            && let (Some(bucket_url), Some(upload_method)) = (&self.bucket_url, &self.upload_method)
-        {
-            let gcs_meta = super::SubagentSessionMetadata::from_meta(
-                &self.prepared.meta,
-                self.prepared.meta.effective_model_id.as_deref(),
-                self.prepared.meta.child_cwd.as_deref(),
-                None,
-                None,
-                None,
-                self.prepared.reasoning_effort.as_deref(),
-                self.prepared.role_name.as_deref(),
-                self.prepared.parent_prompt_id.as_deref(),
-                0,
-            );
-            let bucket = bucket_url.clone();
-            let method = upload_method.clone();
-            let auth_manager = self.auth_manager.clone();
-            tokio::spawn(instrument_task!(
-                debug,
-                "subagent.metadata_upload",
-                xai_grok_telemetry::region::Parent::Root,
-                async move {
-                    crate::upload::trace::upload_subagent_metadata(
-                        &gcs_meta,
-                        &bucket,
-                        method,
-                        auth_manager,
-                    )
-                    .await;
-                }
-            ));
-        }
         emit_subagent_notification(
             &self.gateway,
             &self.parent_session_id,

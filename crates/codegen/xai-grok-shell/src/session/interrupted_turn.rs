@@ -54,28 +54,6 @@ impl InterruptedTurn {
         crate::session::storage::SessionUpdate::Xai(Box::new(notification))
     }
 
-    /// `turn_result.json` for the trace turn whose `metadata.json` the dead process already uploaded.
-    pub(crate) fn turn_result(&self) -> crate::upload::trace::TurnResultMetadata {
-        crate::upload::trace::TurnResultMetadata {
-            schema_version: crate::upload::trace::GCS_SCHEMA_VERSION,
-            request_id: self.prompt_id.clone(),
-            completed: false,
-            stop_reason: Some(INTERRUPTED_STOP_REASON.to_string()),
-            total_tokens: None,
-            input_tokens: None,
-            cached_input_tokens: None,
-            output_tokens: None,
-            error: Some(INTERRUPTED_MESSAGE.to_string()),
-            finished_at: chrono::Utc::now().to_rfc3339(),
-            signals: None,
-            turn_delta: None,
-            resolved_model: None,
-            subagents_spawned: Vec::new(),
-            start_prompt_mode: None,
-            end_prompt_mode: None,
-        }
-    }
-
     /// Closes the open `turn_started` in `events.jsonl` so the next load does not report this turn again.
     pub(crate) fn close_events_turn(&self, session_dir: &Path) {
         xai_grok_session_events::EventWriter::open(session_dir).emit(

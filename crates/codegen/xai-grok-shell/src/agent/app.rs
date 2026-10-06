@@ -45,7 +45,6 @@ const AUTO_UPDATE_CHECK_TIMEOUT: Duration = Duration::from_secs(20 * 60);
 /// Aliases the shared [`crate::agent::activity::SESSION_FLUSH_GRACE`].
 /// This path and the in-process agent's `/exit` / headless-quit flush therefore cannot drift apart.
 const AUTO_UPDATE_FLUSH_GRACE: Duration = crate::agent::activity::SESSION_FLUSH_GRACE;
-const PERSISTENT_EXIT_DRAIN: Duration = Duration::from_secs(1);
 /// Consecutive busy deferrals after which an installed update proceeds anyway (with the graceful flush).
 /// Bounds how long a permanently-"busy" signal (an orphaned parked interaction, a wedged turn) can pin the leader to an old binary. The cap is ~24h at the default 1h check interval.
 /// Mirrors the bounded grace of the `RelaunchForUpdate` drain.
@@ -231,10 +230,6 @@ pub async fn run_stdio_agent(
         );
     }
     xai_grok_telemetry::unified_log::set_version(xai_grok_version::VERSION);
-    crate::file_utils_compat::queue::cleanup_orphaned_uploads(
-        &grok_home::grok_home(),
-        crate::file_utils_compat::queue::DEFAULT_MAX_AGE,
-    );
     if let Ok(version) = std::env::var("GROK_CLIENT_VERSION") {
         crate::unified_log::info(
             "GROK_CLIENT_VERSION",
@@ -304,7 +299,6 @@ pub async fn run_stdio_agent(
         .await;
     agent_cancel.cancel();
     crate::terminal::pty_session::close_all().await;
-    crate::upload::drain_pending_uploads(PERSISTENT_EXIT_DRAIN).await;
     xai_grok_telemetry::session_ctx::drain_at_process_exit().await;
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
     result
@@ -430,12 +424,6 @@ pub async fn run_leader(
     }
     lock.cleanup_socket()?;
     info!("Leader server starting");
-    tokio::task::spawn_blocking(|| {
-        crate::file_utils_compat::queue::cleanup_orphaned_uploads(
-            &grok_home::grok_home(),
-            crate::file_utils_compat::queue::DEFAULT_MAX_AGE,
-        );
-    });
     let (ipc_to_agent_tx, mut ipc_to_agent_rx) = mpsc::unbounded_channel::<String>();
     let (agent_to_ipc_tx, agent_to_ipc_rx) = mpsc::unbounded_channel::<String>();
     let (acp_incoming_rx, acp_incoming_tx) = simplex(MAX_BUFFER_SIZE);
@@ -949,7 +937,6 @@ pub async fn run_leader(
             anyhow::Ok(())
         })
         .await?;
-    crate::upload::drain_pending_uploads(PERSISTENT_EXIT_DRAIN).await;
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
     Ok(())
 }

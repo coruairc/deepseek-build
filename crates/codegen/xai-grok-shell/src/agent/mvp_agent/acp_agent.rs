@@ -1,18 +1,13 @@
 #![cfg_attr(rustfmt, rustfmt::skip)]
 #![allow(unused_imports)]
 use super::*;
-use super::turn_end::{
-    ErrorTurnArtifacts, TraceCaptures, TurnEndCapture, TurnEndOutcome, TurnResultArgs,
-    run_detached_turn_end, run_registry_turn_end, run_trace_completion,
-    upload_error_turn_artifacts,
-};
+use super::turn_end::{TurnEndCapture, run_registry_turn_end};
 use xai_grok_telemetry::instrument_task;
 use xai_grok_telemetry::region;
 use xai_grok_telemetry::region::Parent;
 use xai_grok_telemetry::startup;
 use tracing::Instrument;
 use xai_grok_login::{CachedTokenState, SilentRefresh};
-use crate::upload::trace::PromptMetadataParams;
 use crate::leader::protocol::InternalMethod;
 use crate::agent::config::ModelInfo;
 use crate::agent::handlers::model_switch::SwitchContextWindow;
@@ -614,7 +609,6 @@ impl acp::Agent for MvpAgent {
                     // The client gates BOTH its automatic away-recap poll and the manual `/recap` on this
                     // A disabled feature produces zero `deepseek-build/recap` traffic
                     "sessionRecap": self.cfg.borrow().is_session_recap_enabled(),
-                    "feedbackTraceOffer": self.feedback_trace_offer(),
                     "voiceMode": self.cfg.borrow().is_voice_mode_enabled(),
                 })
                         .as_object()
@@ -1162,16 +1156,6 @@ impl acp::Agent for MvpAgent {
         let turn_number = self.allocate_turn_number(&arguments.session_id);
         tracing::Span::current().record("turn_number", turn_number);
         tracing::info!("Setting up prompt tracing");
-        let trace_context = self.get_trace_context(&handle.info, turn_number).await;
-        let (wait_for_uploads, upload_flush_timeout) = crate::util::config::load_upload_wait_config_sync();
-        crate::upload::drain::capture_flush_timeout_pre_exit(upload_flush_timeout);
-        let turn_end_uploads = if wait_for_uploads {
-            TurnEndUploads::Wait {
-                budget: upload_flush_timeout,
-            }
-        } else {
-            TurnEndUploads::Background
-        };
         let (model_tx, model_rx) = oneshot::channel();
         let _ = handle
             .cmd_tx
@@ -1195,131 +1179,7 @@ impl acp::Agent for MvpAgent {
             .and_then(|m| m.get("sendNow"))
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-        let mut before_upload_handles: Vec<tokio::task::JoinHandle<()>> = Vec::new();
-        if let Some(ctx) = trace_context.clone() {
-            let (tx, parsed_prompt_rx) = oneshot::channel::<ParsedPromptInfo>();
-            parsed_prompt_tx = Some(tx);
-            let auth = self.auth_manager.current();
-            let user_id = auth.as_ref().map(|a| a.user_id.clone());
-            let team_id = auth.as_ref().and_then(|a| a.team_id.clone());
-            let user_email = auth.and_then(|a| a.email);
-            let init_meta = self
-                .initialize_request
-                .get()
-                .and_then(|req| req.meta.as_ref());
-            let client_source = init_meta
-                .and_then(|meta| {
-                    meta
-                        .get("clientSource")
-                        .or_else(|| meta.get("clientType"))
-                        .or_else(|| meta.get("clientIdentifier"))
-                })
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-            let client_version = init_meta
-                .and_then(|meta| meta.get("clientVersion"))
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .or_else(|| self.cfg.borrow().client_version.clone());
-            let plugin_registry = self.plugin_registry_snapshot();
-            let prompt_images: Vec<agent_client_protocol::ImageContent> = arguments
-                .prompt
-                .iter()
-                .filter_map(|block| {
-                    if let agent_client_protocol::ContentBlock::Image(img) = block {
-                        Some(img.clone())
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            let mut prompt_metadata = PromptMetadata::new(PromptMetadataParams {
-                schema_version: GCS_SCHEMA_VERSION.to_string(),
-                session_id: ctx.session_info.id.0.to_string(),
-                turn_number: ctx.turn_number,
-                request_id: prompt_id.clone(),
-                turn_started_at: turn_started_at.clone(),
-                user_id,
-                user_email,
-                team_id,
-                client_source,
-                client_version,
-                model: model.to_owned(),
-                reasoning_effort: ctx
-                    .session_handle
-                    .reasoning_effort
-                    .map(|e| e.as_ref().to_string()),
-                experiment_id: None,
-                host_os: std::env::consts::OS.to_string(),
-                host_arch: std::env::consts::ARCH.to_string(),
-                prompt_has_image: Some(!prompt_images.is_empty()),
-                prompt_was_truncated: Some(false),
-                prompt_verbatim: if verbatim { Some(true) } else { None },
-                cwd: Some(ctx.session_info.cwd.clone()),
-                agent_type: Some(ctx.session_handle.agent_name.clone()),
-                shell_version: Some(xai_grok_version::VERSION.to_string()),
-                sandbox: local_sandbox_telemetry(),
-                ..Default::default()
-            });
-            prompt_metadata.attempt_id = ctx.attempt_id.clone();
-            let (session_copy_tx, session_copy_rx) = oneshot::channel();
-            let copy_sent = ctx
-                .session_handle
-                .cmd_tx
-                .send(SessionCommand::CopyFile {
-                    respond_to: session_copy_tx,
-                })
-                .is_ok();
-            if !copy_sent {
-                tracing::warn!(
-                    session_id = %ctx.session_info.id.0,
-                    turn_number = ctx.turn_number,
-                    "Failed to send CopyFile command, skipping session state upload"
-                );
-            }
-            before_upload_handles
-                .push(
-                    spawn_upload_task(
-                        "prompt_metadata",
-                        {
-                            let ctx = ctx.clone();
-                            async move {
-                                if let Ok(Ok(info)) = tokio::time::timeout(
-                                        crate::session::commands::PARSED_PROMPT_WAIT,
-                                        parsed_prompt_rx,
-                                    )
-                                    .await && !info.text.is_empty()
-                                {
-                                    prompt_metadata.prompt_was_truncated = Some(
-                                        info.full_text.is_some(),
-                                    );
-                                    if let Some(full_text) = &info.full_text {
-                                        upload_full_prompt_txt(&ctx, full_text, UploadWait::Confirm)
-                                            .await;
-                                    }
-                                }
-                                upload_metadata(&ctx, prompt_metadata, UploadWait::Confirm)
-                                    .await;
-                            }
-                        },
-                    ),
-                );
-            before_upload_handles
-                .push(
-                    spawn_upload_task(
-                        "before_uploads",
-                        async move {
-                            let before_workspace_fut = async {};
-                            futures::join!(
-                    upload_session_state(&ctx, "before", session_copy_rx, UploadWait::Confirm),
-                    before_workspace_fut,
-                    upload_images(&ctx, &prompt_images),
-                    upload_plugin_state(&ctx, plugin_registry.as_deref()),
-                );
-                        },
-                    ),
-                );
-        }
+
         let next_trace_turn = self
             .session_turn_number(&arguments.session_id)
             .unwrap_or_else(|| turn_number.saturating_add(1));
@@ -1372,9 +1232,6 @@ impl acp::Agent for MvpAgent {
             }
         };
         let prompt_blocks = arguments.prompt.clone();
-        let artifact_upload_ctx = trace_context
-            .as_ref()
-            .map(|ctx| ctx.artifact_upload_context());
         let traceparent = xai_grok_telemetry::current_traceparent();
         let dispatch_result: Result<(), acp::Error> = if send_now {
             handle
@@ -1383,7 +1240,6 @@ impl acp::Agent for MvpAgent {
                     prompt_id: prompt_id.clone(),
                     prompt_blocks,
                     prompt_mode,
-                    artifact_upload_ctx,
                     client_identifier: prompt_client_identifier,
                     screen_mode: prompt_screen_mode,
                     verbatim,
@@ -1407,7 +1263,6 @@ impl acp::Agent for MvpAgent {
                 crate::session::message_delivery::HumanPromptContent {
                     prompt_blocks,
                     prompt_mode,
-                    artifact_upload_ctx,
                     client_identifier: prompt_client_identifier,
                     screen_mode: prompt_screen_mode,
                     verbatim,
@@ -1460,9 +1315,8 @@ impl acp::Agent for MvpAgent {
             &stop_result,
             Ok(ok) if matches!(ok.completion_kind, crate::session::commands::PromptCompletionKind::RemovedFromQueue)
         );
-        let capture = trace_context.is_some() && !removed_from_queue
-            && stop_result.is_ok();
-        let turn_end_capture: Option<TurnEndCapture> = capture
+        let turn_end_capture: Option<TurnEndCapture> = (!removed_from_queue
+            && stop_result.is_ok())
             .then(|| TurnEndCapture::begin(&handle, handle.info.cwd.clone()));
         let finalize_span = region!("prompt.finalize", Parent::Inherit);
         let turn_usage_span = region!("finalize.turn_usage", Parent::Explicit(finalize_span.span()));
@@ -1503,7 +1357,6 @@ impl acp::Agent for MvpAgent {
                     .meta(meta.as_object().cloned()),
             );
         }
-        let resolved_model = handle.get_model_metadata().await.resolved_model_id;
         let cancel_trigger: Option<String> = stop_result
             .as_ref()
             .ok()
@@ -1567,163 +1420,41 @@ impl acp::Agent for MvpAgent {
             };
             self.push_roster_activity_delta(&arguments.session_id, end_activity);
         }
-        let harness_trace_turns = {
+        // Drain the harness trace buffer so it cannot grow unbounded now that
+        // trace uploads are removed.
+        {
             let (tx, rx) = oneshot::channel();
-            if handle
+            let _ = handle
                 .cmd_tx
                 .send(SessionCommand::TakeHarnessTraceTurns {
                     respond_to: tx,
-                })
-                .is_ok()
-            {
-                rx.await.ok().unwrap_or_default()
-            } else {
-                Vec::new()
-            }
-        };
-        if trace_context.is_some() && !harness_trace_turns.is_empty() {
-            self.upload_harness_trace_turns(
-                    &arguments.session_id,
-                    &handle.info,
-                    &handle.cmd_tx,
-                    &model,
-                    harness_trace_turns,
-                )
-                .await;
+                });
+            let _ = rx.await;
         }
         match stop_result {
             Ok(turn_ok) => {
                 let crate::session::commands::PromptTurnOk {
                     stop_reason,
                     total_tokens,
-                    turn_snapshot,
                     completion_kind,
                     structured_output,
                     usage: prompt_usage,
-                    tool_overrides: _,
+                    ..
                 } = turn_ok;
-                let subagent_refs = self
-                    .spawned_subagent_refs_for_prompt(
-                        arguments.session_id.0.as_ref(),
-                        &prompt_id,
-                    )
-                    .await;
-                let permission_events = self
-                    .collect_permission_events(&arguments.session_id);
-                let turn_messages: Option<xai_chat_state::TurnCapture> = {
-                    let (tx, rx) = oneshot::channel();
-                    if handle
-                        .cmd_tx
-                        .send(SessionCommand::TakeTurnMessages {
-                            respond_to: tx,
-                        })
-                        .is_ok()
-                    {
-                        rx.await.ok().flatten()
-                    } else {
-                        None
-                    }
-                };
-                let streaming_partial = crate::upload::turn::take_streaming_partial(
-                        &handle.cmd_tx,
-                        prompt_id.clone(),
-                        crate::upload::turn::stop_reason_commits_turn(stop_reason),
-                        Some(model.clone()),
-                    )
-                    .await
-                    .map(|mut cap| {
-                        cap.reason
-                            .get_or_insert_with(|| match &completion_kind {
-                                crate::session::commands::PromptCompletionKind::Cancelled {
-                                    category,
-                                    ..
-                                } => {
-                                    match category {
-                                        Some(cat) => format!("cancelled:{cat:?}"),
-                                        None => "cancelled".to_string(),
-                                    }
-                                }
-                                _ => "non_completed".to_string(),
-                            });
-                        cap
+                if let Some(cap) = turn_end_capture {
+                    let (head, head_branch, registry_claim) = cap.finish().await;
+                    let registry = self.build_registry_turn_end_args(
+                        &arguments.session_id,
+                        turn_number,
+                        &handle,
+                        &arguments.prompt,
+                        registry_claim,
+                        head,
+                        head_branch,
+                    );
+                    tokio::task::spawn(async move {
+                        run_registry_turn_end(registry).await;
                     });
-                if let Some(ctx) = trace_context && let Some(cap) = turn_end_capture {
-                    let (head, head_branch, registry_claim, session_copy_rx) = cap
-                        .finish()
-                        .await;
-                    let turn_result = TurnResultArgs {
-                        request_id: prompt_id.clone(),
-                        completed: crate::upload::turn::stop_reason_commits_turn(
-                            stop_reason,
-                        ),
-                        stop_reason: format!("{stop_reason:?}"),
-                        total_tokens: Some(total_tokens),
-                        error: None,
-                        finished_at: chrono::Utc::now().to_rfc3339(),
-                        turn_snapshot,
-                        prompt_mode: prompt_mode.to_string(),
-                        subagents_spawned: subagent_refs,
-                    };
-                    let registry = self
-                        .build_registry_turn_end_args(
-                            &arguments.session_id,
-                            turn_number,
-                            &handle,
-                            &arguments.prompt,
-                            registry_claim,
-                            head,
-                            head_branch,
-                        );
-                    let captures = TraceCaptures {
-                        permission_events,
-                        session_copy_rx,
-                        turn_messages,
-                        streaming_partial,
-                    };
-                    match turn_end_uploads {
-                        TurnEndUploads::Wait { budget } => {
-                            let deadline = tokio::time::Instant::now() + budget;
-                            for handle in std::mem::take(&mut before_upload_handles) {
-                                let _ = tokio::time::timeout_at(deadline, handle).await;
-                            }
-                            let wait = UploadWait::Defer { deadline };
-                            let (archive_confirmed_tx, archive_confirmed_rx) = oneshot::channel();
-                            spawn_linked_upload_task(
-                                "turn_end.registry",
-                                &prompt_id,
-                                &arguments.session_id.0,
-                                run_registry_turn_end(registry, archive_confirmed_rx),
-                            );
-                            let result = turn_result.into_metadata(resolved_model);
-                            upload_turn_result(&ctx, &result, wait)
-                                .instrument(
-                                    tracing::debug_span!("turn_end.turn_result_upload"),
-                                )
-                                .await;
-                            let confirmed = run_trace_completion(&ctx, captures, wait)
-                                .instrument(
-                                    tracing::debug_span!("turn_end.trace_completion"),
-                                )
-                                .await;
-                            let _ = archive_confirmed_tx.send(confirmed);
-                        }
-                        TurnEndUploads::Background => {
-                            spawn_linked_upload_task(
-                                "turn_end.finalize_detached",
-                                &prompt_id,
-                                &arguments.session_id.0,
-                                run_detached_turn_end(
-                                    ctx,
-                                    turn_result,
-                                    resolved_model,
-                                    TurnEndOutcome::Completed {
-                                        captures,
-                                        registry: Box::new(registry),
-                                    },
-                                ),
-                            );
-                        }
-                    }
                 }
                 let last_turn_usage = last_turn_usage_for_meta;
                 Ok(
@@ -1749,91 +1480,6 @@ impl acp::Agent for MvpAgent {
                 )
             }
             Err(err) => {
-                let subagent_refs = self
-                    .spawned_subagent_refs_for_prompt(
-                        arguments.session_id.0.as_ref(),
-                        &prompt_id,
-                    )
-                    .await;
-                let turn_messages: Option<xai_chat_state::TurnCapture> = {
-                    let (tx, rx) = oneshot::channel();
-                    if handle
-                        .cmd_tx
-                        .send(SessionCommand::TakeTurnMessages {
-                            respond_to: tx,
-                        })
-                        .is_ok()
-                    {
-                        rx.await.ok().flatten()
-                    } else {
-                        None
-                    }
-                };
-                let err_kind_str = format!("{:?}", err.code);
-                let streaming_partial = crate::upload::turn::take_streaming_partial(
-                        &handle.cmd_tx,
-                        prompt_id.clone(),
-                        false,
-                        Some(model.clone()),
-                    )
-                    .await
-                    .map(|mut cap| {
-                        cap.reason = Some(format!("sampler_error:{err_kind_str}"));
-                        cap
-                    });
-                if let Some(ctx) = trace_context {
-                    let turn_result = TurnResultArgs {
-                        request_id: prompt_id.clone(),
-                        completed: false,
-                        stop_reason: crate::sampling::error::stop_reason_for_turn_error(
-                                &err,
-                            )
-                            .to_string(),
-                        total_tokens: None,
-                        error: Some(format!("{err:?}")),
-                        finished_at: chrono::Utc::now().to_rfc3339(),
-                        turn_snapshot: None,
-                        prompt_mode: prompt_mode.to_string(),
-                        subagents_spawned: subagent_refs,
-                    };
-                    let artifacts = ErrorTurnArtifacts {
-                        turn_messages,
-                        streaming_partial,
-                        upload_unified: matches!(
-                            crate::sampling::error::http_status_from_error(&err),
-                            Some(401 | 404),
-                        ),
-                    };
-                    match turn_end_uploads {
-                        TurnEndUploads::Wait { budget } => {
-                            let deadline = tokio::time::Instant::now() + budget;
-                            for handle in std::mem::take(&mut before_upload_handles) {
-                                let _ = tokio::time::timeout_at(deadline, handle).await;
-                            }
-                            let result = turn_result.into_metadata(resolved_model);
-                            upload_error_turn_artifacts(
-                                    &ctx,
-                                    &result,
-                                    artifacts,
-                                    UploadWait::Defer { deadline },
-                                )
-                                .await;
-                        }
-                        TurnEndUploads::Background => {
-                            spawn_linked_upload_task(
-                                "turn_end.finalize_detached_error",
-                                &prompt_id,
-                                &arguments.session_id.0,
-                                run_detached_turn_end(
-                                    ctx,
-                                    turn_result,
-                                    resolved_model,
-                                    TurnEndOutcome::Failed(artifacts),
-                                ),
-                            );
-                        }
-                    }
-                }
                 let err = if crate::sampling::error::prompt_usage_from_error(&err)
                     .is_some()
                 {

@@ -710,7 +710,7 @@ pub(super) async fn run_session(
                         SessionCommand::SetToolOverrides { overrides } => {
                             session.set_tool_overrides(overrides);
                         }
-                        SessionCommand::Prompt { prompt_id, prompt_blocks, prompt_mode, artifact_upload_ctx, client_identifier, screen_mode, verbatim, traceparent, json_schema, send_now, admission, tool_overrides_update, respond_to, prompt_admitted, persist_ack, parsed_prompt_tx } => {
+                        SessionCommand::Prompt { prompt_id, prompt_blocks, prompt_mode, client_identifier, screen_mode, verbatim, traceparent, json_schema, send_now, admission, tool_overrides_update, respond_to, prompt_admitted, persist_ack, parsed_prompt_tx } => {
                             let origin = super::PromptOrigin::from_prompt_id(&prompt_id);
                             let (actor_admitted, task_wake_fallback) = match admission {
                                 Some(admission) => {
@@ -765,18 +765,12 @@ pub(super) async fn run_session(
                                     "auto-wake: session actor received synthetic prompt"
                                 );
                             }
-                            let (trace_gcs_config, artifact_tracker) = match artifact_upload_ctx {
-                                Some(tu) => (Some(tu.gcs_config), Some(tu.artifact_tracker)),
-                                None => (None, None),
-                            };
                             let cancel_for_send_now = session
                                 .queue_input(QueueInputRequest {
                                     prompt_blocks,
                                     prompt_id,
                                     input_origin: InputOrigin::new(origin),
                                     prompt_mode,
-                                    trace_gcs_config,
-                                    artifact_tracker,
                                     client_identifier,
                                     screen_mode,
                                     verbatim,
@@ -2036,8 +2030,6 @@ pub(super) async fn run_session(
                                     prompt_id,
                                     prompt_blocks,
                                     prompt_mode: crate::session::plan_mode::PromptMode::Agent,
-                                    trace_gcs_config: None,
-                                    artifact_tracker: None,
                                     client_identifier: None,
                                     screen_mode: None,
                                     verbatim: true,
@@ -2093,8 +2085,6 @@ pub(super) async fn run_session(
                                     prompt_id,
                                     prompt_blocks: vec![acp::ContentBlock::Text(acp::TextContent::new(prompt_text))],
                                     prompt_mode: crate::session::plan_mode::PromptMode::Agent,
-                                    trace_gcs_config: None,
-                                    artifact_tracker: None,
                                     client_identifier: None,
                                     screen_mode: None,
                                     verbatim: true,

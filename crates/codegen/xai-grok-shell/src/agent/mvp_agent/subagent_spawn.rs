@@ -6,8 +6,6 @@
 //! - `start_subagent_coordinator`: takes the event receiver and presentation state and starts the coordinator via `spawn_subagent_coordinator`.
 //! - `build_subagent_validation_context` and `try_build_subagent_spawn_context`: snapshot config and the parent handle for the child.
 use super::*;
-use crate::agent::config::TraceUploadEndpoints;
-use crate::session::repo_changes::UploadMethod;
 impl MvpAgent {
     /// Starts the shared coordinator actor; idempotent.
     /// Takes the event receiver and the concurrency limits off private state and passes them to `spawn_subagent_coordinator`.
@@ -22,23 +20,6 @@ impl MvpAgent {
             behavior: self.cfg.borrow().subagents_limit_behavior,
         };
         crate::agent::subagent::spawn_subagent_coordinator(agent_ref.clone(), rx, limits);
-        let (trace_tx, mut trace_rx) = tokio::sync::mpsc::unbounded_channel::<
-            crate::upload::turn::SyntheticTurnTraceRequest,
-        >();
-        self.subagent_presentation.borrow_mut().synthetic_trace_tx = Some(trace_tx);
-        tokio::task::spawn_local({
-            let agent_ref = agent_ref.clone();
-            async move {
-                while let Some(request) = trace_rx.recv().await {
-                    tokio::task::spawn_local({
-                        let agent_ref = agent_ref.clone();
-                        async move {
-                            handle_synthetic_turn_trace(agent_ref, request).await;
-                        }
-                    });
-                }
-            }
-        });
     }
     /// Lightweight context for the `SubagentEvent::ValidateType` drain arm.
     /// Tolerates an evicted parent session: returns built-in defaults and warns.
@@ -208,25 +189,6 @@ impl MvpAgent {
             .as_ref()
             .map(|h| h.non_interactive)
             .unwrap_or(false);
-        let (gcs_upload_method, gcs_bucket_url) = match self.trace_upload_config_snapshot() {
-            Some(method) => {
-                let bucket = match &method {
-                    UploadMethod::Direct { .. } => self
-                        .cfg
-                        .borrow()
-                        .endpoints
-                        .resolve_trace_bucket_url()
-                        .map(|r| r.value),
-                    UploadMethod::Proxy { .. } => Some("proxy-managed".to_string()),
-                    UploadMethod::S3 { bucket, .. } => Some(format!("file://{bucket}")),
-                };
-                match bucket {
-                    Some(url) => (Some(method), Some(url)),
-                    None => (None, None),
-                }
-            }
-            None => (None, None),
-        };
         let project_trusted = crate::agent::folder_trust::project_scope_allowed(&parent_cwd);
         let (base_roles, base_personas, subagent_model_overrides, subagent_toggle) = {
             let cfg = self.cfg.borrow();
@@ -365,9 +327,7 @@ impl MvpAgent {
                     None
                 }
             },
-            gcs_bucket_url,
             agent_config: Some(self.cfg.borrow().clone()),
-            gcs_upload_method,
             hook_registry: parent_hook_registry,
             permission_handle: parent_handle.as_ref().map(|h| h.permission_handle.clone()),
             worktree_type: self.worktree_type,
@@ -392,9 +352,6 @@ impl MvpAgent {
             parent_skills_config: self.cfg.borrow().skills.clone(),
             parent_compat: self.cfg.borrow().compat_resolved,
             parent_paths_config: self.cfg.borrow().paths.clone(),
-            synthetic_trace_tx: parent_handle
-                .as_ref()
-                .and_then(|h| h.tool_context.synthetic_trace_tx.clone()),
             task_output_tool_name: parent_handle
                 .as_ref()
                 .map(|h| h.tool_context.task_output_tool_name.clone())

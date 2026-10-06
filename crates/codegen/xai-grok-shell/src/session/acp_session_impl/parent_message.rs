@@ -213,8 +213,6 @@ impl PendingParentAgentMessage {
             prompt_id: self.prompt_id,
             prompt_blocks,
             prompt_mode: PromptMode::Agent,
-            trace_gcs_config: None,
-            artifact_tracker: None,
             client_identifier: None,
             screen_mode: None,
             verbatim: matches!(origin.source, ActiveAgentMessageSource::Human),

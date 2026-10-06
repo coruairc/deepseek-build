@@ -1454,7 +1454,6 @@ pub async fn run_single_turn(
     } else {
         None
     };
-    xai_grok_shell::upload::drain_pending_uploads_at_exit().await;
     if let Some(err) = emitter.take_output_error() {
         return Err(anyhow::Error::new(err).context("headless: stdout write failed"));
     }

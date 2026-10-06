@@ -8,18 +8,6 @@ pub use xai_grok_sampling_types::conversation::*;
 #[path = "conversation_tests.rs"]
 mod tests;
 
-/// Tracing context for conversation requests; satisfies `TraceContext` through its blanket impl.
-/// Lives in grok-shell because it references shell-internal config and upload types.
-#[derive(Debug, Clone)]
-pub struct ConversationRequestTrace {
-    pub gcs_config: crate::session::repo_changes::TraceExportConfig,
-    #[expect(
-        dead_code,
-        reason = "retained for snapshot compat; wire when sampler path uploads traces"
-    )]
-    pub(crate) artifact_tracker: Option<crate::upload::manifest::ArtifactTracker>,
-}
-
 /// Filters chat history copied into a fork. Drops synthetic user messages, then truncates at the last complete turn so the child never sees a partial one.
 /// A turn is complete when the Assistant's tool calls are all answered; Reasoning and BackendToolCall items are transparent to the scan.
 /// Keep the "complete turn" definition in sync with `count_complete_turns` in `xai-grok-subagent-resolution/src/context.rs`.

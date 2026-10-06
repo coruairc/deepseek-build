@@ -38,9 +38,6 @@ where
         _ = tokio::time::sleep(timeout) => InitialChildPromptReadiness::TimedOut,
     }
 }
-pub(super) fn subagent_trace_prefix(session_id: &str, turn_number: u64) -> String {
-    format!("{session_id}/turn_{turn_number}")
-}
 pub(super) struct OneTurnAttemptInput<'a> {
     pub child_handle: &'a SessionHandle,
     pub request: &'a SubagentRequest,
@@ -48,8 +45,6 @@ pub(super) struct OneTurnAttemptInput<'a> {
     pub task_prompt_text: &'a str,
     pub prompt_id: String,
     pub inherited_tool_overrides: Option<xai_grok_sampling_types::ToolOverrides>,
-    pub gcs_bucket_url: Option<&'a str>,
-    pub gcs_upload_method: Option<&'a crate::session::repo_changes::UploadMethod>,
     pub turn_number: u64,
     pub cancel_token: CancellationToken,
     pub child_run_started_at: std::time::Instant,
@@ -58,12 +53,8 @@ pub(super) struct OneTurnAttemptInput<'a> {
     pub initial_attempt_behavior: InitialAttemptBehavior,
 }
 pub(super) struct OneTurnTraceCapture {
-    pub before_copy_rx:
-        oneshot::Receiver<anyhow::Result<crate::session::persistence::SessionStateCopy>>,
     pub child_prompt_id: String,
-    pub turn_started_at: String,
     pub turn_token_totals: Option<(u64, u64, u64)>,
-    pub turn_number: u64,
 }
 pub(super) struct OneTurnAttemptOutcome {
     pub result: SubagentResult,
@@ -81,10 +72,6 @@ pub(super) struct OneTurnUsageInput<'a> {
 pub(super) async fn run_one_turn_attempt(
     mut input: OneTurnAttemptInput<'_>,
 ) -> OneTurnAttemptOutcome {
-    let (before_copy_tx, before_copy_rx) = oneshot::channel();
-    let _ = input.child_handle.cmd_tx.send(SessionCommand::CopyFile {
-        respond_to: before_copy_tx,
-    });
     if let Some(overrides) = input.inherited_tool_overrides.take() {
         let _ = input
             .child_handle
@@ -103,42 +90,19 @@ pub(super) async fn run_one_turn_attempt(
                 ..base_result(input.request, input.worktree_path, 0, 1, 0)
             },
             trace: OneTurnTraceCapture {
-                before_copy_rx,
                 child_prompt_id: input.prompt_id,
-                turn_started_at: chrono::Utc::now().to_rfc3339(),
                 turn_token_totals: None,
-                turn_number: input.turn_number,
             },
             cancellation_may_hide_usage: false,
         };
     }
     let child_prompt_id = input.prompt_id;
-    let turn_started_at = chrono::Utc::now().to_rfc3339();
     let _ = input.child_handle.cmd_tx.send(SessionCommand::Prompt {
         prompt_id: child_prompt_id.clone(),
         prompt_blocks: vec![acp::ContentBlock::Text(acp::TextContent::new(
             input.task_prompt_text.to_owned(),
         ))],
         prompt_mode: crate::session::plan_mode::PromptMode::Agent,
-        artifact_upload_ctx: input.gcs_bucket_url.and_then(|_| {
-            input
-                .gcs_upload_method
-                .map(|method| crate::upload::manifest::ArtifactUploadContext {
-                    gcs_config: crate::session::repo_changes::TraceExportConfig {
-                        bucket_url: input.gcs_bucket_url.map(str::to_owned),
-                        service_account_key: None,
-                        prefix_dir: None,
-                        gcs_prefix: Some(subagent_trace_prefix(
-                            &input.request.id,
-                            input.turn_number,
-                        )),
-                        absolute_paths: false,
-                        archive_name_override: None,
-                        upload_method: method.clone(),
-                    },
-                    artifact_tracker: crate::upload::manifest::new_artifact_tracker(),
-                })
-        }),
         client_identifier: None,
         screen_mode: None,
         verbatim: true,
@@ -271,11 +235,8 @@ pub(super) async fn run_one_turn_attempt(
     OneTurnAttemptOutcome {
         result,
         trace: OneTurnTraceCapture {
-            before_copy_rx,
             child_prompt_id,
-            turn_started_at,
             turn_token_totals,
-            turn_number: input.turn_number,
         },
         cancellation_may_hide_usage,
     }
@@ -362,16 +323,6 @@ pub(super) async fn capture_and_fold_one_turn_usage(
         incomplete,
     )
     .await
-}
-#[cfg(test)]
-mod trace_turn_tests {
-    use super::subagent_trace_prefix;
-    #[test]
-    fn child_attempts_use_toolbox_discoverable_turn_paths() {
-        assert_eq!(subagent_trace_prefix("child", 0), "child/turn_0");
-        assert_eq!(subagent_trace_prefix("child", 1), "child/turn_1");
-        assert_eq!(subagent_trace_prefix("child", 2), "child/turn_2");
-    }
 }
 fn base_result(
     request: &SubagentRequest,

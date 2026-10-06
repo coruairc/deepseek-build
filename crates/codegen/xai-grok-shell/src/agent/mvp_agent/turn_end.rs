@@ -5,45 +5,6 @@ use crate::agent::session_registry_client::SessionRegistryClient;
 use crate::agent::session_registry_client::UpdateRequest;
 use tracing::Instrument;
 
-pub(super) struct TurnResultArgs {
-    pub(super) request_id: String,
-    pub(super) completed: bool,
-    pub(super) stop_reason: String,
-    pub(super) total_tokens: Option<u64>,
-    pub(super) error: Option<String>,
-    pub(super) finished_at: String,
-    pub(super) turn_snapshot: Option<crate::session::signals::TurnDeltaSnapshot>,
-    pub(super) prompt_mode: String,
-    pub(super) subagents_spawned: Vec<crate::upload::trace::SubagentSpawnedRef>,
-}
-
-impl TurnResultArgs {
-    pub(super) fn into_metadata(self, resolved_model: Option<String>) -> TurnResultMetadata {
-        let snapshot = self.turn_snapshot;
-        TurnResultMetadata {
-            schema_version: GCS_SCHEMA_VERSION,
-            request_id: self.request_id,
-            completed: self.completed,
-            stop_reason: Some(self.stop_reason),
-            total_tokens: self.total_tokens,
-            input_tokens: snapshot.as_ref().map(|s| s.turn_input_tokens),
-            cached_input_tokens: snapshot.as_ref().map(|s| s.turn_cached_input_tokens),
-            output_tokens: snapshot.as_ref().map(|s| s.turn_output_tokens),
-            error: self.error,
-            finished_at: self.finished_at,
-            signals: snapshot.as_ref().map(|s| s.current.clone()),
-            turn_delta: snapshot.as_ref().map(|s| s.delta.clone()),
-            start_prompt_mode: snapshot
-                .as_ref()
-                .and_then(|s| s.start_prompt_mode.clone())
-                .or(Some(self.prompt_mode)),
-            end_prompt_mode: snapshot.as_ref().and_then(|s| s.end_prompt_mode.clone()),
-            resolved_model,
-            subagents_spawned: self.subagents_spawned,
-        }
-    }
-}
-
 struct SessionRegistration {
     model_id: String,
     hostname: String,
@@ -182,31 +143,17 @@ async fn sample_git_head(cwd: &str) -> (GitRead, Option<String>) {
 pub(super) struct TurnEndCapture {
     registry_claim: crate::session::handle::RegistryTurnClaim,
     git_sample: tokio_util::task::AbortOnDropHandle<(GitRead, Option<String>)>,
-    session_copy_rx:
-        oneshot::Receiver<anyhow::Result<crate::session::persistence::SessionStateCopy>>,
 }
 
 impl TurnEndCapture {
     pub(super) fn begin(handle: &SessionHandle, head_cwd: String) -> Self {
         let registry_claim = handle.registry_write_order.begin_turn_end();
-        // Enqueue CopyFile before any await so the actor snapshots this turn.
-        let (session_copy_tx, session_copy_rx) = oneshot::channel();
-        if handle
-            .cmd_tx
-            .send(crate::session::SessionCommand::CopyFile {
-                respond_to: session_copy_tx,
-            })
-            .is_err()
-        {
-            tracing::warn!("Failed to send CopyFile command, skipping session state upload");
-        }
         let git_sample = tokio_util::task::AbortOnDropHandle::new(tokio::spawn(async move {
             sample_git_head(&head_cwd).await
         }));
         Self {
             registry_claim,
             git_sample,
-            session_copy_rx,
         }
     }
 
@@ -216,10 +163,9 @@ impl TurnEndCapture {
         GitRead,
         Option<String>,
         crate::session::handle::RegistryTurnClaim,
-        oneshot::Receiver<anyhow::Result<crate::session::persistence::SessionStateCopy>>,
     ) {
         let (head, head_branch) = self.git_sample.await.unwrap_or((GitRead::Failed, None));
-        (head, head_branch, self.registry_claim, self.session_copy_rx)
+        (head, head_branch, self.registry_claim)
     }
 }
 
@@ -352,30 +298,6 @@ async fn advance_last_turn(
     }
 }
 
-async fn advance_restorable_turn(
-    client: &SessionRegistryClient,
-    session_id: &str,
-    turn: i32,
-) -> bool {
-    let req = UpdateRequest {
-        summary: None,
-        first_prompt: None,
-        last_turn_number: None,
-        repo_head_at_end: None,
-        restorable_turn_number: Some(turn),
-    };
-    match bounded_registry(client.update(session_id, &req)).await {
-        Ok(_) => true,
-        Err(e) => {
-            tracing::warn!(
-                error = %e,
-                "session registry restorable_turn_number update failed (non-fatal)"
-            );
-            false
-        }
-    }
-}
-
 struct OrderedTurnWrites {
     client: Option<SessionRegistryClient>,
     session_id: String,
@@ -422,24 +344,9 @@ impl OrderedTurnWrites {
             self.order.commit_last_turn(self.turn);
         }
     }
-
-    async fn write_restorable(&self) {
-        let Some(client) = self.client.as_ref() else {
-            return;
-        };
-        let _apply = self.order.lock_restorable_apply().await;
-        if self.order.should_write_restorable(self.turn)
-            && advance_restorable_turn(client, &self.session_id, self.turn).await
-        {
-            self.order.commit_restorable(self.turn);
-        }
-    }
 }
 
-pub(super) async fn run_registry_turn_end(
-    args: RegistryTurnEndArgs,
-    archive_confirmed: oneshot::Receiver<bool>,
-) {
+pub(super) async fn run_registry_turn_end(args: RegistryTurnEndArgs) {
     let RegistryTurnEndArgs {
         client,
         session_id,
@@ -470,135 +377,6 @@ pub(super) async fn run_registry_turn_end(
     writes.write_register().await;
     writes.write_last_turn(repo_head_at_end).await;
     drop(claim);
-    if let Ok(true) = archive_confirmed.await {
-        writes.write_restorable().await;
-    }
-}
-
-pub(super) struct TraceCaptures {
-    pub(super) permission_events: Vec<PermissionEvent>,
-    pub(super) session_copy_rx:
-        oneshot::Receiver<anyhow::Result<crate::session::persistence::SessionStateCopy>>,
-    pub(super) turn_messages: Option<xai_chat_state::TurnCapture>,
-    pub(super) streaming_partial: Option<crate::session::acp_session::StreamingTurnCapture>,
-}
-
-pub(super) async fn run_trace_completion(
-    ctx: &PromptTraceContext,
-    captures: TraceCaptures,
-    wait: UploadWait,
-) -> bool {
-    let TraceCaptures {
-        permission_events,
-        session_copy_rx,
-        turn_messages,
-        streaming_partial,
-    } = captures;
-    match complete_prompt_trace(
-        ctx.clone(),
-        permission_events,
-        session_copy_rx,
-        turn_messages.into(),
-        streaming_partial,
-        wait,
-    )
-    .await
-    {
-        Ok(true) => true,
-        Ok(false) => {
-            match wait {
-                UploadWait::Defer { .. } => tracing::debug!(
-                    "session state unconfirmed within the flush budget; \
-                     skipping restorable_turn_number advance"
-                ),
-                UploadWait::Confirm => tracing::warn!(
-                    "session state upload failed; skipping restorable_turn_number advance"
-                ),
-            }
-            false
-        }
-        Err(e) => {
-            tracing::warn!("Failed to complete prompt trace: {e:?}");
-            match wait {
-                UploadWait::Confirm => write_error_manifest(ctx).await,
-                UploadWait::Defer { deadline } => {
-                    crate::upload::trace::flush_then_write_error_manifest(ctx, deadline).await
-                }
-            }
-            false
-        }
-    }
-}
-
-pub(super) struct ErrorTurnArtifacts {
-    pub(super) turn_messages: Option<xai_chat_state::TurnCapture>,
-    pub(super) streaming_partial: Option<crate::session::acp_session::StreamingTurnCapture>,
-    pub(super) upload_unified: bool,
-}
-
-pub(super) async fn upload_error_turn_artifacts(
-    ctx: &PromptTraceContext,
-    result: &TurnResultMetadata,
-    artifacts: ErrorTurnArtifacts,
-    wait: UploadWait,
-) {
-    let ErrorTurnArtifacts {
-        turn_messages,
-        streaming_partial,
-        upload_unified,
-    } = artifacts;
-    upload_turn_result(ctx, result, wait).await;
-    if let Some(capture) = turn_messages {
-        upload_turn_messages(ctx, capture, wait).await;
-    }
-    if let Some(ref capture) = streaming_partial {
-        crate::upload::trace::upload_streaming_partial(ctx, capture, wait).await;
-    }
-    if upload_unified {
-        upload_unified_log(ctx, wait).await;
-    }
-    match wait {
-        UploadWait::Confirm => write_error_manifest(ctx).await,
-        UploadWait::Defer { deadline } => {
-            crate::upload::trace::flush_then_write_error_manifest(ctx, deadline).await
-        }
-    }
-}
-
-pub(super) enum TurnEndOutcome {
-    Completed {
-        captures: TraceCaptures,
-        registry: Box<RegistryTurnEndArgs>,
-    },
-    Failed(ErrorTurnArtifacts),
-}
-
-pub(super) async fn run_detached_turn_end(
-    ctx: PromptTraceContext,
-    turn_result: TurnResultArgs,
-    resolved_model: Option<String>,
-    outcome: TurnEndOutcome,
-) {
-    let result = turn_result.into_metadata(resolved_model);
-    match outcome {
-        TurnEndOutcome::Completed { captures, registry } => {
-            let (archive_confirmed_tx, archive_confirmed_rx) = oneshot::channel();
-            futures::join!(
-                upload_turn_result(&ctx, &result, UploadWait::Confirm)
-                    .instrument(tracing::debug_span!("turn_end.turn_result_upload")),
-                run_registry_turn_end(*registry, archive_confirmed_rx)
-                    .instrument(tracing::debug_span!("turn_end.registry")),
-                async {
-                    let confirmed = run_trace_completion(&ctx, captures, UploadWait::Confirm).await;
-                    let _ = archive_confirmed_tx.send(confirmed);
-                }
-                .instrument(tracing::debug_span!("turn_end.trace_completion")),
-            );
-        }
-        TurnEndOutcome::Failed(artifacts) => {
-            upload_error_turn_artifacts(&ctx, &result, artifacts, UploadWait::Confirm).await;
-        }
-    }
 }
 
 #[cfg(test)]
@@ -764,13 +542,7 @@ mod tests {
         }
 
         async fn end_turn(&self, turn: u64) {
-            run_turn_end(self.turn_end_args(turn)).await;
+            super::run_registry_turn_end(self.turn_end_args(turn)).await;
         }
-    }
-
-    async fn run_turn_end(args: super::RegistryTurnEndArgs) {
-        let (archive_confirmed_tx, archive_confirmed_rx) = tokio::sync::oneshot::channel();
-        archive_confirmed_tx.send(true).unwrap();
-        super::run_registry_turn_end(args, archive_confirmed_rx).await;
     }
 }

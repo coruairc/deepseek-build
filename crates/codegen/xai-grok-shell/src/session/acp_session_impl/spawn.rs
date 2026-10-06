@@ -646,15 +646,6 @@ pub(crate) async fn spawn_session_actor(
         xai_grok_tools::reminders::task_completion::TaskWakeSuppressed::default();
     tool_context.task_completion_reservations = Some(task_completion_reservations.clone());
     tool_context.task_wake_suppressed = Some(task_wake_suppressed.clone());
-    let synthetic_trace_tx_shared: std::sync::Arc<
-        std::sync::Mutex<
-            Option<
-                tokio::sync::mpsc::UnboundedSender<crate::upload::turn::SyntheticTurnTraceRequest>,
-            >,
-        >,
-    > = std::sync::Arc::new(std::sync::Mutex::new(None));
-    *synthetic_trace_tx_shared.lock().unwrap() = tool_context.synthetic_trace_tx.clone();
-    tool_context.synthetic_trace_tx_shared = Some(synthetic_trace_tx_shared.clone());
     let mut tool_context = tool_context.with_file_state_handle(file_state_handle);
     let index_root_for_session =
         xai_grok_workspace::session::git::find_git_root_from_path(tool_context.cwd.as_path())
@@ -707,7 +698,6 @@ pub(crate) async fn spawn_session_actor(
             session_cmd_tx: cmd_tx.clone(),
             task_completion_reservations: task_completion_reservations.clone(),
             task_wake_suppressed: task_wake_suppressed.clone(),
-            synthetic_trace_tx: synthetic_trace_tx_shared.clone(),
             task_output_tool_name: task_output_tool_name.clone(),
             read_tool_name: read_tool_name.clone(),
             auto_wake_enabled: tool_context.auto_wake_enabled,
@@ -1543,7 +1533,6 @@ pub(crate) async fn spawn_session_actor(
         .iter()
         .map(|e| e.to_string())
         .collect();
-    let upload_queue = Arc::new(std::sync::OnceLock::new());
     let (goal_update_tx, goal_update_rx) = tokio::sync::mpsc::unbounded_channel::<
         xai_grok_tools::implementations::grok_build::update_goal::UpdateGoalEnvelope,
     >();
@@ -1881,7 +1870,6 @@ pub(crate) async fn spawn_session_actor(
         client_identifier: session_client_identifier.clone(),
         origin_client: origin_client.clone(),
         signals_handle: signals_handle.clone(),
-        upload_queue: upload_queue.clone(),
         agent: std::cell::RefCell::new(agent),
         last_reported_branch: Arc::new(Mutex::new(None)),
         git_head_enabled: fs_watch_caps.git_head,
@@ -2005,7 +1993,6 @@ pub(crate) async fn spawn_session_actor(
         image_describe_cache: Arc::new(crate::session::image_describe::ImageDescribeCache::new()),
         subagent_token_records: parking_lot::Mutex::new(HashMap::new()),
         workspace_ops: workspace_ops.clone(),
-        trace_config_template: std::cell::RefCell::new(None),
     });
     drop(actor_build);
     let (actor_setup_timer, actor_setup_span) = spawn_await_step!("actor_setup");
@@ -2351,8 +2338,6 @@ pub(crate) async fn spawn_session_actor(
         mcp_servers: admitted_mcp_servers,
         initial_client_mcp_servers,
         display_cwd: None,
-        upload_queue: upload_queue.clone(),
-        upload_failures_since_success: Arc::new(std::sync::atomic::AtomicU64::new(0)),
         tool_context: tool_context_for_handle,
         model_id: session_model_id,
         reasoning_effort: sampling_config.reasoning_effort,

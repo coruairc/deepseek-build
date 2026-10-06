@@ -15,9 +15,7 @@ pub use xai_tracing_macros::{teprintln, timed, tprintln};
 pub mod agent;
 pub mod auth {
     pub use crate::agent::init::run_cli_logout;
-    pub use crate::credential_factory::{
-        build_bootstrap_otel_credentials, build_storage_client_for_proxy,
-    };
+    pub use crate::credential_factory::build_bootstrap_otel_credentials;
     pub use xai_grok_login::*;
 }
 pub mod builtin;
@@ -32,7 +30,6 @@ pub mod credential_factory;
 pub use xai_grok_shell_base::cpu_profile;
 pub use xai_grok_shell_base::env;
 pub mod extensions;
-pub mod file_utils_compat;
 pub use xai_grok_foreign_sessions as foreign_sessions;
 pub use xai_grok_http as http;
 pub mod inspect;
@@ -51,7 +48,6 @@ pub use xai_grok_shell_terminal as terminal;
 pub(crate) mod test_support;
 pub mod tier;
 pub mod tools;
-pub mod upload;
 pub mod util;
 #[doc(hidden)]
 pub mod waterfall;

@@ -31,7 +31,6 @@ pub(crate) fn human_delivery_identity(prompt_id: String) -> HumanDeliveryIdentit
 pub(crate) struct HumanPromptContent {
     pub(crate) prompt_blocks: Vec<agent_client_protocol::ContentBlock>,
     pub(crate) prompt_mode: crate::session::plan_mode::PromptMode,
-    pub(crate) artifact_upload_ctx: Option<crate::upload::manifest::ArtifactUploadContext>,
     pub(crate) client_identifier: Option<String>,
     pub(crate) screen_mode: Option<String>,
     pub(crate) verbatim: bool,
@@ -49,7 +48,6 @@ impl HumanPromptContent {
             prompt_id,
             prompt_blocks: self.prompt_blocks,
             prompt_mode: self.prompt_mode,
-            artifact_upload_ctx: self.artifact_upload_ctx,
             client_identifier: self.client_identifier,
             screen_mode: self.screen_mode,
             verbatim: self.verbatim,

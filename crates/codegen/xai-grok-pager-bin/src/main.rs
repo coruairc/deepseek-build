@@ -70,7 +70,6 @@ fn process_identity(command: Option<&Command>, is_interactive: bool) -> Option<P
             | Command::Setup { .. }
             | Command::Wrap(_)
             | Command::Export(_)
-            | Command::Trace(_)
             | Command::Version { .. }
             | Command::Completions { .. }
             | Command::Worktree(_)
@@ -108,7 +107,6 @@ fn command_needs_pre_sandbox_policy_heal(command: Option<&Command>) -> bool {
             | Command::Setup { .. }
             | Command::Wrap(_)
             | Command::Export(_)
-            | Command::Trace(_)
             | Command::Version { .. }
             | Command::Completions { .. }
             | Command::DiskUsage(_)
@@ -2125,17 +2123,6 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
             Command::Export(export_args) => {
                 init_tracing_simple("cli");
                 return xai_grok_pager::export_cmd::run(export_args);
-            }
-            Command::Trace(trace_args) => {
-                init_tracing_simple("cli");
-                let _otel_guard = xai_grok_telemetry::otel_layer::otel_guard();
-                let mut agent_config = xai_grok_shell::config::load_agent_config_disk_only()
-                    .map_err(|e| anyhow::anyhow!("Failed to create agent config: {e}"))?;
-                if !trace_args.local {
-                    agent_config.remote_settings =
-                        fetch_remote_settings(&agent_config.grok_com_config).await;
-                }
-                return xai_grok_pager::trace_cmd::run(trace_args, &agent_config).await;
             }
             Command::Memory(memory_args) => {
                 let grok_com_config = load_grok_com_config_for_settings();

@@ -28,8 +28,6 @@ use xai_grok_shell::{
 /// can finish and the thread can unwind.
 const AGENT_JOIN_SLACK: Duration = Duration::from_secs(2);
 
-const UPLOAD_DRAIN_AT_CANCEL: Duration = Duration::from_secs(1);
-
 /// Grace for the worker runtime's teardown after the run loop exits: a plain
 /// drop waits out every in-flight `spawn_blocking` task (non-abortable), so a
 /// long detached archive build would otherwise hold `/quit` for its duration.
@@ -139,10 +137,7 @@ impl Drop for AgentShutdownGuard {
         let Some(handle) = self.thread.take() else {
             return;
         };
-        let timeout = SESSION_FLUSH_GRACE
-            + UPLOAD_DRAIN_AT_CANCEL
-            + WORKER_RUNTIME_SHUTDOWN_GRACE
-            + AGENT_JOIN_SLACK;
+        let timeout = SESSION_FLUSH_GRACE + WORKER_RUNTIME_SHUTDOWN_GRACE + AGENT_JOIN_SLACK;
         match join_agent_thread(handle, timeout) {
             JoinOutcome::Joined => {}
             JoinOutcome::Failed(error) => {
@@ -387,10 +382,7 @@ async fn spawn_agent_thread_direct(
 
             cancel.cancelled().await;
             agent_rc.flush_all_sessions(SESSION_FLUSH_GRACE).await;
-            tokio::join!(
-                xai_grok_shell::upload::drain_pending_uploads(UPLOAD_DRAIN_AT_CANCEL),
-                xai_grok_telemetry::session_ctx::drain_at_process_exit(),
-            );
+            xai_grok_telemetry::session_ctx::drain_at_process_exit().await;
             anyhow::Result::Ok(())
         });
         // LocalSet before runtime, as an implicit scope-end drop would do; the agent last.

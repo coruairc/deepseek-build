@@ -1586,7 +1586,7 @@ impl MvpAgent {
         turn.close_events_turn(session_dir);
         Some(turn)
     }
-    /// Uploads the `turn_result.json` the dead process never wrote, so the trace turn is not left with start-of-turn artifacts only.
+    /// Marks the interrupted turn on the replay rail and queues its model reminder.
     async fn finish_interrupted_turn(
         &self,
         session_id: &acp::SessionId,
@@ -1598,17 +1598,6 @@ impl MvpAgent {
         let _ = handle
             .cmd_tx
             .send(crate::session::SessionCommand::NoteInterruptedTurn { turn: turn.clone() });
-        if let Some(ctx) = self.get_trace_context(&handle.info, turn.trace_turn).await {
-            let result = turn.turn_result();
-            crate::upload::turn::spawn_upload_task("interrupted_turn_result", async move {
-                crate::upload::trace::upload_turn_result(
-                    &ctx,
-                    &result,
-                    crate::upload::turn::UploadWait::Confirm,
-                )
-                .await;
-            });
-        }
     }
     /// Enqueue a persist+broadcast of the live *local* list before `session/load`
     /// returns. Cold spawn has an empty registry, so this writes `tasks: []` and

@@ -1060,7 +1060,7 @@ pub(crate) fn execute(
         Effect::RestoreAndLoadSession { agent_id, session_id, session_cwd: _ } => {
             use xai_grok_shell::agent::session_registry_client::SessionRegistryClient;
             use xai_grok_shell::session::restore::{
-                ensure_available, restore_session_with_storage,
+                ensure_available, restore_session_with_progress,
             };
             if let Err(error) = ensure_available() {
                 tasks
@@ -1092,16 +1092,7 @@ pub(crate) fn execute(
                         .with_alpha_test_key(alpha_test_key.clone())
                         .with_session_id(session_id.clone())
                         .with_auth(auth_manager.clone());
-                    let storage = xai_grok_shell::credential_factory::build_storage_client_for_proxy(
-                        &proxy_base,
-                        deployment_key,
-                        alpha_test_key,
-                        Some(auth_manager.clone()),
-                        None,
-                        Some(session_id.clone()),
-                        "grok-pager",
-                    );
-                    Some((auth_manager, registry, storage))
+                    Some((auth_manager, registry))
                 });
             tracing::info!(
                 elapsed_ms = setup_started.elapsed().as_millis() as u64,
@@ -1112,7 +1103,7 @@ pub(crate) fn execute(
             let ptx = progress_tx.clone();
             tasks
                 .spawn(async move {
-                    let Some((auth_manager, registry_client, storage_client)) = setup
+                    let Some((auth_manager, registry_client)) = setup
                     else {
                         return TaskResult::SessionRestoreFailed {
                             agent_id,
@@ -1185,9 +1176,8 @@ pub(crate) fn execute(
                         )
                     };
                     let cwd_str = target_cwd.to_string_lossy().to_string();
-                    match restore_session_with_storage(
+                    match restore_session_with_progress(
                             &registry_client,
-                            &storage_client,
                             &session_id,
                             &cwd_str,
                             xai_grok_shell::session::restore::RestoreSessionOpts {

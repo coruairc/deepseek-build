@@ -429,7 +429,6 @@ pub(crate) fn present_child_completion(
             task_output_tool_name: &completion_data.task_output_tool_name,
             scheduler_delete_tool_name: completion_data.scheduler_delete_tool_name.as_deref(),
             scheduler_create_tool_name: completion_data.scheduler_create_tool_name.as_deref(),
-            synthetic_trace_tx: &completion_data.synthetic_trace_tx,
             goal_loop_active: &completion_data.goal_loop_active,
         });
     }
@@ -486,8 +485,6 @@ pub(crate) struct InjectParams<'a> {
     pub task_output_tool_name: &'a str,
     pub scheduler_delete_tool_name: Option<&'a str>,
     pub scheduler_create_tool_name: Option<&'a str>,
-    pub synthetic_trace_tx:
-        &'a Option<mpsc::UnboundedSender<crate::upload::turn::SyntheticTurnTraceRequest>>,
     pub goal_loop_active: &'a std::sync::atomic::AtomicBool,
 }
 /// Inject the auto-wake synthetic prompt for a completed background subagent.
@@ -502,7 +499,6 @@ pub(crate) fn inject_subagent_completed_prompt(params: InjectParams) {
         task_output_tool_name,
         scheduler_delete_tool_name,
         scheduler_create_tool_name,
-        synthetic_trace_tx,
         goal_loop_active,
     } = params;
     if goal_loop_active.load(std::sync::atomic::Ordering::Relaxed) {
@@ -522,15 +518,6 @@ pub(crate) fn inject_subagent_completed_prompt(params: InjectParams) {
     );
     let wrapped = xai_grok_tools::reminders::wrap_reminder(&message);
     let prompt_id = format!("subagent-completed-{subagent_id}");
-    let before_rx = if synthetic_trace_tx.is_some() {
-        let (before_tx, before_rx) = tokio::sync::oneshot::channel();
-        let _ = cmd_tx.send(SessionCommand::CopyFile {
-            respond_to: before_tx,
-        });
-        Some(before_rx)
-    } else {
-        None
-    };
     let (respond_to, completion_rx) = tokio::sync::oneshot::channel();
     let prompt_blocks = vec![acp::ContentBlock::Text(acp::TextContent::new(wrapped))];
     if cmd_tx
@@ -538,7 +525,6 @@ pub(crate) fn inject_subagent_completed_prompt(params: InjectParams) {
             prompt_id: prompt_id.clone(),
             prompt_blocks,
             prompt_mode: crate::session::plan_mode::PromptMode::Agent,
-            artifact_upload_ctx: None,
             client_identifier: None,
             screen_mode: None,
             verbatim: true,
@@ -555,15 +541,6 @@ pub(crate) fn inject_subagent_completed_prompt(params: InjectParams) {
         .is_err()
     {
         return;
-    }
-    if let Some(trace_tx) = synthetic_trace_tx {
-        let _ = trace_tx.send(crate::upload::turn::SyntheticTurnTraceRequest {
-            session_id: acp::SessionId::new(request.parent_session_id.clone()),
-            prompt_id,
-            completion_rx,
-            before_session_copy_rx: before_rx
-                .expect("before_rx set when synthetic_trace_tx is Some"),
-        });
     }
 }
 pub(crate) fn emit_subagent_notification(
