@@ -15,7 +15,7 @@ fn render_header_only(
 ) {
     let registry = crate::actions::ActionRegistry::defaults();
     state.clear_chrome_hit_areas();
-    render_header(buf, area, theme, rows, state, &registry, None);
+    render_header(buf, area, theme, rows, state, &registry,);
 }
 /// Paint the actions row on its own, the way `render_dashboard` does (per-frame hit-area reset included).
 fn render_actions_only(

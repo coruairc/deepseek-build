@@ -7341,7 +7341,7 @@ fn dashboard_peek_auto_opens_for_selected_row() {
         crate::views::dashboard::WorkspaceRowInputs::default(),
         None,
         false,
-        None,
+
         None,
     );
     assert!(
@@ -7362,7 +7362,7 @@ fn dashboard_peek_auto_opens_for_selected_row() {
         crate::views::dashboard::WorkspaceRowInputs::default(),
         None,
         false,
-        None,
+
         None,
     );
     assert!(
@@ -7399,7 +7399,7 @@ fn dashboard_peek_box_grows_for_multiline_reply() {
                 crate::views::dashboard::WorkspaceRowInputs::default(),
                 None,
                 false,
-                None,
+
                 None,
             );
         };
