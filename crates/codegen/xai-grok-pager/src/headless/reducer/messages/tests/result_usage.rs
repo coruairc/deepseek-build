@@ -155,6 +155,34 @@ fn messages_result_usage_splits_disjoint_buckets() {
     assert_eq!(at(usage, "/cache_read_input_tokens"), 10);
     assert_eq!(at(usage, "/cache_creation_input_tokens"), 5);
     assert_eq!(at(usage, "/output_tokens"), 7);
+
+    // The model `deepseek-4` is unknown to the table, so it prices at the labelled v4 Pro peak default:
+    // 85 miss + 5 creation @ 1.32, 10 hit @ 0.044, 7 output @ 3.96 -> 0.000146_96 USD.
+    let result = out.last().expect("result line");
+    assert_eq!(at(result, "/estimate"), true);
+    let estimated = at(result, "/estimated_cost_usd")
+        .as_f64()
+        .expect("estimate");
+    assert!(
+        (estimated - 0.000146_96).abs() < 1e-15,
+        "{estimated} should price 85/10/5/7 at the pro default"
+    );
+}
+
+#[test]
+fn messages_result_omits_estimate_when_no_tokens_were_recorded() {
+    let mut r = messages(false);
+    r.reduce(StreamEvent::AgentMessage("hi".into()));
+    let out = r.finish(&end_turn());
+    let result = out.last().expect("result line");
+    assert!(
+        result.get("estimated_cost_usd").is_none(),
+        "a session with no usage cannot carry an estimate: {result:?}"
+    );
+    assert!(
+        result.get("estimate").is_none(),
+        "and no `estimate` marker without a figure: {result:?}"
+    );
 }
 
 #[test]
@@ -423,6 +451,8 @@ fn non_finite_cost_serializes_to_finite_result_frame() {
         result: None,
         stop_reason: None,
         total_cost_usd: f64::INFINITY,
+        estimated_cost_usd: None,
+        estimate: None,
         usage: MessageUsage::default(),
         model_usage: json!({}),
         structured_output: None,

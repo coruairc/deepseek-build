@@ -51,15 +51,25 @@ Field names and nesting follow the common status line convention, so a ported sc
 | `command` | string | none | Script for `type = "command"`. |
 | `padding` | integer | `0` | Horizontal spacing, in characters per side, capped at 16. A padding wide enough to leave no columns reserves the row but paints nothing in it. |
 | `refresh_interval` | integer | unset | `command` rows only, in seconds, 1 to 86,400. Re-runs the script this often even when nothing changed, so an idle session can still surface a change — an incident page, a CI status. Unset keeps the row event-driven. The run it schedules carries `"trigger": "refresh_interval"`, and its failures keep the last output rather than painting an error (see [Refresh runs](#refresh-runs)). A script that calls a network should prefer a longer interval and read a cache on `state` runs. |
-| `pricing` | table | DeepSeek v4 Pro off-peak | Per-model USD per 1,000,000 tokens, used to estimate the `cost` segment when the provider reports none. See [Pricing](#pricing). |
+| `pricing` | table | DeepSeek peak | Per-model USD per 1,000,000 tokens, used to estimate the `cost` segment when the provider reports none. See [Pricing](#pricing). |
 
 ### Pricing
 
 DeepSeek's usage payload carries tokens but no price, so the `cost` segment falls back to this table. It is a
 stand-in, not a contract: prices change without a release, and a cost the provider reports always wins. Rates are USD
-per 1,000,000 tokens. An unspecified rate inherits the DeepSeek v4 Pro off-peak default (`input`/`cache_miss` 0.66,
-`output` 1.98, `cache_hit` 0.022), and a model you do not name also inherits that default, so name a non-DeepSeek model
-before trusting its figure.
+per 1,000,000 tokens.
+
+The shipped defaults are DeepSeek's **peak** list prices (official pricing page, fetched 2026-10-07):
+
+| Model | `cache_hit` | `cache_miss` | `output` |
+| --- | --- | --- | --- |
+| `deepseek-v4-pro` | 0.044 | 1.32 | 3.96 |
+| `deepseek-flash` | 0.006 | 0.30 | 1.20 |
+
+Peak hours are 01:00-04:00 and 06:00-10:00 UTC Mon-Fri, excluding Chinese public holidays; every other hour is
+off-peak, at exactly half these rates. The table has no clock, so it always prices at peak and never under-estimates.
+To price off-peak, halve the three rates in an override. An unspecified rate inherits the DeepSeek v4 Pro default,
+and a model you do not name also inherits that default, so name a non-DeepSeek model before trusting its figure.
 
 ```toml
 [ui.status_line]
@@ -67,10 +77,14 @@ type = "builtin"
 items = ["model", "effort", "tokens", "cache", "cost", "context"]
 
 [ui.status_line.pricing.deepseek-v4-pro]
-input = 0.66
-output = 1.98
-cache_hit = 0.022
-cache_miss = 0.66
+cache_hit = 0.044
+cache_miss = 1.32
+output = 3.96
+
+[ui.status_line.pricing.deepseek-flash]
+cache_hit = 0.006
+cache_miss = 0.30
+output = 1.20
 ```
 
 ## How it works

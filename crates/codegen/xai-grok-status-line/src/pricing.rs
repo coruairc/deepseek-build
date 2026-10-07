@@ -2,9 +2,14 @@
 //!
 //! A provider that reports its own cost (the ledger's `cost_usd_ticks`) wins; this table only fills the gap for
 //! providers like DeepSeek whose usage payload carries tokens but no price. It lives under
-//! `[ui.status_line.pricing.<model>]` and every rate falls back to the clearly-labelled DeepSeek v4 Pro off-peak
-//! default below, so a bare `items = ["cost"]` still shows a number and an override only has to state the rates it
+//! `[ui.status_line.pricing.<model>]` and every rate falls back to the clearly-labelled DeepSeek v4 Pro default
+//! below, so a bare `items = ["cost"]` still shows a number and an override only has to state the rates it
 //! changes.
+//!
+//! The default rates are DeepSeek's **peak** list prices (official pricing page, fetched 2026-10-07). Off-peak is
+//! exactly half: peak hours are 01:00-04:00 and 06:00-10:00 UTC Mon-Fri excluding Chinese public holidays, and
+//! every other hour is off-peak. This table has no clock, so it always prices at peak and therefore never
+//! under-estimates; halve the three rates in an override to price off-peak.
 //!
 //! The default is a stand-in, not a contract: prices are provider policy and change without a release, so treat a
 //! reported cost as authoritative and this table as an estimate.
@@ -18,6 +23,9 @@ use crate::context::StatusLineSessionUsage;
 /// The model the built-in defaults are labelled for.
 pub const DEFAULT_PRICING_MODEL: &str = "deepseek-v4-pro";
 
+/// The second DeepSeek model the shipped table names explicitly.
+pub const FLASH_PRICING_MODEL: &str = "deepseek-flash";
+
 /// USD per 1,000,000 tokens for one model.
 ///
 /// A missing key in a `[ui.status_line.pricing.<model>]` table inherits the DeepSeek v4 Pro default rather than
@@ -25,27 +33,36 @@ pub const DEFAULT_PRICING_MODEL: &str = "deepseek-v4-pro";
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ModelPricing {
-    /// Cache-miss (fresh) prompt tokens.
-    pub input: f64,
-    /// Completion tokens, reasoning included.
-    pub output: f64,
     /// Prompt tokens served from the prefix cache.
     pub cache_hit: f64,
-    /// Alias for `input` kept separate so the four provider rates read as written.
+    /// Cache-miss (fresh) prompt tokens.
     pub cache_miss: f64,
+    /// Completion tokens, reasoning included.
+    pub output: f64,
 }
 
-/// DeepSeek v4 Pro off-peak list price, per the provider's pricing page at the time of writing.
+/// DeepSeek v4 Pro **peak** list price, per the provider's pricing page (fetched 2026-10-07): cache-hit input
+/// $0.044, cache-miss input $1.32, output $3.96 per 1M tokens. Off-peak is half these rates.
 ///
-/// The field names are pinned to the four rates the provider publishes; override any of them with
+/// The field names are the three rates the provider publishes; override any of them with
 /// `[ui.status_line.pricing.deepseek-v4-pro]`.
 impl Default for ModelPricing {
     fn default() -> Self {
         Self {
-            input: 0.66,
-            output: 1.98,
-            cache_hit: 0.022,
-            cache_miss: 0.66,
+            cache_hit: 0.044,
+            cache_miss: 1.32,
+            output: 3.96,
+        }
+    }
+}
+
+impl ModelPricing {
+    /// `deepseek-flash` peak list price: cache-hit input $0.006, cache-miss input $0.30, output $1.20 per 1M.
+    pub const fn flash() -> Self {
+        Self {
+            cache_hit: 0.006,
+            cache_miss: 0.30,
+            output: 1.20,
         }
     }
 }
@@ -57,10 +74,11 @@ pub struct PricingTable {
 }
 
 impl PricingTable {
-    /// The shipped default table.
+    /// The shipped default table: DeepSeek v4 Pro and Flash at peak rates.
     pub fn deepseek_defaults() -> Self {
         let mut models = BTreeMap::new();
         models.insert(DEFAULT_PRICING_MODEL.to_string(), ModelPricing::default());
+        models.insert(FLASH_PRICING_MODEL.to_string(), ModelPricing::flash());
         Self { models }
     }
 
@@ -87,6 +105,7 @@ impl PricingTable {
     ///
     /// `StatusLineSessionUsage.input_tokens` is already the fresh (cache-miss) subset, so the buckets sum without
     /// overlap: fresh input + cache creation at the miss rate, cache hits at the hit rate, completion at output.
+    /// Reasoning tokens are inside `output_tokens` and are not charged again.
     pub fn cost_usd(&self, model_id: &str, usage: &StatusLineSessionUsage) -> Option<f64> {
         let pricing = self.for_model(model_id)?;
         if usage.input_tokens == 0
@@ -127,15 +146,17 @@ mod tests {
     }
 
     #[test]
-    fn default_table_prices_the_labelled_model() {
+    fn default_table_prices_both_labelled_models_at_peak() {
         let table = PricingTable::default();
-        let pricing = table
-            .for_model(DEFAULT_PRICING_MODEL)
-            .expect("default model");
-        assert_eq!(pricing.input, 0.66);
-        assert_eq!(pricing.output, 1.98);
-        assert_eq!(pricing.cache_hit, 0.022);
-        assert_eq!(pricing.cache_miss, 0.66);
+        let pro = table.for_model(DEFAULT_PRICING_MODEL).expect("pro");
+        assert_eq!(pro.cache_hit, 0.044);
+        assert_eq!(pro.cache_miss, 1.32);
+        assert_eq!(pro.output, 3.96);
+
+        let flash = table.for_model(FLASH_PRICING_MODEL).expect("flash");
+        assert_eq!(flash.cache_hit, 0.006);
+        assert_eq!(flash.cache_miss, 0.30);
+        assert_eq!(flash.output, 1.20);
     }
 
     #[test]
@@ -147,17 +168,38 @@ mod tests {
         );
     }
 
+    /// The worked example from the task: pro, 1000 cache-hit + 2000 cache-miss input + 500 output.
+    /// 1000*0.044 + 2000*1.32 + 500*3.96 = 44 + 2640 + 1980 micro-USD = 0.004664.
+    #[test]
+    fn pro_worked_example_is_exact() {
+        let table = PricingTable::default();
+        let cost = table
+            .cost_usd(DEFAULT_PRICING_MODEL, &usage(0, 500, 1_000, 2_000))
+            .expect("cost");
+        assert!((cost - 0.004664).abs() < 1e-12, "{cost}");
+    }
+
+    /// Flash, the same buckets: 1000*0.006 + 2000*0.30 + 500*1.20 = 6 + 600 + 600 = 0.001206.
+    #[test]
+    fn flash_worked_example_is_exact() {
+        let table = PricingTable::default();
+        let cost = table
+            .cost_usd(FLASH_PRICING_MODEL, &usage(0, 500, 1_000, 2_000))
+            .expect("cost");
+        assert!((cost - 0.001206).abs() < 1e-12, "{cost}");
+    }
+
     #[test]
     fn cost_splits_hits_misses_and_output() {
         let table = PricingTable::default();
-        // 1M fresh input @ 0.66 + 1M output @ 1.98 + 1M cached @ 0.022 + 1M creation @ 0.66 = 3.322
+        // 1M fresh input @ 1.32 + 1M output @ 3.96 + 1M cached @ 0.044 + 1M creation @ 1.32 = 6.644
         let cost = table
             .cost_usd(
                 DEFAULT_PRICING_MODEL,
                 &usage(1_000_000, 1_000_000, 1_000_000, 1_000_000),
             )
             .expect("cost");
-        assert!((cost - 3.322).abs() < 1e-9, "{cost}");
+        assert!((cost - 6.644).abs() < 1e-9, "{cost}");
     }
 
     #[test]
@@ -175,14 +217,13 @@ mod tests {
         overrides.insert(
             "my-model".to_string(),
             ModelPricing {
-                input: 1.0,
-                output: 2.0,
                 cache_hit: 0.1,
                 cache_miss: 1.0,
+                output: 2.0,
             },
         );
         let table = PricingTable::with_overrides(overrides);
         assert_eq!(table.for_model("my-model").unwrap().output, 2.0);
-        assert_eq!(table.for_model(DEFAULT_PRICING_MODEL).unwrap().output, 1.98);
+        assert_eq!(table.for_model(DEFAULT_PRICING_MODEL).unwrap().output, 3.96);
     }
 }
