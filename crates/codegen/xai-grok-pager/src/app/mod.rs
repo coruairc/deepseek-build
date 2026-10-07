@@ -1526,10 +1526,14 @@ pub(crate) fn set_terminal_title(title: &str) {
 fn terminal_title_string(title: &str) -> String {
     let sanitized: String = title.chars().filter(|c| !c.is_control()).collect();
     if sanitized.is_empty() {
-        "grok".into()
+        xai_grok_brand::NAME.into()
     } else {
-        let truncated: String = sanitized.chars().take(80 - 6).collect();
-        format!("{} - grok", truncated)
+        let name = xai_grok_brand::NAME;
+        let truncated: String = sanitized
+            .chars()
+            .take(80usize.saturating_sub(name.len() + 3))
+            .collect();
+        format!("{truncated} - {name}")
     }
 }
 #[cfg(test)]
@@ -1581,9 +1585,12 @@ mod tests {
             terminal_title_string("evil\x07\x1b]52;c;payload\x07title"),
             "evil]52;c;payloadtitle - grok"
         );
-        assert_eq!(terminal_title_string("\x07\x1b\x00"), "grok");
-        assert_eq!(terminal_title_string(""), "grok");
-        assert_eq!(terminal_title_string("My chat"), "My chat - grok");
+        assert_eq!(terminal_title_string("\x07\x1b\x00"), xai_grok_brand::NAME);
+        assert_eq!(terminal_title_string(""), xai_grok_brand::NAME);
+        assert_eq!(
+            terminal_title_string("My chat"),
+            format!("My chat - {}", xai_grok_brand::NAME)
+        );
     }
     #[test]
     fn hunk_tracker_mode_nothing_set_is_none() {
