@@ -413,6 +413,29 @@ fn auto_respond_to_permissions(
 fn auth_required_message() -> String {
     "Not signed in: set DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) to authenticate.".to_string()
 }
+/// One-line hint for a turn that ended because a permission-gated tool was not approved in
+/// headless mode (no TTY can answer the prompt). `None` for approved turns, user interrupts
+/// (`MidTurnAbort`), and every other cancellation, so their behavior is unchanged.
+fn permission_cancel_hint(
+    stop_reason: &str,
+    cancellation_category: Option<&str>,
+    is_yolo: bool,
+) -> Option<&'static str> {
+    use xai_grok_shell::session::commands::{
+        PERMISSION_CANCELLED_CATEGORY, PERMISSION_REJECTED_CATEGORY,
+    };
+    if is_yolo || stop_reason != "cancelled" {
+        return None;
+    }
+    match cancellation_category {
+        Some(c) if c == PERMISSION_CANCELLED_CATEGORY || c == PERMISSION_REJECTED_CATEGORY => Some(
+            "Turn ended: a permission-gated tool was cancelled because headless mode cannot prompt \
+             for approval. Re-run with --always-approve, or choose a non-interactive permission \
+             mode such as --permission-mode auto.",
+        ),
+        _ => None,
+    }
+}
 /// The same backend switch the TUI applies; the shell unless another backend is enabled.
 async fn spawn_agent(
     agent_config: AgentConfig,
@@ -1378,16 +1401,25 @@ pub async fn run_single_turn(
                     ""
                 }
             };
-            let is_max_turns = resp
+            let cancellation_category = resp
                 .meta
                 .as_ref()
                 .and_then(|m| m.get(crate::app::CANCELLATION_CATEGORY_KEY))
-                .and_then(|v| v.as_str())
+                .and_then(|v| v.as_str());
+            let is_max_turns = cancellation_category
                 == Some(xai_grok_shell::session::commands::MAX_TURNS_REACHED_CATEGORY);
             if is_max_turns {
                 emitter.on_max_turns();
                 emitter.on_end(&stop_reason, sid, rid);
                 Err(anyhow::anyhow!("max turns reached"))
+            } else if let Some(hint) =
+                permission_cancel_hint(&stop_reason, cancellation_category, options.yolo)
+            {
+                emitter.on_end(&stop_reason, sid, rid);
+                eprint_line(hint);
+                Err(anyhow::anyhow!(
+                    "permission-gated tool cancelled; pass --always-approve to approve it"
+                ))
             } else {
                 emitter.on_end(&stop_reason, sid, rid);
                 Ok(())

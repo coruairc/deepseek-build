@@ -827,3 +827,35 @@ fn handler_answers_ext_method_instead_of_dropping() {
         serde_json::from_str(resp.0.get()).expect("typed wire reply");
     assert!(matches!(parsed, AskUserQuestionExtResponse::Cancelled));
 }
+
+#[test]
+fn permission_cancel_hint_only_fires_for_unapproved_gated_cancel() {
+    use xai_grok_shell::session::commands::{
+        MID_TURN_ABORT_CATEGORY, PERMISSION_CANCELLED_CATEGORY, PERMISSION_REJECTED_CATEGORY,
+    };
+    // A gated tool cancelled or rejected in headless mode with no approval: warn + exit non-zero.
+    assert!(
+        super::permission_cancel_hint("cancelled", Some(PERMISSION_CANCELLED_CATEGORY), false)
+            .is_some()
+    );
+    assert!(
+        super::permission_cancel_hint("cancelled", Some(PERMISSION_REJECTED_CATEGORY), false)
+            .is_some()
+    );
+    // --always-approve: the user did approve (or asked to), so behavior is unchanged.
+    assert!(
+        super::permission_cancel_hint("cancelled", Some(PERMISSION_CANCELLED_CATEGORY), true)
+            .is_none()
+    );
+    // A user interrupt is not a permission gate.
+    assert!(
+        super::permission_cancel_hint("cancelled", Some(MID_TURN_ABORT_CATEGORY), false).is_none()
+    );
+    assert!(super::permission_cancel_hint("cancelled", None, false).is_none());
+    // A cleanly completed turn is untouched even if a category somehow rides along.
+    assert!(
+        super::permission_cancel_hint("end_turn", Some(PERMISSION_CANCELLED_CATEGORY), false)
+            .is_none()
+    );
+}
+
