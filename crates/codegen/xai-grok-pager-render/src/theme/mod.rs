@@ -1070,9 +1070,9 @@ mod tests {
 
     #[test]
     fn ansi16_quantize_without_override_collapses_deepseek_monokai_backgrounds() {
-        // Ratchet: naive Basic maps the deepest DeepSeekMonokai bg levels to Black. The
-        // elevated hover/visual surface (#49483e) is light enough to land on ANSI 8
-        // (DarkGray); `ansi16_chrome_overrides` pins that same slot explicitly.
+        // Ratchet: naive Basic maps every DeepSeekMonokai bg level to Black now that the
+        // palette was darkened (#2f2e27 and below are closer to Black than to ANSI 8);
+        // `ansi16_chrome_overrides` pins the elevated hover/visual surfaces explicitly.
         use ratatui::style::Color;
         let q = Theme::deepseek_monokai().quantized(color_support::ColorLevel::Basic);
         for (name, color) in [
@@ -1089,11 +1089,15 @@ mod tests {
                 "{name} should collapse to Black without the override"
             );
         }
-        assert_eq!(q.bg_hover, Color::DarkGray, "bg_hover quantizes to ANSI 8");
+        assert_eq!(
+            q.bg_hover,
+            Color::Black,
+            "bg_hover collapses to Black on the darkened palette"
+        );
         assert_eq!(
             q.bg_visual,
-            Color::DarkGray,
-            "bg_visual quantizes to ANSI 8"
+            Color::Black,
+            "bg_visual collapses to Black on the darkened palette"
         );
     }
 

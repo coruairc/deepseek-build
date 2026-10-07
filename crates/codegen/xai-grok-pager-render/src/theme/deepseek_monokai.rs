@@ -16,13 +16,15 @@ const fn rgb(r: u8, g: u8, b: u8) -> Color {
 mod palette {
     use super::*;
 
-    // ── Backgrounds (Monokai) ───────────────────────────────────────────
-    pub const BG: Color = rgb(30, 31, 28); //   #1e1f1c, deepest (terminal bg)
-    pub const BG_DARK: Color = rgb(30, 31, 28); // #1e1f1c, code blocks
-    pub const BG_STORM_DARK: Color = rgb(30, 31, 28); // #1e1f1c
-    pub const BG_STORM: Color = rgb(39, 40, 34); //  #272822, main bg
-    pub const BG_HIGHLIGHT: Color = rgb(62, 61, 50); // #3e3d32, highlight
-    pub const BG_HOVER: Color = rgb(73, 72, 62); //  #49483e
+    // ── Backgrounds (Monokai, darkened for 256-color terminals) ────────
+    // Values are chosen so 256-color quantization keeps four distinct,
+    // visibly darker levels: 232 (deepest) / 233 (canvas) / 236 (highlight) / 237 (hover).
+    pub const BG: Color = rgb(13, 14, 11); //    #0d0e0b, deepest (terminal bg), idx 232
+    pub const BG_DARK: Color = rgb(13, 14, 11); // #0d0e0b, code blocks, idx 232
+    pub const BG_STORM_DARK: Color = rgb(13, 14, 11); // #0d0e0b
+    pub const BG_STORM: Color = rgb(22, 23, 20); //  #161714, main bg, idx 233
+    pub const BG_HIGHLIGHT: Color = rgb(47, 46, 39); // #2f2e27, highlight, idx 236
+    pub const BG_HOVER: Color = rgb(58, 57, 49); //  #3a3931, idx 237
 
     // ── Text / grays ────────────────────────────────────────────────────
     pub const FG: Color = rgb(248, 248, 242); // #f8f8f2, primary text
