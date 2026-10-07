@@ -35,7 +35,7 @@ pub enum RequestCompression {
 
 /// All knobs that control a single sampling request.
 /// Auth is selected separately via `auth_scheme`, while `api_backend` controls only the request/response protocol shape.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SamplerConfig {
     pub api_key: Option<String>,
     pub base_url: String,
@@ -126,6 +126,54 @@ pub struct SamplerConfig {
     /// Per-request header injector (e.g. OTel traceparent). Called in `post()`.
     #[serde(skip)]
     pub header_injector: Option<SharedHeaderInjector>,
+}
+
+/// Hand-written so `{:?}` never prints the API key (configs are dumped into debug logs).
+impl std::fmt::Debug for SamplerConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SamplerConfig")
+            .field("api_key", &self.api_key.as_ref().map(|_| "<redacted>"))
+            .field("base_url", &self.base_url)
+            .field("mtls_cert_dir", &self.mtls_cert_dir)
+            .field("model", &self.model)
+            .field("max_completion_tokens", &self.max_completion_tokens)
+            .field("temperature", &self.temperature)
+            .field("top_p", &self.top_p)
+            .field("api_backend", &self.api_backend)
+            .field("model_routing", &self.model_routing)
+            .field("auth_scheme", &self.auth_scheme)
+            .field("request_compression", &self.request_compression)
+            .field("extra_headers", &self.extra_headers)
+            .field("extra_response_includes", &self.extra_response_includes)
+            .field("query_params", &self.query_params)
+            .field("env_http_headers", &self.env_http_headers)
+            .field("context_window", &self.context_window)
+            .field("max_request_bytes", &self.max_request_bytes)
+            .field("force_http1", &self.force_http1)
+            .field("max_retries", &self.max_retries)
+            .field(
+                "rate_limit_retry_threshold",
+                &self.rate_limit_retry_threshold,
+            )
+            .field("stream_tool_calls", &self.stream_tool_calls)
+            .field("idle_timeout_secs", &self.idle_timeout_secs)
+            .field("reasoning_effort", &self.reasoning_effort)
+            .field("reasoning_summary", &self.reasoning_summary)
+            .field("origin_client", &self.origin_client)
+            .field("client_identifier", &self.client_identifier)
+            .field("deployment_id", &self.deployment_id)
+            .field("user_id", &self.user_id)
+            .field("conversation_group_id", &self.conversation_group_id)
+            .field("client_version", &self.client_version)
+            .field("attribution_callback", &self.attribution_callback)
+            .field("bearer_resolver", &self.bearer_resolver)
+            .field("supports_backend_search", &self.supports_backend_search)
+            .field("compactions_remaining", &self.compactions_remaining)
+            .field("compaction_at_tokens", &self.compaction_at_tokens)
+            .field("doom_loop_recovery", &self.doom_loop_recovery)
+            .field("header_injector", &self.header_injector)
+            .finish()
+    }
 }
 
 impl Default for SamplerConfig {
@@ -232,6 +280,22 @@ pub struct OriginClientInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The config is dumped into debug logs; its `Debug` must never print the API key.
+    #[test]
+    fn debug_redacts_api_key() {
+        let config = SamplerConfig {
+            api_key: Some("sk-SUPER-SECRET-CANARY".into()),
+            model: "deepseek-v4-pro".into(),
+            ..Default::default()
+        };
+        let rendered = format!("{config:?}");
+        assert!(!rendered.contains("sk-SUPER-SECRET-CANARY"), "{rendered}");
+        assert!(rendered.contains("<redacted>"), "{rendered}");
+        // A missing key renders as absent, not as a bare `None` leak of the field.
+        let none = SamplerConfig::default();
+        assert!(!format!("{none:?}").contains("SUPER-SECRET"));
+    }
 
     /// Configs serialized before the field existed must keep deserializing.
     #[test]

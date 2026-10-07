@@ -409,19 +409,9 @@ fn auto_respond_to_permissions(
     }
     None
 }
-/// "Not signed in" error message, tailored to the session type.
-fn auth_required_message(interactive: bool) -> String {
-    if interactive {
-        "Not signed in. Run `grok login` to authenticate \
-         (or `grok login --device-code` if no browser is available)."
-            .to_string()
-    } else {
-        "Not signed in. To authenticate without a browser, run:\n  \
-         grok login --device-code\n\n\
-         Alternatively, set the XAI_API_KEY environment variable \
-         or run `grok login` on a machine with a browser."
-            .to_string()
-    }
+/// Clear one-line auth error naming the accepted environment variables.
+fn auth_required_message() -> String {
+    "Not signed in: set DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) to authenticate.".to_string()
 }
 /// The same backend switch the TUI applies; the shell unless another backend is enabled.
 async fn spawn_agent(
@@ -441,18 +431,10 @@ async fn authenticate(
     default_auth_method_id: Option<&acp::AuthMethodId>,
 ) -> anyhow::Result<bool> {
     let method_id = crate::acp::select_eager_auth_method(auths, default_auth_method_id)
-        .ok_or_else(|| {
-            use std::io::IsTerminal;
-            let interactive = std::io::stdin().is_terminal()
-                && !xai_grok_shell::util::clipboard::is_remote_session();
-            anyhow::anyhow!("{}", auth_required_message(interactive))
-        })?;
+        .ok_or_else(|| anyhow::anyhow!("{}", auth_required_message()))?;
     let kind = AuthMethodKind::from_id(&method_id);
     if kind.needs_interactive_login() {
-        use std::io::IsTerminal;
-        let interactive =
-            std::io::stdin().is_terminal() && !xai_grok_shell::util::clipboard::is_remote_session();
-        anyhow::bail!("{}", auth_required_message(interactive));
+        anyhow::bail!("{}", auth_required_message());
     }
     let is_api_key_auth = kind.is_api_key();
     let _resp: acp::AuthenticateResponse = acp_send(
