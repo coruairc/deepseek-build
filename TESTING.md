@@ -2,143 +2,104 @@
 
 A 20–30 minute manual test plan for the personal `deepseek-build` agent.
 
-> Status caveat: **`cargo test --workspace` does not compile** — the failing crate
-> is `xai-grok-workspace` (its `#[cfg(test)]` modules reference code deleted in the
-> Phase-1 cleanup). The non-test build (`cargo build --release -p xai-grok-pager-bin`)
-> is green and the binary runs. The interactive product path — DeepSeek chat, tools,
-> permissions, plan mode, sessions, headless, MCP — is testable today.
-> See [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) for what is unfinished (including the
-> live smoke test, which is skipped without `DEEPSEEK_API_KEY`).
+> Status: the non-test build is green and the binary runs. **`cargo test
+> --workspace` does not compile yet** — the failing crate is `xai-grok-workspace`
+> (its test modules reference code deleted in the Phase-1 cleanup). See
+> [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md). The live DeepSeek smoke test and the
+> extended egress audit have been run and pass; rerun them with the scripts below.
 
-## 1. Build
+## 1. Build (3 min)
 
 ```sh
 source "$HOME/.cargo/env"          # rustup, pinned toolchain 1.94.0
 cargo build --release -p xai-grok-pager-bin
-# artifact (the package keeps the internal xai-grok-* name, D2):
 ls -lh target/release/deepseek-build
 ./target/release/deepseek-build --version
-# => deepseek-build <version>
+# => deepseek-build <version> (<short sha>)
 ```
 
-If you already have the release binary, skip the build. `scripts/sandbox-run.sh`
-expects it at `target/release/deepseek-build` (override with `BIN=`).
+Expected: build succeeds; `--version` prints `deepseek-build`; no `grok` in the
+top-level `--help` beyond the word "clone" in internal descriptions.
 
-## 2. API key
+## 2. API key via environment (1 min)
 
 ```sh
 export DEEPSEEK_API_KEY=sk-...      # preferred
 # or: export DEEPSEEK_BUILD_API_KEY=sk-...
 ```
 
-The key is read from the environment. The only network destinations are the
-configured provider (`https://api.deepseek.com`) and any user-configured MCP
-servers; see [Network & privacy](SECURITY.md#network--privacy).
+- With **no** key: `deepseek-build -p hi` prints exactly
+  `Not signed in: set DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) to authenticate.`
+- The key is never written to logs, sessions, or crash output. Prove it:
+  `scripts/key-leak-check.sh` → `PASS fake key absent ...`.
 
-## 3. Safe sandbox run (recommended first)
+## 3. Automated scripts (5–8 min)
 
-```sh
-scripts/sandbox-run.sh --version
-scripts/sandbox-run.sh -p "print hello and exit"
-```
+| Command | Expected |
+|---|---|
+| `scripts/smoke-test.sh` | `8 passed, 0 failed`: `/models` lists `deepseek-v4-pro`+`deepseek-flash`; plain + streamed chat; a 3-turn thinking tool chain; usage has `reasoning_tokens`/`cache_read_input_tokens`; flash alias accepted; `cached_tokens == prompt_cache_hit_tokens` on a cache hit |
+| `scripts/egress-check.sh` | `PASS EGRESS-CHECK PASS`, `EGRESS_VIOLATIONS=0`; destinations limited to `api.deepseek.com`, the `web_fetch` host, loopback/AF_UNIX |
+| `scripts/key-leak-check.sh` | `PASS fake key absent ...` |
+| `scripts/check-egress.sh --strict` | `HARD egress gate: OK`, exit 0 |
+| `scripts/sandbox-run.sh -p "print hello"` | session completes; `web_fetch`/other external hosts are refused with `sandbox-run: BLOCKED connect ...` |
 
-`scripts/sandbox-run.sh` installs an `LD_PRELOAD` shim that permits `connect()`
-only to loopback, `AF_UNIX`, and the resolved addresses of
-`$DEEPSEEK_BUILD_EGRESS_HOST` (default `api.deepseek.com`); everything else is
-refused with `ECONNREFUSED` and logged as `sandbox-run: BLOCKED connect to <ip>`.
-Use `BIN=/path/to/deepseek-build` to point it at another build.
+None of these scripts ever print the key.
 
-Quick non-interactive smoke:
+## 4. Manual checklist (12–18 min)
 
-```sh
-./target/release/deepseek-build -p "Reply with exactly: pong"
-```
-
-Expected: prints `pong` (or a short reply) and exits 0. With a bad/absent key you
-get a clear `401` from `https://api.deepseek.com/chat/completions` plus the
-model/auth line (`Model: deepseek-v4-pro`, `Auth: ApiKey`).
-
-## 4. Manual checklist
-
-Do these in a scratch git repo (`git init /tmp/dsb-scratch && cd /tmp/dsb-scratch`).
-Each row should take roughly a minute. Rows marked **N/A — removed** or
-**N/A — not implemented** are known gaps, not failures.
+Work in a scratch git repo: `git init /tmp/dsb-scratch && cd /tmp/dsb-scratch`.
+Start with `deepseek-build` and approve tool actions in the TUI as needed.
 
 | # | Step | Expected |
 |---|------|----------|
-| 1 | Run `deepseek-build` in the scratch dir | TUI starts with the DeepSeek whale welcome logo; no crash |
-| 2 | Ask "create hello.py printing hello" | It proposes a file write; permission prompt appears |
-| 3 | Approve the write | File created; diff/status shown |
-| 4 | Ask for a multi-file refactor | Multiple edits, streamed answer, tool calls |
-| 5 | Reasoning visibility | Thinking shown as a collapsible block, visually distinct from the answer |
-| 6 | Fold keys: `e`, `E`, `Ctrl+E` | `e` folds/unfolds selected entry; `E` folds every entry; `Ctrl+E` toggles all thinking blocks |
-| 7 | `/think` | Shows/hides reasoning blocks on/off |
-| 8 | Plan mode (`/plan`, or Shift+Tab to cycle modes) | Read-only investigation; asks for approval before acting; `--no-plan` disables it |
-| 9 | Permission modes (Shift+Tab; `/auto`, `/always-approve`; flags `--allow`/`--deny`/`--permission-mode`) | Modes change behavior; a dangerous command (e.g. `rm -rf`) still prompts and carries a warning |
-| 10 | Read-before-write | Editing a file without reading it first is denied with a clear message |
-| 11 | Model switch (`/model`, alias `/m`) | Lists `deepseek-v4-pro`, `deepseek-flash`, and the hidden `deepseek-v4-flash`; switch works |
-| 12 | Reasoning effort (`/effort <level>`) | Offers `none`, `low`, `high`, `max` (per-model catalog); request honors the chosen level |
+| 1 | Run `deepseek-build` in the scratch dir | TUI starts with the DeepSeek whale welcome logo; no crash, no `~/.grok` access (only `~/.deepseek-build`) |
+| 2 | Simple edit: "create hello.py printing hello" | A file-write tool call; permission prompt; approve → file created, diff shown |
+| 3 | Fix a failing test: add `calc.py`/`test_calc.py` with a bug, ask it to fix the test | It runs `python3 test_calc.py`, fixes the code (not the test), reports pass |
+| 4 | Multi-file refactor: "rename `mul` to `multiply` everywhere" | Edits all affected files; no stale `mul(` remains; tests still pass |
+| 5 | Reasoning visibility | Thinking shown as a collapsible block, distinct from the answer |
+| 6 | Fold keys: `e`, `E`, `Ctrl+E` | `e` folds/unfolds the selected entry; `E` folds all; `Ctrl+E` toggles all thinking blocks |
+| 7 | `/think` | Shows/hides reasoning blocks |
+| 8 | Plan mode (`/plan` or Shift+Tab) | Read-only investigation; asks approval before acting; `--no-plan` disables it. **Headless `--permission-mode plan` is read-only but does not emit a plan for a bare edit request (known gap).** |
+| 9 | Permission modes (Shift+Tab; `/auto`; `--allow`/`--deny`/`--permission-mode`) | Modes change behavior; a dangerous `rm -rf` still prompts with a warning. In headless, a gated action is cancelled (empty output, exit 0) rather than prompted |
+| 10 | Read-before-write | Editing a file not read first is denied with a clear message |
+| 11 | Model switch (`/model`, alias `/m`) | Lists `deepseek-v4-pro`, `deepseek-flash`, hidden `deepseek-v4-flash`; switch works |
+| 12 | Reasoning effort (`/effort <level>`) | Offers `none`, `low`, `high`, `max`; the request honors the chosen level |
 | 13 | Status line | Shows cwd/model/context by default; `[ui.status_line] items` adds `effort`, `tokens`, `cache`, `cost`, `turn_timer`, `session_name` |
-| 14 | Cost/cache (`/usage`) | Token usage shown; cache-hit/miss counters and cost when a price table is configured |
-| 15 | Themes (`/theme`, alias `/t`) | Switches `deepseek-monokai` (default) or another palette (`deepseek-day`, `tokyonight`, `rosepine-moon`, `oscura-midnight`, `terminal`), or `auto` to follow the system |
-| 16 | Resume (`-c` / `--resume` / `/resume`) | Previous session reloads with history |
-| 17 | Headless (`deepseek-build -p "..."`) | Non-interactive reply on stdout, exit 0 |
-| 18 | `web_fetch` ask-gate | Fetching a non-allowlisted URL asks permission first |
-| 19 | MCP (`[mcp_servers.<name>]` in `~/.deepseek-build/config.toml`; `/mcps`) | Configured stdio/HTTP MCP server connects; its tools appear; `/mcps` shows status |
+| 14 | Cost/cache (`/usage`) | Token usage and cache-hit/miss shown; cost when a price table is configured. **Headless JSON exposes usage but not cost** (DeepSeek returns no cost) |
+| 15 | Themes (`/theme`, alias `/t`) | Switches `deepseek-monokai` (default) or another palette; `auto` follows the system |
+| 16 | Resume (`-c` / `--resume` / `/resume`) | Previous session reloads with history; `-r <id>` reuses the same id |
+| 17 | Headless (`deepseek-build -p "..."`) | Non-interactive reply on stdout, exit 0; `--output-format json` includes `usage` |
+| 18 | `web_fetch` ask-gate | Fetching a non-allowlisted URL asks permission first; approve → fetches; deny → refuses |
+| 19 | MCP (`[mcp_servers.<name>]` in `~/.deepseek-build/config.toml`; `/mcps`) | Configured stdio/HTTP MCP server connects; its tool appears and can be called |
 | 20 | `AGENTS.md` | Instructions in `AGENTS.md` are followed |
-| 21 | Checkpoints/undo (`/rewind`, alias `/undo`) | Restores a prior turn / conversation state |
-| 22 | `scripts/check-egress.sh --strict` | Prints `HARD egress gate: OK` and exits 0 (SOFT branding is zero) |
-| 23 | Voice dictation (`/voice`) | **N/A — removed** (feature deleted; command is fail-closed/hidden) |
-| 24 | Session share / relay (`/share`, remote relay) | **N/A — removed** (share command and WebSocket relay deleted) |
-| 25 | Feedback upload (`/feedback`) | Command/modal still exists but is local/inert: it performs **no** network upload |
-| 26 | Automatic model routing (Flash vs Pro) | **N/A — not wired.** The `model_routing` module and `route_turn` exist, but the policy defaults to `off` and no turn path calls it |
-| 27 | Wiremock/live adapter smoke | **N/A here — see below.** Covered by `crates/codegen/xai-grok-sampler/tests/chat_completions_wire.rs`; live run needs a real key |
+| 21 | Checkpoints/undo (`/rewind`, alias `/undo`) | Restores a prior turn/conversation state |
+| 22 | `scripts/check-egress.sh --strict` | `HARD egress gate: OK`, exit 0 (SOFT branding zero) |
+| 23 | Voice dictation (`/voice`) | **N/A — removed** |
+| 24 | Session share / relay | **N/A — removed** |
+| 25 | Feedback upload (`/feedback`) | Local/inert: performs no network upload |
+| 26 | Automatic model routing (Flash vs Pro) | **N/A — not wired** (policy defaults to `off`) |
 
-## 5. Egress verification (no `strace` needed)
+## 5. Egress verification
 
-The development environment had no `strace`, so an `LD_PRELOAD` connect-logger
-was used. To reproduce where `strace` is available:
+Preferred (needs `strace`):
 
 ```sh
-strace -f -e trace=connect ./target/release/deepseek-build -p "hi" 2>&1 | grep -i connect
+strace -f -e trace=connect,sendto,sendmsg ./target/release/deepseek-build -p "hi" 2>&1 | grep -i connect
 ```
 
-Observed in development with a dummy key:
+Where `strace` is unavailable, `scripts/egress-check.sh` compiles an LD_PRELOAD
+logger (`scripts/egress_log.c`) and fails on any destination outside
+{`api.deepseek.com`, the `web_fetch` host, loopback, AF_UNIX}. It logs
+`connect`/`sendto`/`sendmsg`/`sendmmsg` from the binary and dynamic children.
+It cannot see raw `syscall(2)`/`io_uring`/statically-linked children — see
+`KNOWN-ISSUES.md`.
 
-- `--version` / `--help`: **no** outbound connects.
-- Single-turn prompt: **only** `api.deepseek.com:443` plus one local `AF_UNIX`
-  socket. The request reached `https://api.deepseek.com/chat/completions` and
-  returned 401 for the dummy key.
-- `scripts/check-egress.sh --strict`: `HARD egress gate: OK`, exit 0.
+## 6. Test suite
 
-`scripts/sandbox-run.sh --version` needs the release binary; with no
-`target/release/deepseek-build` present it exits 127 before running anything.
-Build first (or pass `BIN=`).
-
-## 6. Test suite and live smoke
-
-- `cargo test --workspace` compiles a large graph and is not part of the 20–30
-  minute run; its current status is tracked in
-  [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md#build--tests).
-- Adapter behavior is covered by
-  `crates/codegen/xai-grok-sampler/tests/chat_completions_wire.rs` (wiremock):
-  streaming text + reasoning, a 3-turn tool chain replaying `reasoning_content`,
-  missing-`reasoning_content` backfill, typographic-quote tool-call JSON repair,
-  and a partial/malformed stream. Retry/backoff is covered by
-  `crates/codegen/xai-grok-sampler/tests/test_actor.rs` (429 and 500).
-- **Live smoke (blocked without a key):** GET `/models` to confirm
-  `deepseek-v4-pro` / `deepseek-flash`, a plain chat, a streamed chat, a 3-turn
-  thinking tool-call chain, and `prompt_cache_hit_tokens` /
-  `prompt_tokens_details.cached_tokens` plus `reasoning_tokens` in usage.
-
-## 7. Troubleshooting
-
-- `Unauthorized (401)` — set a real `DEEPSEEK_API_KEY`.
-- Connection refused / DNS failure — check network; only `api.deepseek.com` (and
-  user MCP servers) are used.
-- Config/state lives under `~/.deepseek-build/`. The legacy `~/.grok` directory is
-  read as a fallback when `~/.deepseek-build` is absent; to point the tool at an
-  explicit directory set `DEEPSEEK_BUILD_HOME` (the legacy `GROK_HOME` is still
-  honored as a fallback).
-- `sandbox-run: BLOCKED connect to <ip>` — the binary tried a destination outside
-  the allowlist; capture the IP and report it.
+- `cargo test --workspace` **does not compile** (`xai-grok-workspace`, see
+  `KNOWN-ISSUES.md`).
+- Per-crate suites that do build, e.g.:
+  `cargo test -p xai-grok-sampler --lib`,
+  `cargo test -p xai-grok-telemetry --lib`,
+  `cargo test -p xai-grok-sampling-types --lib`.
+- `scripts/smoke-test.sh` is the live end-to-end check.
