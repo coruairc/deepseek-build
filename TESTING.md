@@ -96,9 +96,11 @@ It cannot see raw `syscall(2)`/`io_uring`/statically-linked children — see
 
 ## 6. Test suite
 
-- `cargo test --workspace` **does not compile** (`xai-grok-workspace`, see
-  `KNOWN-ISSUES.md`).
-- Per-crate suites that do build, e.g.:
+- `cargo test --workspace` **does not compile yet** (see `KNOWN-ISSUES.md`):
+  `xai-grok-workspace`'s test target now compiles (1693 pass / 25 pre-existing
+  failures), but **`xai-grok-shell`'s lib test target** still references deleted
+  Phase-1 features (~96 errors). This is the remaining test-repair pass.
+- Per-crate suites that do build and pass, e.g.:
   `cargo test -p xai-grok-sampler --lib`,
   `cargo test -p xai-grok-telemetry --lib`,
   `cargo test -p xai-grok-sampling-types --lib`.

@@ -7,21 +7,32 @@ real-use passes (2026-10-07).
 
 ## Build & tests
 
-- **`cargo test --workspace` does not compile.** The only failing crate is
-  **`xai-grok-workspace`** (all other crates' test targets compile). Its
-  `#[cfg(test)]` / `test_support` modules still reference production code removed
-  by the deletion branches: `crate::hub` / `crate::hub_server` / `crate::mcp`,
-  `xai_computer_hub_sdk`, `build_session_routed_handlers`, `SharedAuthProvider`,
-  the MCP session bridge types (`WorkspaceMcpBinding`, `McpServerOutcome`,
-  `FakeHubRegistry`), the removed `SessionContext.auth_provider` field, and
-  donation/observability methods. Affected files:
-  `xai-grok-workspace/src/{handle_tests,host_kind_tests}.rs`,
-  `session/tool_config.rs` (`test_support`), `permission/hub_permission.rs`
-  (test module), `permission/hub_gate_tests.rs`. Repair tooling exists
-  (`scripts/synstrip/`, `scripts/line_loop.py`); this is Step 6 and is not done.
+- **`cargo test --workspace` does not compile yet.** Two separate problems:
+  - **`xai-grok-workspace` (repaired in Step 6, commits `582cb718`..`f8e67475`):**
+    its test target now **compiles** (`cargo check -p xai-grok-workspace --lib
+    --tests` is green). `TestSessionContextFactory` no longer sets the removed
+    `auth_provider`; tests for deleted hub/MCP/bind behavior were removed with
+    110 ledger entries in `docs/DROPPED-TESTS.md` (no kept-feature test dropped).
+    Running the suite: **1693 passed, 25 failed** — all pre-existing production
+    stubs, not compilation: 9 `permission::manager::tests::*` hit the removed hub
+    permission transport, 14 `sandbox::real_wiring_tests::*` expectation
+    mismatches, 1 `init_metrics_tests` expecting a removed
+    `grok_workspace_rpc_requests_total` baseline. Fixing these needs production
+    changes or explicit test decisions; they were not forced green.
+  - **`xai-grok-shell` (lib test target, ~96 errors):** test modules still
+    reference deleted Phase-1 features — `crate::remote`
+    (`Conversation`/`ConversationsClient`/`RemoteSync`), `crate::upload`
+    (`GcsUploadContext`/`SubagentSessionMetadata`), `crate::cloud_config`,
+    `session::repo_changes`, removed hub-auth, and removed struct
+    fields/methods (`SessionActor::upload_queue`, `InputItem::trace_gcs_config`,
+    the two extra `handle_prompt` params across ~33 call sites, etc.). This is a
+    dedicated future pass; do not mass-delete kept tests to force it green.
 - **Non-test build is green:** `cargo check -p xai-grok-pager-bin` and
   `cargo build --release -p xai-grok-pager-bin` succeed; the binary runs
   (`target/release/deepseek-build`, `deepseek-build 1.0.45`).
+- **Step 6 mutation check:** breaking the sandbox truncation cap (`5_000`→
+  `6_000`) made `sandbox_host_caps_task_output_polls_at_5k` fail, confirming the
+  sandbox tests still detect the behavior; the change was reverted.
 - **Tags:** `last-known-good-2026-10-06` (`b3847ff8`, last green test compile;
   still contains egress code — not safe to run).
 
