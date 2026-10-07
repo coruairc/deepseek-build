@@ -1194,9 +1194,12 @@ pub async fn run_single_turn(
         emitter.on_error(&msg, None);
         anyhow::bail!("{msg}");
     }
-    if let Err(e) =
-        apply_headless_permission_mode(&acp_tx, &session_id, options.permission_mode_flag.as_deref())
-            .await
+    if let Err(e) = apply_headless_permission_mode(
+        &acp_tx,
+        &session_id,
+        options.permission_mode_flag.as_deref(),
+    )
+    .await
     {
         let msg = e.to_string();
         emitter.on_error(&msg, None);

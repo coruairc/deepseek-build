@@ -872,7 +872,9 @@ async fn headless_plan_mode_sends_set_session_mode_only_for_plan() {
                     .lock()
                     .unwrap()
                     .push(args.request.mode_id.0.to_string());
-                let _ = args.response_tx.send(Ok(acp::SetSessionModeResponse::new()));
+                let _ = args
+                    .response_tx
+                    .send(Ok(acp::SetSessionModeResponse::new()));
             }
         }
     });

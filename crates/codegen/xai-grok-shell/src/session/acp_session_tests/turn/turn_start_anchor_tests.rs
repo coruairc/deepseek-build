@@ -32,7 +32,8 @@ fn host_turn_stamps_fresh_turn_start() {
                 false,
                 None,
                 None,
-                None))
+                None,
+            ))
             .await
             .expect("/session-info ends the turn host-side");
 

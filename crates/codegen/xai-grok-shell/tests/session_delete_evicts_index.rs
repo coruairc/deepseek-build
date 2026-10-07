@@ -101,12 +101,9 @@ async fn deleting_a_session_clears_only_its_own_search_row() {
         "a delete with no workspace must clear a row nothing else will ever prune",
     );
 
-    delete_session_history(
-        "elsewhere",
-        Some("/ws-a"),
-        Some(&index))
-    .await
-    .unwrap();
+    delete_session_history("elsewhere", Some("/ws-a"), Some(&index))
+        .await
+        .unwrap();
     assert!(
         finds(&index, root, "elsewhere").await,
         "a delete scoped to another workspace must not evict this session",

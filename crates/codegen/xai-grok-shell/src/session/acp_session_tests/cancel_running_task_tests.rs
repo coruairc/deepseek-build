@@ -333,7 +333,8 @@ async fn persist_ack_waits_for_disk_flush_before_success() {
                         false,
                         None,
                         Some(ack_tx),
-                        None)
+                        None,
+                    )
                     .await
             });
             assert!(ack_rx.await.is_ok(), "persist ack should resolve");
@@ -398,7 +399,8 @@ async fn plain_user_prompt_without_persist_ack_still_sends_flush_barrier_behind_
                         false,
                         None,
                         None,
-                        None)
+                        None,
+                    )
                     .await
             });
             tokio::time::timeout(std::time::Duration::from_secs(5), async {
@@ -849,7 +851,8 @@ async fn first_turn_memory_injection_disabled_does_not_persist_to_chat_history()
                     "disabled-memory",
                     None,
                     &mut length_salvage::LengthSalvage::new(None),
-                    &mut Default::default())
+                    &mut Default::default(),
+                )
                 .await;
             let (flush_tx, flush_rx) = tokio::sync::oneshot::channel();
             persistence
@@ -1567,7 +1570,8 @@ async fn handle_prompt_frames_interrupt_on_user_message() {
                         false,
                         None,
                         Some(ack_tx),
-                        None)
+                        None,
+                    )
                     .await
             });
             assert!(ack_rx.await.is_ok(), "persist ack should resolve");
@@ -1613,7 +1617,8 @@ async fn handle_prompt_verbatim_skips_interrupt_envelope() {
                         false,
                         None,
                         Some(ack_tx),
-                        None)
+                        None,
+                    )
                     .await
             });
             assert!(ack_rx.await.is_ok(), "persist ack should resolve");
@@ -1658,7 +1663,8 @@ async fn handle_prompt_send_now_frames_interjection_envelope() {
                         true,
                         None,
                         Some(ack_tx),
-                        None)
+                        None,
+                    )
                     .await
             });
             assert!(ack_rx.await.is_ok(), "persist ack should resolve");
@@ -1709,7 +1715,8 @@ async fn handle_prompt_synthetic_origin_preserves_interrupt_reminder() {
                         false,
                         None,
                         Some(ack_tx),
-                        None)
+                        None,
+                    )
                     .await
             });
             assert!(ack_rx.await.is_ok(), "persist ack should resolve");

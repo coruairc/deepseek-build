@@ -12,7 +12,12 @@ pub fn run(shell: Shell) {
     // Ensure the script always uses the public product name.
     let mut cmd = PagerArgs::command().name(xai_grok_brand::NAME);
     if shell != Shell::Zsh {
-        generate(shell, &mut cmd, xai_grok_brand::NAME, &mut std::io::stdout());
+        generate(
+            shell,
+            &mut cmd,
+            xai_grok_brand::NAME,
+            &mut std::io::stdout(),
+        );
         return;
     }
     // zsh needs post-processing (see fix_zsh_root_prompt_positional).
@@ -102,6 +107,9 @@ mod tests {
             "nested subcommand dispatch must be untouched"
         );
         // The subcommand list itself must still be offered at the root.
-        assert!(fixed.contains("_deepseek-build_commands"), "root command list intact");
+        assert!(
+            fixed.contains("_deepseek-build_commands"),
+            "root command list intact"
+        );
     }
 }

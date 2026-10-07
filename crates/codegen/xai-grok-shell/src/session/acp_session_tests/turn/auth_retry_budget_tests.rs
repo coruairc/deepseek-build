@@ -307,7 +307,8 @@ async fn run_prompt_with_cap(
             /* send_now */ false,
             None,
             None,
-            None),
+            None,
+        ),
     )
     .await
     .expect("turn must finish within timeout")

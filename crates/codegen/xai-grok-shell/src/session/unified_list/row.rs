@@ -172,4 +172,3 @@ mod tests {
         assert_eq!(acp::SessionInfo::try_from(info), Err(CwdNotAbsolute));
     }
 }
-

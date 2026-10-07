@@ -168,7 +168,8 @@ pub(super) async fn run_prompt(
             /* send_now */ false,
             None,
             None,
-            None),
+            None,
+        ),
     )
     .await
     .expect("turn must finish within timeout")

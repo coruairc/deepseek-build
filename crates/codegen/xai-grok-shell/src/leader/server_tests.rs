@@ -4916,4 +4916,3 @@ async fn leader_client_id_dropped_when_target_disconnected() {
 
     cancel.cancel();
 }
-

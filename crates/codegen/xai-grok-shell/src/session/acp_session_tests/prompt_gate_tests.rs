@@ -260,7 +260,8 @@ async fn synthetic_prompt_ignores_hook_block() {
                     false,
                     None,
                     None,
-                    None))
+                    None,
+                ))
                 .await
             });
 
@@ -324,7 +325,8 @@ async fn subagent_session_ignores_hook_block() {
                     false,
                     None,
                     None,
-                    None))
+                    None,
+                ))
                 .await
             });
 
@@ -651,7 +653,8 @@ async fn synthetic_prompt_commits_despite_blocking_hook() {
                     false,
                     None,
                     None,
-                    None))
+                    None,
+                ))
                 .await
             });
 

@@ -2,9 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use super::{
-    AgentConfig, BootstrapError, bootstrap_with_cancel, hold_bootstrap_gate_for_tests,
-};
+use super::{AgentConfig, BootstrapError, bootstrap_with_cancel, hold_bootstrap_gate_for_tests};
 use tokio_util::sync::CancellationToken;
 use xai_grok_login::{AuthManager, GrokComConfig};
 

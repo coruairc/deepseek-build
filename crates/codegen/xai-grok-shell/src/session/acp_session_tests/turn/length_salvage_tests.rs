@@ -173,7 +173,8 @@ async fn run_prompt(actor: &Arc<SessionActor>, prompt_id: &str) -> PromptTurnRes
             false,
             None,
             None,
-            None),
+            None,
+        ),
     )
     .await
     .expect("turn must finish within timeout")

@@ -94,7 +94,8 @@ async fn run_turn_attached(
             "req-transient-loop-test",
             None,
             &mut length_salvage::LengthSalvage::new(None),
-            &mut Default::default()),
+            &mut Default::default(),
+        ),
     )
     .await
     .expect("turn must finish within timeout");
@@ -306,7 +307,8 @@ fn prompt_budget_spans_turn_loop_reentries() {
                         &format!("req-reentry-{entry}"),
                         None,
                         &mut length_salvage::LengthSalvage::new(None),
-                        &mut Default::default()),
+                        &mut Default::default(),
+                    ),
                 )
                 .await
                 .expect("entry must finish within timeout");
@@ -349,7 +351,8 @@ fn turn_phase_prompt_latency_invariants() {
                     "req-turn-phase-invariant",
                     None,
                     &mut length_salvage::LengthSalvage::new(None),
-                    &mut Default::default()),
+                    &mut Default::default(),
+                ),
             )
             .await
             .expect("turn must finish within timeout");
