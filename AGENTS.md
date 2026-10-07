@@ -101,6 +101,29 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
   runtime prompt is XOR-obfuscated: after editing any template run
   `python3 scripts/encrypt_templates.py` (restored) and verify with
   `test_encrypted_templates_not_stale` (needs a compiling test suite).
+- **Step 5b — release pipeline + installer (DONE, on `dsb/integration`):**
+  - `.github/workflows/release.yml` — tag `v*` (and `workflow_dispatch`) builds 4 targets
+    **natively** (`ubuntu-22.04`, `ubuntu-22.04-arm`, `macos-15`, `macos-15-intel`), packages
+    `deepseek-build-<ver>-<target>.tar.gz` (binary + LICENSE + NOTICE + THIRD-PARTY-NOTICES +
+    README.txt), generates `SHA256SUMS`, and attaches tarballs + `SHA256SUMS` + `install.sh` to
+    the GitHub release. All actions pinned to SHAs. Only uploads to the GitHub release (plus
+    GitHub-internal `upload-artifact` between jobs). `actionlint` clean.
+  - `install.sh` (repo root, also a release asset) — POSIX sh, `set -eu`, OS/arch detection,
+    downloads tarball + `SHA256SUMS` from **github.com only** (no API host), verifies SHA-256
+    **before** extracting, installs to `${INSTALL_DIR:-$HOME/.local/bin}` (no sudo), PATH hint,
+    `--uninstall`, rerun-to-update, prints the non-affiliation line. `shellcheck --shell=sh`
+    clean; `dash -n` clean.
+  - `scripts/test-install.sh` — local fake-release HTTP harness: success, latest-resolution,
+    checksum mismatch (installs nothing), unsupported OS, tarball 404, uninstall, rerun-update,
+    unwritable dir. **25/25 assertions pass.**
+  - `deny.toml` + `docs/LICENSE-AUDIT.md` + `docs/license-deny-report.txt` — cargo-deny
+    `licenses/bans/sources` all `ok`. Copyleft: only vendored libgit2 (GPL-2.0-only WITH
+    libgit2-linking-exception; full text in THIRD-PARTY-NOTICES, shipped in tarballs). Weak
+    copyleft MPL-2.0 crates listed in the audit. No GPL-3/AGPL/LGPL/CDDL.
+  - README `## Install` section: curl one-liner, download-inspect-run alternative, VERSION
+    pinning, uninstall, manual verify, supported-platform table, attribution + non-affiliation.
+  - **Not yet done:** no tag has been pushed, so no release exists yet. See §6 for the test-tag
+    procedure.
 
 ## 3. What is LEFT (ordered)
 
@@ -188,4 +211,37 @@ cargo build --release -p xai-grok-pager-bin
 
 scripts/check-egress.sh           # HARD gate
 scripts/check-egress.sh --strict  # + branding (post-rebrand)
+
+# Step 5b release pipeline / installer
+actionlint .github/workflows/*.yml
+shellcheck --shell=sh install.sh scripts/test-install.sh
+sh scripts/test-install.sh        # 25/25 assertions
+cargo-deny check licenses bans sources
 ```
+
+### Test-tag procedure (do NOT tag a real release until the dry run is green)
+
+```sh
+# 1. Push a throwaway tag to exercise the workflow end to end.
+git tag v0.0.1-rc1
+git push origin v0.0.1-rc1
+
+# 2. Watch the run (4 native builds + publish).
+gh run list --workflow=release.yml --limit 3
+gh run watch "$(gh run list --workflow=release.yml --limit 1 --json databaseId -q '.[0].databaseId')"
+
+# 3. Inspect the release it created (prerelease, because of the -rc1 suffix).
+gh release view v0.0.1-rc1
+
+# 4. Clean up: delete the release and the tag (local + remote).
+gh release delete v0.0.1-rc1 --yes
+git push origin :refs/tags/v0.0.1-rc1
+git tag -d v0.0.1-rc1
+```
+
+What to check on the run: all 4 build jobs succeed; each tarball contains
+`deepseek-build`, `LICENSE`, `NOTICE`, `THIRD-PARTY-NOTICES`, `README.txt` at top level;
+`SHA256SUMS` lists all 4 tarballs; the release has 4 tarballs + `SHA256SUMS` + `install.sh`;
+then run the installer against the real release:
+`curl -fsSL https://github.com/coruairc/deepseek-build/releases/download/v0.0.1-rc1/install.sh | VERSION=v0.0.1-rc1 sh`
+and confirm `deepseek-build --version` prints the tag version.
