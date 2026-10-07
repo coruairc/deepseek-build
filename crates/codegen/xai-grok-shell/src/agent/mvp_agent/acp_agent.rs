@@ -670,7 +670,7 @@ impl acp::Agent for MvpAgent {
                         return Err(
                             acp::Error::auth_required()
                                 .data(
-                                    "Set XAI_API_KEY or add api_key/env_key to config.toml.",
+                                    "Set DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) or add api_key/env_key to config.toml.",
                                 ),
                         );
                     }

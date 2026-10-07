@@ -261,7 +261,9 @@ pub fn run_cli_logout(grok_com_config: &xai_grok_login::GrokComConfig) -> anyhow
     if !result.was_logged_in {
         eprintln!("No cached session to log out of.");
         if result.api_key_still_set {
-            eprintln!("You are authenticated via XAI_API_KEY (environment variable).");
+            eprintln!(
+                "You are authenticated via DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) (environment variable)."
+            );
         }
         return Ok(());
     }
@@ -271,7 +273,9 @@ pub fn run_cli_logout(grok_com_config: &xai_grok_login::GrokComConfig) -> anyhow
         eprintln!("Logged out");
     }
     if result.api_key_still_set {
-        eprintln!("XAI_API_KEY is still set and will be used for authentication.");
+        eprintln!(
+            "DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) is still set and will be used for authentication."
+        );
     }
     Ok(())
 }
