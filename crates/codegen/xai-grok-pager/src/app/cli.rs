@@ -105,7 +105,7 @@ See ~/.deepseek-build/README.md for more information.
     Workspace(WorkspaceMgmtArgs),
     /// Open the Agent Dashboard view at startup.
     /// The dashboard shows every session, top-level and subagents.
-    /// Disabled when `[dashboard].enabled = false` in `~/.deepseek-build/config.toml` or when the `GROK_AGENT_DASHBOARD=0` env var is set.
+    /// Disabled when `[dashboard].enabled = false` in `~/.deepseek-build/config.toml` or when the `DEEPSEEK_BUILD_AGENT_DASHBOARD=0` env var is set.
     Dashboard,
 }
 /// Arguments for the `wrap` subcommand: the command to run, then its args.
@@ -275,13 +275,18 @@ impl AgentArgs {
                 Ok(canonical) if canonical.is_dir() => Some(canonical),
                 Ok(_) => {
                     eprintln!(
-                        "grok: --plugin-dir {}: not a directory; skipping",
+                        "{}: --plugin-dir {}: not a directory; skipping",
+                        xai_grok_brand::NAME,
                         p.display()
                     );
                     None
                 }
                 Err(e) => {
-                    eprintln!("grok: --plugin-dir {}: {e}; skipping", p.display());
+                    eprintln!(
+                        "{}: --plugin-dir {}: {e}; skipping",
+                        xai_grok_brand::NAME,
+                        p.display()
+                    );
                     None
                 }
             })
@@ -612,7 +617,8 @@ pub struct PagerArgs {
     )]
     pub background_wait_timeout_secs: u64,
     /// Sandbox profile for filesystem and network access.
-    #[arg(long, env = "GROK_SANDBOX", value_name = "PROFILE")]
+    /// The legacy `GROK_SANDBOX` name is still honored.
+    #[arg(long, env = "DEEPSEEK_BUILD_SANDBOX", value_name = "PROFILE")]
     pub sandbox: Option<String>,
     /// Session storage mode: local or writeback.
     #[arg(long = "storage-mode", value_name = "MODE", hide = true)]
@@ -842,7 +848,7 @@ impl PagerArgs {
     }
     /// Resolve the sandbox profile to apply at startup, accounting for the profile the resumed session was created with.
     /// `saved` is the resumed session's persisted profile (read once via [`Self::saved_resume_profile`]).
-    /// An explicit `--sandbox`/`GROK_SANDBOX` that differs from the saved profile is refused: changing a session's sandbox on resume would be unsafe.
+    /// An explicit `--sandbox`/`DEEPSEEK_BUILD_SANDBOX` (legacy `GROK_SANDBOX`) that differs from the saved profile is refused: changing a session's sandbox on resume would be unsafe.
     pub fn startup_sandbox_profile(&self, saved: Option<&str>) -> SandboxStartup {
         let explicit = self.sandbox.as_deref().filter(|s| !s.is_empty());
         Self::resolve_startup_sandbox(explicit, saved.map(String::from))

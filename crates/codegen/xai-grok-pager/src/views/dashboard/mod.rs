@@ -78,14 +78,19 @@ pub fn overlay_cycle_order(
         .collect()
 }
 
-/// The env override wins (`GROK_AGENT_DASHBOARD=0` turns the dashboard off), else the persisted `[dashboard].enabled` flag (default `true`).
+/// The env override wins (`DEEPSEEK_BUILD_AGENT_DASHBOARD=0` turns the dashboard off; the legacy
+/// `GROK_AGENT_DASHBOARD` name is still honored), else the persisted `[dashboard].enabled` flag (default `true`).
 /// The slash command and CLI subcommand check this before opening; on `false` they print a toast and stay where they are.
 /// `var_os` avoids the per-call allocation of `var`.
 pub fn dashboard_enabled() -> bool {
-    if std::env::var_os("GROK_AGENT_DASHBOARD")
-        .as_deref()
-        .is_some_and(|v| v == std::ffi::OsStr::new("0"))
-    {
+    let disabled = ["DEEPSEEK_BUILD_AGENT_DASHBOARD", "GROK_AGENT_DASHBOARD"]
+        .into_iter()
+        .any(|name| {
+            std::env::var_os(name)
+                .as_deref()
+                .is_some_and(|v| v == std::ffi::OsStr::new("0"))
+        });
+    if disabled {
         return false;
     }
     state::load_persisted_enabled().unwrap_or(true)
@@ -108,15 +113,25 @@ mod tests {
     use super::*;
 
     /// Minimal mode always points at `/resume`: the dashboard is refused there no matter what the feature flag says, so the hint must not depend on it.
-    /// Runs under the same serial key as the other `GROK_AGENT_DASHBOARD` env-mutating tests.
+    /// Runs under the same serial key as the other `DEEPSEEK_BUILD_AGENT_DASHBOARD` env-mutating tests.
     #[serial_test::serial(GROK_AGENT_DASHBOARD)]
     #[test]
     fn switch_hint_minimal_is_resume_even_with_dashboard_disabled() {
         // SAFETY: the test temporarily mutates a process-wide env var.
         // `serial_test`'s lock ensures no other test marked with the same
-        // `GROK_AGENT_DASHBOARD` key reads it concurrently.
-        unsafe { std::env::set_var("GROK_AGENT_DASHBOARD", "0") };
+        // key reads it concurrently.
+        unsafe { std::env::set_var("DEEPSEEK_BUILD_AGENT_DASHBOARD", "0") };
         assert_eq!(session_switch_hint_command(true), Some("/resume"));
+        unsafe { std::env::remove_var("DEEPSEEK_BUILD_AGENT_DASHBOARD") };
+    }
+
+    /// The legacy `GROK_AGENT_DASHBOARD=0` name still disables the dashboard for existing setups.
+    #[serial_test::serial(GROK_AGENT_DASHBOARD)]
+    #[test]
+    fn legacy_agent_dashboard_env_still_disables() {
+        // SAFETY: see above.
+        unsafe { std::env::set_var("GROK_AGENT_DASHBOARD", "0") };
+        assert!(!dashboard_enabled());
         unsafe { std::env::remove_var("GROK_AGENT_DASHBOARD") };
     }
 

@@ -143,11 +143,29 @@ pub fn resolve_string_flag(
     config_val: Option<&str>,
     feature_flag_val: Option<&str>,
 ) -> Option<Resolved<String>> {
+    resolve_string_flag_legacy(cli_arg, env_var, "", config_val, feature_flag_val)
+}
+
+/// [`resolve_string_flag`] with a legacy env-var fallback: cli > primary env > legacy env >
+/// config > feature flag. The rebranded primary name wins; the old name keeps existing
+/// setups working. An empty `legacy_env_var` disables the fallback.
+pub fn resolve_string_flag_legacy(
+    cli_arg: Option<&str>,
+    env_var: &str,
+    legacy_env_var: &str,
+    config_val: Option<&str>,
+    feature_flag_val: Option<&str>,
+) -> Option<Resolved<String>> {
     if let Some(val) = cli_arg.filter(|s| !s.is_empty()) {
         return Some(Resolved::new(val.to_owned(), ConfigSource::Cli));
     }
     if let Some(val) = xai_grok_env::env_string(env_var) {
         return Some(Resolved::new(val, ConfigSource::Env));
+    }
+    if !legacy_env_var.is_empty() {
+        if let Some(val) = xai_grok_env::env_string(legacy_env_var) {
+            return Some(Resolved::new(val, ConfigSource::Env));
+        }
     }
     if let Some(val) = config_val.filter(|s| !s.is_empty()) {
         return Some(Resolved::new(val.to_owned(), ConfigSource::Config));

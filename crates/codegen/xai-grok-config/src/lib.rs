@@ -123,7 +123,9 @@ pub use remote_settings::{
     LongReasoningReminderSettings, RemoteRequestEncoding, RemoteSettings, WorktreeAutoGcSettings,
     WorktreeKindMaxAge, deserialize_tolerant,
 };
-pub use resolved::{BoolFlag, ConfigSource, Resolved, resolve_string_flag};
+pub use resolved::{
+    BoolFlag, ConfigSource, Resolved, resolve_string_flag, resolve_string_flag_legacy,
+};
 pub use validation::{
     RequirementsError, RequirementsLayer, RequirementsSource, load_merged_requirements,
     requirements_layers, validate_requirements,

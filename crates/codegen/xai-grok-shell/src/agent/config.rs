@@ -281,7 +281,7 @@ pub(crate) fn resolve_compaction_detail_from(
         .or_else(|| remote.and_then(CompactionDetail::parse))
         .unwrap_or_default()
 }
-pub(crate) use xai_grok_config::resolve_string_flag;
+pub(crate) use xai_grok_config::{resolve_string_flag, resolve_string_flag_legacy};
 /// Resolve `enabled` for section-based configs (memory, subagents, etc.).
 /// Feature flag only applies when the TOML section is absent.
 pub(crate) fn resolve_enabled(
@@ -538,8 +538,14 @@ impl SandboxSettingsConfig {
         if let Some(val) = requirement {
             return Resolved::new(val.to_owned(), ConfigSource::Requirement);
         }
-        resolve_string_flag(cli_arg, "GROK_SANDBOX", self.profile.as_deref(), None)
-            .unwrap_or_else(|| Resolved::new("off".to_owned(), ConfigSource::Default))
+        resolve_string_flag_legacy(
+            cli_arg,
+            "DEEPSEEK_BUILD_SANDBOX",
+            "GROK_SANDBOX",
+            self.profile.as_deref(),
+            None,
+        )
+        .unwrap_or_else(|| Resolved::new("off".to_owned(), ConfigSource::Default))
     }
     /// Resolve auto_allow_bash: requirement > env > config > default (false).
     pub(crate) fn resolve_auto_allow_bash(&self, requirement: Option<bool>) -> Resolved<bool> {

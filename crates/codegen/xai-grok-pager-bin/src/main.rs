@@ -1060,7 +1060,11 @@ fn shutdown_and_flush_telemetry(exit_code: i32) -> ! {
 }
 fn finalize_span_profile() {
     if let Some(path) = xai_grok_telemetry::span_profile::finalize() {
-        eprintln!("grok: span profile written to {}", path.display());
+        eprintln!(
+            "{}: span profile written to {}",
+            xai_grok_brand::NAME,
+            path.display()
+        );
     }
 }
 #[tracing::instrument(level = "debug", skip_all)]
@@ -1095,8 +1099,12 @@ async fn forward_stdio_line_to_leader(
     }
 }
 /// Emitted by both leader guards (server mode and leader-connect) so the two sites can't drift.
-const PLUGIN_DIR_LEADER_WARNING: &str = "grok: --plugin-dir is ignored in leader mode; run with --no-leader to \
-     load per-process plugins";
+fn plugin_dir_leader_warning() -> String {
+    format!(
+        "{}: --plugin-dir is ignored in leader mode; run with --no-leader to load per-process plugins",
+        xai_grok_brand::NAME
+    )
+}
 /// Run the `agent` subcommand, dispatching to the appropriate mode.
 #[tracing::instrument(level = "debug", skip_all)]
 async fn run_agent_command(
@@ -1156,7 +1164,7 @@ async fn run_agent_command(
         None,
     );
     if let Some(warning) = launch_yolo.blocked_warning {
-        eprintln!("grok: {warning}");
+        eprintln!("{}: {warning}", xai_grok_brand::NAME);
     }
     agent_config.default_yolo_mode = launch_yolo.yolo;
     agent_config.default_auto_mode = xai_grok_shell::util::config::effective_auto_for_launch(
@@ -1171,7 +1179,7 @@ async fn run_agent_command(
         .map(resolve_agent_profile_path);
     agent_config.client_version = Some(PAGER_CLIENT_VERSION.to_string());
     if is_leader && !agent_args.plugin_dirs.is_empty() {
-        eprintln!("{PLUGIN_DIR_LEADER_WARNING}");
+        eprintln!("{}", plugin_dir_leader_warning());
     } else {
         agent_config.plugins.cli_plugin_dirs = agent_args.canonical_plugin_dirs();
     }
@@ -1223,7 +1231,7 @@ async fn run_agent_command(
     });
     if use_leader {
         if !agent_args.plugin_dirs.is_empty() {
-            eprintln!("{PLUGIN_DIR_LEADER_WARNING}");
+            eprintln!("{}", plugin_dir_leader_warning());
         }
         use std::sync::Arc;
         use tokio::io::AsyncWriteExt;
@@ -1469,7 +1477,7 @@ fn flag_dashboard_at_startup_if_requested(args: &mut PagerArgs) -> Result<()> {
         anyhow::bail!(
             "the Agent Dashboard is disabled. Enable it by removing \
              `[dashboard] enabled = false` from ~/.deepseek-build/config.toml and \
-             unsetting GROK_AGENT_DASHBOARD=0."
+             unsetting DEEPSEEK_BUILD_AGENT_DASHBOARD=0 (legacy GROK_AGENT_DASHBOARD=0)."
         );
     }
     args.command = None;
@@ -1548,10 +1556,12 @@ impl WorkerCount {
                 used,
                 cores,
             } => Some(format!(
-                "grok: clamped {GROK_WORKER_THREADS_ENV}={requested} to {used} (valid range is 1..={cores})"
+                "{}: clamped {GROK_WORKER_THREADS_ENV}={requested} to {used} (valid range is 1..={cores})",
+                xai_grok_brand::NAME
             )),
             Self::Ignored { value, .. } => Some(format!(
-                "grok: ignoring {GROK_WORKER_THREADS_ENV}={value:?} (not a valid integer)"
+                "{}: ignoring {GROK_WORKER_THREADS_ENV}={value:?} (not a valid integer)",
+                xai_grok_brand::NAME
             )),
         }
     }
@@ -1771,7 +1781,7 @@ fn main() {
         xai_grok_pager::memory_trace::install_allocator_dump_provider(jemalloc_stats_dump);
     }
     let args = configure_process_env(args).unwrap_or_else(|err| {
-        eprintln!("grok: {err:#}");
+        eprintln!("{}: {err:#}", xai_grok_brand::NAME);
         std::process::exit(1);
     });
     xai_grok_pager::memory_trace::start(xai_grok_pager::memory_trace::default_dir());
@@ -1811,7 +1821,10 @@ fn main() {
     builder.worker_threads(workers.get()).enable_all();
     let runtime =
         xai_tty_utils::runtime::build_with_blocking_pool(&mut builder).unwrap_or_else(|e| {
-            eprintln!("grok: failed to start tokio runtime: {e}");
+            eprintln!(
+                "{}: failed to start tokio runtime: {e}",
+                xai_grok_brand::NAME
+            );
             shutdown_and_flush_telemetry(1);
         });
     let result = run_and_shutdown(runtime, async_main(args), RUNTIME_SHUTDOWN_GRACE);
@@ -2065,7 +2078,7 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
             None,
         );
         if let Some(warning) = launch_yolo.blocked_warning {
-            eprintln!("grok: {warning}");
+            eprintln!("{}: {warning}", xai_grok_brand::NAME);
         }
         let json_schema = args
             .json_schema
