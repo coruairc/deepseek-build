@@ -9,22 +9,26 @@ use xai_grok_shell::util::config::{McpServerConfig, McpServerTransportConfig};
 
 use crate::util::display_user_grok_path;
 
-const ADD_AFTER_HELP: &str = "\
-Examples:
+fn add_after_help() -> String {
+    let cmd = xai_grok_brand::NAME;
+    format!(
+        "Examples:
   # Add a stdio server (everything after -- is the server command)
-  grok mcp add xcode -- xcrun mcpbridge
+  {cmd} mcp add xcode -- xcrun mcpbridge
 
   # Add a stdio server with environment variables
-  grok mcp add postgres -e DATABASE_URL=postgres://localhost/mydb -- npx -y @modelcontextprotocol/server-postgres
+  {cmd} mcp add postgres -e DATABASE_URL=postgres://localhost/mydb -- npx -y @modelcontextprotocol/server-postgres
 
   # Add a remote HTTP server
-  grok mcp add --transport http sentry https://mcp.example.com/mcp
+  {cmd} mcp add --transport http sentry https://mcp.example.com/mcp
 
   # Add a remote server with an authentication header
-  grok mcp add --transport http api https://mcp.example.com/mcp --header \"Authorization: Bearer YOUR_TOKEN\"
+  {cmd} mcp add --transport http api https://mcp.example.com/mcp --header \"Authorization: Bearer YOUR_TOKEN\"
 
-  # Add to the project config (./.grok/config.toml) instead of ~/.grok/config.toml
-  grok mcp add --scope project github -- npx -y @modelcontextprotocol/server-github";
+  # Add to the project config (./.deepseek-build/config.toml) instead of ~/.deepseek-build/config.toml
+  {cmd} mcp add --scope project github -- npx -y @modelcontextprotocol/server-github"
+    )
+}
 
 #[derive(Debug, clap::Args, Clone)]
 pub struct McpArgs {
@@ -46,9 +50,9 @@ pub enum McpTransport {
 /// Which config file an MCP server definition is written to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum McpScope {
-    /// `~/.grok/config.toml`, available in all your projects
+    /// `~/.deepseek-build/config.toml`, available in all your projects
     User,
-    /// `./.grok/config.toml`, shared with everyone working in this directory
+    /// `./.deepseek-build/config.toml`, shared with everyone working in this directory
     Project,
 }
 
@@ -102,7 +106,7 @@ pub enum McpCommand {
 
 // Everything `mcp add` accepts, before validation; `resolve_add` turns it into a transport config
 #[derive(Debug, clap::Args, Clone)]
-#[command(after_help = ADD_AFTER_HELP)]
+#[command(after_help = add_after_help())]
 pub struct AddArgs {
     /// Server name
     name: String,
@@ -190,7 +194,10 @@ fn run_list(json: bool) -> Result<()> {
             .collect();
         println!("{}", serde_json::to_string_pretty(&payload)?);
     } else if servers.is_empty() {
-        println!("No MCP servers configured. Run `grok mcp add --help` to get started.");
+        println!(
+            "No MCP servers configured. Run `{} mcp add --help` to get started.",
+            xai_grok_brand::NAME
+        );
     } else {
         for (name, (config, scope)) in &servers {
             let transport = match &config.transport {
@@ -349,7 +356,8 @@ fn resolve_add(args: &AddArgs) -> Result<ResolvedAdd> {
         McpTransport::Stdio => {
             let Some(command) = source else {
                 bail!(
-                    "A command is required for stdio servers. Usage: grok mcp add <name> -- <command> [args...]"
+                    "A command is required for stdio servers. Usage: {} mcp add <name> -- <command> [args...]",
+                    xai_grok_brand::NAME
                 );
             };
             if !args.header.is_empty() {
@@ -381,7 +389,8 @@ fn resolve_add(args: &AddArgs) -> Result<ResolvedAdd> {
                         format!("http://{command}")
                     };
                 warnings.push(format!(
-                    "Warning: '{command}' looks like a URL, but it is being added as a stdio command because --transport was not specified.\nFor a remote server, use: grok mcp add --transport http {} {suggested_url}",
+                    "Warning: '{command}' looks like a URL, but it is being added as a stdio command because --transport was not specified.\nFor a remote server, use: {} mcp add --transport http {} {suggested_url}",
+                    xai_grok_brand::NAME,
                     args.name
                 ));
             }
@@ -405,7 +414,8 @@ fn resolve_add(args: &AddArgs) -> Result<ResolvedAdd> {
             };
             let Some(url) = source else {
                 bail!(
-                    "A URL is required for {label} servers. Usage: grok mcp add --transport {label} <name> <url>"
+                    "A URL is required for {label} servers. Usage: {} mcp add --transport {label} <name> <url>",
+                    xai_grok_brand::NAME
                 );
             };
             if !url.starts_with("http://") && !url.starts_with("https://") {
@@ -632,7 +642,10 @@ async fn run_set_enabled(name: &str, enabled: bool) -> Result<()> {
         if !available.is_empty() {
             eprintln!("Available servers: {}", available.join(", "));
         } else {
-            eprintln!("No MCP servers configured. Run `grok mcp add --help` to get started.");
+            eprintln!(
+                "No MCP servers configured. Run `{} mcp add --help` to get started.",
+                xai_grok_brand::NAME
+            );
         }
         std::process::exit(1);
     }
@@ -726,7 +739,10 @@ async fn run_remove(name: &str, requested_scope: Option<McpScope>) -> Result<()>
                 display_user_grok_path(xai_grok_config::USER_CONFIG_FILENAME)
             );
             eprintln!("  project: {}", project_path.display());
-            eprintln!("Specify which one to remove, e.g.: grok mcp remove {name} --scope project");
+            eprintln!(
+                "Specify which one to remove, e.g.: {} mcp remove {name} --scope project",
+                xai_grok_brand::NAME
+            );
             std::process::exit(1);
         }
     };

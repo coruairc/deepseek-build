@@ -13225,6 +13225,7 @@ dependencies = [
  "xai-fsnotify",
  "xai-grok-agent",
  "xai-grok-auth",
+ "xai-grok-brand",
  "xai-grok-compaction",
  "xai-grok-config",
  "xai-grok-config-types",

@@ -155,6 +155,7 @@ xai-grok-workspace = { workspace = true }
 xai-grok-foreign-sessions = { workspace = true }
 xai-grok-subagent-resolution = { path = "../xai-grok-subagent-resolution" }
 xai-grok-agent = { path = "../xai-grok-agent" }
+xai-grok-brand = { workspace = true }
 xai-grok-config = { workspace = true }
 xai-grok-external-agent-migration = { workspace = true }
 xai-grok-config-types = { workspace = true }

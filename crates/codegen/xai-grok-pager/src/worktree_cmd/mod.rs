@@ -18,7 +18,7 @@ pub struct WorktreeArgs {
 }
 #[derive(Debug, Subcommand, Clone)]
 enum WorktreeCommand {
-    /// Create a worktree the way `grok -w` does, without starting a session
+    /// Create a worktree the way `deepseek-build -w` does, without starting a session
     Create {
         /// Worktree name; generated when omitted
         name: Option<String>,
@@ -60,7 +60,7 @@ enum WorktreeCommand {
         #[arg(long)]
         max_age: Option<String>,
         /// Skip the live-process and protected-path guards.
-        /// This does not override the safety check; use `grok worktree rm` for that.
+        /// This does not override the safety check; use `deepseek-build worktree rm` for that.
         #[arg(short, long)]
         force: bool,
     },

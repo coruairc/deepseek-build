@@ -169,7 +169,7 @@ impl std::fmt::Display for UninstallError {
                 write!(
                     f,
                     "Plugin \"{name}\" not found.\n\
-                     Run `grok plugin list` to see installed plugins."
+                     Run `deepseek-build plugin list` to see installed plugins."
                 )
             }
             Self::RegistryLock { detail } => {
@@ -309,7 +309,7 @@ impl std::fmt::Display for UpdateError {
                 write!(
                     f,
                     "Plugin \"{name}\" not found.\n\
-                     Run `grok plugin list` to see installed plugins."
+                     Run `deepseek-build plugin list` to see installed plugins."
                 )
             }
             Self::RegistryLock { detail } => {
@@ -646,7 +646,7 @@ impl std::fmt::Display for MarketplaceInstallError {
                     write!(
                         f,
                         "Unknown marketplace \"{qualifier}\". No marketplaces are registered; \
-                         add one with `grok plugin marketplace add`."
+                         add one with `deepseek-build plugin marketplace add`."
                     )
                 } else {
                     let list = bullet_list(registered);
@@ -683,8 +683,8 @@ impl std::fmt::Display for MarketplaceInstallError {
                 write!(
                     f,
                     "No marketplace plugin named \"{name}\" in any registered marketplace.\n\
-                     Install a local directory with `grok plugin install ./{name}`, or add a \
-                     source with `grok plugin marketplace add`."
+                     Install a local directory with `deepseek-build plugin install ./{name}`, or add a \
+                     source with `deepseek-build plugin marketplace add`."
                 )?;
                 if !skipped_sources.is_empty() {
                     write!(
@@ -701,7 +701,7 @@ impl std::fmt::Display for MarketplaceInstallError {
                 write!(
                     f,
                     "Multiple marketplaces provide a plugin named \"{name}\":\n{list}\n\
-                     Pin one with `grok plugin install {name}@<qualifier>`."
+                     Pin one with `deepseek-build plugin install {name}@<qualifier>`."
                 )
             }
             Self::PartialScan {
@@ -713,7 +713,7 @@ impl std::fmt::Display for MarketplaceInstallError {
                     f,
                     "Couldn't scan every marketplace while resolving \"{name}\", so it can't be \
                      resolved safely. Unscanned source(s):\n{list}\n\
-                     Retry, or pin the source explicitly with `grok plugin install {name}@<qualifier>`."
+                     Retry, or pin the source explicitly with `deepseek-build plugin install {name}@<qualifier>`."
                 )
             }
             Self::Sync {

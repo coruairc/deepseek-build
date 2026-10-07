@@ -747,9 +747,10 @@ async fn apply_headless_model_and_effort(
     .map_err(|e| {
         if let Some(name) = model_name {
             anyhow::anyhow!(
-                "Couldn't set model '{}': {}. Run 'grok models' to see available models.",
+                "Couldn't set model '{}': {}. Run '{} models' to see available models.",
                 name,
-                e
+                e,
+                xai_grok_brand::NAME
             )
         } else {
             anyhow::anyhow!("Couldn't apply reasoning effort: {e}")

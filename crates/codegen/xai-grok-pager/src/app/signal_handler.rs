@@ -222,7 +222,11 @@ fn flush_telemetry_and_exit(exit_code: i32) -> ! {
     }
     xai_grok_telemetry::debug_log::flush();
     if let Some(path) = xai_grok_telemetry::span_profile::finalize() {
-        eprintln!("grok: span profile written to {}", path.display());
+        eprintln!(
+            "{}: span profile written to {}",
+            xai_grok_brand::NAME,
+            path.display()
+        );
     }
     std::process::exit(exit_code);
 }

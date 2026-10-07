@@ -1,4 +1,4 @@
-//! `grok inspect`: configuration introspection.
+//! `deepseek-build inspect`: configuration introspection.
 //!
 //! Shows everything deepseek-build discovers in the current directory.
 //! That covers project instructions, permissions, hooks, skills, agents, plugins, MCP servers, LSP config, and config.toml sources.
@@ -348,7 +348,7 @@ pub(crate) struct ConfigSources {
     pub layers: Vec<ConfigLayer>,
 }
 
-/// A single config layer entry for `grok inspect`.
+/// A single config layer entry for `deepseek-build inspect`.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ConfigLayer {
@@ -366,7 +366,7 @@ pub async fn inspect(cwd: &Path, json: bool) -> anyhow::Result<()> {
     write_inspect(&report, json, &mut std::io::stdout().lock())
 }
 
-/// A closed stdout (`grok inspect | head`) is a clean stop.
+/// A closed stdout (`deepseek-build inspect | head`) is a clean stop.
 fn write_inspect(report: &InspectReport, json: bool, out: &mut impl Write) -> anyhow::Result<()> {
     let written = if json {
         writeln!(out, "{}", serde_json::to_string_pretty(report)?)
@@ -1167,7 +1167,7 @@ fn list_lsp_servers(
 
     // Folder-trust gate, display-only: inspect never spawns servers
     // Mark the repo-local (project-scoped) entries a session would skip in an untrusted clone, so the listing matches the live gate
-    // `remote = None` mirrors `grok mcp doctor` (no loaded RemoteSettings in a standalone command)
+    // `remote = None` mirrors `deepseek-build mcp doctor` (no loaded RemoteSettings in a standalone command)
     crate::agent::folder_trust::resolve_and_record(cwd, None, false);
     let project_allowed = crate::agent::folder_trust::project_scope_allowed(cwd);
 
@@ -1730,7 +1730,10 @@ fn print_human(r: &InspectReport, out: &mut impl Write) -> std::io::Result<()> {
     if r.mcp_servers.is_empty() {
         writeln!(out)?;
         writeln!(out, "  MCP Servers (0)")?;
-        writeln!(out, "  {TREE} (none) \u{2014} see `grok mcp add --help`")?;
+        writeln!(
+            out,
+            "  {TREE} (none) \u{2014} see `deepseek-build mcp add --help`"
+        )?;
     } else {
         print_columns(
             out,

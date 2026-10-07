@@ -186,7 +186,7 @@ pub(crate) fn collect_startup_warnings_from(
         );
         warning.note = Some(
             "deepseek-build also saves each copy to the backup file shown in the copy message. To copy \
-             directly, run `grok wrap ssh <host>` on your local computer or use a terminal that \
+             directly, run `deepseek-build wrap ssh <host>` on your local computer or use a terminal that \
              supports OSC 52. You can also use `/copy <file>` or `/minimal`."
                 .to_owned(),
         );
@@ -376,7 +376,7 @@ pub fn ssh_wrap_hint(
     let mut warning = TerminalWarning::new(
         WarningCategory::SshWithoutWrap,
         "Use local SSH wrapping for more reliable clipboard copy and terminal recovery",
-        Some("grok wrap ssh <host>"),
+        Some("deepseek-build wrap ssh <host>"),
         None,
     );
     warning.note = Some(

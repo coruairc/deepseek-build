@@ -18,15 +18,19 @@ use xai_fast_worktree::{
 };
 /// Bump when a field changes meaning or is removed. Additions are free.
 const SCHEMA_VERSION: u32 = 2;
-#[derive(Clone, Debug, clap::Args)]
-#[command(
-    after_help = "Lists every top-level directory in the grok home, largest first, then every \
+fn disk_usage_after_help() -> String {
+    format!(
+        "Lists every top-level directory in the deepseek-build home, largest first, then every \
 worktree under `worktrees/` and `worktree_pool/` with its size, age, and label. To reclaim space, preview a sweep with \
-`grok worktree gc --max-age 7d --dry-run`: without `--max-age`, gc expires nothing, it \
+`{cmd} worktree gc --max-age 7d --dry-run`: without `--max-age`, gc expires nothing, it \
 visits only worktrees the registry tracks, and it keeps a worktree whose work \
-it cannot find elsewhere. Inspect Grove artifacts with `grok worktree redirect list <mount>` \
-and purge them with `grok worktree clean-artifacts <mount> --yes`."
-)]
+it cannot find elsewhere. Inspect Grove artifacts with `{cmd} worktree redirect list <mount>` \
+and purge them with `{cmd} worktree clean-artifacts <mount> --yes`.",
+        cmd = xai_grok_brand::NAME,
+    )
+}
+#[derive(Clone, Debug, clap::Args)]
+#[command(after_help = disk_usage_after_help())]
 pub struct DiskUsageArgs {
     /// Emit machine-readable JSON output.
     #[arg(long)]
