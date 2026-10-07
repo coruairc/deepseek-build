@@ -543,81 +543,22 @@ mod link_click_tests {
         assert!(agent.block_drag_selection.is_none());
         assert!(!agent.scrollbar_dragging);
     }
-    /// Clicking the banner's [hide] button dispatches the same action as `/announcements hide`; clicks outside the cached rect do not.
-    #[test]
-    fn click_on_announcement_hide_button_dispatches_hide_action() {
-        let mut agent = make_agent();
-        let reg = ActionRegistry::defaults();
-        agent
-            .hit_announcement_hide
-            .set(Some(Rect::new(70, 1, 6, 1)));
-        let outcome = agent.handle_input(&Event::Mouse(mouse_down(72, 1)), &reg);
-        assert!(
-            matches!(outcome, InputOutcome::Action(Action::AnnouncementsHide)),
-            "[hide] click must dispatch AnnouncementsHide"
-        );
-        let outcome = agent.handle_input(&Event::Mouse(mouse_down(72, 2)), &reg);
-        assert!(!matches!(
-            outcome,
-            InputOutcome::Action(Action::AnnouncementsHide)
-        ));
-        agent.hit_announcement_hide.set(None);
-        let outcome = agent.handle_input(&Event::Mouse(mouse_down(72, 1)), &reg);
-        assert!(!matches!(
-            outcome,
-            InputOutcome::Action(Action::AnnouncementsHide)
-        ));
-    }
-    /// Clicking the promo banner's [label] CTA button dispatches the open action (URL resolved at dispatch time).
-    /// Clicks outside the cached rect (or on a collapsed banner) do not.
-    #[test]
-    fn click_on_announcement_cta_button_dispatches_open_action() {
-        let mut agent = make_agent();
-        let reg = ActionRegistry::defaults();
-        agent.hit_announcement_cta.set(Some(Rect::new(0, 1, 15, 1)));
-        let outcome = agent.handle_input(&Event::Mouse(mouse_down(3, 1)), &reg);
-        assert!(
-            matches!(
-                outcome,
-                InputOutcome::Action(Action::AnnouncementsOpenCta(_))
-            ),
-            "[label] click must dispatch AnnouncementsOpenCta"
-        );
-        let outcome = agent.handle_input(&Event::Mouse(mouse_down(3, 2)), &reg);
-        assert!(!matches!(
-            outcome,
-            InputOutcome::Action(Action::AnnouncementsOpenCta(_))
-        ));
-        agent.hit_announcement_cta.set(None);
-        let outcome = agent.handle_input(&Event::Mouse(mouse_down(3, 1)), &reg);
-        assert!(!matches!(
-            outcome,
-            InputOutcome::Action(Action::AnnouncementsOpenCta(_))
-        ));
-    }
-    /// Draw one 80x30 frame with `announcements` in the banner slot.
+    /// Draw one 80x30 frame with an empty banner slot.
     /// Shared fixture for the banner dropdown-suppression tests so `draw`'s long positional signature is spelled once.
-    fn draw_banner_frame(
-        agent: &mut AgentView,
-        reg: &ActionRegistry,
-        announcements: &[xai_grok_shell::util::config::RemoteAnnouncement],
-        banner_height: u16,
-    ) {
-        draw_frame_sized(agent, reg, announcements, banner_height, 80);
+    fn draw_banner_frame(agent: &mut AgentView, reg: &ActionRegistry, banner_height: u16) {
+        draw_frame_sized(agent, reg, banner_height, 80);
     }
     fn draw_frame_sized(
         agent: &mut AgentView,
         reg: &ActionRegistry,
-        announcements: &[xai_grok_shell::util::config::RemoteAnnouncement],
         banner_height: u16,
         cols: u16,
     ) -> Buffer {
-        draw_frame_privacy(agent, reg, announcements, banner_height, cols, false)
+        draw_frame_privacy(agent, reg, banner_height, cols, false)
     }
     fn draw_frame_privacy(
         agent: &mut AgentView,
         reg: &ActionRegistry,
-        announcements: &[xai_grok_shell::util::config::RemoteAnnouncement],
         banner_height: u16,
         cols: u16,
         privacy_banner: bool,
@@ -634,8 +575,6 @@ mod link_click_tests {
             false,
             crate::app::agent_view::BannerSlotParams {
                 height: banner_height,
-                announcements,
-                hidden_ids: &std::collections::BTreeSet::new(),
                 privacy_banner,
                 mouse_pos: None,
                 tip: None,
@@ -654,7 +593,7 @@ mod link_click_tests {
         let mut agent = make_agent();
         agent.last_terminal_size = (80, 30);
         agent.session.state = AgentState::TurnRunning;
-        draw_banner_frame(&mut agent, &reg, &[], 0);
+        draw_banner_frame(&mut agent, &reg, 0);
         let rect = agent
             .hit_cancel_button
             .rect
@@ -670,7 +609,7 @@ mod link_click_tests {
             agent.prompt.any_dropdown_open(),
             "setup: slash dropdown must be open"
         );
-        draw_banner_frame(&mut agent, &reg, &[], 0);
+        draw_banner_frame(&mut agent, &reg, 0);
         assert!(
             agent.hit_cancel_button.rect.is_none(),
             "open dropdown must suppress the stop rect"
@@ -689,7 +628,7 @@ mod link_click_tests {
         let mut agent = make_agent();
         agent.last_terminal_size = (80, 30);
         super::test_fixtures::add_running_bg_task(&mut agent);
-        draw_banner_frame(&mut agent, &reg, &[], 0);
+        draw_banner_frame(&mut agent, &reg, 0);
         let rect = agent.hit_watching_cue.rect.expect("cue rect must be armed");
         let click = Event::Mouse(mouse_down(rect.x + 1, rect.y));
         let _ = agent.handle_input(&click, &reg);
@@ -697,17 +636,17 @@ mod link_click_tests {
         assert!(agent.toast.is_none(), "focus-only click must not toast");
         agent.tasks.overlay.hide();
         agent.tasks.on_state_change();
-        draw_banner_frame(&mut agent, &reg, &[], 0);
+        draw_banner_frame(&mut agent, &reg, 0);
         let _ = agent.handle_input(&click, &reg);
         assert!(agent.tasks.overlay.visible && agent.tasks.overlay.focused);
         assert_eq!(agent.active_pane, AgentPane::Tasks);
         let toast = agent.toast.clone().map(|(msg, _)| msg);
         assert_eq!(toast.as_deref(), Some("Tip: Ctrl+G toggles the tasks pane"));
         agent.toast = None;
-        draw_banner_frame(&mut agent, &reg, &[], 0);
+        draw_banner_frame(&mut agent, &reg, 0);
         let _ = agent.handle_input(&click, &reg);
         assert!(!agent.tasks.overlay.visible);
-        draw_banner_frame(&mut agent, &reg, &[], 0);
+        draw_banner_frame(&mut agent, &reg, 0);
         let _ = agent.handle_input(&click, &reg);
         assert!(agent.tasks.overlay.visible);
         assert!(agent.toast.is_none(), "toast fires only once per session");
@@ -733,7 +672,7 @@ mod link_click_tests {
             &NotificationMeta::default(),
             &mut agent.scrollback,
         );
-        draw_banner_frame(&mut agent, &reg, &[], 0);
+        draw_banner_frame(&mut agent, &reg, 0);
         let rect = agent
             .hit_bg_button
             .rect
@@ -749,7 +688,7 @@ mod link_click_tests {
             agent.prompt.any_dropdown_open(),
             "setup: slash dropdown must be open"
         );
-        draw_banner_frame(&mut agent, &reg, &[], 0);
+        draw_banner_frame(&mut agent, &reg, 0);
         assert!(
             agent.hit_bg_button.rect.is_none(),
             "open dropdown must suppress the bg rect"
@@ -777,7 +716,7 @@ mod link_click_tests {
         );
         parent.open_subagent_fullscreen("child-sid".into());
         let child = parent.subagent_views.get_mut("child-sid").unwrap();
-        draw_banner_frame(child, &reg, &[], 0);
+        draw_banner_frame(child, &reg, 0);
         assert!(
             child.hit_bg_button.rect.is_none(),
             "read-only child view must not advertise a background button"
@@ -805,7 +744,7 @@ mod link_click_tests {
             &NotificationMeta::default(),
             &mut agent.scrollback,
         );
-        draw_banner_frame(&mut agent, &reg, &[], 0);
+        draw_banner_frame(&mut agent, &reg, 0);
         let stop = agent
             .hit_cancel_button
             .rect
@@ -833,7 +772,7 @@ mod link_click_tests {
             agent.hit_cancel_button.rect.is_some() && agent.hit_bg_button.rect.is_some(),
             "occluder guard is click-time: the rects stay armed"
         );
-        draw_banner_frame(&mut agent, &reg, &[], 0);
+        draw_banner_frame(&mut agent, &reg, 0);
         let outcome = agent.handle_input(&Event::Mouse(mouse_down(bg.x, bg.y)), &reg);
         assert!(
             matches!(outcome, InputOutcome::Action(Action::DemoteToBackground)),

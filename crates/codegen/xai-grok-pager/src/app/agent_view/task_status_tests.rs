@@ -42,8 +42,6 @@ fn draw_frame(agent: &mut AgentView, registry: &ActionRegistry) -> Buffer {
         false,
         BannerSlotParams {
             height: 0,
-            announcements: &[],
-            hidden_ids: &std::collections::BTreeSet::new(),
             privacy_banner: false,
             mouse_pos: None,
             tip: None,

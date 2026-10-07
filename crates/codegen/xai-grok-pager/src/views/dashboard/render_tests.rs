@@ -240,7 +240,6 @@ fn workspace_dashboard_renders_snapshot_member_with_archive_control() {
         None,
         false,
         None,
-        None,
     );
 
     let content = buf_to_text(&buf);
@@ -303,7 +302,6 @@ fn dashboard_toast_paints_while_peek_is_open() {
         None,
         false,
         None,
-        None,
     );
 
     let content = buf_to_text(&buf);
@@ -363,7 +361,6 @@ fn narrow_workspace_dashboard_keeps_archive_hit_target() {
         None,
         false,
         None,
-        None,
     );
 
     assert!(
@@ -403,7 +400,6 @@ fn open_previous_actions_button_is_v2_only_and_follows_new_agent() {
             },
             None,
             false,
-            None,
             None,
         );
         (buf_to_text(&buf), state)
@@ -547,7 +543,6 @@ fn dashboard_session_picker_renders_simple_open_surface() {
         Some(&mut surface),
         false,
         None,
-        None,
     );
     let content = buf_to_text(&buf);
     assert!(content.contains("Open session"));
@@ -631,7 +626,6 @@ fn dashboard_session_picker_search_focus_keeps_the_selected_row() {
         },
         Some(&mut surface),
         false,
-        None,
         None,
     );
     let content = buf_to_text(&buf);
@@ -761,7 +755,6 @@ fn render_dashboard_shows_roster_when_local_agents_empty() {
         None,
         false,
         None,
-        None,
     );
 
     let content = buf_to_text(&buf);
@@ -816,7 +809,6 @@ fn render_dashboard_hover_shows_delete_x_only_for_settled_rows() {
             crate::views::dashboard::WorkspaceRowInputs::default(),
             None,
             false,
-            None,
             None,
         );
         buf_to_text(&buf)
@@ -3207,7 +3199,6 @@ fn render_dashboard_paints_full_area_background() {
         crate::views::dashboard::WorkspaceRowInputs::default(),
         None,
         false,
-        None,
         None,
     );
 

@@ -262,7 +262,7 @@ pub struct HitArea {
     pub hovered: bool,
 }
 /// Privacy upsell banner state on the agent view: whether the banner owns the banner slot this frame (`active`, set at draw start like
-/// `session_banner_active`; persists until acted on, so it is a tip occluder AND a tip-tick freezer) plus the four click targets.
+/// the banner slot; persists until acted on, so it is a tip occluder AND a tip-tick freezer) plus the four click targets.
 #[derive(Debug, Default)]
 pub struct PrivacyBannerState {
     pub(crate) active: bool,

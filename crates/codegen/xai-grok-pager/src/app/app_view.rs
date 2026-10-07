@@ -889,7 +889,7 @@ pub struct AppView {
     /// One-shot gate for the small-screen `/compact-mode` tip: set after the first evaluation at a stable agent-view draw (regardless of outcome).
     /// Later resizes thus can never re-trigger the tip within this run.
     pub small_screen_tip_evaluated: bool,
-    /// One-shot gate for the SSH `grok wrap` tip: set after the first evaluation at a stable agent-view draw.
+    /// One-shot gate for the SSH `deepseek-build wrap` tip: set after the first evaluation at a stable agent-view draw.
     /// The environment gates are process-constant, so one evaluation decides the run.
     pub ssh_wrap_tip_evaluated: bool,
     /// State for the clipboard-image tip, polled opportunistically and only while the terminal is focused.
@@ -4696,7 +4696,7 @@ impl AppView {
         self.small_screen_tip_evaluated = true;
         super::dispatch::show_small_screen_tip(self);
     }
-    /// One-shot SSH `grok wrap` tip trigger, run at the top of every `draw` right after [`Self::maybe_trigger_small_screen_tip`].
+    /// One-shot SSH `deepseek-build wrap` tip trigger, run at the top of every `draw` right after [`Self::maybe_trigger_small_screen_tip`].
     /// The welcome screen has no ephemeral-tip row, so the first stable agent-view draw is the earliest surface that can paint a session-load tip.
     /// Reads the live environment (cached statics) and delegates to the injectable inner so tests never depend on the host's SSH shape.
     pub(crate) fn maybe_trigger_ssh_wrap_tip(&mut self) {

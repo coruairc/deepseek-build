@@ -104,9 +104,6 @@ pub(crate) fn test_app() -> AppView {
         escape_writer: crate::render::draw::EscapeWriter::disconnected(),
         deferred_notification: None,
         tracing_rx: None,
-        active_announcements: vec![],
-        hidden_announcement_ids: Default::default(),
-        announcements_last_gen: 0,
         announcement: None,
         changelog_markdown: None,
         changelog_bullets: Vec::new(),
@@ -934,7 +931,7 @@ fn ephemeral_tip_frozen_under_critical_does_not_request_animation_or_burn_ttl() 
             crate::tips::EphemeralTip::new("t", ratatui::text::Line::from("TIP")),
             &mut HashMap::new(),
         );
-        agent.session_banner_active = true;
+        agent.privacy_banner.active = true;
     }
     let before = app
         .agents
@@ -966,7 +963,7 @@ fn ephemeral_tip_frozen_under_critical_does_not_request_animation_or_burn_ttl() 
         Some(before),
         "TTL must not burn while critical occludes"
     );
-    app.agents.get_mut(&id).unwrap().session_banner_active = false;
+    app.agents.get_mut(&id).unwrap().privacy_banner.active = false;
     assert!(
         app.needs_animation(),
         "unfreezing must re-arm tip countdown ticks"
@@ -6008,7 +6005,6 @@ fn dashboard_picker_esc_after_search_click_restores_the_selection() {
         },
         Some(surface),
         false,
-        None,
         None,
     );
     let overlay = theme.selection_overlay();

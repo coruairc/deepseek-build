@@ -132,35 +132,6 @@ fn doctor_planning_rejects_bind_replace_and_unbind_rebind() {
 }
 
 #[test]
-fn doctor_planning_displaces_feedback_before_opening_question() {
-    let temp = tempfile::tempdir().unwrap();
-    let mut app = test_app_with_agent();
-    let id = AgentId(0);
-    let target = doctor_target(&app, id);
-    app.agents.get_mut(&id).unwrap().feedback_modal =
-        Some(crate::views::feedback_modal::FeedbackModalState::new(
-            crate::views::feedback_modal::OpenFeedbackModal {
-                text: Some("unsent report".to_owned()),
-                ..Default::default()
-            },
-        ));
-
-    dispatch_task_result(
-        TaskResult::DoctorFixPlanned {
-            target,
-            result: Ok(crate::app::actions::DoctorPlanningOutcome::Plan(Box::new(
-                crate::diagnostics::test_fix_plan(temp.path()),
-            ))),
-        },
-        &mut app,
-    );
-
-    let agent = &expect_agent(&app, id);
-    assert!(agent.feedback_modal.is_none());
-    assert!(agent.question_view.is_some());
-}
-
-#[test]
 fn doctor_planning_opens_refuses_remote_and_rejects_stale_identity() {
     let temp = tempfile::tempdir().unwrap();
     let mut app = test_app_with_agent();
@@ -205,14 +176,14 @@ fn doctor_planning_opens_refuses_remote_and_rejects_stale_identity() {
         TaskResult::DoctorFixPlanned {
             target: target.clone(),
             result: Ok(crate::app::actions::DoctorPlanningOutcome::RunLocally(
-                "grok doctor fix ssh-wrap".to_owned(),
+                "deepseek-build doctor fix ssh-wrap".to_owned(),
             )),
         },
         &mut app,
     );
     assert!(
         last_system_text(&app, id)
-            .contains("On your local computer, run: grok doctor fix ssh-wrap")
+            .contains("On your local computer, run: deepseek-build doctor fix ssh-wrap")
     );
 
     app.agents
@@ -600,7 +571,7 @@ fn wrap_host_image_request_eligible_covers_full_miss_and_attachment_error_only()
     use crate::app::actions::{ClipboardPasteCompletion, ClipboardPasteFailure};
 
     // A clean empty miss and a remote read *error* both fall through to the wrap host-image request
-    // That request is how `grok wrap` pastes images over headless SSH
+    // That request is how `deepseek-build wrap` pastes images over headless SSH
     assert!(wrap_host_image_request_eligible(
         ClipboardPasteCompletion::FullMiss
     ));

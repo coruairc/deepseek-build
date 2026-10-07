@@ -76,7 +76,7 @@ pub enum WarningCategory {
     /// tmux is attached to a client it believes cannot render 24-bit color, so it rewrites every truecolor cell to the client terminfo's palette.
     TmuxColorReduced,
     SandboxProfileConflict,
-    /// The session runs over SSH without `grok wrap` on the local end.
+    /// The session runs over SSH without `deepseek-build wrap` on the local end.
     /// Clipboard forwarding and terminal-mode restore on dropped connections are then not guaranteed.
     /// An informational recommendation, not a breakage.
     SshWithoutWrap,
@@ -362,7 +362,7 @@ fn sandbox_profile_conflict_warning_from(conflicts: Vec<String>) -> Option<Termi
     })
 }
 
-/// Pure SSH `grok wrap` recommendation: suggests launching the session through `grok wrap ssh <host>` on the user's
+/// Pure SSH `deepseek-build wrap` recommendation: suggests launching the session through `deepseek-build wrap ssh <host>` on the user's
 /// local machine. Gates (all must hold). This detector only describes the environment. All inputs are injected so
 /// tests never touch ambient env (pattern: [`diagnose_wayland_data_control`]).
 pub fn ssh_wrap_hint(
@@ -2019,7 +2019,7 @@ mod tests {
         // is_ssh, no sink, not VS Code remote: recommend wrap
         let w = ssh_wrap_hint(true, false, false).expect("hint must fire");
         assert_eq!(w.category, WarningCategory::SshWithoutWrap);
-        assert_eq!(w.fix.as_deref(), Some("grok wrap ssh <host>"));
+        assert_eq!(w.fix.as_deref(), Some("deepseek-build wrap ssh <host>"));
         assert!(
             w.config_path.is_none(),
             "fix is a command, not a config line"
@@ -2040,7 +2040,7 @@ mod tests {
 
     #[test]
     fn ssh_wrap_hint_suppressed_when_sink_active() {
-        // An active OSC 52 sink means the session already runs under `grok wrap`; adoption silences the hint by itself
+        // An active OSC 52 sink means the session already runs under `deepseek-build wrap`; adoption silences the hint by itself
         assert!(ssh_wrap_hint(true, true, false).is_none());
     }
 

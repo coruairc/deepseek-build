@@ -1583,7 +1583,7 @@ mod tests {
     fn terminal_title_strips_control_characters() {
         assert_eq!(
             terminal_title_string("evil\x07\x1b]52;c;payload\x07title"),
-            "evil]52;c;payloadtitle - grok"
+            "evil]52;c;payloadtitle - deepseek-build"
         );
         assert_eq!(terminal_title_string("\x07\x1b\x00"), xai_grok_brand::NAME);
         assert_eq!(terminal_title_string(""), xai_grok_brand::NAME);

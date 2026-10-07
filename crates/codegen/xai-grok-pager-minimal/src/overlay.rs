@@ -947,18 +947,17 @@ mod tests {
     /// Prompt-replacing modals are sized by `modal_target`; only band-owning modals may hold commits.
     #[test]
     fn is_live_region_modal_active_ignores_prompt_modals() {
-        use xai_grok_pager::views::feedback_modal::{FeedbackModalState, OpenFeedbackModal};
-
         let mut agent = question_input_agent("answer");
         assert_eq!(active_modal(&agent), Some(Modal::Question));
         assert!(!is_live_region_modal_active(&agent));
 
         minimal_api::set_question_view(&mut agent, None);
-        minimal_api::set_feedback_modal(
-            &mut agent,
-            Some(FeedbackModalState::new(OpenFeedbackModal::default())),
-        );
-        assert!(!app_modal_active(&agent));
+        agent.active_modal = Some(xai_grok_pager::views::modal::ActiveModal::CommandPalette {
+            entries: Vec::new(),
+            state: xai_grok_pager::views::picker::PickerState::default(),
+            window: xai_grok_pager::views::modal_window::ModalWindowState::new(),
+        });
+        assert!(app_modal_active(&agent));
         assert!(is_live_region_modal_active(&agent));
     }
 

@@ -57,7 +57,6 @@ fn disabling_preview_frees_list_space_and_stays_off_across_selection() {
                 None,
                 false,
                 None,
-                None,
             );
 
             assert!(state.dispatch_rect.is_some());

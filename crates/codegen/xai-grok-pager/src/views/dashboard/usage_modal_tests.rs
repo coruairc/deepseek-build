@@ -50,7 +50,6 @@ fn render_with_modal(
         },
         None,
         false,
-        None,
         credit_balance,
     );
     assert!(
