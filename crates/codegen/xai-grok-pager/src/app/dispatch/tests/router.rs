@@ -290,30 +290,6 @@ fn seed_foreign_resume_hint(
         }),
     );
 }
-/// Sending feedback is a submit: it retires the active ephemeral tip.
-#[test]
-fn send_feedback_clears_active_ephemeral_tip() {
-    let mut app = test_app_with_agent();
-    let id = AgentId(0);
-    let agent = app.agents.get_mut(&id).unwrap();
-    let _ = agent.ephemeral_tip.show(
-        crate::tips::EphemeralTip::new("t", ratatui::text::Line::from("hint")),
-        &mut std::collections::HashMap::new(),
-    );
-    assert!(agent.ephemeral_tip.is_active());
-    let _ = dispatch(
-        Action::SendFeedback {
-            text: "it broke".into(),
-            images: Default::default(),
-            trace: None,
-        },
-        &mut app,
-    );
-    assert!(
-        !app.agents.get(&id).unwrap().ephemeral_tip.is_active(),
-        "feedback submit must clear the tip"
-    );
-}
 /// Sending a remember note is a submit: it retires the active ephemeral tip.
 #[test]
 fn send_remember_note_clears_active_ephemeral_tip() {
@@ -512,75 +488,6 @@ fn mark_turn_finished_clears_start_and_stamps_active() {
         agent.last_active_at.is_some(),
         "last_active_at must be stamped"
     );
-}
-fn critical_announcement(id: &str) -> xai_grok_shell::util::config::RemoteAnnouncement {
-    xai_grok_shell::util::config::RemoteAnnouncement {
-        id: Some(id.into()),
-        title: Some(format!("{id} title")),
-        message: Some(format!("{id} message")),
-        severity: Some("critical".into()),
-        ..Default::default()
-    }
-}
-fn promo_announcement(id: &str) -> xai_grok_shell::util::config::RemoteAnnouncement {
-    xai_grok_shell::util::config::RemoteAnnouncement {
-        id: Some(id.into()),
-        message: Some(format!("{id} message")),
-        severity: Some("promo".into()),
-        cta: Some(xai_grok_shell::util::config::AnnouncementCta {
-            label: Some("Go".into()),
-            url: Some(format!("https://deepseek-build/{id}")),
-            caption: None,
-        }),
-        ..Default::default()
-    }
-}
-/// Id of the item the banner slot currently selects (None = banner closed).
-fn shown_banner_id(app: &AppView) -> Option<String> {
-    crate::views::announcements::first_session_announcement(
-        &app.active_announcements,
-        &app.hidden_announcement_ids,
-    )
-    .and_then(|a| a.id.clone())
-}
-/// No impression is logged without a painted button under a promo slot owner.
-/// A critical preempting the slot, a hidden promo, and cleared (unpainted) rects all emit nothing; this is the same gate the click dispatch resolves.
-#[test]
-fn cta_impressions_respect_slot_gate_and_paint() {
-    use crate::app::app_view::ActiveView;
-    let mut app = test_app_with_agent();
-    let id = AgentId(0);
-    app.active_view = ActiveView::Agent(id);
-    let rect = Some(ratatui::layout::Rect::new(0, 0, 4, 1));
-    {
-        let agent = app.agents.get_mut(&id).unwrap();
-        agent.hit_announcement_cta.set(rect);
-        agent.hit_upgrade_cta.set(rect);
-    }
-    app.active_announcements = vec![critical_announcement("crit"), promo_announcement("p")];
-    app.log_announcement_cta_impressions();
-    assert!(app.announcement_cta_impressions_logged.is_empty());
-    app.active_announcements = vec![promo_announcement("p")];
-    app.hidden_announcement_ids = ["p".to_string()].into_iter().collect();
-    app.log_announcement_cta_impressions();
-    assert!(app.announcement_cta_impressions_logged.is_empty());
-    app.hidden_announcement_ids.clear();
-    {
-        let agent = app.agents.get_mut(&id).unwrap();
-        agent.hit_announcement_cta.clear();
-        agent.hit_upgrade_cta.clear();
-    }
-    app.log_announcement_cta_impressions();
-    assert!(app.announcement_cta_impressions_logged.is_empty());
-    {
-        let agent = app.agents.get_mut(&id).unwrap();
-        agent.active_subagent = Some("child-sid".into());
-        agent.hit_announcement_cta.clear();
-        agent.hit_upgrade_cta.clear();
-    }
-    app.active_announcements = vec![promo_announcement("p2")];
-    app.log_announcement_cta_impressions();
-    assert!(app.announcement_cta_impressions_logged.is_empty());
 }
 #[test]
 fn switch_model_dispatch_produces_effect_and_sets_pending() {

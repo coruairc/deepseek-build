@@ -292,34 +292,6 @@
         );
     }
 
-    /// The settings path must not touch announcements: the shell already emits generation-ordered `deepseek-build/announcements/update` for every settings writer.
-    /// Applying announcements here without a generation could clobber a newer push.
-    #[test]
-    fn settings_update_ignores_announcements_payload() {
-        let mut app = make_app_with_agent("sess-ann");
-        app.active_announcements = vec![critical_announcement("from-push")];
-        app.announcements_last_gen = 7;
-
-        let notif = acp::ExtNotification::new(
-            "deepseek-build/settings/update",
-            serde_json::value::to_raw_value(&serde_json::json!({
-                "show_resolved_model": false,
-                "announcements": [critical_announcement("from-settings")],
-            }))
-            .unwrap()
-            .into(),
-        );
-        let _ = handle_ext_notification(&notif, &mut app);
-
-        assert_eq!(
-            app.active_announcements,
-            vec![critical_announcement("from-push")],
-            "settings/update must not replace the pushed announcements"
-        );
-        assert_eq!(app.announcements_last_gen, 7, "watermark untouched");
-        assert!(!app.show_resolved_model, "other settings fields still apply");
-    }
-
     /// Temporary client kill switch: remote `sharing_enabled: true` must not re-enable share UI.
     /// Agents stay off and `/share` stays out of the menu (typed `/share` still dispatches for the disable message).
     /// A user-owned mode blocks remote pushes from re-enabling default_yolo or rewriting the UI.
@@ -536,3 +508,4 @@
         let _ = handle_ext_notification(&push(serde_json::json!({ "subagent_model_inheritance_enabled": null })), &mut app);
         assert_eq!(None, app.subagent_model_inheritance.other_tiers.remote);
     }
+

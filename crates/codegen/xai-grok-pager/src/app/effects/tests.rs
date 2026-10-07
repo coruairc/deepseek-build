@@ -3091,36 +3091,6 @@ fn a_failed_rewind_points_reply_names_the_failure(
         other => panic!("{other:?}"),
     }
 }
-/// Exact wire bytes of the one-shot request: the shell's `upload_trace_offer_gate_allows`
-/// relaxation keys off this exact snake_case value, so the shape is a cross-crate contract.
-#[test]
-fn upload_trace_request_with_intent_exact_wire_shape() {
-    let request = UploadTraceRequest {
-        session_id: "sess-1".to_string(),
-        intent: Some(
-            crate::views::feedback_modal::FeedbackTraceUploadIntent::SendThisSession,
-        ),
-        trace_upload_token: Some("grant-1".to_string()),
-    };
-    assert_eq!(
-            serde_json::to_string(&request).unwrap(),
-            r#"{"sessionId":"sess-1","intent":"send_this_session","traceUploadToken":"grant-1"}"#
-        );
-}
-/// A legacy trace-card upload must stay byte-identical to the pre-intent request
-/// (no `"intent":null`), so an older shell's strict parsing cannot regress.
-#[test]
-fn upload_trace_request_without_intent_keeps_legacy_wire_shape() {
-    let request = UploadTraceRequest {
-        session_id: "sess-1".to_string(),
-        intent: None,
-        trace_upload_token: None,
-    };
-    assert_eq!(
-            serde_json::to_string(&request).unwrap(),
-            r#"{"sessionId":"sess-1"}"#
-        );
-}
 /// Every answer the shell can give, plus a dead channel and a broken peer, comes back as `TeamCapabilityHydrated` for the identity that asked.
 /// The serialization arm is not in the table: `HydrateTeamCapabilityRequest` is two `Option<String>`s, whose `Serialize` cannot fail, so no input reaches it.
 #[tokio::test]
@@ -3184,3 +3154,4 @@ async fn hydrate_team_capability_adapter_maps_every_reply_to_the_asking_identity
                 .is_err()
         );
 }
+

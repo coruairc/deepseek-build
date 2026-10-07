@@ -629,34 +629,6 @@ pub(super) fn make_app_two_agents() -> AppView {
     assert_eq!(app.active_view, ActiveView::Agent(AgentId(1)));
     app
 }
-pub(super) fn critical_announcement(
-    id: &str,
-) -> xai_grok_shell::util::config::RemoteAnnouncement {
-    xai_grok_shell::util::config::RemoteAnnouncement {
-        id: Some(id.into()),
-        title: Some(format!("{id} title")),
-        message: Some(format!("{id} message")),
-        severity: Some("critical".into()),
-        ..Default::default()
-    }
-}
-pub(super) fn announcements_update_notif(
-    r#gen: u64,
-    announcements: &[xai_grok_shell::util::config::RemoteAnnouncement],
-) -> acp::ExtNotification {
-    acp_fixtures::ext_notification(
-        "deepseek-build/announcements/update",
-        &serde_json::json!({ "gen": r#gen, "announcements": announcements }),
-    )
-}
-/// Id of the item the banner slot currently selects (`None` means the banner is closed).
-pub(super) fn shown_banner_id(app: &AppView) -> Option<String> {
-    crate::views::announcements::first_session_announcement(
-            &app.active_announcements,
-            &app.hidden_announcement_ids,
-        )
-        .and_then(|a| a.id.clone())
-}
 pub(super) fn make_created_ext_notif(
     session_id: &str,
     task_id: &str,
@@ -2319,3 +2291,4 @@ mod models;
 mod mcp;
 mod git_head;
 mod version_mismatch;
+
