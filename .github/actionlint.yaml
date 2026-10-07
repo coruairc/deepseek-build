@@ -1,0 +1,11 @@
+# actionlint configuration.
+#
+# actionlint 1.7.7's bundled GitHub runner-label list predates the
+# `macos-15-intel` GitHub-hosted label, which the release workflow uses
+# (.github/workflows/release.yml, target x86_64-apple-darwin). Declaring the
+# label here tells actionlint it is a known, intentional runner label instead
+# of erroring on runner-label validation. It is a GitHub-hosted runner, not a
+# self-hosted one.
+self-hosted-runner:
+  labels:
+    - macos-15-intel
