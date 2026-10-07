@@ -17,8 +17,7 @@ use super::handle_request::{
     CHILD_ACTOR_ACK_TIMEOUT, PARENT_ACK_TIMEOUT, TaskModelAdmissionError,
     admit_explicit_tool_model, agent_memory_scope_for_mode, child_actor_query,
     explicit_tool_model, mark_child_usage_not_applied_with_fallback,
-    reparent_surviving_child_tasks, resolve_child_model, take_child_streaming_partial,
-    take_child_turn_messages,
+    reparent_surviving_child_tasks,
 };
 use crate::agent::model_catalog::task_model_policy::TaskModelSelection;
 use crate::test_support::lsp_runtime::{ctx_with_toggle, test_gateway_with_receiver};
@@ -150,59 +149,6 @@ async fn child_actor_query_is_bounded_when_the_actor_never_answers() {
         .expect("child-actor queries must complete in bounded time");
     assert_eq!(tokens, 7, "a starved query must degrade to the fallback");
 }
-/// Regression: a wedged child actor that never answers `TakeTurnMessages`
-/// must not park teardown ahead of the bounded upload set, and the
-/// timed-out take must surface as the recorded miss, not an empty turn.
-#[tokio::test(start_paused = true)]
-async fn turn_message_take_is_bounded_and_records_the_wedge() {
-    let (cmd_tx, _cmd_rx) = mpsc::unbounded_channel();
-    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(60);
-    let taken = tokio::time::timeout(
-            std::time::Duration::from_secs(3600),
-            take_child_turn_messages(&cmd_tx, deadline),
-        )
-        .await
-        .expect("the take must be bounded under a wedged child actor");
-    assert!(matches!(
-            taken,
-            crate::upload::turn::TurnMessages::Missing(
-                crate::upload::turn::MissingTurnMessages::TakeTimedOut
-            )
-        ));
-}
-/// The dead-actor takes — command channel closed, or responder dropped
-/// without an answer — are recorded misses, not genuinely empty turns.
-#[tokio::test(start_paused = true)]
-async fn turn_message_take_records_the_miss_when_the_actor_is_gone() {
-    use crate::upload::turn::{MissingTurnMessages, TurnMessages};
-    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(60);
-    let (closed_tx, closed_rx) = mpsc::unbounded_channel();
-    drop(closed_rx);
-    let taken = take_child_turn_messages(&closed_tx, deadline).await;
-    assert!(
-            matches!(
-                taken,
-                TurnMessages::Missing(MissingTurnMessages::ChannelDropped)
-            ),
-            "a closed command channel must not pass for an empty turn"
-        );
-    let (cmd_tx, mut cmd_rx) = mpsc::unbounded_channel();
-    let actor = tokio::spawn(async move {
-        match cmd_rx.recv().await {
-            Some(SessionCommand::TakeTurnMessages { respond_to }) => drop(respond_to),
-            _ => panic!("expected TakeTurnMessages"),
-        }
-    });
-    let taken = take_child_turn_messages(&cmd_tx, deadline).await;
-    actor.await.expect("actor task");
-    assert!(
-            matches!(
-                taken,
-                TurnMessages::Missing(MissingTurnMessages::ChannelDropped)
-            ),
-            "a dropped responder must not pass for an empty turn"
-        );
-}
 /// A real `SessionHandle` whose child-session actors never answer: the command channel is held open but unserviced and the signals actor is never run — the shape a tool synchronously blocking the child session thread leaves behind. The receiver and actor must stay alive so sends succeed but never get answered.
 fn wedged_child_handle() -> (
     SessionHandle,
@@ -320,40 +266,6 @@ async fn cancelled_attempt_fails_closed_when_the_signals_read_never_answers() {
             outcome.cancellation_may_hide_usage,
             "an unanswered signals read must not pass for 'no work done'"
         );
-}
-/// Regression: a wedged child actor must not park teardown on the
-/// streaming-capture take; the capture is skipped in bounded time.
-#[tokio::test(start_paused = true)]
-async fn streaming_partial_take_is_bounded_when_the_child_actor_is_wedged() {
-    let (cmd_tx, _cmd_rx) = mpsc::unbounded_channel();
-    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(60);
-    let capture = tokio::time::timeout(
-            std::time::Duration::from_secs(3600),
-            take_child_streaming_partial(
-                &cmd_tx,
-                deadline,
-                "prompt-1".into(),
-                false,
-                None,
-            ),
-        )
-        .await
-        .expect("the streaming take must be bounded under a wedged child actor");
-    assert!(capture.is_none(), "a timed-out take skips the capture");
-}
-/// Regression: the resolved-model read for turn_result.json must degrade
-/// to the configured model id in bounded time under a wedged child actor.
-#[tokio::test(start_paused = true)]
-async fn resolved_model_read_is_bounded_and_falls_back_to_configured() {
-    let (cmd_tx, _cmd_rx) = mpsc::unbounded_channel();
-    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(60);
-    let resolved = tokio::time::timeout(
-            std::time::Duration::from_secs(3600),
-            resolve_child_model(&cmd_tx, deadline, Some("configured-model".into())),
-        )
-        .await
-        .expect("the model read must be bounded under a wedged child actor");
-    assert_eq!(resolved.as_deref(), Some("configured-model"));
 }
 /// Regression: a completed child's usage fold must not park forever behind
 /// a parent actor that never services `cmd_rx`; that leaked the child's
@@ -2194,21 +2106,6 @@ fn subagent_keeps_default_flavor_when_parent_model_is_non_strict() {
             "a non-strict parent model must leave subagents on the default harness",
         );
 }
-fn test_gcs_context(ctx: &SubagentSpawnContext) -> GcsUploadContext {
-    GcsUploadContext {
-        bucket_url: None,
-        upload_method: None,
-        model_id: None,
-        cwd: None,
-        isolation_mode: None,
-        capability_mode: None,
-        reasoning_effort: None,
-        role_name: None,
-        parent_prompt_id: None,
-        depth: 0,
-        auth_manager: ctx.auth_manager.clone(),
-    }
-}
 #[tokio::test]
 async fn cancel_pending_shell_child_presents_one_cancelled_finish() {
     let mut ctx = ctx_with_toggle(HashMap::new());
@@ -2845,3 +2742,4 @@ async fn join_worker_task_drop_aborts_worker() {
         .expect("abort must reach the worker task")
         .expect("drop probe fires on abort");
 }
+

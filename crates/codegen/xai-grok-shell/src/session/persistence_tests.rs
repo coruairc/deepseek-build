@@ -14,21 +14,12 @@ impl ActorGuard {
 }
 
 fn test_actor(info: Info, storage: Arc<dyn StorageAdapter>) -> ActorGuard {
-    test_actor_with_remote_sync(info, storage, None)
-}
-
-fn test_actor_with_remote_sync(
-    info: Info,
-    storage: Arc<dyn StorageAdapter>,
-    remote_sync: Option<RemoteSync>,
-) -> ActorGuard {
-    test_actor_inner(info, storage, remote_sync, false)
+    test_actor_inner(info, storage, false)
 }
 
 fn test_actor_inner(
     info: Info,
     storage: Arc<dyn StorageAdapter>,
-    remote_sync: Option<RemoteSync>,
     mark_summary_done: bool,
 ) -> ActorGuard {
     let (tx, rx) = mpsc::unbounded_channel();
@@ -49,7 +40,6 @@ fn test_actor_inner(
             storage,
             pending_notification: None,
             rx,
-            remote_sync,
             // These tests run the actor as resumed; the backfill on writeback upgrade only runs for a fresh session
             created_fresh: false,
             summary,

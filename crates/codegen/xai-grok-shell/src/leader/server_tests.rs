@@ -167,89 +167,6 @@ fn decide_relaunch_is_idempotent_and_directional() {
     ));
 }
 
-#[derive(Debug)]
-struct TestAuth;
-impl AuthProvider for TestAuth {
-    fn current(&self) -> AuthCredential {
-        AuthCredential::bearer("test-token")
-    }
-}
-
-#[tokio::test]
-async fn wait_for_leader_auth_returns_when_already_wired() {
-    let ws = WorkspaceControl::new(None);
-    ws.auth.send_replace(Some(Arc::new(TestAuth)));
-    let cancel = CancellationToken::new();
-    let auth = wait_for_leader_auth(&ws, &cancel).await.expect("wired");
-    assert!(matches!(auth.current(), AuthCredential::Bearer { .. }));
-}
-
-#[tokio::test]
-async fn wait_for_leader_auth_resolves_when_wired_late() {
-    // A command can arrive before auth is wired; it must wait, not fail.
-    let ws = Arc::new(WorkspaceControl::new(None));
-    let cancel = CancellationToken::new();
-    let waiter = {
-        let ws = ws.clone();
-        let cancel = cancel.clone();
-        tokio::spawn(async move { wait_for_leader_auth(&ws, &cancel).await.is_ok() })
-    };
-    tokio::task::yield_now().await;
-    ws.auth.send_replace(Some(Arc::new(TestAuth)));
-    assert!(waiter.await.unwrap(), "auth wired late should resolve Ok");
-}
-
-/// A hub-less exposure never arms a metric pump, and every teardown path (pause, a second pause,
-/// stop) drains without hanging and leaves the slot empty. The pump itself has no test
-/// constructor, so a real drain-once assertion is out of reach here.
-#[tokio::test]
-async fn hubless_workspace_exposure_arms_no_metric_pump_and_tears_down_cleanly() {
-    let handle = xai_grok_workspace::WorkspaceHandle::for_test();
-    assert!(arm_metric_donation(&handle).await.is_none());
-
-    let state = default_test_control_state(Path::new("/tmp/grok-ws-metric-test.sock"));
-    state
-        .workspace
-        .exposure
-        .store(Some(Arc::new(WorkspaceExposure {
-            handle,
-            hub_url: "wss://hub.example/v1/tools".to_owned(),
-            cwd: PathBuf::from("/repo"),
-            started_at: Instant::now(),
-            paused: AtomicBool::new(false),
-            metric_donation: Mutex::new(None),
-        })));
-
-    for _ in 0..2 {
-        let payload = tokio::time::timeout(
-            Duration::from_secs(5),
-            handle_workspace_pause(state.clone()),
-        )
-        .await
-        .expect("pause drains promptly")
-        .unwrap();
-        assert!(matches!(
-            payload,
-            ControlPayload::WorkspaceStatus {
-                state: ref s, ..
-            } if s == "paused"
-        ));
-        let exposure = state.workspace.exposure.load_full().unwrap();
-        assert!(exposure.metric_donation.lock().is_none());
-    }
-
-    let payload =
-        tokio::time::timeout(Duration::from_secs(5), handle_workspace_stop(state.clone()))
-            .await
-            .expect("stop drains promptly")
-            .unwrap();
-    assert!(matches!(
-        payload,
-        ControlPayload::WorkspaceStatus { state: ref s, .. } if s == "none"
-    ));
-    assert!(state.workspace.exposure.load().is_none());
-}
-
 async fn setup_test_server(
     temp: &TempDir,
 ) -> (PathBuf, CancellationToken, mpsc::UnboundedReceiver<String>) {
@@ -4999,3 +4916,4 @@ async fn leader_client_id_dropped_when_target_disconnected() {
 
     cancel.cancel();
 }
+

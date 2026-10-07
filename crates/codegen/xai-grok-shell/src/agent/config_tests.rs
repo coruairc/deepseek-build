@@ -5361,26 +5361,6 @@ fn unknown_key_still_warns_next_to_exempt_sections() {
         "exactly the typo'd key must be flagged"
     );
 }
-/// Regression: a deployment key with no OAuth token must resolve to Proxy.
-#[test]
-fn resolve_upload_method_accepts_deployment_key_without_oauth() {
-    use crate::session::repo_changes::UploadMethod;
-    let endpoints = EndpointsConfig {
-        deployment_key: Some("enterprise-key".to_string()),
-        ..Default::default()
-    };
-    match endpoints.resolve_upload_method(None) {
-        Some(UploadMethod::Proxy {
-            deployment_key,
-            user_token,
-            ..
-        }) => {
-            assert_eq!(deployment_key.as_deref(), Some("enterprise-key"));
-            assert_eq!(user_token, "");
-        }
-        other => panic!("expected Proxy upload method, got {other:?}"),
-    }
-}
 fn empty_config() -> toml::Value {
     toml::Value::Table(toml::map::Map::new())
 }
@@ -6477,25 +6457,6 @@ fn slug_propagation_prefers_same_key_menu_donor_over_restricted_alias() {
     );
     assert_eq!(effort_ids(info("deepseek-4.6-cheap")), ["low"]);
 }
-/// Inheriting an unmarked `capabilities` menu must carry the server-default flag along, or the alias would
-/// derive `.first()` (`low`) where the same-key row sends nothing.
-#[test]
-fn slug_inherited_unmarked_capabilities_menu_keeps_no_default_effort() {
-    let row = serde_json::json!({
-        "id": "deepseek-4.6-build",
-        "capabilities": { "reasoning_effort": ["low", "medium", "high", "xhigh"] }
-    });
-    let parsed =
-        crate::remote::client::parse_remote_model_value(&row, "https://test.example.com/v1")
-            .expect("row parses");
-    let entry =
-        resolve_row_with_menu_donor("deepseek-4.6", "", ModelEntry::from_config_entry(&parsed));
-    assert_eq!(effort_ids(&entry.info), ["low", "medium", "high", "xhigh"]);
-    assert!(entry.info.supports_reasoning_effort);
-    assert!(entry.info.reasoning_effort_server_default);
-    assert_eq!(entry.info.reasoning_effort, None);
-    assert_eq!(resolve_sampling(&entry, None).reasoning_effort, None);
-}
 /// An explicit `supports_reasoning_effort = false` in config discards the menu whether it arrives through the
 /// same-key base (wire-id key) or through slug propagation (alias key), and the scalar whether it came from the
 /// catalog row or from the config row itself, so nothing reaches the wire.
@@ -6522,32 +6483,6 @@ fn explicit_supports_reasoning_effort_false_discards_inherited_menu() {
             "{key}"
         );
     }
-}
-/// A `/v1/models` row whose `capabilities` names no default keeps the menu but sends no effort, so the
-/// server applies its own instead of the lowest listed tier.
-#[test]
-fn capabilities_menu_without_default_resolves_to_no_reasoning_effort() {
-    let mut cfg = Config::default();
-    cfg.endpoints.models_base_url = Some("https://test.example.com/v1".to_owned());
-    let row = serde_json::json!({
-        "id": "deepseek-4.6-build",
-        "capabilities": { "reasoning_effort": ["low", "medium", "high", "xhigh"] }
-    });
-    let parsed =
-        crate::remote::client::parse_remote_model_value(&row, "https://test.example.com/v1")
-            .expect("row parses");
-    let mut prefetched = IndexMap::new();
-    prefetched.insert(
-        "deepseek-4.6-build".to_owned(),
-        ModelEntry::from_config_entry(&parsed),
-    );
-    let info = resolve_model_list(&cfg, Some(prefetched))
-        .shift_remove("deepseek-4.6-build")
-        .expect("deepseek-4.6-build key must exist")
-        .info;
-    assert_eq!(info.reasoning_efforts.len(), 4);
-    assert!(info.supports_reasoning_effort);
-    assert_eq!(info.reasoning_effort, None);
 }
 #[test]
 fn resolve_model_list_inherits_context_window_from_default_when_prefetched_has_fallback() {
@@ -7333,3 +7268,4 @@ fn test_model_entry(
         api_base_url: api_base_url.map(|s| s.to_string()),
     }
 }
+
