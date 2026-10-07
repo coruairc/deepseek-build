@@ -306,7 +306,29 @@ asserted deleted upload/remote/collection surfaces:
 - `session/signals_tests.rs` — `test_gcs_queue_snapshot` (deleted
   `SignalEvent::RecordGcsQueueSnapshot` and the `gcs_queue_*` signal fields).
 - `session/slash_commands_tests.rs` — `feedback_resolves_when_enabled` (deleted
-  `BuiltinAction::Feedback`).
+  `BuiltinAction::Feedback`). `available_commands_orders_builtins_first` is
+  retained but repaired to drop `feedback` from the expected builtin list.
+- `agent/mvp_agent/tests.rs` (runtime failures) —
+  `spawn_settings_reapply_coalesces_while_in_flight`,
+  `spawn_settings_reapply_clears_flag_after_completion`,
+  `post_auth_settings_not_coalesced_by_in_flight_reapply` asserted coalescing
+  around the now no-op `spawn_settings_reapply`/`spawn_post_auth_settings`
+  (remote settings bootstrap removed); and
+  `restore_keeps_the_saved_context_window_selection_without_a_catalog` asserted
+  the removed "catalog not yet fetched" restore path (`wait_for_first_catalog`
+  is now always true). The counterpart
+  `restore_applies_the_saved_context_window_selection` is retained.
+- `session/acp_session_tests/idle_resume_tests.rs` —
+  `test_e2e_idle_resume_refreshes_model_metadata` asserted a remote
+  `/models-v2` metadata refresh (now a no-op); `test_last_api_request_at_idle_detection`
+  and `test_idle_resume_noop_when_not_idle_enough` remain.
+
+Repaired at runtime (not dropped):
+- `session/acp_session_tests/auth_error_no_retry_tests.rs` legacy-auth hint
+  tests now assert the rebranded `deepseek-build update/logout/login` hints.
+- `tools/notification_bridge_tests.rs`
+  `task_completed_notification_stamps_will_wake` no longer expects the removed
+  trace `SessionCommand::CopyFile`.
 
 Repaired, not dropped (kept behavior):
 - Removed the deleted constructor fields from test fixtures across

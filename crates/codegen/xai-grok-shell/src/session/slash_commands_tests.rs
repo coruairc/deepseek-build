@@ -594,7 +594,6 @@ fn available_commands_orders_builtins_first() {
             "plugins",
             "reload-plugins",
             "session-info",
-            "feedback",
             "deep-research",
             "workflow",
             "goal",

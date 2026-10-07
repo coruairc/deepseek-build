@@ -929,19 +929,19 @@ async fn legacy_auth_hint_on_404_model_not_found() {
                 "404 with WebLogin must include deprecation message, got: {msg}"
             );
             assert!(
-                msg.contains("grok update"),
-                "hint must mention `grok update` before re-login, got: {msg}"
+                msg.contains("deepseek-build update"),
+                "hint must mention `deepseek-build update` before re-login, got: {msg}"
             );
             assert!(
-                msg.contains("grok logout"),
-                "hint must mention `grok logout`, got: {msg}"
+                msg.contains("deepseek-build logout"),
+                "hint must mention `deepseek-build logout`, got: {msg}"
             );
             assert!(
-                msg.contains("grok login"),
-                "hint must mention `grok login`, got: {msg}"
+                msg.contains("deepseek-build login"),
+                "hint must mention `deepseek-build login`, got: {msg}"
             );
-            let update_at = msg.find("grok update").expect("grok update");
-            let logout_at = msg.find("grok logout").expect("grok logout");
+            let update_at = msg.find("deepseek-build update").expect("grok update");
+            let logout_at = msg.find("deepseek-build logout").expect("grok logout");
             assert!(
                 update_at < logout_at,
                 "update must come before logout, got: {msg}"
@@ -1009,19 +1009,19 @@ async fn legacy_auth_hint_on_401_unauthorized() {
                 "401 with WebLogin must include deprecation message, got: {msg}"
             );
             assert!(
-                msg.contains("grok update"),
-                "hint must mention `grok update` before re-login, got: {msg}"
+                msg.contains("deepseek-build update"),
+                "hint must mention `deepseek-build update` before re-login, got: {msg}"
             );
             assert!(
-                msg.contains("grok logout"),
-                "hint must mention `grok logout`, got: {msg}"
+                msg.contains("deepseek-build logout"),
+                "hint must mention `deepseek-build logout`, got: {msg}"
             );
             assert!(
-                msg.contains("grok login"),
-                "hint must mention `grok login`, got: {msg}"
+                msg.contains("deepseek-build login"),
+                "hint must mention `deepseek-build login`, got: {msg}"
             );
-            let update_at = msg.find("grok update").expect("grok update");
-            let logout_at = msg.find("grok logout").expect("grok logout");
+            let update_at = msg.find("deepseek-build update").expect("grok update");
+            let logout_at = msg.find("deepseek-build logout").expect("grok logout");
             assert!(
                 update_at < logout_at,
                 "update must come before logout, got: {msg}"

@@ -1517,53 +1517,6 @@ async fn restore_applies_the_saved_context_window_selection() {
         switch_rx.await.expect("restore switches the model")
     );
 }
-#[tokio::test]
-async fn restore_keeps_the_saved_context_window_selection_without_a_catalog() {
-    let agent = build_minimal_agent_for_tests();
-    let mut entry = ModelEntry::fallback("bundled-model", &EndpointsConfig::default());
-    entry.info.context_window = NonZeroU64::new(256_000).unwrap();
-    agent
-        .models_manager
-        .insert_test_entry("bundled-model", entry);
-    let sid = acp::SessionId::new("restore-no-catalog-sess");
-    let (handle, _cmd_tx, mut cmd_rx) = make_live_session_handle(&sid, None);
-    let selection = handle.context_window_selection.clone();
-    let (switch_tx, switch_rx) = tokio::sync::oneshot::channel();
-    tokio::spawn(async move {
-        while let Some(cmd) = cmd_rx.recv().await {
-            if let crate::session::SessionCommand::SetSessionModel {
-                switch,
-                responds_to,
-            } = cmd
-            {
-                let _ = switch_tx.send((
-                    switch.context_window_selection,
-                    switch.sampling_config.context_window,
-                ));
-                let _ = responds_to.send(Ok(acp::ModelId::new(switch.sampling_config.model)));
-                break;
-            }
-        }
-    });
-    agent.insert_resident(&sid, handle);
-    let info = crate::session::info::Info {
-        id: sid.clone(),
-        cwd: "/tmp".to_string(),
-    };
-    let mut summary =
-        crate::session::persistence::Summary::new(&info, acp::ModelId::new("bundled-model"))
-            .unwrap();
-    summary.context_window = NonZeroU64::new(500_000);
-    agent.restore_persisted_model(&sid, &summary, None).await;
-    assert_eq!(
-        (SwitchContextWindow::Preserve, 256_000),
-        switch_rx.await.expect("restore switches the model")
-    );
-    assert_eq!(
-        500_000,
-        selection.load(std::sync::atomic::Ordering::Relaxed)
-    );
-}
 /// A session persisted under a routing *slug* (not the catalog map key) must still get reasoning modes and a selected model.
 /// `session_config_options` resolves the id to the catalog key before the catalog effort lookups and the selected-model match.
 #[tokio::test]
@@ -5835,68 +5788,6 @@ fn supervisor_reaps_panicked_resident_actor() {
             agent.finalize_spy.borrow().is_empty(),
             "reaping a dead actor must NOT finalize (conversation persists)"
         );
-    });
-}
-/// `spawn_settings_reapply` coalesces: while one reapply is in flight, repeated calls (boot plus rapid `/new`) do not spawn overlapping tasks.
-#[test]
-fn spawn_settings_reapply_coalesces_while_in_flight() {
-    run_local_for_bridge_test(|| async {
-        let agent = build_minimal_agent_for_tests();
-        assert_eq!(agent.settings_reapply_spawn_count.get(), 0);
-        agent.spawn_settings_reapply();
-        agent.spawn_settings_reapply();
-        agent.spawn_settings_reapply();
-        assert_eq!(
-            agent.settings_reapply_spawn_count.get(),
-            1,
-            "overlapping settings reapplies must coalesce to a single task"
-        );
-        assert!(agent.settings_reapply_in_flight.get());
-    });
-}
-/// The in-flight guard clears on task completion (via the `ClearOnDrop` guard, so it also clears on panic), allowing a later reapply to re-spawn.
-#[test]
-fn spawn_settings_reapply_clears_flag_after_completion() {
-    run_local_for_bridge_test(|| async {
-        let agent = build_minimal_agent_for_tests();
-        agent.spawn_settings_reapply();
-        assert_eq!(agent.settings_reapply_spawn_count.get(), 1);
-        assert!(agent.settings_reapply_in_flight.get());
-        let mut cleared = false;
-        for _ in 0..40 {
-            if !agent.settings_reapply_in_flight.get() {
-                cleared = true;
-                break;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
-        }
-        assert!(
-            cleared,
-            "in-flight flag must clear after the task completes"
-        );
-        agent.spawn_settings_reapply();
-        assert_eq!(
-            agent.settings_reapply_spawn_count.get(),
-            2,
-            "a reapply after completion must spawn again"
-        );
-    });
-}
-/// The post-auth fetch has its own guard.
-/// An in-flight settings reapply cannot coalesce away a freshly authenticated identity's gate and settings resolution.
-#[test]
-fn post_auth_settings_not_coalesced_by_in_flight_reapply() {
-    run_local_for_bridge_test(|| async {
-        let agent = build_minimal_agent_for_tests();
-        agent.spawn_settings_reapply();
-        assert!(agent.settings_reapply_in_flight.get());
-        agent.spawn_post_auth_settings(xai_grok_login::GrokAuth::test_default());
-        assert_eq!(
-            agent.post_auth_settings_spawn_count.get(),
-            1,
-            "post-auth must spawn on its own guard despite an in-flight reapply"
-        );
-        assert!(agent.post_auth_settings_in_flight.get());
     });
 }
 /// The tier re-check work is single-flight across every caller: back-to-back gated initializes run at most one live check.

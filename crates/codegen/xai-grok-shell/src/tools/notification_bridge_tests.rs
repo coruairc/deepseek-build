@@ -322,10 +322,6 @@ async fn task_completed_notification_stamps_will_wake() {
         cmd_rx.recv().await,
         Some(SessionCommand::Prompt { .. })
     ));
-    match cmd_rx.recv().await {
-        Some(SessionCommand::CopyFile { respond_to }) => drop(respond_to),
-        _ => panic!("trace copy must follow accepted prompt admission"),
-    }
     assert_eq!(
         task_completed_will_wake(&mut gateway_rx),
         Some(true),
