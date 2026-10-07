@@ -1373,8 +1373,6 @@ async fn stop_then_slash_goal_resume_reopens_spawn_admission_before_planner_retr
                         "/goal resume",
                     ))],
                     prompt_mode: PromptMode::Agent,
-                    trace_gcs_config: None,
-                    artifact_tracker: None,
                     client_identifier: None,
                     screen_mode: None,
                     verbatim: true,

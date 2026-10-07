@@ -1,10 +1,9 @@
 //! One binary, one home: `grok_home()` memoizes the first read for the process, so tests that need a temp home have to share one.
 //! `#[serial]` keeps their env writes apart.
 
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
 
 use agent_client_protocol as acp;
-use xai_grok_login::{AuthManager, GrokComConfig};
 use xai_grok_shell::session::info::Info;
 use xai_grok_shell::session::persistence::delete_session_history;
 use xai_grok_shell::session::storage::search::{
@@ -90,12 +89,10 @@ async fn deleting_a_session_clears_only_its_own_search_row() {
     );
     assert!(finds(&index, root, "scoped").await, "precondition: indexed");
 
-    let auth = Arc::new(AuthManager::new(root, GrokComConfig::default()));
-
     let session_dir =
         xai_grok_shell::util::grok_home::sessions_cwd_dir_in(root, "/ws-a").join("orphan");
     std::fs::remove_dir_all(&session_dir).unwrap();
-    let deletion = delete_session_history("orphan", None, false, auth.clone(), Some(&index))
+    let deletion = delete_session_history("orphan", None, Some(&index))
         .await
         .unwrap();
     assert!(!deletion.any_removed(), "nothing was left to remove");
@@ -107,10 +104,7 @@ async fn deleting_a_session_clears_only_its_own_search_row() {
     delete_session_history(
         "elsewhere",
         Some("/ws-a"),
-        false,
-        auth.clone(),
-        Some(&index),
-    )
+        Some(&index))
     .await
     .unwrap();
     assert!(
@@ -118,7 +112,7 @@ async fn deleting_a_session_clears_only_its_own_search_row() {
         "a delete scoped to another workspace must not evict this session",
     );
 
-    let deletion = delete_session_history("scoped", Some("/ws-c"), false, auth, Some(&index))
+    let deletion = delete_session_history("scoped", Some("/ws-c"), Some(&index))
         .await
         .unwrap();
     assert!(deletion.local_removed, "the session was there to remove");
@@ -142,8 +136,7 @@ async fn deleting_a_session_evicts_its_row_without_a_handle() {
         "precondition: indexed"
     );
 
-    let auth = Arc::new(AuthManager::new(root, GrokComConfig::default()));
-    let deletion = delete_session_history("indexless", Some("/ws-d"), false, auth, None)
+    let deletion = delete_session_history("indexless", Some("/ws-d"), None)
         .await
         .unwrap();
     assert!(deletion.local_removed, "the session was there to remove");

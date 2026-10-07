@@ -197,7 +197,6 @@ pub(super) async fn make_replay_send_update_fixture() -> ReplaySendUpdateFixture
         }),
         client_identifier: None,
         origin_client: None,
-        upload_queue: Arc::new(OnceLock::new()),
         agent: std::cell::RefCell::new(test_agent_default().await),
         last_reported_branch: std::sync::Arc::new(parking_lot::Mutex::new(None)),
         git_head_enabled: false,
@@ -304,7 +303,6 @@ pub(super) async fn make_replay_send_update_fixture() -> ReplaySendUpdateFixture
         image_describe_cache: Arc::new(crate::session::image_describe::ImageDescribeCache::new()),
         subagent_token_records: parking_lot::Mutex::new(HashMap::new()),
         workspace_ops: xai_grok_workspace::WorkspaceOps::for_test(),
-        trace_config_template: std::cell::RefCell::new(None),
     };
     ReplaySendUpdateFixture {
         actor,

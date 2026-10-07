@@ -59,14 +59,11 @@ async fn run_wake_turn(
             PromptMode::Agent,
             None,
             None,
-            None,
-            None,
             true,
             false,
             None,
             persist_ack,
-            None,
-        )
+            None)
         .await
 }
 /// Aborts the wake turn after its commit: the test sampler never answers.
@@ -394,14 +391,11 @@ async fn task_completion_wake_is_admitted_without_cancel_barrier() {
                         PromptMode::Agent,
                         None,
                         None,
-                        None,
-                        None,
                         true,
                         false,
                         None,
                         None,
-                        None,
-                    )
+                        None)
                     .await
             });
             tokio::time::timeout(std::time::Duration::from_secs(2), async {
@@ -449,14 +443,11 @@ async fn disk_full_refusal_still_clears_task_completion_reservation() {
                     PromptMode::Agent,
                     None,
                     None,
-                    None,
-                    None,
                     true,
                     false,
                     None,
                     None,
-                    None,
-                )
+                    None)
                 .await
                 .expect_err("latched disk-full must refuse the wake");
             assert_eq!(error.message, "No space left on device");
@@ -549,14 +540,11 @@ async fn genuine_user_start_consumes_deferred_completions_without_notification_t
                         PromptMode::Agent,
                         None,
                         None,
-                        None,
-                        None,
                         false,
                         false,
                         None,
                         None,
-                        None,
-                    )
+                        None)
                     .await
             });
             tokio::time::timeout(std::time::Duration::from_secs(2), async {
@@ -641,14 +629,11 @@ async fn accepted_reservation_survives_user_start() {
                         PromptMode::Agent,
                         None,
                         None,
-                        None,
-                        None,
                         false,
                         false,
                         None,
                         None,
-                        None,
-                    )
+                        None)
                     .await
             });
             tokio::time::timeout(std::time::Duration::from_secs(2), async {

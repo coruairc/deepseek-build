@@ -164,14 +164,11 @@ async fn mid_turn_user_injection_must_not_duplicate_tool_results_for_one_tool_us
                     PromptMode::Agent,
                     None,
                     None,
-                    None,
-                    None,
                     true,
                     /* send_now */ false,
                     None,
                     None,
-                    None,
-                ),
+                    None),
             )
             .await
             .expect("turn must finish within timeout");

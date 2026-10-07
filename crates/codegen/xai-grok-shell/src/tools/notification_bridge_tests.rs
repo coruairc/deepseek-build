@@ -96,7 +96,6 @@ fn make_test_config_full_raw() -> (
             xai_grok_tools::reminders::task_completion::TaskCompletionReservations::default(),
         task_wake_suppressed:
             xai_grok_tools::reminders::task_completion::TaskWakeSuppressed::default(),
-        synthetic_trace_tx: Arc::new(std::sync::Mutex::new(None)),
         task_output_tool_name: Arc::new(std::sync::OnceLock::new()),
         read_tool_name: Arc::new(std::sync::OnceLock::new()),
         auto_wake_enabled: true,
@@ -310,11 +309,6 @@ async fn task_completed_notification_stamps_will_wake() {
         .task_output_tool_name
         .set(Some("get_command_or_subagent_output".to_string()))
         .expect("slot is fresh in this test fixture");
-    let (trace_tx, mut trace_rx) = mpsc::unbounded_channel();
-    *config
-        .synthetic_trace_tx
-        .lock()
-        .unwrap_or_else(|e| e.into_inner()) = Some(trace_tx);
     let mut offsets = HashMap::new();
     handle_notification_with_admission(
         &config,
@@ -328,26 +322,13 @@ async fn task_completed_notification_stamps_will_wake() {
         cmd_rx.recv().await,
         Some(SessionCommand::Prompt { .. })
     ));
-    match cmd_rx.recv().await {
-        Some(SessionCommand::CopyFile { respond_to }) => drop(respond_to),
-        _ => panic!("trace copy must follow accepted prompt admission"),
-    }
     assert_eq!(
         task_completed_will_wake(&mut gateway_rx),
         Some(true),
         "an auto-woken completion must stamp will_wake: true"
     );
-    assert!(
-        trace_rx.try_recv().is_ok(),
-        "accepted admission must request a synthetic-turn trace"
-    );
 
     let (config, mut gateway_rx, mut persistence_rx, mut cmd_rx) = make_test_config_full();
-    let (trace_tx, mut trace_rx) = mpsc::unbounded_channel();
-    *config
-        .synthetic_trace_tx
-        .lock()
-        .unwrap_or_else(|e| e.into_inner()) = Some(trace_tx);
     let mut offsets = HashMap::new();
     handle_notification_with_admission(
         &config,
@@ -365,10 +346,6 @@ async fn task_completed_notification_stamps_will_wake() {
     assert!(
         config.task_completion_reservations.contains("bg-declined"),
         "the actor owns reservation release after queuing the deferred fallback"
-    );
-    assert!(
-        trace_rx.try_recv().is_err(),
-        "declined admission must not request a synthetic-turn trace"
     );
     assert!(matches!(
         cmd_rx.try_recv(),

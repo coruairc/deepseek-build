@@ -266,14 +266,87 @@ Dropped test functions (55) and helpers that referenced deleted types:
 - `agent/mvp_agent/tests.rs` — `upload_harness_trace_turns_numbers_siblings_and_persists_counter`, `upload_harness_trace_turns_build_per_turn_manifest` (deleted `crate::upload` / `TraceUploadEndpoints`); the uploads-disabled guard test is retained.
 - `leader/server_tests.rs` — `wait_for_leader_auth_returns_when_already_wired`, `wait_for_leader_auth_resolves_when_wired_late`, `hubless_workspace_exposure_arms_no_metric_pump_and_tears_down_cleanly` (deleted `wait_for_leader_auth`, `arm_metric_donation`); helper `TestAuth` (deleted `AuthProvider`/`AuthCredential`). The other 149 leader tests are retained.
 
-### Second compile layer (known remaining, not yet repaired)
+### Second compile layer (batch 2 — resolved)
 
-After this batch `cargo check -p xai-grok-shell --lib --tests` still reports 166
-errors across ~33 files because the first layer masked further references to the
-same deleted upload/remote/hub surfaces. The bulk are removed test-constructor
-fields and call-site arity mismatches, e.g. `SessionActor.upload_queue` /
-`trace_config_template`, `SessionContext.auth_provider`, `InputItem.trace_gcs_config` /
-`artifact_tracker`, `HumanPromptContent.artifact_upload_ctx`, `InjectParams.synthetic_trace_tx`,
-`OneTurnAttemptInput.gcs_bucket_url`/`gcs_upload_method`, and further
-`handle_prompt`/turn-entry call sites. These are mechanical but have not been
-adjudicated yet.
+The 166-error second layer is now adjudicated; `cargo check -p xai-grok-shell
+--lib --tests` is green. Most were repairs, not drops: removed test-constructor
+fields were stripped (all `None`/placeholder) and call-site arity matches were
+fixed where the remaining behavior is kept. Dropped tests/helpers that only
+asserted deleted upload/remote/collection surfaces:
+
+- `session/persistence_tests.rs` — remaining remote writeback/title-sync and
+  durable-append-sync tests: `durable_append_committed_failure_is_synced`,
+  `pending_drain_disposition_controls_remote_sync`,
+  `manual_rename_next_flush_does_not_revert_backend_title`,
+  `manual_after_auto_last_flush_is_manual`,
+  `auto_after_committed_manual_emits_no_set_title`,
+  `reset_title_to_auto_then_generated_title_is_adopted`,
+  `reset_title_to_auto_adopts_in_flight_generation_as_auto`,
+  `winning_identity_stamp_seeds_remote_writeback`,
+  `writeback_backfill_is_fresh_only_and_acp_only`; helper `recv_observed`.
+  (Batch 1's ledger line for this file listed these as already dropped but they
+  were only adjudicated here; the durability/flush/restore tests remain.)
+- `agent/config_tests.rs` — `coding_data_opt_out_does_not_block_uploads_to_own_bucket`
+  (deleted `EndpointsConfig::is_trace_upload_blocked_for`; `trace_upload_bucket`
+  no longer drives upload gating).
+- `agent/mvp_agent/tests.rs` — trace/diagnostic upload config tests:
+  `upload_harness_trace_turns_uploads_disabled_does_not_burn_counter`,
+  `data_collection_disabled_for_zdr_team`,
+  `data_collection_disabled_for_opted_out_team`,
+  `diagnostic_upload_skipped_for_opted_out_user`,
+  `diagnostic_upload_skipped_without_credentials`,
+  `zdr_team_uploads_no_traces_to_own_bucket`,
+  `diagnostic_upload_skipped_for_opted_out_user_with_own_bucket`,
+  `diagnostic_upload_skipped_after_mid_session_trace_upload_kill_switch`,
+  `collection_config_gate_mirror_follows_trace_upload_flip` (deleted
+  `upload_harness_trace_turns`, `trace_upload_config_snapshot`,
+  `diagnostic_upload_config`, `sync_collection_config_gate`,
+  `MvpAgent.trace_upload_live`, and `crate::upload` / `TraceUploadEndpoints`).
+  The `is_data_collection_disabled` privacy tests remain.
+- `session/signals_tests.rs` — `test_gcs_queue_snapshot` (deleted
+  `SignalEvent::RecordGcsQueueSnapshot` and the `gcs_queue_*` signal fields).
+- `session/slash_commands_tests.rs` — `feedback_resolves_when_enabled` (deleted
+  `BuiltinAction::Feedback`). `available_commands_orders_builtins_first` is
+  retained but repaired to drop `feedback` from the expected builtin list.
+- `agent/mvp_agent/tests.rs` (runtime failures) —
+  `spawn_settings_reapply_coalesces_while_in_flight`,
+  `spawn_settings_reapply_clears_flag_after_completion`,
+  `post_auth_settings_not_coalesced_by_in_flight_reapply` asserted coalescing
+  around the now no-op `spawn_settings_reapply`/`spawn_post_auth_settings`
+  (remote settings bootstrap removed); and
+  `restore_keeps_the_saved_context_window_selection_without_a_catalog` asserted
+  the removed "catalog not yet fetched" restore path (`wait_for_first_catalog`
+  is now always true). The counterpart
+  `restore_applies_the_saved_context_window_selection` is retained.
+- `session/acp_session_tests/idle_resume_tests.rs` —
+  `test_e2e_idle_resume_refreshes_model_metadata` asserted a remote
+  `/models-v2` metadata refresh (now a no-op); `test_last_api_request_at_idle_detection`
+  and `test_idle_resume_noop_when_not_idle_enough` remain.
+
+Repaired at runtime (not dropped):
+- `session/acp_session_tests/auth_error_no_retry_tests.rs` legacy-auth hint
+  tests now assert the rebranded `deepseek-build update/logout/login` hints.
+- `tools/notification_bridge_tests.rs`
+  `task_completed_notification_stamps_will_wake` no longer expects the removed
+  trace `SessionCommand::CopyFile`.
+
+Repaired, not dropped (kept behavior):
+- Removed the deleted constructor fields from test fixtures across
+  `SessionActor` (`upload_queue`, `trace_config_template`),
+  `SessionContext` (`auth_provider`), `InputItem`/`TurnInputRequest`
+  (`trace_gcs_config`, `artifact_tracker`), `HumanPromptContent`
+  (`artifact_upload_ctx`), `InjectParams`/`SubagentSpawnContext`
+  (`synthetic_trace_tx`), `OneTurnAttemptInput` (`gcs_bucket_url`,
+  `gcs_upload_method`), `SessionHandle` (`upload_queue`,
+  `upload_failures_since_success`).
+- Fixed `handle_prompt` (12→10) and
+  `process_conversation_turn_with_recovery` (6→4) call arity, and
+  `delete_session_history` (5→3) in `tests/session_delete_evicts_index.rs`.
+- Dropped the `remote_fetch_enabled` first arg from `ModelsManager::new` in
+  `agent/subagent/tests/rest.rs` and the now-removed `settle_first_catalog_for_tests`
+  calls in `agent/mvp_agent/tests.rs` (the local catalog is always complete).
+- Dropped the trace-channel assertions from the retained
+  `task_completed_notification_stamps_will_wake` and the subagent
+  `inject_*` tests; their wake/admission behavior assertions remain.
+- Repaired `persistence_tests::test_actor_inner` call sites and
+  `session_delete_evicts_index.rs` (removed the now-unused auth setup).

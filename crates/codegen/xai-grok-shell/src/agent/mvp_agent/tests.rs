@@ -435,31 +435,6 @@ async fn first_subagent_turn_allocation_does_not_walk_the_sessions_index() {
     assert_eq!(agent.allocate_turn_number(&sid), 0);
     assert_eq!(agent.session_turn_number(&sid), Some(1));
 }
-/// With trace upload disabled the agent-side path must NOT burn a turn number or persist a counter (and spawns no upload).
-/// The buffer-clearing half of the drain is the caller's `TakeHarnessTraceTurns`; this guards the upload function's uploads-disabled branch.
-#[tokio::test(flavor = "current_thread")]
-async fn upload_harness_trace_turns_uploads_disabled_does_not_burn_counter() {
-    let agent = build_minimal_agent_for_tests();
-    let sid = acp::SessionId::new("harness-disabled-sess");
-    let info = crate::session::info::Info {
-        id: sid.clone(),
-        cwd: "/tmp".to_string(),
-    };
-    let (cmd_tx, mut cmd_rx) =
-        tokio::sync::mpsc::unbounded_channel::<crate::session::SessionCommand>();
-    agent
-        .upload_harness_trace_turns(&sid, &info, &cmd_tx, "test-model", vec![harness_pair("a")])
-        .await;
-    assert_eq!(
-        agent.session_turn_number(&sid),
-        None,
-        "uploads-disabled skip must not consume a turn number",
-    );
-    assert!(
-        cmd_rx.try_recv().is_err(),
-        "uploads-disabled path must not persist a counter",
-    );
-}
 /// With no overrides and model_agent_type = None, the default agent is used.
 #[test]
 #[serial_test::serial]
@@ -965,7 +940,6 @@ async fn file_toolset_override_e2e_to_finalized_toolset() {
         lsp: None,
         app_builder_deployer_config: xai_grok_tools::implementations::grok_build::app_builder::AppBuilderDeployerConfig::default(),
         api_key_provider: None,
-        auth_provider: None,
         attribution_callback: None,
         system_reminder_tag: xai_grok_tools::reminders::DEFAULT_REMINDER_TAG,
     };
@@ -1040,8 +1014,6 @@ pub(super) fn make_test_handle(
         mcp_servers: Default::default(),
         initial_client_mcp_servers: Default::default(),
         display_cwd: None,
-        upload_queue: Arc::new(OnceLock::new()),
-        upload_failures_since_success: Arc::new(std::sync::atomic::AtomicU64::new(0)),
         tool_context: crate::tools::ToolContext::new_local_context(
             xai_grok_paths::AbsPathBuf::new(std::path::PathBuf::from("/tmp")).unwrap(),
             std::sync::Arc::new(xai_grok_workspace::file_system::LocalFs::new(
@@ -1509,7 +1481,6 @@ async fn restore_applies_the_saved_context_window_selection() {
     agent
         .models_manager
         .insert_test_entry("window-model", entry);
-    agent.models_manager.settle_first_catalog_for_tests(true);
     let sid = acp::SessionId::new("restore-window-sess");
     let (handle, _cmd_tx, mut cmd_rx) = make_live_session_handle(&sid, None);
     let (switch_tx, switch_rx) = tokio::sync::oneshot::channel();
@@ -1544,54 +1515,6 @@ async fn restore_applies_the_saved_context_window_selection() {
     assert_eq!(
         (SwitchContextWindow::Set(NonZeroU64::new(500_000)), true),
         switch_rx.await.expect("restore switches the model")
-    );
-}
-#[tokio::test]
-async fn restore_keeps_the_saved_context_window_selection_without_a_catalog() {
-    let agent = build_minimal_agent_for_tests();
-    let mut entry = ModelEntry::fallback("bundled-model", &EndpointsConfig::default());
-    entry.info.context_window = NonZeroU64::new(256_000).unwrap();
-    agent
-        .models_manager
-        .insert_test_entry("bundled-model", entry);
-    agent.models_manager.settle_first_catalog_for_tests(false);
-    let sid = acp::SessionId::new("restore-no-catalog-sess");
-    let (handle, _cmd_tx, mut cmd_rx) = make_live_session_handle(&sid, None);
-    let selection = handle.context_window_selection.clone();
-    let (switch_tx, switch_rx) = tokio::sync::oneshot::channel();
-    tokio::spawn(async move {
-        while let Some(cmd) = cmd_rx.recv().await {
-            if let crate::session::SessionCommand::SetSessionModel {
-                switch,
-                responds_to,
-            } = cmd
-            {
-                let _ = switch_tx.send((
-                    switch.context_window_selection,
-                    switch.sampling_config.context_window,
-                ));
-                let _ = responds_to.send(Ok(acp::ModelId::new(switch.sampling_config.model)));
-                break;
-            }
-        }
-    });
-    agent.insert_resident(&sid, handle);
-    let info = crate::session::info::Info {
-        id: sid.clone(),
-        cwd: "/tmp".to_string(),
-    };
-    let mut summary =
-        crate::session::persistence::Summary::new(&info, acp::ModelId::new("bundled-model"))
-            .unwrap();
-    summary.context_window = NonZeroU64::new(500_000);
-    agent.restore_persisted_model(&sid, &summary, None).await;
-    assert_eq!(
-        (SwitchContextWindow::Preserve, 256_000),
-        switch_rx.await.expect("restore switches the model")
-    );
-    assert_eq!(
-        500_000,
-        selection.load(std::sync::atomic::Ordering::Relaxed)
     );
 }
 /// A session persisted under a routing *slug* (not the catalog map key) must still get reasoning modes and a selected model.
@@ -3234,21 +3157,6 @@ async fn data_collection_enabled_for_normal_user() {
     );
 }
 #[tokio::test]
-async fn data_collection_disabled_for_zdr_team() {
-    let agent = build_agent_with_auth(xai_grok_login::GrokAuth {
-        team_blocked_reasons: vec!["BLOCKED_REASON_NO_LOGS".into()],
-        ..xai_grok_login::GrokAuth::test_default()
-    });
-    assert!(
-        agent.is_data_collection_disabled(),
-        "ZDR team must have data collection disabled"
-    );
-    assert!(
-        agent.trace_upload_config_snapshot().is_none(),
-        "trace uploads must be disabled for ZDR team"
-    );
-}
-#[tokio::test]
 async fn data_collection_disabled_for_zdr_moderated_team() {
     let agent = build_agent_with_auth(xai_grok_login::GrokAuth {
         team_blocked_reasons: vec!["BLOCKED_REASON_NO_LOGS_MODERATED".into()],
@@ -3257,21 +3165,6 @@ async fn data_collection_disabled_for_zdr_moderated_team() {
     assert!(
         agent.is_data_collection_disabled(),
         "ZDR-moderated team must have data collection disabled"
-    );
-}
-#[tokio::test]
-async fn data_collection_disabled_for_opted_out_team() {
-    let agent = build_agent_with_auth(xai_grok_login::GrokAuth {
-        coding_data_retention_opt_out: true,
-        ..xai_grok_login::GrokAuth::test_default()
-    });
-    assert!(
-        agent.is_data_collection_disabled(),
-        "opted-out team must have data collection disabled"
-    );
-    assert!(
-        agent.trace_upload_config_snapshot().is_none(),
-        "trace uploads must be disabled for opted-out team"
     );
 }
 #[tokio::test]
@@ -3358,101 +3251,6 @@ async fn spawn_counting_storage_stub() -> (String, std::sync::Arc<std::sync::ato
     });
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
     (format!("http://127.0.0.1:{port}"), count)
-}
-/// Regression: the auth-diagnostics uploader was gated only on the trace-upload config switch.
-/// It must also honor ZDR / retention opt-out, checked at invocation time.
-#[tokio::test]
-async fn diagnostic_upload_skipped_for_opted_out_user() {
-    let (stub_url, count) = spawn_counting_storage_stub().await;
-    let agent = build_agent_with_auth(xai_grok_login::GrokAuth {
-        coding_data_retention_opt_out: true,
-        ..xai_grok_login::GrokAuth::test_default()
-    });
-    enable_trace_upload_config(&agent);
-    agent.cfg.borrow_mut().endpoints.trace_upload_url = Some(stub_url);
-    let uploader = agent
-        .diagnostic_upload_config()
-        .expect("uploader is wired whenever trace upload config is on");
-    uploader(b"log".to_vec(), "tok".into(), "user-id-1".into()).await;
-    assert_eq!(
-        count.load(std::sync::atomic::Ordering::SeqCst),
-        0,
-        "no diagnostics request may leave the machine after opt-out"
-    );
-}
-/// The diagnostics privacy gate fails closed: with no credential in the `AuthManager`, nothing may leave the machine.
-/// The credential can be missing when a mid-session `/logout` raced the refresh failure that triggers the upload.
-#[tokio::test]
-async fn diagnostic_upload_skipped_without_credentials() {
-    let (stub_url, count) = spawn_counting_storage_stub().await;
-    let agent = build_minimal_agent_for_tests();
-    enable_trace_upload_config(&agent);
-    agent.cfg.borrow_mut().endpoints.trace_upload_url = Some(stub_url);
-    let uploader = agent
-        .diagnostic_upload_config()
-        .expect("uploader is wired whenever trace upload config is on");
-    uploader(b"log".to_vec(), "tok".into(), "user-id-1".into()).await;
-    assert_eq!(
-        count.load(std::sync::atomic::Ordering::SeqCst),
-        0,
-        "missing credentials must fail closed for diagnostics uploads"
-    );
-}
-#[tokio::test]
-async fn zdr_team_uploads_no_traces_to_own_bucket() {
-    let agent = build_agent_with_auth(xai_grok_login::GrokAuth {
-        team_blocked_reasons: vec!["BLOCKED_REASON_NO_LOGS".into()],
-        ..xai_grok_login::GrokAuth::test_default()
-    });
-    enable_trace_upload_config(&agent);
-    agent.cfg.borrow_mut().endpoints.trace_upload_bucket = Some("file:///tmp/acme-traces".into());
-    assert!(agent.trace_upload_config_snapshot().is_none());
-}
-/// Auth diagnostics always go to the proxy, so a deployment's own bucket must not open them for an opted-out user.
-#[tokio::test]
-async fn diagnostic_upload_skipped_for_opted_out_user_with_own_bucket() {
-    let (stub_url, count) = spawn_counting_storage_stub().await;
-    let agent = build_agent_with_auth(xai_grok_login::GrokAuth {
-        coding_data_retention_opt_out: true,
-        ..xai_grok_login::GrokAuth::test_default()
-    });
-    enable_trace_upload_config(&agent);
-    {
-        let mut cfg = agent.cfg.borrow_mut();
-        cfg.endpoints.trace_upload_url = Some(stub_url);
-        cfg.endpoints.trace_upload_bucket = Some("file:///tmp/acme-traces".into());
-    }
-    let uploader = agent
-        .diagnostic_upload_config()
-        .expect("uploader is wired whenever trace upload config is on");
-    uploader(b"log".to_vec(), "tok".into(), "user-id-1".into()).await;
-    assert_eq!(0, count.load(std::sync::atomic::Ordering::SeqCst));
-}
-/// The diagnostics uploader is wired once (at agent construction), so it must re-check the live trace-upload mirror at invocation time.
-/// A mid-session config-level kill switch stops diagnostics uploads too.
-#[tokio::test]
-async fn diagnostic_upload_skipped_after_mid_session_trace_upload_kill_switch() {
-    let (stub_url, count) = spawn_counting_storage_stub().await;
-    let agent = build_agent_with_auth(xai_grok_login::GrokAuth::test_default());
-    enable_trace_upload_config(&agent);
-    agent.cfg.borrow_mut().endpoints.trace_upload_url = Some(stub_url);
-    agent.sync_collection_config_gate();
-    let uploader = agent
-        .diagnostic_upload_config()
-        .expect("uploader is wired whenever trace upload config is on");
-    {
-        let mut cfg = agent.cfg.borrow_mut();
-        cfg.features.telemetry = Some(crate::agent::config::TelemetryMode::Disabled);
-        cfg.telemetry.trace_upload = Some(false);
-    }
-    agent.sync_collection_config_gate();
-    uploader(b"log".to_vec(), "tok".into(), "user-id-1".into()).await;
-    assert_eq!(
-        count.load(std::sync::atomic::Ordering::SeqCst),
-        0,
-        "an already-wired diagnostics uploader must honor a mid-session \
-         trace-upload kill switch"
-    );
 }
 use crate::session::storage::search::IndexDecision;
 /// A grok home of its own, with the switch left at its registered default.
@@ -3559,33 +3357,6 @@ async fn session_opened_before_the_decision_sees_it_land() {
     assert!(
         matches!(held_by_a_session.decision(), IndexDecision::On(_)),
         "the session indexes as soon as the decision lands"
-    );
-}
-/// The live collection gate reads a `Send` mirror of the config-level trace-upload switch.
-/// `sync_collection_config_gate` must keep that mirror current.
-/// A mid-session remote-settings flip (kill switch) then stops collection without a new session.
-#[tokio::test]
-async fn collection_config_gate_mirror_follows_trace_upload_flip() {
-    let agent = build_agent_with_auth(xai_grok_login::GrokAuth::test_default());
-    enable_trace_upload_config(&agent);
-    agent.sync_collection_config_gate();
-    assert!(
-        agent
-            .trace_upload_live
-            .load(std::sync::atomic::Ordering::Relaxed),
-        "precondition: mirror reflects the enabled switch"
-    );
-    {
-        let mut cfg = agent.cfg.borrow_mut();
-        cfg.features.telemetry = Some(crate::agent::config::TelemetryMode::Disabled);
-        cfg.telemetry.trace_upload = Some(false);
-    }
-    agent.sync_collection_config_gate();
-    assert!(
-        !agent
-            .trace_upload_live
-            .load(std::sync::atomic::Ordering::Relaxed),
-        "mirror must follow a mid-session config-level trace-upload flip"
     );
 }
 /// `parse_session_kind` routes `session/load` to the gateway Chat path vs. the disk-backed Build path.
@@ -6017,68 +5788,6 @@ fn supervisor_reaps_panicked_resident_actor() {
             agent.finalize_spy.borrow().is_empty(),
             "reaping a dead actor must NOT finalize (conversation persists)"
         );
-    });
-}
-/// `spawn_settings_reapply` coalesces: while one reapply is in flight, repeated calls (boot plus rapid `/new`) do not spawn overlapping tasks.
-#[test]
-fn spawn_settings_reapply_coalesces_while_in_flight() {
-    run_local_for_bridge_test(|| async {
-        let agent = build_minimal_agent_for_tests();
-        assert_eq!(agent.settings_reapply_spawn_count.get(), 0);
-        agent.spawn_settings_reapply();
-        agent.spawn_settings_reapply();
-        agent.spawn_settings_reapply();
-        assert_eq!(
-            agent.settings_reapply_spawn_count.get(),
-            1,
-            "overlapping settings reapplies must coalesce to a single task"
-        );
-        assert!(agent.settings_reapply_in_flight.get());
-    });
-}
-/// The in-flight guard clears on task completion (via the `ClearOnDrop` guard, so it also clears on panic), allowing a later reapply to re-spawn.
-#[test]
-fn spawn_settings_reapply_clears_flag_after_completion() {
-    run_local_for_bridge_test(|| async {
-        let agent = build_minimal_agent_for_tests();
-        agent.spawn_settings_reapply();
-        assert_eq!(agent.settings_reapply_spawn_count.get(), 1);
-        assert!(agent.settings_reapply_in_flight.get());
-        let mut cleared = false;
-        for _ in 0..40 {
-            if !agent.settings_reapply_in_flight.get() {
-                cleared = true;
-                break;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
-        }
-        assert!(
-            cleared,
-            "in-flight flag must clear after the task completes"
-        );
-        agent.spawn_settings_reapply();
-        assert_eq!(
-            agent.settings_reapply_spawn_count.get(),
-            2,
-            "a reapply after completion must spawn again"
-        );
-    });
-}
-/// The post-auth fetch has its own guard.
-/// An in-flight settings reapply cannot coalesce away a freshly authenticated identity's gate and settings resolution.
-#[test]
-fn post_auth_settings_not_coalesced_by_in_flight_reapply() {
-    run_local_for_bridge_test(|| async {
-        let agent = build_minimal_agent_for_tests();
-        agent.spawn_settings_reapply();
-        assert!(agent.settings_reapply_in_flight.get());
-        agent.spawn_post_auth_settings(xai_grok_login::GrokAuth::test_default());
-        assert_eq!(
-            agent.post_auth_settings_spawn_count.get(),
-            1,
-            "post-auth must spawn on its own guard despite an in-flight reapply"
-        );
-        assert!(agent.post_auth_settings_in_flight.get());
     });
 }
 /// The tier re-check work is single-flight across every caller: back-to-back gated initializes run at most one live check.

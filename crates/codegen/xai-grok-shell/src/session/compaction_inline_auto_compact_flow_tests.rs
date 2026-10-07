@@ -177,7 +177,6 @@ async fn create_test_actor(
         buffering_settings: None,
         client_identifier: None,
         origin_client: None,
-        upload_queue: Arc::new(OnceLock::new()),
         agent: std::cell::RefCell::new(test_agent_default().await),
         last_reported_branch: std::sync::Arc::new(parking_lot::Mutex::new(None)),
         git_head_enabled: false,
@@ -286,7 +285,6 @@ async fn create_test_actor(
         image_describe_cache: Arc::new(crate::session::image_describe::ImageDescribeCache::new()),
         subagent_token_records: parking_lot::Mutex::new(std::collections::HashMap::new()),
         workspace_ops: xai_grok_workspace::WorkspaceOps::for_test(),
-        trace_config_template: std::cell::RefCell::new(None),
     }
 }
 /// Suppression gates both AUTO paths; the reset scope depends on the reason.

@@ -194,10 +194,6 @@ fn wedged_child_handle() -> (
         mcp_servers: Default::default(),
         initial_client_mcp_servers: Default::default(),
         display_cwd: None,
-        upload_queue: std::sync::Arc::new(std::sync::OnceLock::new()),
-        upload_failures_since_success: std::sync::Arc::new(
-            std::sync::atomic::AtomicU64::new(0),
-        ),
         tool_context: crate::tools::ToolContext::new_local_context(
             xai_grok_paths::AbsPathBuf::new(PathBuf::from("/tmp")).unwrap(),
             std::sync::Arc::new(
@@ -248,8 +244,6 @@ async fn cancelled_attempt_fails_closed_when_the_signals_read_never_answers() {
                 task_prompt_text: "task",
                 prompt_id: uuid::Uuid::now_v7().to_string(),
                 inherited_tool_overrides: None,
-                gcs_bucket_url: None,
-                gcs_upload_method: None,
                 turn_number: 0,
                 cancel_token,
                 child_run_started_at: std::time::Instant::now(),
@@ -756,7 +750,6 @@ fn inject_subagent_completed_prompt_sends_prompt() {
         task_output_tool_name: "get_command_or_subagent_output",
         scheduler_delete_tool_name: Some("renamed_scheduler_delete"),
         scheduler_create_tool_name: Some("renamed_scheduler_create"),
-        synthetic_trace_tx: &None,
         goal_loop_active: &std::sync::atomic::AtomicBool::new(false),
     });
     match cmd_rx.try_recv().expect("expected synthetic Prompt") {
@@ -804,7 +797,6 @@ fn inject_subagent_completed_prompt_copies_capped_task_output() {
         task_output_tool_name: "get_command_or_subagent_output",
         scheduler_delete_tool_name: None,
         scheduler_create_tool_name: None,
-        synthetic_trace_tx: &None,
         goal_loop_active: &std::sync::atomic::AtomicBool::new(false),
     });
     let SessionCommand::Prompt { prompt_blocks, .. } = cmd_rx
@@ -850,7 +842,6 @@ fn inject_subagent_completed_prompt_omits_cleanup_without_loop_task() {
         task_output_tool_name: "get_command_or_subagent_output",
         scheduler_delete_tool_name: Some("scheduler_delete"),
         scheduler_create_tool_name: Some("scheduler_create"),
-        synthetic_trace_tx: &None,
         goal_loop_active: &std::sync::atomic::AtomicBool::new(false),
     });
     let SessionCommand::Prompt { prompt_blocks, .. } = cmd_rx
@@ -882,7 +873,6 @@ fn inject_subagent_completed_prompt_bails_when_goal_loop_activates_in_gap() {
         task_output_tool_name: "get_command_or_subagent_output",
         scheduler_delete_tool_name: None,
         scheduler_create_tool_name: None,
-        synthetic_trace_tx: &None,
         goal_loop_active: &std::sync::atomic::AtomicBool::new(true),
     });
     assert!(cmd_rx.try_recv().is_err(), "no prompt when the goal loop owns the cadence");
@@ -891,7 +881,6 @@ fn inject_subagent_completed_prompt_bails_when_goal_loop_activates_in_gap() {
 fn inject_subagent_completed_prompt_bails_when_parent_closed() {
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<SessionCommand>();
     drop(cmd_rx);
-    let (trace_tx, mut trace_rx) = mpsc::unbounded_channel();
     let request = auto_wake_test_request("sa-closed");
     let result = SubagentResult {
         success: true,
@@ -908,10 +897,8 @@ fn inject_subagent_completed_prompt_bails_when_parent_closed() {
         task_output_tool_name: "get_command_or_subagent_output",
         scheduler_delete_tool_name: None,
         scheduler_create_tool_name: None,
-        synthetic_trace_tx: &Some(trace_tx),
         goal_loop_active: &std::sync::atomic::AtomicBool::new(false),
     });
-    assert!(trace_rx.try_recv().is_err(), "no prompt was sent, so no trace request follows");
 }
 #[test]
 fn persist_gate_only_persists_successful_nonempty_outputs() {
@@ -2125,11 +2112,9 @@ async fn cancel_pending_shell_child_presents_one_cancelled_finish() {
             None,
             false,
             42,
-            &test_gcs_context(&ctx),
             UNPROMOTED_SESSION_THREAD_EXIT_TIMEOUT,
             UnpromotedChildDisposition::Cancelled,
-            true,
-        )
+            true)
         .await;
     assert!(matches!(child_cmd_rx.try_recv(), Ok(SessionCommand::Cancel(_))));
     assert!(matches!(
@@ -2203,11 +2188,9 @@ async fn run_promote_cancel_with_worktree(
             Some(worktree),
             worktree_freshly_created,
             42,
-            &test_gcs_context(&ctx),
             UNPROMOTED_SESSION_THREAD_EXIT_TIMEOUT,
             UnpromotedChildDisposition::Cancelled,
-            true,
-        )
+            true)
         .await;
     assert!(matches!(child_cmd_rx.try_recv(), Ok(SessionCommand::Cancel(_))));
     assert!(matches!(
@@ -2294,11 +2277,9 @@ async fn unproven_thread_exit_preserves_fresh_worktree() {
             Some(worktree.path()),
             true,
             42,
-            &test_gcs_context(&ctx),
             std::time::Duration::ZERO,
             UnpromotedChildDisposition::Cancelled,
-            true,
-        )
+            true)
         .await;
     assert!(matches!(child_cmd_rx.try_recv(), Ok(SessionCommand::Cancel(_))));
     assert!(matches!(
@@ -2341,11 +2322,9 @@ async fn startup_admission_timeout_is_failed_not_cancelled() {
             None,
             false,
             42,
-            &test_gcs_context(&ctx),
             UNPROMOTED_SESSION_THREAD_EXIT_TIMEOUT,
             UnpromotedChildDisposition::AdmissionTimedOut,
-            true,
-        )
+            true)
         .await;
     assert!(matches!(child_cmd_rx.try_recv(), Ok(SessionCommand::Cancel(_))));
     assert!(matches!(

@@ -204,7 +204,6 @@ async fn persist_ack_waits_for_disk_flush_before_success() {
                 buffering_settings: None,
                 client_identifier: None,
                 origin_client: None,
-                upload_queue: Arc::new(OnceLock::new()),
                 agent: std::cell::RefCell::new(test_agent_default().await),
                 last_reported_branch: std::sync::Arc::new(parking_lot::Mutex::new(None)),
                 git_head_enabled: false,
@@ -316,7 +315,6 @@ async fn persist_ack_waits_for_disk_flush_before_success() {
                 ),
                 subagent_token_records: parking_lot::Mutex::new(HashMap::new()),
                 workspace_ops: xai_grok_workspace::WorkspaceOps::for_test(),
-                trace_config_template: std::cell::RefCell::new(None),
             });
             let prompt_blocks = vec![acp::ContentBlock::Text(acp::TextContent::new(
                 "hello persist".to_string(),
@@ -331,14 +329,11 @@ async fn persist_ack_waits_for_disk_flush_before_success() {
                         PromptMode::Agent,
                         None,
                         None,
-                        None,
-                        None,
                         true,
                         false,
                         None,
                         Some(ack_tx),
-                        None,
-                    )
+                        None)
                     .await
             });
             assert!(ack_rx.await.is_ok(), "persist ack should resolve");
@@ -399,14 +394,11 @@ async fn plain_user_prompt_without_persist_ack_still_sends_flush_barrier_behind_
                         PromptMode::Agent,
                         None,
                         None,
-                        None,
-                        None,
                         true,
                         false,
                         None,
                         None,
-                        None,
-                    )
+                        None)
                     .await
             });
             tokio::time::timeout(std::time::Duration::from_secs(5), async {
@@ -740,7 +732,6 @@ async fn first_turn_memory_injection_disabled_does_not_persist_to_chat_history()
                 buffering_settings: None,
                 client_identifier: None,
                 origin_client: None,
-                upload_queue: Arc::new(OnceLock::new()),
                 agent: std::cell::RefCell::new(test_agent_default().await),
                 last_reported_branch: std::sync::Arc::new(parking_lot::Mutex::new(None)),
                 git_head_enabled: false,
@@ -852,17 +843,13 @@ async fn first_turn_memory_injection_disabled_does_not_persist_to_chat_history()
                 ),
                 subagent_token_records: parking_lot::Mutex::new(HashMap::new()),
                 workspace_ops: xai_grok_workspace::WorkspaceOps::for_test(),
-                trace_config_template: std::cell::RefCell::new(None),
             });
             let _ = actor
                 .process_conversation_turn_with_recovery(
                     "disabled-memory",
                     None,
-                    None,
-                    None,
                     &mut length_salvage::LengthSalvage::new(None),
-                    &mut Default::default(),
-                )
+                    &mut Default::default())
                 .await;
             let (flush_tx, flush_rx) = tokio::sync::oneshot::channel();
             persistence
@@ -1069,7 +1056,6 @@ async fn cancel_running_task_teardown_clears_running_and_pending_work() {
                 buffering_settings: None,
                 client_identifier: None,
                 origin_client: None,
-                upload_queue: Arc::new(OnceLock::new()),
                 agent: std::cell::RefCell::new(agent),
                 last_reported_branch: std::sync::Arc::new(parking_lot::Mutex::new(None)),
                 git_head_enabled: false,
@@ -1206,7 +1192,6 @@ async fn cancel_running_task_teardown_clears_running_and_pending_work() {
                 ),
                 subagent_token_records: parking_lot::Mutex::new(HashMap::new()),
                 workspace_ops: xai_grok_workspace::WorkspaceOps::for_test(),
-                trace_config_template: std::cell::RefCell::new(None),
             };
             let (tx, rx) = tokio::sync::oneshot::channel();
             let bridge = actor.agent.borrow().tool_bridge().clone();
@@ -1228,8 +1213,6 @@ async fn cancel_running_task_teardown_clears_running_and_pending_work() {
                         prompt_id: "running".into(),
                         prompt_blocks: vec![],
                         prompt_mode: PromptMode::Agent,
-                        trace_gcs_config: None,
-                        artifact_tracker: None,
                         client_identifier: None,
                         screen_mode: None,
                         verbatim: false,
@@ -1580,14 +1563,11 @@ async fn handle_prompt_frames_interrupt_on_user_message() {
                         PromptMode::Agent,
                         None,
                         None,
-                        None,
-                        None,
                         false,
                         false,
                         None,
                         Some(ack_tx),
-                        None,
-                    )
+                        None)
                     .await
             });
             assert!(ack_rx.await.is_ok(), "persist ack should resolve");
@@ -1629,14 +1609,11 @@ async fn handle_prompt_verbatim_skips_interrupt_envelope() {
                         PromptMode::Agent,
                         None,
                         None,
-                        None,
-                        None,
                         true,
                         false,
                         None,
                         Some(ack_tx),
-                        None,
-                    )
+                        None)
                     .await
             });
             assert!(ack_rx.await.is_ok(), "persist ack should resolve");
@@ -1677,14 +1654,11 @@ async fn handle_prompt_send_now_frames_interjection_envelope() {
                         PromptMode::Agent,
                         None,
                         None,
-                        None,
-                        None,
                         false,
                         true,
                         None,
                         Some(ack_tx),
-                        None,
-                    )
+                        None)
                     .await
             });
             assert!(ack_rx.await.is_ok(), "persist ack should resolve");
@@ -1731,14 +1705,11 @@ async fn handle_prompt_synthetic_origin_preserves_interrupt_reminder() {
                         PromptMode::Agent,
                         None,
                         None,
-                        None,
-                        None,
                         true,
                         false,
                         None,
                         Some(ack_tx),
-                        None,
-                    )
+                        None)
                     .await
             });
             assert!(ack_rx.await.is_ok(), "persist ack should resolve");
@@ -1769,8 +1740,6 @@ async fn cancel_running_task_interactive_preserves_queued_work() {
             prompt_id: prompt_id.to_string(),
             prompt_blocks: vec![],
             prompt_mode: PromptMode::Agent,
-            trace_gcs_config: None,
-            artifact_tracker: None,
             client_identifier: None,
             screen_mode: None,
             verbatim: false,
@@ -2313,8 +2282,6 @@ async fn cancel_resolves_front_when_running_task_is_none() {
             prompt_id: prompt_id.to_string(),
             prompt_blocks: vec![],
             prompt_mode: PromptMode::Agent,
-            trace_gcs_config: None,
-            artifact_tracker: None,
             client_identifier: None,
             screen_mode: None,
             verbatim: false,
@@ -2487,8 +2454,6 @@ async fn cancel_keeps_remaining_queued_prompts_visible_to_clients() {
             prompt_id: prompt_id.to_string(),
             prompt_blocks: vec![],
             prompt_mode: PromptMode::Agent,
-            trace_gcs_config: None,
-            artifact_tracker: None,
             client_identifier: None,
             screen_mode: None,
             verbatim: false,

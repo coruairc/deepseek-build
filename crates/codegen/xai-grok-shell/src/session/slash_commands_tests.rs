@@ -594,7 +594,6 @@ fn available_commands_orders_builtins_first() {
             "plugins",
             "reload-plugins",
             "session-info",
-            "feedback",
             "deep-research",
             "workflow",
             "goal",
@@ -1385,22 +1384,6 @@ fn feedback_does_not_resolve_when_disabled() {
         )
         .is_ok()
     );
-}
-
-#[test]
-fn feedback_resolves_when_enabled() {
-    let outcome = resolve(
-        vec![text_block("/feedback hello")],
-        &[],
-        all_gated(),
-        SkillSlashRewrite::default(),
-        &[],
-    )
-    .unwrap_err();
-    assert!(matches!(
-        outcome,
-        SlashCommandOutcome::Builtin(BuiltinAction::Feedback { ref text }) if text == "hello"
-    ));
 }
 
 fn advertised_names_with(availability: CommandAvailability) -> Vec<String> {
