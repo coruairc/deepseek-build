@@ -1,4 +1,4 @@
-//! Tests for feedback / remember / btw / recap dispatchers.
+//! Tests for remember / btw / recap dispatchers.
 use super::*;
 use crate::app::dispatch::{recap_unavailable_toast, scrollback_has_user_messages};
 fn agent_ref(app: &AppView, id: AgentId) -> &AgentView {
