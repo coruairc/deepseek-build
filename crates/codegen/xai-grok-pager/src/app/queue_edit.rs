@@ -1197,9 +1197,9 @@ mod tests {
     }
 
     #[test]
-    fn edit_local_feedback_carries_the_submitted_images() {
+    fn edit_local_btw_carries_the_submitted_images() {
         let mut agent = enter_edit_local_row();
-        agent.prompt.set_text("/feedback report ");
+        agent.prompt.set_text("/btw report ");
         let end = agent.prompt.text().len();
         agent.prompt.set_cursor(end);
         agent
@@ -1219,7 +1219,7 @@ mod tests {
         match outcome {
             InputOutcome::Action(Action::RunEditedQueuedCommand { submission, .. }) => {
                 assert_eq!(submission.images.len(), 1);
-                assert_eq!(submission.text_without_image_chips(), "/feedback report  ");
+                assert_eq!(submission.text_without_image_chips(), "/btw report  ");
             }
             other => panic!("expected RunEditedQueuedCommand, got {other:?}"),
         }

@@ -415,6 +415,6 @@ mod tests {
         let msg = note_orphaned_worktree("Couldn't create session: boom", Path::new("/wt/q"));
         assert!(msg.starts_with("Couldn't create session: boom"));
         assert!(msg.contains("/wt/q"));
-        assert!(msg.contains("grok worktree rm"));
+        assert!(msg.contains("deepseek-build worktree rm"));
     }
 }

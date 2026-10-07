@@ -905,8 +905,8 @@ fn print_report_renders_registry_notices() {
 }
 #[test]
 fn reclaim_hint_names_a_sequence_that_frees_space() {
-    const AGE: &str = "run `grok worktree gc --max-age 7d --dry-run`";
-    const RM: &str = "Remove one with `grok worktree rm --dry-run <path>`";
+    const AGE: &str = "run `deepseek-build worktree gc --max-age 7d --dry-run`";
+    const RM: &str = "Remove one with `deepseek-build worktree rm --dry-run <path>`";
     let tracked = tracked_row(60, record("wt-1", 0));
     let text = render_report(&worktrees_report(vec![tracked], 100), 0);
     assert!(text.contains(AGE), "{text}");

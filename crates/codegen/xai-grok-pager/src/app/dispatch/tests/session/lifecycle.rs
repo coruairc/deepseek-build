@@ -3058,7 +3058,6 @@ fn dashboard_stop_with_peek_open_moves_selection_and_peek_down_one() {
             crate::views::dashboard::WorkspaceRowInputs::default(),
             None,
             false,
-
             None,
         );
     };

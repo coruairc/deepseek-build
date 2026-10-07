@@ -2270,4 +2270,3 @@ mod link_click_tests {
         );
     }
 }
-

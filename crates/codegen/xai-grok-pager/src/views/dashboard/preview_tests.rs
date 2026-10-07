@@ -56,7 +56,6 @@ fn disabling_preview_frees_list_space_and_stays_off_across_selection() {
                 WorkspaceRowInputs::default(),
                 None,
                 false,
-
                 None,
             );
 

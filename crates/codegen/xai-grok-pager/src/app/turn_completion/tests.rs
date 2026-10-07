@@ -1549,4 +1549,3 @@ fn viewer_finalize_truncation_wire_pair_renders_exact_user_copy() {
         other => panic!("expected TurnFailed, got {other:?}"),
     }
 }
-

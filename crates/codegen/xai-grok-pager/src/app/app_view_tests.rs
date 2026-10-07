@@ -6005,7 +6005,6 @@ fn dashboard_picker_esc_after_search_click_restores_the_selection() {
         },
         Some(surface),
         false,
-
         None,
     );
     let overlay = theme.selection_overlay();

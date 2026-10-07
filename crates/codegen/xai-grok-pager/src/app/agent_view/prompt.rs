@@ -2010,4 +2010,3 @@ mod queue_recall_tests {
         assert_eq!(agent.prompt.text(), "an older prompt");
     }
 }
-

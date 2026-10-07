@@ -6292,7 +6292,6 @@ fn search_mode_keeps_a_page_flipped_peek_lease() {
         },
         None,
         false,
-
         None,
     );
 

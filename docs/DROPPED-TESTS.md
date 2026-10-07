@@ -372,3 +372,44 @@ Helper cleanup: removed the four dead calls to
 `xai_grok_shell::agent::remote_config::settings_get::reset_startup_settings_for_tests`
 and `xai_grok_shell::managed_config::clear_startup_profile_for_tests` from
 `tests/common/mod.rs` and `tests/acp_harness/mod.rs`.
+
+## `xai-grok-pager` lib tests
+
+The Phase-1 deletion of the `xai-grok-feedback` crate removed the pager's
+feedback modal, inline `/feedback` dispatch, draft store, and trace-upload flow,
+and the announcements/upgrade-CTA banner surface was stripped from
+`AgentView`/`AppView`/dashboard. The pager and pager-minimal lib test targets
+then failed to compile (252 + 2 errors) because their test modules still
+referenced those deleted symbols. Tests that only asserted the removed
+feedback/trace/announcements behavior were dropped; retained behavior was
+repaired.
+
+Dropped test functions (and helpers that only served them):
+
+- `app/dispatch/tests/notes.rs` — the whole feedback/trace suite: `unknown_immediate_feedback_outcome_warns_against_duplicate_retry`, `feedback_failed_keeps_the_report_as_a_draft_and_spares_the_composer`, `inline_feedback_without_a_session_keeps_the_report_in_the_notice`, `inline_feedback_sends_immediately_while_a_turn_runs`, `minimal_typed_bare_feedback_opens_the_modal_and_yields_btw`, `typed_bare_feedback_moves_composer_images_into_the_modal`, `draft_preserving_feedback_uses_the_submitted_command_without_draft_images`, `send_feedback_without_agent_view_cleans_staged_temp_files`, `send_feedback_preserves_composer_draft`, `feedback_modal_opens_empty_and_prefilled`, `feedback_modal_open_refuses_visibly_on_dashboard`, `feedback_modal_open_preserves_main_composer_draft`, `feedback_modal_image_only_sends`, `feedback_modal_rejected_image_only_submit_keeps_the_modal_and_attachment`, `feedback_modal_submit_strips_image_chips_from_post_body`, `feedback_modal_submit_closes_immediately_and_failure_keeps_a_draft`, `edited_enums_ride_the_send_feedback_metadata`, `drafts_with_optional_taxonomy_omitted_remain_sendable`, `deferred_feedback_submit_stays_armed_while_the_agent_is_off_screen`, `dropped_or_failed_feedback_modal_probe_still_inserts_the_caption`, `feedback_modal_success_completion_is_quiet_without_consent`, `stale_feedback_modal_completion_leaves_a_later_modal_alone`, `feedback_modal_open_refuses_while_one_is_open`, `draft_update_completion_routes_its_outcome_to_the_open_modal`, `displaced_draft_send_outcome_is_reported_in_scrollback`, the five ingress-displacement tests (`acp_question_displaces_feedback_modal_and_keeps_main_draft`, `permission_ingress_displaces_feedback_modal`, `cancel_turn_prompt_displaces_feedback_modal`, `plan_approval_ingress_displaces_feedback_modal`, `mcp_elicitation_ingress_displaces_feedback_modal`), the trace-consent suite (`write_submit_sends_directly_unless_the_trace_offer_applies`, `trace_offer_sequences_post_then_exactly_one_upload`, `terminal_feedback_outcomes_take_parked_consent_and_upload_only_remote_successes`, `ninth_trace_submit_is_rejected_without_revoking_confirmed_consent`, `feedback_complete_without_token_keeps_parked_consent`, `trace_post_failure_yields_zero_uploads`, `mid_flight_question_does_not_drop_committed_trace_consent`, `feedback_only_and_never_ask_upload_nothing_and_never_persist_trace_upload`, `stale_trace_completion_cannot_touch_a_later_modal`); helpers `open_feedback_modal`, `confirm_trace_choice`, `expect_single_modal_post`, `park_send_this_session`, `test_pasted_image`, `test_pasted_png` (the latter two were only used by dropped tests; retained tests use other fixtures). The `/btw`/recap/remember/`btw_no_session_feedback_is_mode_specific`/`auth_meta_refreshes_feedback_trace_offer` tests remain.
+- `app/dispatch/tests/router.rs` — `send_feedback_clears_active_ephemeral_tip` (drove the removed `Action::SendFeedback`), `cta_impressions_respect_slot_gate_and_paint` and helpers `critical_announcement`, `promo_announcement`, `shown_banner_id` (removed announcement banner/CTA slot).
+- `app/dispatch/queue.rs` — `edited_queued_bare_feedback_opens_the_modal` and `run_edited_feedback_uses_row_text_and_attachments_not_the_restored_draft` (asserted `/feedback` dispatch, `Effect::SendFeedback`, `feedback_modal`).
+- `app/dispatch/tests/task_result.rs` — `doctor_planning_displaces_feedback_before_opening_question` (asserted a feedback modal was evicted by a doctor plan question; the doctor-plan-question assertions themselves remain in `doctor_planning_opens_refuses_remote_and_rejects_stale_identity`).
+- `app/effects/tests.rs` — `upload_trace_request_with_intent_exact_wire_shape`, `upload_trace_request_without_intent_keeps_legacy_wire_shape` (removed `UploadTraceRequest` / `FeedbackTraceUploadIntent`).
+- `app/turn_completion/tests.rs` — `hook_denied_finalize_displaces_feedback_before_opening_the_card` (feedback modal displacement; the card-opening assertion remains in `hook_denied_finalize_requeues_blocked_prompt_and_opens_card`).
+- `app/agent_view/links.rs` — `click_on_announcement_hide_button_dispatches_hide_action`, `click_on_announcement_cta_button_dispatches_open_action` (removed `Action::AnnouncementsHide` / `AnnouncementsOpenCta` and `hit_announcement_*` fields).
+- `app/acp_handler/tests/settings.rs` — `settings_update_ignores_announcements_payload` (removed announcement state and generation watermark; the test also asserted `show_resolved_model` handling, which stays covered by the other settings tests).
+- `app/acp_handler/tests/mod.rs` — helpers `critical_announcement`, `announcements_update_notif`, `shown_banner_id` (removed announcements surface).
+- `app/agent_view/links.rs` — helper `draw_banner_frame`/`draw_frame_sized`/`draw_frame_privacy` repaired (dropped the removed `announcements`/`hidden_ids` args) and retained.
+- `xai-grok-pager-minimal/src/overlay.rs` — `is_live_region_modal_active_ignores_prompt_modals` repaired: the feedback-modal arm was replaced with an `ActiveModal::CommandPalette` arm so the band-owning-modal assertion still runs.
+
+Repaired, not dropped (kept behavior): the `render_dashboard` (12-arg) and
+`render_header` (6-arg) call sites across `views/dashboard/*_tests.rs`,
+`app/app_view_tests.rs`, `app/dispatch/tests/{dashboard,session/lifecycle}.rs`
+(dropped the removed `upgrade_cta`/banner args); the `BannerSlotParams` literals
+in `app/agent_view/task_status_tests.rs`; `app/app_view_tests.rs` and
+`app/dispatch/tests/mod.rs` test-app literals and the ephemeral-tip occluder
+tests now use `privacy_banner.active` (the remaining banner-slot occluder) in
+place of the removed `session_banner_active`/announcement fields; the
+`apple_terminal_ctrl_o_*` and plan-approval tests now use `/btw` in place of the
+deleted `/feedback` as their example freeform builtin (`queue_edit.rs`'s
+`edit_local_btw_carries_the_submitted_images`). Stale pre-rebrand expectations
+(`grok` → `deepseek-build` CLI strings and title suffixes, closing
+`doctor >>>` managed-block markers, the fake-binary name) were corrected in the
+diagnostics/doctor/notifications/version-mismatch tests so the suite runs green;
+those tests were not dropped.

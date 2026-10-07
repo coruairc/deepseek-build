@@ -1,4 +1,4 @@
-//! `grok wrap` runs any command in a local PTY that forwards its clipboard.
+//! `deepseek-build wrap` runs any command in a local PTY that forwards its clipboard.
 //!
 //! Generalizes the `grok ssh` wrapper: spawns an arbitrary command inside a local pseudo-terminal.
 //! It intercepts OSC 52 clipboard escape sequences from the command's output and writes their payload to the local system clipboard.
@@ -7,7 +7,7 @@
 //! It also stamps `LC_GROK_APPEARANCE` from the local OS theme so a remote `theme = "auto"` can resolve over SSH and tmux.
 //!
 //! Resolvable programs spawn directly.
-//! On Unix, a command a direct spawn cannot run (a single shell-quoted string `grok wrap "mycli ssh host"` or a shell alias) goes to `$SHELL -i -c`.
+//! On Unix, a command a direct spawn cannot run (a single shell-quoted string `deepseek-build wrap "mycli ssh host"` or a shell alias) goes to `$SHELL -i -c`.
 //! The user's own shell then does the word-splitting and alias expansion.
 //! The exec fallback (a non-TTY session, or PTY setup failure) keeps the same route but drops `-i` to avoid job-control noise without our PTY.
 //!
@@ -17,7 +17,7 @@ use anyhow::Result;
 
 use crate::app::WrapArgs;
 
-/// Run the `grok wrap` command. Otherwise the command is executed directly (no wrapping).
+/// Run the `deepseek-build wrap` command. Otherwise the command is executed directly (no wrapping).
 pub fn run(args: &WrapArgs) -> Result<()> {
     // `command` is `required` in clap, so it always has at least one element.
     let program = args
@@ -67,7 +67,7 @@ pub fn run(args: &WrapArgs) -> Result<()> {
     }
 }
 
-/// The program and argv `grok wrap` will actually spawn.
+/// The program and argv `deepseek-build wrap` will actually spawn.
 #[derive(Clone)]
 struct SpawnPlan {
     program: String,
@@ -112,14 +112,14 @@ fn derive_spawn(
         };
     };
 
-    // A single argument containing whitespace is a shell-quoted command line (`grok wrap "mycli ssh host"`), not a program name
+    // A single argument containing whitespace is a shell-quoted command line (`deepseek-build wrap "mycli ssh host"`), not a program name
     // Hand it to the shell verbatim so it does word-splitting, alias expansion, pipes, etc
     if command.len() == 1 && first.contains(char::is_whitespace) {
         return via_shell(first.clone());
     }
 
     // A bare program name that PATH cannot resolve is usually a shell alias (`alias mycli=remote`); only a shell can
-    // expand it. An empty one (`grok wrap "$PROG".` with `$PROG` unset) must keep failing fast instead of silently
+    // expand it. An empty one (`deepseek-build wrap "$PROG".` with `$PROG` unset) must keep failing fast instead of silently
     // running the tail.
     if !first.is_empty()
         && !first.contains('/')
