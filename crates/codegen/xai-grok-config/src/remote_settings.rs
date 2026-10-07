@@ -416,10 +416,6 @@ pub struct RemoteSettings {
     /// Requirements, env, and `config.toml [mcp] max_output_bytes` override it. The built-in default is 20_000.
     #[serde(default)]
     pub max_mcp_output_bytes: Option<u64>,
-    /// When `Some(true)`, enable session registry hooks (register, update, finalize, memory upload).
-    /// When absent or `Some(false)`, all hooks are disabled.
-    #[serde(default)]
-    pub session_registry_enabled: Option<bool>,
     /// The remote settings `doom_loop_recovery` JSON object; see [`DoomLoopRecoverySettings`].
     /// Absent means every knob falls through to TOML/defaults; a partial object falls through per-field.
     #[serde(default)]

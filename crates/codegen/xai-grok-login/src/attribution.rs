@@ -3,7 +3,7 @@
 //! Every 401 emit site in the shell joins the bearer the client
 //! actually sent on the wire (the `Authorization` value for OAI-compat
 //! backends, `x-api-key` for the Anthropic Messages API, the API proxy
-//! `Authorization` header for storage / feedback / registry /
+//! `Authorization` header for storage / feedback /
 //! idle-resume) with the manager's in-memory token
 //! ([`AuthManager::current_or_expired`] -- hard-expired tokens stay
 //! visible, since most 401s arrive exactly then). The two sinks are:
@@ -26,7 +26,7 @@
 //!                                 (negative once expired), or 0 when the
 //!                                 manager is empty>,
 //!   "consumer": "OaiCompatClient.<endpoint>" | "StorageClient.<op>"
-//!             | "FeedbackClient.<op>" | "SessionRegistryClient.<op>"
+//!             | "FeedbackClient.<op>"
 //!             | "IdleResumeModelRefresh",
 //!   "is_stale_snapshot": <bool; true iff a bearer was actually sent AND it
 //!                        differs from the held token -- "sent nothing"
@@ -40,7 +40,7 @@
 //! It invokes the trait [`xai_grok_sampler::Auth401AttributionCallback`] at its six 401 arms.
 //! This module provides [`ShellAttribution`], the concrete impl wired into [`xai_grok_sampler::SamplerConfig::attribution_callback`].
 //! The shell does that wiring at every sampler-construction site.
-//! Non-sampler sites (storage / feedback / registry / idle-resume) call [`record_consumer_401`] directly with their `(consumer_kind, op)` pair.
+//! Non-sampler sites (storage / feedback / idle-resume) call [`record_consumer_401`] directly with their `(consumer_kind, op)` pair.
 
 use std::sync::Arc;
 
@@ -163,9 +163,6 @@ pub enum ConsumerKind {
     StorageClient,
     /// Feedback collection sites in `agent/feedback_client.rs`.
     FeedbackClient,
-    /// Session registry register/update sites in
-    /// `agent/session_registry_client.rs`.
-    SessionRegistryClient,
     /// Idle-resume model-metadata refresh in `session/acp_session.rs::maybe_refresh_model_metadata_on_resume`.
     /// No per-op discriminator; the consumer string is just `"IdleResumeModelRefresh"`.
     IdleResumeModelRefresh,
@@ -187,7 +184,6 @@ impl ConsumerKind {
             Self::OaiCompatClient => "OaiCompatClient",
             Self::StorageClient => "StorageClient",
             Self::FeedbackClient => "FeedbackClient",
-            Self::SessionRegistryClient => "SessionRegistryClient",
             Self::IdleResumeModelRefresh => "IdleResumeModelRefresh",
             Self::ImageGen => "ImageGen",
             Self::VideoGen => "VideoGen",
@@ -217,7 +213,7 @@ fn format_consumer(kind: ConsumerKind, op: &str) -> String {
 
 /// Emit a single `auth 401 attribution` event for a per-consumer 401. Wraps [`record_auth_401`] with the canonical `consumer` formatting (e.g., `"StorageClient.upload"`, `"FeedbackClient.submit"`).
 /// All 401 emit sites in `xai-grok-shell` go through this helper.
-/// The per-client `record_401_attribution` wrappers in `agent/feedback_client.rs`, `agent/session_registry_client.rs`, and `upload/storage_client.rs` each resolve their bearer and call this with the right `(kind, op)`. `sent_bearer` may be a full bearer or a 12-char prefix. The sampler-side [`Auth401AttributionCallback`] boundary passes a prefix; the sampler scrubs before crossing the crate boundary.
+/// The per-client `record_401_attribution` wrappers in `agent/feedback_client.rs` and `upload/storage_client.rs` each resolve their bearer and call this with the right `(kind, op)`. `sent_bearer` may be a full bearer or a 12-char prefix. The sampler-side [`Auth401AttributionCallback`] boundary passes a prefix; the sampler scrubs before crossing the crate boundary.
 pub fn record_consumer_401(
     auth_manager: &AuthManager,
     session_id: Option<&str>,
