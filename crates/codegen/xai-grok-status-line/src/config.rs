@@ -30,6 +30,7 @@ pub struct StatusLineConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     refresh_interval: Option<u64>,
     /// Per-model USD per 1M tokens, used to estimate a running cost when the provider reports none.
+    /// Defaults to DeepSeek peak rates; see [`crate::pricing`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pricing: Option<BTreeMap<String, ModelPricing>>,
     #[serde(skip)]
@@ -195,7 +196,7 @@ impl StatusLineConfig {
         self.padding.unwrap_or(0).min(Self::MAX_PADDING_PER_SIDE)
     }
 
-    /// The resolved price table: DeepSeek defaults with any `[ui.status_line.pricing]` overrides layered on top.
+    /// The resolved price table: DeepSeek peak defaults with any `[ui.status_line.pricing]` overrides layered on top.
     pub fn pricing(&self) -> PricingTable {
         match &self.pricing {
             Some(overrides) => PricingTable::with_overrides(overrides.clone()),

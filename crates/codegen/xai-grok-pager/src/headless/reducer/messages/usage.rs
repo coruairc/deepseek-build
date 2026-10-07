@@ -3,6 +3,7 @@
 //! Kept apart so the token/cost/model math is self-contained.
 
 use serde_json::{Value, json};
+use xai_grok_status_line::{PricingTable, StatusLineSessionUsage};
 
 use crate::headless::attach_result_usage;
 use crate::headless::reducer::to_line;
@@ -17,6 +18,13 @@ pub(super) struct ResultUsage {
     pub(super) num_turns: u64,
     pub(super) total_cost_usd: f64,
     pub(super) duration_api_ms: u64,
+    /// Estimated cost from the shipped DeepSeek price table, when any usage was recorded.
+    ///
+    /// This is a locally computed estimate, not a provider figure: DeepSeek's usage payload carries tokens but no
+    /// price, so it is filled from [`PricingTable`] at peak rates (see the `estimated_cost_usd` wire field). It is
+    /// always present alongside `estimate: true` when the session recorded tokens; the ledger's own
+    /// `total_cost_usd` is untouched.
+    pub(super) estimated_cost_usd: Option<f64>,
 }
 
 impl MessagesReducer {
@@ -66,6 +74,7 @@ impl MessagesReducer {
             .get("total_cost_usd")
             .and_then(Value::as_f64)
             .unwrap_or(0.0);
+        let estimated_cost_usd = self.estimated_cost_usd(&usage);
         // `apiDurationMs` is dropped by the projection, so read it from `end_usage`.
         let duration_api_ms = end_usage.map_or(0, |u| field(Some(u), "apiDurationMs"));
         // Attribute the whole web-search count to the current model (only a global count is tracked).
@@ -81,7 +90,30 @@ impl MessagesReducer {
             num_turns,
             total_cost_usd,
             duration_api_ms,
+            estimated_cost_usd,
         }
+    }
+
+    /// Price one completed turn's tokens with the shipped DeepSeek table, keyed by the session model.
+    ///
+    /// The buckets are the same disjoint split the `usage` block carries: `input_tokens` is already cache-miss
+    /// (fresh) only, so cache creation is charged at the miss rate and cache reads at the hit rate. The session
+    /// model is the model the reducer was begun with; an unknown one falls back to the labelled v4 Pro default.
+    /// No tokens recorded yields `None`, so the field is omitted rather than shown as a false `$0`.
+    fn estimated_cost_usd(&self, usage: &MessageUsage) -> Option<f64> {
+        let model = self
+            .session
+            .as_ref()
+            .and_then(|s| s.model.as_deref())
+            .unwrap_or("");
+        let session_usage = StatusLineSessionUsage {
+            input_tokens: usage.input_tokens,
+            output_tokens: usage.output_tokens,
+            cache_creation_input_tokens: usage.cache_creation_input_tokens,
+            cache_read_input_tokens: usage.cache_read_input_tokens,
+            reasoning_tokens: 0,
+        };
+        PricingTable::default().cost_usd(model, &session_usage)
     }
 }
 

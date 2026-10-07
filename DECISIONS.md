@@ -4,7 +4,7 @@ Canonical decision log for turning the xAI Grok Build clone into a DeepSeek-firs
 agent named **`deepseek-build`**. Re-read this at the start of every phase. If a needed
 decision is not covered here, stop and ask the stakeholder.
 
-Last updated: 2026-10-02.
+Last updated: 2026-10-07.
 
 ---
 
@@ -25,6 +25,7 @@ Last updated: 2026-10-02.
 | D11 | **DeepSeek adapter + `reasoning_content` round-trip + cache-stable prefix is authored by ONE agent, never parallelized.** | Correctness-critical, shared state. |
 | D12 | **An independent verification sub-agent** that did not write the reviewed code re-checks gates 2 & 3 and the PLAN.md deletion checklist. | Anti-groupthink. |
 | D13 | **The API key must never appear in logs, panic/error text, saved sessions, crash output, commits, or command output.** Auth is env-only (`DEEPSEEK_API_KEY` / `DEEPSEEK_BUILD_API_KEY`); a missing key prints one clear line naming both vars. `SamplerConfig`'s `Debug` redacts `api_key`; header-conversion errors do not echo it. `scripts/key-leak-check.sh` runs with a fake key and scans logs + saved sessions. | Stakeholder requirement; defense against accidental secret egress into local artifacts. |
+| D14 | **Cost estimates use a configurable price table with peak-rate defaults.** Three rates per model, USD per 1,000,000 tokens: `cache_hit` input, `cache_miss` input, `output` (reasoning tokens are inside `output`, never double-charged). Source: DeepSeek official pricing page, <https://api-docs.deepseek.com/quick_start/pricing>, **fetched 2026-10-07**. Peak defaults: `deepseek-flash` = 0.006 / 0.30 / 1.20; `deepseek-v4-pro` = 0.044 / 1.32 / 3.96. **Peak hours are 01:00-04:00 and 06:00-10:00 UTC Mon-Fri excluding Chinese public holidays; all other hours are off-peak, at exactly half the peak rates.** The table has no clock, so it always prices at peak (conservative, never under-estimates); an override can halve the rates to price off-peak. User-overridable via `[ui.status_line.pricing.<model>]` in `~/.deepseek-build/config.toml`; an unnamed model falls back to the v4 Pro default rather than zero. Shown in the TUI `cost` status item and in the headless result as `estimated_cost_usd` + `estimate: true` (estimated locally; any provider-reported `total_cost_usd` is left untouched). | Personal tool; DeepSeek's usage payload carries tokens but no price. Peak default is conservative. |
 
 ## B. Phase scope (locked)
 
