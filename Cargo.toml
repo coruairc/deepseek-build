@@ -370,7 +370,8 @@ zip = "3"
 zstd = "0.13"
 
 [profile.release]
-incremental = true
+# Incremental compilation is unsupported/unreliable for release builds and
+# caused rust-lld "undefined hidden symbol" link failures; left off on purpose.
 panic = "abort"
 # Personal-tool trim: drop debug symbols from the default release build.
 strip = "symbols"

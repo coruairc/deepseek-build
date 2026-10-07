@@ -75,7 +75,7 @@ impl TitleManager {
 
         if !has_parts {
             self.composed.clear();
-            self.composed.push_str("grok");
+            self.composed.push_str(xai_grok_brand::NAME);
         }
 
         let result = if self.composed != self.last_title {
@@ -97,9 +97,9 @@ impl TitleManager {
     }
 
     pub fn reset(&mut self) -> String {
-        let esc = build_title_escape("grok");
+        let esc = build_title_escape(xai_grok_brand::NAME);
         self.last_title.clear();
-        self.last_title.push_str("grok");
+        self.last_title.push_str(xai_grok_brand::NAME);
         self.spinner_frame = 0;
         self.tick_count = 0;
         esc
@@ -118,7 +118,7 @@ fn write_item(
     match item {
         TitleItem::DeepSeek => {
             push_separator(buf, has_parts);
-            buf.push_str("grok");
+            buf.push_str(xai_grok_brand::NAME);
         }
         TitleItem::Spinner => {
             if !state.is_busy && state.activity.is_none() {
@@ -299,7 +299,7 @@ mod tests {
         let mut mgr = TitleManager::new(&cfg);
         let state = idle_state();
         mgr.update(&state);
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
     }
 
     #[test]
@@ -320,7 +320,7 @@ mod tests {
         let mut mgr = TitleManager::new(&cfg);
         let state = idle_state();
         mgr.update(&state);
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
     }
 
     #[test]
@@ -332,7 +332,7 @@ mod tests {
             ..idle_state()
         };
         mgr.update(&state);
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
     }
 
     #[test]
@@ -341,7 +341,7 @@ mod tests {
         let mut mgr = TitleManager::new(&cfg);
 
         mgr.update(&idle_state());
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
 
         let activity = TurnActivity::Thinking;
         let state = TitleState {
@@ -511,7 +511,7 @@ mod tests {
         let cfg = config_with_items(vec![TitleItem::Activity, TitleItem::DeepSeek]);
         let mut mgr = TitleManager::new(&cfg);
         mgr.update(&idle_state());
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
     }
 
     #[test]
@@ -617,9 +617,9 @@ mod tests {
             ..idle_state()
         };
         mgr.update(&state);
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
         mgr.update(&state);
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
     }
 
     #[test]
@@ -630,10 +630,10 @@ mod tests {
 
         let first = mgr.update(&state);
         assert!(first.is_some());
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
 
         assert_eq!(mgr.update(&state), None);
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
     }
 
     #[test]
@@ -641,7 +641,7 @@ mod tests {
         let cfg = config_with_items(vec![]);
         let mut mgr = TitleManager::new(&cfg);
         mgr.update(&idle_state());
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
     }
 
     #[test]
@@ -661,7 +661,7 @@ mod tests {
         let cfg = config_with_items(vec![TitleItem::Model, TitleItem::DeepSeek]);
         let mut mgr = TitleManager::new(&cfg);
         mgr.update(&idle_state());
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
     }
 
     #[test]
@@ -697,7 +697,7 @@ mod tests {
             ..idle_state()
         };
         mgr.update(&state);
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
     }
 
     #[test]
@@ -738,10 +738,10 @@ mod tests {
             ..idle_state()
         };
         mgr.update(&state);
-        assert_ne!(mgr.last_title, "grok");
+        assert_ne!(mgr.last_title, xai_grok_brand::NAME);
 
         mgr.reset();
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
         assert_eq!(mgr.spinner_frame, 0);
         assert_eq!(mgr.tick_count, 0);
     }
@@ -772,7 +772,10 @@ mod tests {
 
         // Both should contain the persistent parts.
         for t in [&t1, &t2] {
-            assert!(t.contains("grok"), "title missing 'grok': {t}");
+            assert!(
+                t.contains(xai_grok_brand::NAME),
+                "title missing brand: {t}"
+            );
             assert!(t.contains("Responding"), "title missing 'Responding': {t}");
             assert!(t.contains("my-session"), "title missing session name: {t}");
         }
@@ -787,7 +790,7 @@ mod tests {
         let cfg = default_config();
         let mut mgr = TitleManager::new(&cfg);
         mgr.update(&idle_state());
-        assert_eq!(mgr.last_title, "grok");
+        assert_eq!(mgr.last_title, xai_grok_brand::NAME);
     }
 
     #[test]
