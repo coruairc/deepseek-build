@@ -335,14 +335,17 @@ jobs:
   #
   # Auth: GITHUB_TOKEN is auto-provisioned by GitHub Actions; docker/login-action
   # converts it to a GHCR token. packages: write is required to push images.
+  # Container job: builds and pushes a multi-arch OCI image to GHCR.io for
+  # linux/amd64 + linux/arm64 from the release tarballs produced by the build
+  # jobs. Runs only for tag pushes. `packages: write` is scoped to this job.
   container:
     name: Build and push container image
     needs: [version, build]
     runs-on: ubuntu-22.04
-    # Only run on tag pushes; skip for manual workflow_dispatch runs.
     if: github.ref_type == 'tag'
     timeout-minutes: 30
     permissions:
+      contents: read
       packages: write
     steps:
       - name: Checkout tag
@@ -351,83 +354,47 @@ jobs:
           ref: ${{ github.ref }}
           persist-credentials: false
 
-      # Download only the two Linux tarballs (from this same workflow run).
-      - name: Fetch Linux tarballs
+      - name: Fetch linux/amd64 tarball
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          pattern: release-x86_64-unknown-linux-gnu
-          merge-multiple: true
-          path: dist/linux-x86_64
+          name: release-x86_64-unknown-linux-gnu
+          path: dist/linux-amd64
 
-      - name: Fetch Linux arm64 tarball
+      - name: Fetch linux/arm64 tarball
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          pattern: release-aarch64-unknown-linux-gnu
-          merge-multiple: true
-          path: dist/linux-aarch64
+          name: release-aarch64-unknown-linux-gnu
+          path: dist/linux-arm64
 
-      - name: Verify both tarballs
+      - name: Stage per-arch build contexts
         env:
           RELEASE_VERSION: ${{ needs.version.outputs.version }}
         run: |
           set -euo pipefail
-          for t in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
-            if [ ! -f "dist/linux-${t#x86_64-unknown-/}/deepseek-build-${RELEASE_VERSION}-${t}.tar.gz" ]; then
-              # Try the simple paths
-              for dir in dist/linux-*; do
-                ls "$dir/" || true
-              done
-              echo "::error::missing tarball for ${t}"
-              exit 1
-            fi
+          for pair in "amd64:x86_64-unknown-linux-gnu" "arm64:aarch64-unknown-linux-gnu"; do
+            arch="${pair%%:*}"; target="${pair##*:}"
+            ctx="dist/ctx-${arch}"
+            mkdir -p "$ctx"
+            tar -xzf "dist/linux-${arch}/deepseek-build-${RELEASE_VERSION}-${target}.tar.gz" -C "$ctx"
+            # The Dockerfile expects the binary named per TARGETARCH.
+            mv "$ctx/deepseek-build" "$ctx/deepseek-build-${arch}"
+            cp docker/Dockerfile "$ctx/Dockerfile"
+            ls -la "$ctx"
           done
-          echo "Tarballs present:"
-          find dist -name "*.tar.gz" -ls
 
-      # Set up Docker buildx with docker/setup-buildx-action.
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@1e423e8f0c27a6c2a3a3f5b8c4f6c3b7d8e9f0a1
-        with:
-          driver-opts: |
-            image=moby/buildkit:buildx-stable-1
-            network=host
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
 
-      # Authenticate to GHCR. docker/login-action handles the OIDC exchange:
-      # GITHUB_TOKEN -> ghcr.io credential. The namespace is
-      # ghcr.io/<github.actor>/deepseek-build — accessible at
-      # https://github.com/<github.actor>/packages?package_name=deepseek-build
-      # and visibile in the actor's package list.
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@1e3d3e8f0c27a6c2a3a3f5b8c4f6c3b7d8e9f0a2
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Extract each tarball into a staging directory for the respective platform.
-      - name: Stage linux/amd64 image root
-        env:
-          RELEASE_VERSION: ${{ needs.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          mkdir -p dist/image-amd64
-          tar -xzf "dist/linux-x86_64/deepseek-build-${RELEASE_VERSION}-x86_64-unknown-linux-gnu.tar.gz" -C dist/image-amd64
-
-      - name: Stage linux/arm64 image root
-        env:
-          RELEASE_VERSION: ${{ needs.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          mkdir -p dist/image-arm64
-          tar -xzf "dist/linux-aarch64/deepseek-build-${RELEASE_VERSION}-aarch64-unknown-linux-gnu.tar.gz" -C dist/image-arm64
-
-      # Build and push both platform images in one step, then assemble manifest.
-      # images: is a comma-separated list built by the metadata-action below.
-      # Platforms are linux/amd64 and linux/arm64; QEMU is NOT used (native
-      # buildx on ubuntu-22.04 and ubuntu-22.04-arm runners).
       - name: Extract metadata (tags + labels)
         id: meta
-        uses: docker/metadata-action@8e3d3e8f0c27a6c2a3a3f5b8c4f6c3b7d8e9f0a2
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051
         with:
           images: ghcr.io/${{ github.actor }}/deepseek-build
           tags: |
@@ -436,10 +403,14 @@ jobs:
             type=semver,pattern={{major}}
             type=ref,event=tag
 
+      # Build each arch natively (no QEMU) and push by digest, then assemble the
+      # multi-arch manifest. `file: Dockerfile` is the copy staged per context.
       - name: Build and push linux/amd64
-        uses: docker/build-push-action@6e2f7c8d0a27b5c3d8e9f0a1b2c3d4e5f6a7b8c
+        id: build_amd64
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
-          context: dist/image-amd64
+          context: dist/ctx-amd64
+          file: dist/ctx-amd64/Dockerfile
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -448,9 +419,11 @@ jobs:
           cache-to: type=gha,mode=max,scope=amd64
 
       - name: Build and push linux/arm64
-        uses: docker/build-push-action@6e2f7c8d0a27b5c3d8e9f0a1b2c3d4e5f6a7b8c
+        id: build_arm64
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
-          context: dist/image-arm64
+          context: dist/ctx-arm64
+          file: dist/ctx-arm64/Dockerfile
           platforms: linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -458,62 +431,26 @@ jobs:
           cache-from: type=gha,scope=arm64
           cache-to: type=gha,mode=max,scope=arm64
 
-      # Assemble the multi-arch manifest from the two pushed images.
-      # crane is bundled in the buildx image; no extra install step needed.
-      # Annotations mark the per-arch digests for transparency.
-      - name: Create multi-arch manifest
+      - name: Assemble multi-arch manifest
         env:
-          VERSION: ${{ needs.version.outputs.version }}
           IS_PRERELEASE: ${{ needs.version.outputs.is_prerelease }}
         run: |
           set -euo pipefail
           IMAGE="ghcr.io/${{ github.actor }}/deepseek-build"
-
-          # Fetch the two pushed digests.
-          AMD64_DIGEST=$(crane digest "${IMAGE}:${VERSION}-linux-amd64" 2>/dev/null || \
-                         crane digest "${IMAGE}:${VERSION}" --platform linux/amd64)
-          ARM64_DIGEST=$(crane digest "${IMAGE}:${VERSION}-linux-arm64" 2>/dev/null || \
-                         crane digest "${IMAGE}:${VERSION}" --platform linux/arm64)
-          echo "amd64 digest: ${AMD64_DIGEST}"
-          echo "arm64 digest: ${ARM64_DIGEST}"
-
-          # Create the manifest list (multi-arch manifest).
-          MANIFEST_DIGEST=$(crane manifest "${IMAGE}:${VERSION}" 2>/dev/null || true)
-          if [ -n "${MANIFEST_DIGEST}" ]; then
-            echo "Existing manifest for ${IMAGE}:${VERSION}: ${MANIFEST_DIGEST}"
-          fi
-
-          # Build the multi-arch manifest index and push it as the version tag.
-          # This makes `docker run $IMAGE:$VERSION` work transparently.
-          crane index append \
-            --base "${IMAGE}:${VERSION}" \
-            --annotation "org.opencontainers.image.platforms=linux/amd64,linux/arm64" \
-            --subject "${IMAGE}:${VERSION}" || {
-            # If index append fails (e.g. manifest already exists as a single arch),
-            # build it manually using crane manifest create.
-            echo "fallback: creating manifest list from scratch"
-            crane manifest create --json "${IMAGE}:${VERSION}" \
-              "${IMAGE}@${AMD64_DIGEST}" \
-              "${IMAGE}@${ARM64_DIGEST}"
-          }
-          echo "Manifest created for ${IMAGE}:${VERSION}"
-
-          # Also tag the version manifest as linux-amd64 / linux-arm64 variants
-          # so users can pull a specific arch if they want.
-          for arch in amd64 arm64; do
-            digest_var="${arch^^}_DIGEST"
-            crane tag "${IMAGE}@${!digest_var}" "${VERSION}-linux-${arch}" || true
-          done
-
-          # Stable releases: also update the :latest tag.
-          # Pre-releases (-rc, -alpha, -beta) NEVER move :latest.
+          AMD64="${{ steps.build_amd64.outputs.digest }}"
+          ARM64="${{ steps.build_arm64.outputs.digest }}"
+          echo "amd64=${AMD64} arm64=${ARM64}"
+          # Create the manifest list for every tag metadata-action produced.
+          while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            docker buildx imagetools create -t "$tag" \
+              "${IMAGE}@${AMD64}" "${IMAGE}@${ARM64}"
+          done <<< "${{ steps.meta.outputs.tags }}"
+          # Stable releases move :latest; pre-releases never do.
           if [ "${IS_PRERELEASE}" = "false" ]; then
-            echo "Stable release — updating :latest tag"
-            crane tag "${IMAGE}:${VERSION}" latest
+            docker buildx imagetools create -t "${IMAGE}:latest" \
+              "${IMAGE}@${AMD64}" "${IMAGE}@${ARM64}"
           else
-            echo "Pre-release — :latest tag is unchanged"
+            echo "Pre-release — :latest unchanged"
           fi
-
-          # Verify: pull the manifest list
-          echo "Manifest list for ${IMAGE}:${VERSION}:"
-          crane manifest "${IMAGE}:${VERSION}" | python3 -c "import sys,json; m=json.load(sys.stdin); [print(f'  {s[\"platform\"][\"os\"]}/{s[\"platform\"][\"architecture\"]} @ {s[\"digest\"]}') for s in m.get('manifests',[])]"
+          docker buildx imagetools inspect "${IMAGE}:${{ needs.version.outputs.version }}"

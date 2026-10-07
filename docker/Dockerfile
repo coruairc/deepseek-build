@@ -1,47 +1,54 @@
 # =============================================================================
 # deepseek-build production Docker image
 # =============================================================================
-# Base: debian:bookworm-slim (glibc ~2.36)
-# Scope: Official releases only. Multi-arch manifest assembled in CI from the
-#        linux-x86_64 and linux-aarch64 tarballs produced by release.yml.
-#        NOT validated locally — see docker/Dockerfile.localtest for local use.
+# Independent project, not affiliated with DeepSeek.
+#
+# Base: debian:bookworm-slim (glibc ~2.36).
+# Scope: official releases only. The image is assembled in CI from the
+#        linux-x86_64 / linux-aarch64 release tarballs produced by release.yml;
+#        the tarball contents (binary + license files) are the build context.
+#        For local testing use docker/Dockerfile.localtest.
 # =============================================================================
 
 FROM debian:bookworm-slim
 
-# Prevent interactive prompts during apt install.
+# OCI labels (the CI metadata-action adds version/revision/source on top).
+LABEL org.opencontainers.image.title="deepseek-build" \
+      org.opencontainers.image.description="DeepSeek-first terminal coding agent. Independent project, not affiliated with DeepSeek." \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.vendor="Independent project, not affiliated with DeepSeek"
+
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install the runtime requirements. We include:
-#   - ca-certificates: TLS root CAs (api.deepseek.com)
-#   - libgcc-s1 (or higher): C++ runtime needed by jemalloc (our allocator)
-#   - tini: minimal init (PID 1 reaping); the container runs one invocation.
-# We deliberately do NOT include:
-#   - protobuf-compiler or cmake: build-time only
-#   - git: the binary is self-contained; no git needed at runtime
-#   - shell or coreutils: the binary is statically linked for its target
+# Runtime tools a coding agent needs inside the container: TLS roots, git,
+# ripgrep, curl, ssh, bash, procps. No build toolchain.
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
+        git \
+        ripgrep \
+        curl \
+        openssh-client \
+        bash \
+        procps \
         libgcc-s1 \
-        tini \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user matching the host UID (default 1000; can be overridden
-# at docker run time with --user). The binary needs no special privileges.
-RUN useradd --create-home --uid 1000 app
+# Non-root user, uid 1000 (override at run time with --user "$(id -u):$(id -g)").
+RUN useradd --create-home --uid 1000 --shell /bin/bash app
 
-WORKDIR /app
+# License/attribution files live in the conventional docs directory.
+COPY LICENSE NOTICE THIRD-PARTY-NOTICES /usr/share/doc/deepseek-build/
+COPY README.txt /usr/share/doc/deepseek-build/README.txt
 
-# Copy the release tarball contents laid out by release.yml:
-#   deepseek-build  LICENSE  NOTICE  THIRD-PARTY-NOTICES  README.txt
-COPY deepseek-build deepseek-build
-COPY LICENSE NOTICE THIRD-PARTY-NOTICES README.txt ./
+# The binary is installed on PATH. The build context stages one binary per
+# target arch as deepseek-build-amd64 / deepseek-build-arm64; buildx sets
+# TARGETARCH for each platform in a multi-platform build.
+ARG TARGETARCH
+COPY deepseek-build-${TARGETARCH} /usr/local/bin/deepseek-build
+RUN chmod 755 /usr/local/bin/deepseek-build
 
-# Binary is +x from the tarball; ensure it for the image.
-RUN chmod 755 deepseek-build
+WORKDIR /work
+USER app
 
-# tini runs as PID 1 so the binary gets proper signal handling (SIGTERM →
-# SIGINT → SIGKILL if it doesn't exit cleanly).
-ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["./deepseek-build"]
+ENTRYPOINT ["deepseek-build"]
