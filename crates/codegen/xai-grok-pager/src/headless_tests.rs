@@ -859,3 +859,44 @@ fn permission_cancel_hint_only_fires_for_unapproved_gated_cancel() {
     );
 }
 
+#[tokio::test]
+async fn headless_plan_mode_sends_set_session_mode_only_for_plan() {
+    use xai_acp_lib::AcpAgentMessage;
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<AcpAgentMessage>();
+    let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
+    let seen_for_task = seen.clone();
+    tokio::spawn(async move {
+        while let Some(msg) = rx.recv().await {
+            if let AcpAgentMessage::SetSessionMode(args) = msg {
+                seen_for_task
+                    .lock()
+                    .unwrap()
+                    .push(args.request.mode_id.0.to_string());
+                let _ = args.response_tx.send(Ok(acp::SetSessionModeResponse::new()));
+            }
+        }
+    });
+
+    let sid = acp::SessionId::new("sess-plan");
+    assert!(
+        super::apply_headless_permission_mode(&tx, &sid, Some("plan"))
+            .await
+            .unwrap()
+    );
+    assert!(
+        !super::apply_headless_permission_mode(&tx, &sid, Some("auto"))
+            .await
+            .unwrap()
+    );
+    assert!(
+        !super::apply_headless_permission_mode(&tx, &sid, Some("bypassPermissions"))
+            .await
+            .unwrap()
+    );
+    assert!(
+        !super::apply_headless_permission_mode(&tx, &sid, None)
+            .await
+            .unwrap()
+    );
+    assert_eq!(seen.lock().unwrap().clone(), vec!["plan".to_string()]);
+}

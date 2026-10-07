@@ -786,6 +786,33 @@ async fn apply_headless_model_and_effort(
     );
     Ok(())
 }
+/// Enter plan mode over ACP when `--permission-mode plan` was requested.
+///
+/// The CLI flag alone only lands on the agent definition's inert `permission_mode`, so without
+/// this the model is never told it is planning and read-only plan-mode enforcement never arms.
+/// Sending the session mode runs the same `handle_session_mode` path the TUI uses, which injects
+/// the plan-mode reminder on the next turn and keeps the plan edit gate active.
+/// Returns whether a request was sent.
+async fn apply_headless_permission_mode(
+    acp_tx: &AcpAgentTx,
+    session_id: &acp::SessionId,
+    permission_mode_flag: Option<&str>,
+) -> anyhow::Result<bool> {
+    if permission_mode_flag != Some("plan") {
+        return Ok(false);
+    }
+    acp_send(
+        acp::SetSessionModeRequest::new(
+            session_id.clone(),
+            acp::SessionModeId::new(xai_grok_tools::types::SessionMode::Plan.as_id()),
+        ),
+        acp_tx,
+    )
+    .await
+    .map_err(|e| anyhow::anyhow!("Couldn't enter plan mode: {e}"))?;
+    tracing::debug!("headless: plan mode requested via --permission-mode plan");
+    Ok(true)
+}
 /// Startup-materialization context for headless (`-p`) runs; never chat mode.
 fn headless_materialize_ctx(
     resume_title_pinned: bool,
@@ -1162,6 +1189,14 @@ pub async fn run_single_turn(
         options.reasoning_effort.as_deref(),
     )
     .await
+    {
+        let msg = e.to_string();
+        emitter.on_error(&msg, None);
+        anyhow::bail!("{msg}");
+    }
+    if let Err(e) =
+        apply_headless_permission_mode(&acp_tx, &session_id, options.permission_mode_flag.as_deref())
+            .await
     {
         let msg = e.to_string();
         emitter.on_error(&msg, None);
