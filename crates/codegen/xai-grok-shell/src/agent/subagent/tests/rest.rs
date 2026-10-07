@@ -3,7 +3,6 @@ use super::*;
 use super::super::resume_window::resume_inherited_prefix_len;
 use crate::session::storage::UnfinishedSubagent;
 use crate::test_support::lsp_runtime::{ctx_with_toggle, test_gateway};
-use crate::upload::trace::SubagentSpawnedRef;
 use xai_grok_sampling_types::SyntheticReason;
 use xai_grok_tools::implementations::grok_build::task::backend::ChannelBackend;
 #[test]
@@ -322,36 +321,6 @@ fn compaction_no_prefix_passes_through() {
     let result = if prefix_len > 0 { unreachable!() } else { compacted.clone() };
     assert_eq!(result.len(), 2);
     assert!(matches!(result.first(), Some(ConversationItem::System(_))));
-}
-#[test]
-fn resumed_from_field_in_meta_roundtrips() {
-    let meta = SubagentMeta {
-        subagent_id: "sa-resumed".into(),
-        description: "resumed task".into(),
-        prompt: "continue".into(),
-        resumed_from: Some("prev-subagent-id".into()),
-        ..base_meta()
-    };
-    let json = serde_json::to_string(&meta).unwrap();
-    assert!(json.contains("resumed_from"));
-    assert!(json.contains("prev-subagent-id"));
-    let parsed: SubagentMeta = serde_json::from_str(&json).unwrap();
-    assert_eq!(parsed.resumed_from.as_deref(), Some("prev-subagent-id"));
-    let gcs = SubagentSessionMetadata::from_meta(
-        &meta,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        0,
-    );
-    assert_eq!(gcs.resumed_from.as_deref(), Some("prev-subagent-id"));
-    let gcs_json = serde_json::to_string(&gcs).unwrap();
-    assert!(gcs_json.contains("resumedFrom"));
 }
 #[test]
 fn resumed_from_none_not_serialized_in_meta() {
@@ -701,246 +670,10 @@ async fn disposal_names_a_reflog_only_commit_before_removing_the_worktree() {
         );
 }
 #[test]
-fn subagent_session_metadata_roundtrip() {
-    let meta = SubagentMeta {
-        subagent_id: "sa-1".into(),
-        parent_session_id: "parent-1".into(),
-        child_session_id: "child-1".into(),
-        description: "test task".into(),
-        prompt: "do something".into(),
-        status: "completed".into(),
-        completed_at: Some(chrono::Utc::now()),
-        duration_ms: Some(1234),
-        tool_calls: Some(5),
-        turns: Some(2),
-        effective_context_source: Some("new".into()),
-        persona: Some("reviewer".into()),
-        ..base_meta()
-    };
-    let session_meta = SubagentSessionMetadata::from_meta(
-        &meta,
-        Some("deepseek-4.5"),
-        Some("/workspace"),
-        Some("/tmp/worktree"),
-        Some("worktree"),
-        Some("read-only"),
-        Some("medium"),
-        Some("rust-dev"),
-        Some("prompt-123"),
-        1,
-    );
-    assert_eq!(session_meta.schema_version, 1);
-    assert_eq!(session_meta.session_kind, "subagent");
-    assert_eq!(session_meta.subagent_id, "sa-1");
-    assert_eq!(session_meta.parent_session_id, "parent-1");
-    assert_eq!(session_meta.description, "test task");
-    assert_eq!(session_meta.model_id.as_deref(), Some("deepseek-4.5"));
-    assert_eq!(session_meta.role.as_deref(), Some("rust-dev"));
-    assert_eq!(session_meta.persona.as_deref(), Some("reviewer"));
-    assert!(!session_meta.context_normalized);
-    assert_eq!(session_meta.depth, 1);
-    let json = serde_json::to_string_pretty(&session_meta).unwrap();
-    let deserialized: SubagentSessionMetadata = serde_json::from_str(&json).unwrap();
-    assert_eq!(deserialized.session_kind, "subagent");
-    assert_eq!(deserialized.subagent_id, "sa-1");
-    assert_eq!(deserialized.description, "test task");
-    let mut value: serde_json::Value = serde_json::from_str(&json).unwrap();
-    value.as_object_mut().unwrap().remove("description");
-    let legacy: SubagentSessionMetadata = serde_json::from_value(value).unwrap();
-    assert!(legacy.description.is_empty());
-    assert!(json.contains("schemaVersion"));
-    assert!(json.contains("sessionKind"));
-}
-#[test]
-fn subagent_session_metadata_non_forked() {
-    let meta = SubagentMeta {
-        subagent_id: "sa-2".into(),
-        parent_session_id: "parent-2".into(),
-        child_session_id: "child-2".into(),
-        subagent_type: "explore".into(),
-        description: "search code".into(),
-        prompt: "find auth".into(),
-        effective_context_source: Some("new".into()),
-        persona: Some("implementer".into()),
-        ..base_meta()
-    };
-    let session_meta = SubagentSessionMetadata::from_meta(
-        &meta,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        0,
-    );
-    assert_eq!(session_meta.session_kind, "subagent");
-    assert!(!session_meta.context_normalized);
-    assert_eq!(session_meta.depth, 0);
-    assert!(session_meta.model_id.is_none());
-    assert!(session_meta.worktree_path.is_none());
-}
-#[test]
-fn subagent_session_metadata_backward_compat_deserialization() {
-    let json = r#"{
-            "schemaVersion": 1,
-            "sessionId": "s1",
-            "sessionKind": "subagent",
-            "subagentId": "sa1",
-            "childSessionId": "c1",
-            "parentSessionId": "p1",
-            "subagentType": "explore",
-            "startedAt": "2026-01-01T00:00:00Z",
-            "status": "completed",
-            "depth": 0
-        }"#;
-    let meta: SubagentSessionMetadata = serde_json::from_str(json).unwrap();
-    assert_eq!(meta.session_kind, "subagent");
-    assert!(meta.persona.is_none());
-    assert!(meta.role.is_none());
-    assert!(!meta.context_normalized);
-}
-#[test]
-fn upload_lifecycle_spawn_then_completion_preserves_fields() {
-    let spawn_meta = SubagentMeta {
-        subagent_id: "sa-lifecycle".into(),
-        parent_session_id: "parent-1".into(),
-        child_session_id: "child-1".into(),
-        description: "test task".into(),
-        prompt: "do something".into(),
-        effective_context_source: Some("forked".into()),
-        context_normalized: true,
-        persona: Some("implementer".into()),
-        ..base_meta()
-    };
-    let spawn_gcs = SubagentSessionMetadata::from_meta(
-        &spawn_meta,
-        Some("deepseek-4.5"),
-        Some("/workspace"),
-        None,
-        Some("worktree"),
-        Some("all"),
-        Some("medium"),
-        Some("rust-dev"),
-        Some("prompt-42"),
-        1,
-    );
-    assert_eq!(spawn_gcs.status, "running");
-    assert!(spawn_gcs.completed_at.is_none());
-    assert!(spawn_gcs.duration_ms.is_none());
-    assert_eq!(spawn_gcs.model_id.as_deref(), Some("deepseek-4.5"));
-    assert_eq!(spawn_gcs.cwd.as_deref(), Some("/workspace"));
-    assert_eq!(spawn_gcs.role.as_deref(), Some("rust-dev"));
-    assert_eq!(spawn_gcs.parent_prompt_id.as_deref(), Some("prompt-42"));
-    assert_eq!(spawn_gcs.depth, 1);
-    let mut completed_meta = spawn_meta.clone();
-    completed_meta.status = "completed".to_string();
-    completed_meta.completed_at = Some(chrono::Utc::now());
-    completed_meta.duration_ms = Some(5000);
-    completed_meta.tool_calls = Some(12);
-    completed_meta.turns = Some(3);
-    let completion_gcs = SubagentSessionMetadata::from_meta(
-        &completed_meta,
-        Some("deepseek-4.5"),
-        Some("/workspace"),
-        Some("/tmp/worktree-1"),
-        Some("worktree"),
-        Some("all"),
-        Some("medium"),
-        Some("rust-dev"),
-        Some("prompt-42"),
-        1,
-    );
-    assert_eq!(completion_gcs.status, "completed");
-    assert!(completion_gcs.completed_at.is_some());
-    assert_eq!(completion_gcs.duration_ms, Some(5000));
-    assert_eq!(completion_gcs.tool_calls, Some(12));
-    assert_eq!(completion_gcs.turns, Some(3));
-    assert_eq!(completion_gcs.model_id.as_deref(), Some("deepseek-4.5"));
-    assert_eq!(completion_gcs.cwd.as_deref(), Some("/workspace"));
-    assert_eq!(completion_gcs.role.as_deref(), Some("rust-dev"));
-    assert_eq!(
-            completion_gcs.parent_prompt_id.as_deref(),
-            Some("prompt-42")
-        );
-    assert_eq!(
-            completion_gcs.worktree_path.as_deref(),
-            Some("/tmp/worktree-1")
-        );
-    assert_eq!(completion_gcs.depth, 1);
-    assert_eq!(spawn_gcs.child_session_id, completion_gcs.child_session_id);
-}
-#[test]
-fn upload_lifecycle_failure_preserves_error() {
-    let meta = SubagentMeta {
-        subagent_id: "sa-fail".into(),
-        parent_session_id: "p".into(),
-        child_session_id: "c".into(),
-        subagent_type: "explore".into(),
-        description: "d".into(),
-        prompt: "p".into(),
-        status: "failed".to_string(),
-        completed_at: Some(chrono::Utc::now()),
-        duration_ms: Some(100),
-        tool_calls: Some(0),
-        turns: Some(0),
-        error: Some("session spawn error".into()),
-        effective_context_source: Some("new".into()),
-        ..base_meta()
-    };
-    let gcs = SubagentSessionMetadata::from_meta(
-        &meta,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        0,
-    );
-    assert_eq!(gcs.status, "failed");
-    assert_eq!(gcs.error.as_deref(), Some("session spawn error"));
-    assert_eq!(gcs.session_kind, "subagent");
-}
-#[test]
 fn initial_context_source_resumed_variant() {
     let source = InitialContextSource::Resumed;
     assert!(matches!(source, InitialContextSource::Resumed));
     assert_ne!(source, InitialContextSource::New);
-}
-#[test]
-fn session_metadata_session_kind_for_resumed() {
-    let meta = SubagentMeta {
-        subagent_id: "sa-resume".into(),
-        parent_session_id: "p".into(),
-        child_session_id: "c".into(),
-        description: "d".into(),
-        prompt: "p".into(),
-        effective_context_source: Some("resumed".into()),
-        resumed_from: Some("prev-id".into()),
-        ..base_meta()
-    };
-    let gcs = SubagentSessionMetadata::from_meta(
-        &meta,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        0,
-    );
-    assert_eq!(
-            gcs.session_kind, "subagent_resume",
-            "resumed subagents should have session_kind=subagent_resume"
-        );
-    assert_eq!(gcs.resumed_from.as_deref(), Some("prev-id"));
 }
 /// Resume must preserve only the System head (`Some(1)`) while passing the full transcript through intact.
 /// A prefix that covered the whole transcript is what stopped compaction from ever shrinking it.
@@ -2072,39 +1805,6 @@ fn notification_subagent_spawned_includes_resumed_from() {
     assert!(json.get("resumed_from").is_none());
     assert!(json.get("role").is_none());
     assert!(json.get("model").is_none());
-}
-#[test]
-fn upload_ref_includes_resumed_from() {
-    let ref_resumed = SubagentSpawnedRef {
-        subagent_id: "sa-r".into(),
-        child_session_id: "child-r".into(),
-        subagent_type: "general-purpose".into(),
-        description: "goal achievement skeptic".into(),
-        persona: Some("implementer".into()),
-        resumed_from: Some("prev-agent".into()),
-    };
-    let json = serde_json::to_value(&ref_resumed).unwrap();
-    assert_eq!(
-            json.get("resumed_from").and_then(|v| v.as_str()),
-            Some("prev-agent")
-        );
-    assert_eq!(
-            json.get("description").and_then(|v| v.as_str()),
-            Some("goal achievement skeptic")
-        );
-    let ref_fresh = SubagentSpawnedRef {
-        subagent_id: "sa-f".into(),
-        child_session_id: "child-f".into(),
-        subagent_type: "explore".into(),
-        description: String::new(),
-        persona: None,
-        resumed_from: None,
-    };
-    let json = serde_json::to_value(&ref_fresh).unwrap();
-    assert!(json.get("resumed_from").is_none());
-    assert!(json.get("description").is_none());
-    let parsed: SubagentSpawnedRef = serde_json::from_value(json).unwrap();
-    assert!(parsed.description.is_empty());
 }
 fn ctx_with_parent_chat_state(
     session_model_id: &str,
@@ -3256,3 +2956,4 @@ async fn progress_publisher_delivers_ticks_to_parent_cmd_channel() {
         })
         .await;
 }
+

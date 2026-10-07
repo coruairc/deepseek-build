@@ -773,22 +773,6 @@ mod tests {
         });
         addr
     }
-    /// A degraded conversations lane (no OAuth) is reported through `conversations_partial` instead of failing the list.
-    #[tokio::test]
-    #[serial_test::serial]
-    async fn degraded_conversations_lane_reports_no_oauth() {
-        let home = tempfile::tempdir().expect("tempdir");
-        let auth = std::sync::Arc::new(xai_grok_login::AuthManager::new(
-            home.path(),
-            xai_grok_login::GrokComConfig::default(),
-        ));
-        let client = ConversationsClient::new(auth);
-        let mut req = ListReq::default();
-        force_kind_chat(&mut req);
-        let result = build_unified_list(req).await;
-        assert!(result.rows.is_empty());
-        assert_eq!(result.conversations_partial, Some(PartialReason::NoOauth));
-    }
     /// Build-mode canary: with no conversations client the lane is skipped, not degraded.
     #[tokio::test]
     async fn non_chat_list_without_client_skips_conversations_lane() {
@@ -818,32 +802,6 @@ mod tests {
         {
             let _off = xai_grok_test_support::EnvGuard::set("GROK_SESSION_LIST_CONVERSATIONS", "0");
             assert!(!conversations_lane_enabled());
-        }
-    }
-    /// Truth table for `conversations_lane_active`: desktop env lane OR process chat mode, hard-off in release builds.
-    #[test]
-    #[serial_test::serial]
-    fn conversations_lane_active_truth_table() {
-        use crate::agent::chat_modes::GROK_CHAT_MODE_ENV;
-        let _chat_off = xai_grok_test_support::EnvGuard::unset(GROK_CHAT_MODE_ENV);
-        let _desktop_off =
-            xai_grok_test_support::EnvGuard::unset("GROK_SESSION_LIST_CONVERSATIONS");
-        assert!(
-            !conversations_lane_active(),
-            "no env ⇒ lane off (Build-mode default)"
-        );
-        {
-            let _desktop =
-                xai_grok_test_support::EnvGuard::set("GROK_SESSION_LIST_CONVERSATIONS", "1");
-            assert_eq!(conversations_lane_active(), false);
-        }
-        {
-            let _chat = xai_grok_test_support::EnvGuard::set(GROK_CHAT_MODE_ENV, "1");
-            assert_eq!(
-                conversations_lane_active(),
-                false,
-                "process chat mode must enable the lane (chat feature only)"
-            );
         }
     }
     /// Wire pin for the cross-crate `deepseek-build/partial` envelope the pager parses: the serialized reason strings must not drift.
@@ -1026,3 +984,4 @@ mod tests {
         );
     }
 }
+

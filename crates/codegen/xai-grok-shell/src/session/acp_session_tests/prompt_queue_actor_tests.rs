@@ -3759,8 +3759,6 @@ async fn promoter_clears_committed_flag_and_handle_prompt_sets_it() {
                         "m2",
                         vec![acp::ContentBlock::Text(acp::TextContent::new("hello"))],
                         PromptMode::Agent,
-                        /* trace_gcs_config */ None,
-                        /* artifact_tracker */ None,
                         /* client_identifier */ None,
                         /* screen_mode */ None,
                         /* verbatim */ true,

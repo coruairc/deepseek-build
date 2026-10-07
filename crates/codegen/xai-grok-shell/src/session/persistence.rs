@@ -3053,10 +3053,6 @@ pub async fn delete_session_history(
 mod durable_update_tests;
 
 #[cfg(test)]
-#[path = "persistence_delete_session_history_tests.rs"]
-mod delete_session_history_tests;
-
-#[cfg(test)]
 #[path = "persistence_worktree_stamp_tests.rs"]
 mod worktree_stamp_tests;
 

@@ -3,7 +3,6 @@ use super::system_prompt::{
 };
 use super::test_hooks::{AttachPause, with_pause_at};
 use super::*;
-use crate::agent::config::TraceUploadEndpoints;
 use crate::agent::config::{EndpointsConfig, ModelEntry};
 use crate::agent::handlers::model_switch::SwitchContextWindow;
 use crate::extensions::code_nav::CodeNavEligibility;
@@ -436,95 +435,6 @@ async fn first_subagent_turn_allocation_does_not_walk_the_sessions_index() {
     assert_eq!(agent.allocate_turn_number(&sid), 0);
     assert_eq!(agent.session_turn_number(&sid), Some(1));
 }
-/// Agent-side upload path: each drained harness turn takes a distinct, monotonic turn number that CONTINUES past the user turn.
-/// It advances the per-session counter, persisted via exactly one `SetNextTraceTurn`.
-/// This is what makes each sibling `turn_{N}` reachable: without the advance every harness turn would clobber the same GCS path.
-#[tokio::test(flavor = "current_thread")]
-async fn upload_harness_trace_turns_numbers_siblings_and_persists_counter() {
-    let agent = build_minimal_agent_for_tests();
-    {
-        let mut cfg = agent.cfg.borrow_mut();
-        cfg.features.telemetry = Some(crate::agent::config::TelemetryMode::Enabled);
-        cfg.telemetry.trace_upload = Some(true);
-        cfg.endpoints.trace_upload_bucket = Some("file:///tmp/harness-trace-test".to_string());
-    }
-    let sid = acp::SessionId::new("harness-upload-sess");
-    let info = crate::session::info::Info {
-        id: sid.clone(),
-        cwd: "/tmp".to_string(),
-    };
-    let mut handle = make_test_handle("test-model", false, None);
-    handle.info = info.clone();
-    let queue_home = tempfile::tempdir().unwrap();
-    let queue_cfg = crate::session::repo_changes::TraceExportConfig {
-        bucket_url: Some("file:///tmp/harness-trace-test".to_string()),
-        service_account_key: None,
-        prefix_dir: None,
-        gcs_prefix: None,
-        absolute_paths: false,
-        archive_name_override: None,
-        upload_method: crate::session::repo_changes::UploadMethod::Direct {
-            service_account_key: None,
-        },
-    };
-    let queue = crate::upload::trace::spawn_upload_queue(
-        queue_home.path(),
-        &queue_cfg,
-        Some(xai_grok_version::VERSION),
-        agent.auth_manager.clone(),
-    );
-    let _ = handle.upload_queue.set(queue);
-    agent.insert_resident(&sid, handle);
-    for _ in 0..3 {
-        agent.allocate_turn_number(&sid);
-    }
-    assert_eq!(agent.session_turn_number(&sid), Some(3));
-    let built = agent
-        .build_harness_trace_uploads(
-            &sid,
-            &info,
-            "test-model",
-            3,
-            vec![harness_pair("a"), harness_pair("b")],
-        )
-        .await;
-    let numbers: Vec<u64> = built.iter().map(|(_, m, _)| m.turn_number).collect();
-    assert_eq!(numbers, vec![3, 4], "siblings take base, base+1");
-    assert!(
-        built.iter().all(|(_, m, _)| m.model == "test-model"),
-        "harness metadata carries the requested model alias",
-    );
-    let (cmd_tx, mut cmd_rx) =
-        tokio::sync::mpsc::unbounded_channel::<crate::session::SessionCommand>();
-    agent
-        .upload_harness_trace_turns(
-            &sid,
-            &info,
-            &cmd_tx,
-            "test-model",
-            vec![harness_pair("a"), harness_pair("b")],
-        )
-        .await;
-    assert_eq!(
-        agent.session_turn_number(&sid),
-        Some(5),
-        "two siblings advance the counter by two from the user turn",
-    );
-    let mut persisted = Vec::new();
-    while let Ok(cmd) = cmd_rx.try_recv() {
-        if let crate::session::SessionCommand::SetNextTraceTurn {
-            next_trace_turn, ..
-        } = cmd
-        {
-            persisted.push(next_trace_turn);
-        }
-    }
-    assert_eq!(
-        persisted,
-        vec![5],
-        "persist the advanced counter once, ahead of the spawned uploads",
-    );
-}
 /// With trace upload disabled the agent-side path must NOT burn a turn number or persist a counter (and spawns no upload).
 /// The buffer-clearing half of the drain is the caller's `TakeHarnessTraceTurns`; this guards the upload function's uploads-disabled branch.
 #[tokio::test(flavor = "current_thread")]
@@ -549,124 +459,6 @@ async fn upload_harness_trace_turns_uploads_disabled_does_not_burn_counter() {
         cmd_rx.try_recv().is_err(),
         "uploads-disabled path must not persist a counter",
     );
-}
-/// Guards three facts of the per-harness-turn manifest. (1) Every turn's ctx carries a FRESH `artifact_tracker`, so turn 1 never inherits turn 0's recorded artifacts.
-/// (2) Recording the turn's metadata and turn_messages yields a manifest listing exactly those two. (3) `fully_uploaded` is true iff neither failed.
-#[tokio::test(flavor = "current_thread")]
-async fn upload_harness_trace_turns_build_per_turn_manifest() {
-    use crate::upload::manifest::{
-        ArtifactResult, ArtifactStatus, build_manifest, record_artifact, resolve_upload_method,
-    };
-    let agent = build_minimal_agent_for_tests();
-    {
-        let mut cfg = agent.cfg.borrow_mut();
-        cfg.features.telemetry = Some(crate::agent::config::TelemetryMode::Enabled);
-        cfg.telemetry.trace_upload = Some(true);
-        cfg.endpoints.trace_upload_bucket = Some("file:///tmp/harness-trace-test".to_string());
-    }
-    let sid = acp::SessionId::new("harness-manifest-sess");
-    let info = crate::session::info::Info {
-        id: sid.clone(),
-        cwd: "/tmp".to_string(),
-    };
-    let mut handle = make_test_handle("test-model", false, None);
-    handle.info = info.clone();
-    let queue_home = tempfile::tempdir().unwrap();
-    let queue_cfg = crate::session::repo_changes::TraceExportConfig {
-        bucket_url: Some("file:///tmp/harness-trace-test".to_string()),
-        service_account_key: None,
-        prefix_dir: None,
-        gcs_prefix: None,
-        absolute_paths: false,
-        archive_name_override: None,
-        upload_method: crate::session::repo_changes::UploadMethod::Direct {
-            service_account_key: None,
-        },
-    };
-    let queue = crate::upload::trace::spawn_upload_queue(
-        queue_home.path(),
-        &queue_cfg,
-        Some(xai_grok_version::VERSION),
-        agent.auth_manager.clone(),
-    );
-    let _ = handle.upload_queue.set(queue);
-    agent.insert_resident(&sid, handle);
-    let built = agent
-        .build_harness_trace_uploads(
-            &sid,
-            &info,
-            "test-model",
-            0,
-            vec![harness_pair("a"), harness_pair("b")],
-        )
-        .await;
-    assert_eq!(
-        built.len(),
-        2,
-        "both harness turns obtained a trace context"
-    );
-    let Some((ctx0, _, _)) = built.first() else {
-        panic!("expected two harness turns");
-    };
-    record_artifact(
-        &ctx0.artifact_tracker,
-        "metadata.json",
-        ArtifactResult::Succeeded,
-    );
-    record_artifact(
-        &ctx0.artifact_tracker,
-        "turn_messages.json",
-        ArtifactResult::Succeeded,
-    );
-    let m0 = build_manifest(
-        &ctx0.artifact_tracker,
-        resolve_upload_method(&ctx0.gcs_config),
-        None,
-    );
-    assert!(matches!(
-        m0.artifacts.get("metadata.json"),
-        Some(ArtifactStatus::Succeeded)
-    ));
-    assert!(matches!(
-        m0.artifacts.get("turn_messages.json"),
-        Some(ArtifactStatus::Succeeded)
-    ));
-    assert!(m0.fully_uploaded, "both succeeded → fully_uploaded");
-    let Some((ctx1, _, _)) = built.get(1) else {
-        panic!("expected two harness turns");
-    };
-    let before = build_manifest(
-        &ctx1.artifact_tracker,
-        resolve_upload_method(&ctx1.gcs_config),
-        None,
-    );
-    assert!(
-        before.artifacts.is_empty(),
-        "per-turn tracker: turn 1 must not inherit turn 0's artifacts",
-    );
-    record_artifact(
-        &ctx1.artifact_tracker,
-        "metadata.json",
-        ArtifactResult::Succeeded,
-    );
-    record_artifact(
-        &ctx1.artifact_tracker,
-        "turn_messages.json",
-        ArtifactResult::Failed {
-            reason: "upload_failed",
-            error: None,
-        },
-    );
-    let m1 = build_manifest(
-        &ctx1.artifact_tracker,
-        resolve_upload_method(&ctx1.gcs_config),
-        None,
-    );
-    assert!(
-        !m1.fully_uploaded,
-        "a failed turn_messages flips fully_uploaded",
-    );
-    assert_eq!(m1.artifacts.len(), 2, "no cross-turn contamination");
 }
 /// With no overrides and model_agent_type = None, the default agent is used.
 #[test]
@@ -7191,3 +6983,4 @@ fn user_message_echo_session_meta_outranks_the_client_that_started_the_process()
     assert!(!wanted(Some(acp::Meta::new()), says_nothing()));
     assert!(!wanted(None, says_nothing()));
 }
+

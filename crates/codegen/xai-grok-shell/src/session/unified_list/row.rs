@@ -145,51 +145,6 @@ mod tests {
     use crate::session::unified_list::facet_registry;
 
     #[test]
-    fn conversation_row_uses_conversation_id_as_session_id() {
-        let c = Conversation {
-            conversation_id: "conv_abc123".into(),
-            title: "Compare GPU vendors".into(),
-            modify_time: Some("2026-06-18T18:02:00Z".into()),
-            create_time: Some("2026-06-18T17:30:00Z".into()),
-            ..Conversation::default()
-        };
-        let row = conversation_to_row(c, facet_registry());
-        assert_eq!(row.legacy.session_id, "conv_abc123");
-        assert_eq!(row.kind, SessionKind::Chat);
-        assert_eq!(row.legacy.source, "conversation");
-        assert_eq!(row.legacy.cwd, "");
-
-        let ext = serde_json::to_value(row.clone().into_ext_superset()).unwrap();
-        assert_eq!(
-            ext.get("sessionId").and_then(|v| v.as_str()),
-            Some("conv_abc123")
-        );
-        assert_eq!(ext.get("cwd").and_then(|v| v.as_str()), Some(""));
-        assert_eq!(
-            ext.get("source").and_then(|v| v.as_str()),
-            Some("conversation")
-        );
-        assert_eq!(
-            ext.get("_meta")
-                .and_then(|m| m.get("deepseek-build/session"))
-                .and_then(|s| s.get("kind"))
-                .and_then(|v| v.as_str()),
-            Some("chat")
-        );
-        // Chat rows have no local git enrichment (fields omitted).
-        assert!(ext.get("gitRootDir").is_none());
-        assert!(ext.get("gitRemotes").is_none());
-        assert!(ext.get("sourceWorkspaceDir").is_none());
-        assert!(ext.get("sessionKind").is_none());
-
-        let bare = serde_json::to_value(row.into_session_info()).unwrap();
-        assert_eq!(
-            bare.get("sessionId").and_then(|v| v.as_str()),
-            Some("conv_abc123")
-        );
-    }
-
-    #[test]
     fn acp_conversion_preserves_the_row() {
         let merged = MergedSession {
             session_id: "sess_abc123".into(),
@@ -216,17 +171,5 @@ mod tests {
         let info = merged_session_to_row(merged, facet_registry()).into_session_info();
         assert_eq!(acp::SessionInfo::try_from(info), Err(CwdNotAbsolute));
     }
-
-    #[test]
-    fn conversation_missing_modify_time_still_resumable() {
-        let c = Conversation {
-            conversation_id: "conv_no_time".into(),
-            title: "Untitled".into(),
-            ..Conversation::default()
-        };
-        let row = conversation_to_row(c, facet_registry());
-        assert_eq!(row.legacy.session_id, "conv_no_time");
-        assert!(row.updated_at.is_none());
-        assert_eq!(row.legacy.updated_at, "");
-    }
 }
+

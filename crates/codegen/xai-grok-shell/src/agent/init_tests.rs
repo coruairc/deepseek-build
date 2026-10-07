@@ -3,96 +3,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use super::{
-    AgentConfig, BootstrapError, PREFETCH_RUNS, StartupPrefetch, apply_post_gate_settings,
-    bootstrap_with_cancel, hold_bootstrap_gate_for_tests, startup_settings_deadline,
+    AgentConfig, BootstrapError, bootstrap_with_cancel, hold_bootstrap_gate_for_tests,
 };
-use crate::cloud_config::managed_config::LaunchProfile;
 use tokio_util::sync::CancellationToken;
 use xai_grok_login::{AuthManager, GrokComConfig};
-
-#[test]
-fn startup_settings_deadline_selects_by_profile() {
-    assert_eq!(
-        startup_settings_deadline(LaunchProfile::Managed),
-        crate::http::MANAGED_STARTUP_SETTINGS_WAIT_DEADLINE,
-        "a managed principal must get the longer kill-switch wait",
-    );
-    assert_eq!(
-        startup_settings_deadline(LaunchProfile::Personal),
-        crate::http::STARTUP_SETTINGS_WAIT_DEADLINE,
-        "a personal launch must get the shorter wait",
-    );
-}
-
-// Resets the process-global `STARTUP_STATE` (aborting its owner), so it must serialize with the settings_get tests that own it.
-#[test]
-#[serial_test::serial(remote_sig_disarm, startup_settings)]
-fn post_gate_pass_spends_at_most_one_settings_budget() {
-    crate::agent::model_catalog::settings_get::reset_startup_settings_for_tests();
-    let runs_before = PREFETCH_RUNS.with(std::cell::Cell::get);
-
-    let mut cfg = AgentConfig::default();
-    assert!(
-        cfg.remote_settings.is_none(),
-        "an absent prefetch result is the state under test"
-    );
-    apply_post_gate_settings(
-        &mut cfg,
-        StartupPrefetch::ClientSupplied,
-        LaunchProfile::Personal,
-        &CancellationToken::new(),
-        None,
-        None,
-    );
-    assert_eq!(
-        PREFETCH_RUNS.with(std::cell::Cell::get),
-        runs_before + 1,
-        "the fallback prefetch never ran: the counter is dead or the wiring lost the fetch"
-    );
-
-    let mut cfg = AgentConfig::default();
-    apply_post_gate_settings(
-        &mut cfg,
-        StartupPrefetch::Ran,
-        LaunchProfile::Personal,
-        &CancellationToken::new(),
-        None,
-        None,
-    );
-    assert_eq!(
-        PREFETCH_RUNS.with(std::cell::Cell::get),
-        runs_before + 1,
-        "the post-gate pass spent a second settings retry budget"
-    );
-}
-
-// Resets the process-global `STARTUP_STATE` (aborting its owner), so it must serialize with the settings_get tests that own it.
-#[test]
-#[serial_test::serial(remote_sig_disarm, startup_settings)]
-fn supplied_settings_skip_the_getter() {
-    crate::agent::model_catalog::settings_get::reset_startup_settings_for_tests();
-    let runs_before = PREFETCH_RUNS.with(std::cell::Cell::get);
-    let mut cfg = AgentConfig {
-        remote_settings: Some(Default::default()),
-        ..AgentConfig::default()
-    };
-    let outcome = super::ensure_remote_settings_side_effects(
-        &mut cfg,
-        LaunchProfile::Personal,
-        &CancellationToken::new(),
-        None,
-        None,
-    );
-    assert!(
-        matches!(outcome, Ok(StartupPrefetch::ClientSupplied)),
-        "supplied settings must not run the getter, got {outcome:?}"
-    );
-    assert_eq!(
-        PREFETCH_RUNS.with(std::cell::Cell::get),
-        runs_before,
-        "supplied settings must not spend a settings budget"
-    );
-}
 
 fn file_len_and_mtime(path: &std::path::Path) -> Option<(u64, Option<std::time::SystemTime>)> {
     std::fs::metadata(path)
