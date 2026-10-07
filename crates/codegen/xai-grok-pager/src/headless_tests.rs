@@ -827,3 +827,76 @@ fn handler_answers_ext_method_instead_of_dropping() {
         serde_json::from_str(resp.0.get()).expect("typed wire reply");
     assert!(matches!(parsed, AskUserQuestionExtResponse::Cancelled));
 }
+
+#[test]
+fn permission_cancel_hint_only_fires_for_unapproved_gated_cancel() {
+    use xai_grok_shell::session::commands::{
+        MID_TURN_ABORT_CATEGORY, PERMISSION_CANCELLED_CATEGORY, PERMISSION_REJECTED_CATEGORY,
+    };
+    // A gated tool cancelled or rejected in headless mode with no approval: warn + exit non-zero.
+    assert!(
+        super::permission_cancel_hint("cancelled", Some(PERMISSION_CANCELLED_CATEGORY), false)
+            .is_some()
+    );
+    assert!(
+        super::permission_cancel_hint("cancelled", Some(PERMISSION_REJECTED_CATEGORY), false)
+            .is_some()
+    );
+    // --always-approve: the user did approve (or asked to), so behavior is unchanged.
+    assert!(
+        super::permission_cancel_hint("cancelled", Some(PERMISSION_CANCELLED_CATEGORY), true)
+            .is_none()
+    );
+    // A user interrupt is not a permission gate.
+    assert!(
+        super::permission_cancel_hint("cancelled", Some(MID_TURN_ABORT_CATEGORY), false).is_none()
+    );
+    assert!(super::permission_cancel_hint("cancelled", None, false).is_none());
+    // A cleanly completed turn is untouched even if a category somehow rides along.
+    assert!(
+        super::permission_cancel_hint("end_turn", Some(PERMISSION_CANCELLED_CATEGORY), false)
+            .is_none()
+    );
+}
+
+#[tokio::test]
+async fn headless_plan_mode_sends_set_session_mode_only_for_plan() {
+    use xai_acp_lib::AcpAgentMessage;
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<AcpAgentMessage>();
+    let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
+    let seen_for_task = seen.clone();
+    tokio::spawn(async move {
+        while let Some(msg) = rx.recv().await {
+            if let AcpAgentMessage::SetSessionMode(args) = msg {
+                seen_for_task
+                    .lock()
+                    .unwrap()
+                    .push(args.request.mode_id.0.to_string());
+                let _ = args.response_tx.send(Ok(acp::SetSessionModeResponse::new()));
+            }
+        }
+    });
+
+    let sid = acp::SessionId::new("sess-plan");
+    assert!(
+        super::apply_headless_permission_mode(&tx, &sid, Some("plan"))
+            .await
+            .unwrap()
+    );
+    assert!(
+        !super::apply_headless_permission_mode(&tx, &sid, Some("auto"))
+            .await
+            .unwrap()
+    );
+    assert!(
+        !super::apply_headless_permission_mode(&tx, &sid, Some("bypassPermissions"))
+            .await
+            .unwrap()
+    );
+    assert!(
+        !super::apply_headless_permission_mode(&tx, &sid, None)
+            .await
+            .unwrap()
+    );
+    assert_eq!(seen.lock().unwrap().clone(), vec!["plan".to_string()]);
+}

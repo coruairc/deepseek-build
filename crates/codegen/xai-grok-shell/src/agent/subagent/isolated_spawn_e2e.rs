@@ -98,8 +98,6 @@ fn spawn_ctx(parent_cwd: PathBuf) -> SubagentSpawnContext {
         models_manager: Default::default(),
         file_tool_overrides: None,
         agent_config: None,
-        gcs_bucket_url: None,
-        gcs_upload_method: None,
         hook_registry: None,
         parent_depth: 0,
         subagents_max_depth: xai_grok_tools::implementations::grok_build::task::MAX_SUBAGENT_DEPTH,
@@ -131,7 +129,6 @@ fn spawn_ctx(parent_cwd: PathBuf) -> SubagentSpawnContext {
         parent_skills_config: xai_grok_agent::prompt::skills::SkillsConfig::default(),
         parent_compat: xai_grok_tools::types::compat::CompatConfig::default(),
         parent_paths_config: Default::default(),
-        synthetic_trace_tx: None,
         task_output_tool_name: xai_grok_tools::reminders::task_completion::DEFAULT_TASK_OUTPUT_TOOL
             .to_string(),
         scheduler_delete_tool_name: None,

@@ -413,6 +413,29 @@ fn auto_respond_to_permissions(
 fn auth_required_message() -> String {
     "Not signed in: set DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) to authenticate.".to_string()
 }
+/// One-line hint for a turn that ended because a permission-gated tool was not approved in
+/// headless mode (no TTY can answer the prompt). `None` for approved turns, user interrupts
+/// (`MidTurnAbort`), and every other cancellation, so their behavior is unchanged.
+fn permission_cancel_hint(
+    stop_reason: &str,
+    cancellation_category: Option<&str>,
+    is_yolo: bool,
+) -> Option<&'static str> {
+    use xai_grok_shell::session::commands::{
+        PERMISSION_CANCELLED_CATEGORY, PERMISSION_REJECTED_CATEGORY,
+    };
+    if is_yolo || stop_reason != "cancelled" {
+        return None;
+    }
+    match cancellation_category {
+        Some(c) if c == PERMISSION_CANCELLED_CATEGORY || c == PERMISSION_REJECTED_CATEGORY => Some(
+            "Turn ended: a permission-gated tool was cancelled because headless mode cannot prompt \
+             for approval. Re-run with --always-approve, or choose a non-interactive permission \
+             mode such as --permission-mode auto.",
+        ),
+        _ => None,
+    }
+}
 /// The same backend switch the TUI applies; the shell unless another backend is enabled.
 async fn spawn_agent(
     agent_config: AgentConfig,
@@ -762,6 +785,33 @@ async fn apply_headless_model_and_effort(
         "headless: model/effort set"
     );
     Ok(())
+}
+/// Enter plan mode over ACP when `--permission-mode plan` was requested.
+///
+/// The CLI flag alone only lands on the agent definition's inert `permission_mode`, so without
+/// this the model is never told it is planning and read-only plan-mode enforcement never arms.
+/// Sending the session mode runs the same `handle_session_mode` path the TUI uses, which injects
+/// the plan-mode reminder on the next turn and keeps the plan edit gate active.
+/// Returns whether a request was sent.
+async fn apply_headless_permission_mode(
+    acp_tx: &AcpAgentTx,
+    session_id: &acp::SessionId,
+    permission_mode_flag: Option<&str>,
+) -> anyhow::Result<bool> {
+    if permission_mode_flag != Some("plan") {
+        return Ok(false);
+    }
+    acp_send(
+        acp::SetSessionModeRequest::new(
+            session_id.clone(),
+            acp::SessionModeId::new(xai_grok_tools::types::SessionMode::Plan.as_id()),
+        ),
+        acp_tx,
+    )
+    .await
+    .map_err(|e| anyhow::anyhow!("Couldn't enter plan mode: {e}"))?;
+    tracing::debug!("headless: plan mode requested via --permission-mode plan");
+    Ok(true)
 }
 /// Startup-materialization context for headless (`-p`) runs; never chat mode.
 fn headless_materialize_ctx(
@@ -1144,6 +1194,14 @@ pub async fn run_single_turn(
         emitter.on_error(&msg, None);
         anyhow::bail!("{msg}");
     }
+    if let Err(e) =
+        apply_headless_permission_mode(&acp_tx, &session_id, options.permission_mode_flag.as_deref())
+            .await
+    {
+        let msg = e.to_string();
+        emitter.on_error(&msg, None);
+        anyhow::bail!("{msg}");
+    }
     let t_prompt = Instant::now();
     emitter.mark_prompt_started();
     let mut ttf_logged = false;
@@ -1378,16 +1436,25 @@ pub async fn run_single_turn(
                     ""
                 }
             };
-            let is_max_turns = resp
+            let cancellation_category = resp
                 .meta
                 .as_ref()
                 .and_then(|m| m.get(crate::app::CANCELLATION_CATEGORY_KEY))
-                .and_then(|v| v.as_str())
+                .and_then(|v| v.as_str());
+            let is_max_turns = cancellation_category
                 == Some(xai_grok_shell::session::commands::MAX_TURNS_REACHED_CATEGORY);
             if is_max_turns {
                 emitter.on_max_turns();
                 emitter.on_end(&stop_reason, sid, rid);
                 Err(anyhow::anyhow!("max turns reached"))
+            } else if let Some(hint) =
+                permission_cancel_hint(&stop_reason, cancellation_category, options.yolo)
+            {
+                emitter.on_end(&stop_reason, sid, rid);
+                eprint_line(hint);
+                Err(anyhow::anyhow!(
+                    "permission-gated tool cancelled; pass --always-approve to approve it"
+                ))
             } else {
                 emitter.on_end(&stop_reason, sid, rid);
                 Ok(())
