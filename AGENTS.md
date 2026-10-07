@@ -17,18 +17,22 @@ decisions; wins on conflict), [`PLAN.md`](PLAN.md) (audit + phased plan),
   in `crates/codegen/xai-grok-brand/`.
 - **Egress gate:** `scripts/check-egress.sh --strict` → **exit 0** (HARD OK, SOFT zero).
 - **Build:** `cargo check -p xai-grok-pager-bin` and `cargo build --release` are green.
-  `cargo test --workspace --no-run` **compiles**; per-crate suites pass (shell 6638,
-  workspace 2018, tools 3310, pager 9976, pager-render 1209, agent 576, chat-state 391,
-  telemetry 164, fast-worktree 333, …). A single full `cargo test --workspace` green run
-  was not confirmed (4 upstream Grove/NFS tests flake under whole-workspace parallelism).
-- **Runtime egress (observed):** single-turn prompt contacts only
-  `api.deepseek.com:443` + one local AF_UNIX socket; `--version`/`--help` make no
-  outbound connects. Measured with an `LD_PRELOAD` connect-logger (`strace`/netns
-  unavailable in this environment).
-- **Status:** usable now with a real `DEEPSEEK_API_KEY` (on `main`). See `TESTING.md`,
-  `scripts/sandbox-run.sh`, `KNOWN-ISSUES.md`. Remaining: full deletion of the inert
-  stubs listed in `KNOWN-ISSUES.md` (upload/cloud_config/computer-hub/announcements/
-  remote/telemetry stubs), workspace-wide clippy/fmt, and the live smoke test.
+  **`cargo test --workspace` does not compile yet: only `xai-grok-pager` (~252 errors)
+  and `xai-grok-pager-minimal` (2) lib test targets fail** on test-only references to
+  deleted Phase-1 features (`xai_grok_feedback`, removed fields/methods, a 13→12
+  constructor arity). Every other lib test target compiles and passes
+  (shell 6221, workspace 1693, sampler 186, config 467, chat-state 391, agent 576, …).
+- **Runtime egress (observed):** a real model-driven session (shell, edits, web_fetch,
+  local MCP, compaction, resume) contacts only `api.deepseek.com:443`, the web_fetch
+  host, and AF_UNIX sockets — `scripts/egress-check.sh` reports
+  `EGRESS_VIOLATIONS=0`. Measured with an `LD_PRELOAD` connect/send logger
+  (`strace` absent).
+- **Status:** usable with a real `DEEPSEEK_API_KEY`. See `TESTING.md`,
+  `scripts/smoke-test.sh`, `scripts/egress-check.sh`, `scripts/sandbox-run.sh`,
+  `KNOWN-ISSUES.md`. Remaining: the pager/pager-minimal test-target repair; the
+  local-harness sandbox/pre-run coverage gap noted in `KNOWN-ISSUES.md`; DeepSeek
+  prompt tuning (`docs/TUNING.md`, not started); interactive TUI verified under a pty
+  but not by a human.
 
 ## 1. How to resume (another machine)
 

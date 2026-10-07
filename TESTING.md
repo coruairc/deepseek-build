@@ -3,10 +3,13 @@
 A 20–30 minute manual test plan for the personal `deepseek-build` agent.
 
 > Status: the non-test build is green and the binary runs. **`cargo test
-> --workspace` does not compile yet** — the failing crate is `xai-grok-workspace`
-> (its test modules reference code deleted in the Phase-1 cleanup). See
-> [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md). The live DeepSeek smoke test and the
-> extended egress audit have been run and pass; rerun them with the scripts below.
+> --workspace` does not compile yet — only the `xai-grok-pager` (~252 errors)
+> and `xai-grok-pager-minimal` (2) lib test targets fail**, on test-only
+> references to deleted Phase-1 features (`xai_grok_feedback`, removed
+> fields/methods, a 13→12 constructor arity). Every other lib test target
+> compiles and passes (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). The live
+> DeepSeek smoke test and the extended egress audit have been run and pass;
+> rerun them with the scripts below.
 
 ## 1. Build (3 min)
 
@@ -96,12 +99,11 @@ It cannot see raw `syscall(2)`/`io_uring`/statically-linked children — see
 
 ## 6. Test suite
 
-- `cargo test --workspace` **does not compile yet** (see `KNOWN-ISSUES.md`):
-  `xai-grok-workspace`'s test target now compiles (1693 pass / 25 pre-existing
-  failures), but **`xai-grok-shell`'s lib test target** still references deleted
-  Phase-1 features (~96 errors). This is the remaining test-repair pass.
-- Per-crate suites that do build and pass, e.g.:
-  `cargo test -p xai-grok-sampler --lib`,
-  `cargo test -p xai-grok-telemetry --lib`,
-  `cargo test -p xai-grok-sampling-types --lib`.
+- `cargo test --workspace` **does not compile yet** — only `xai-grok-pager`
+  (~252 errors) and `xai-grok-pager-minimal` (2) fail, on test-only references
+  to deleted Phase-1 features. Every other lib test target compiles and passes,
+  e.g. `cargo test -p xai-grok-shell --lib` (6221 pass),
+  `cargo test -p xai-grok-workspace --lib` (1693 pass),
+  `cargo test -p xai-grok-sampler --lib`, `-p xai-grok-telemetry --lib`,
+  `-p xai-grok-sampling-types --lib`.
 - `scripts/smoke-test.sh` is the live end-to-end check.

@@ -7,30 +7,29 @@ real-use passes (2026-10-07).
 
 ## Build & tests
 
-- **`cargo test --workspace` does not compile yet.** Two separate problems:
-  - **`xai-grok-workspace` (repaired Step 6 `582cb718`..`f8e67475`; 25 leftover
-    failures resolved `755fb7cf`..`1fab9c64`):** its test target compiles and,
-    with the last 25 failing tests resolved, runs **1692 passed + 1 flaky** (the
-    flake rotates between the pre-existing `session::git_gate` /
-    `restore_fetch` timing tests and passes in isolation). All 25 were tests of
-    the deleted computer hub, not live regressions: 8
-    `permission::manager::tests::*` + helpers drove the removed hub permission
-    transport (`prompter.rs` `unreachable!`), 16 `sandbox::real_wiring_tests::*`
-    asserted the deleted `crate::hub::SessionRoutedToolHandler` dispatch
-    (pre-run gate, mode-layer guard, pin/floor + finish, result decode), and
-    `init_metrics_tests` asserted baselines for the deleted `hub_server` RPC
-    counters and the removed OIDC refresh metric. **Coverage gap to re-home:**
-    the local harness `SessionToolHandle`/`create_local_harness` runs the toolset
-    without that sandbox/pre-run integration, so equivalent local sandbox and
-    pre-run-gate coverage must be re-established (see `docs/DROPPED-TESTS.md`).
-  - **`xai-grok-shell` (lib test target, ~96 errors):** test modules still
-    reference deleted Phase-1 features — `crate::remote`
-    (`Conversation`/`ConversationsClient`/`RemoteSync`), `crate::upload`
-    (`GcsUploadContext`/`SubagentSessionMetadata`), `crate::cloud_config`,
-    `session::repo_changes`, removed hub-auth, and removed struct
-    fields/methods (`SessionActor::upload_queue`, `InputItem::trace_gcs_config`,
-    the two extra `handle_prompt` params across ~33 call sites, etc.). This is a
-    dedicated future pass; do not mass-delete kept tests to force it green.
+- **`cargo test --workspace` does not compile yet: only `xai-grok-pager`
+  (~252 errors) and `xai-grok-pager-minimal` (2 errors) fail their lib test
+  targets.** They reference deleted Phase-1 features: the removed
+  `xai_grok_feedback` crate (`app/dispatch/tests/notes.rs`), removed
+  fields/methods on dashboard/dispatch test fixtures (E0609 ×84, E0599 ×83),
+  and a 13→12 constructor arity (E0061 ×18). All other lib test targets
+  compile and pass (see below). This is a bounded compiler-driven pass; do not
+  mass-delete kept tests to force it green.
+- **`xai-grok-shell` lib tests: green.** 6221 passed / 0 failed / 4 ignored.
+  Integration tests compile after dropping the 8 remote-settings prefetch tests
+  for the deleted `remote_config`/`managed_config` modules.
+- **`xai-grok-workspace` test target: compiles and passes** (1693 passed; a
+  pre-existing `session::git_gate` / `restore_fetch` timing flake rotates under
+  whole-suite saturation and passes in isolation). The last 25 failures were
+  tests of the deleted computer hub, not regressions. **Coverage gap to
+  re-home:** the local harness `SessionToolHandle`/`create_local_harness` runs
+  the toolset without the deleted hub pre-run/sandbox integration, so
+  equivalent local coverage must be re-established (see
+  `docs/DROPPED-TESTS.md`).
+- **Per-crate test results (this revision):** sampling-types 240, sampler 186,
+  telemetry 156, status-line 24, brand 2, version 2, config 467, tools-api 15,
+  chat-state 391, session-events 16, active-sessions 6, foreign-sessions 53,
+  config-types 45, http 14, mcp 279, hooks 279, agent 576 — all 0 failures.
 - **Non-test build is green:** `cargo check -p xai-grok-pager-bin` and
   `cargo build --release -p xai-grok-pager-bin` succeed; the binary runs
   (`target/release/deepseek-build`, `deepseek-build 1.0.45`).
