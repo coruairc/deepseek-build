@@ -136,7 +136,9 @@ Build first (or pass `BIN=`).
 - `Unauthorized (401)` — set a real `DEEPSEEK_API_KEY`.
 - Connection refused / DNS failure — check network; only `api.deepseek.com` (and
   user MCP servers) are used.
-- Config/state lives under `~/.deepseek-build/` (the legacy `~/.grok` is **not**
-  migrated automatically; point `GROK_HOME` at the old directory to reuse it).
+- Config/state lives under `~/.deepseek-build/`. The legacy `~/.grok` directory is
+  read as a fallback when `~/.deepseek-build` is absent; to point the tool at an
+  explicit directory set `DEEPSEEK_BUILD_HOME` (the legacy `GROK_HOME` is still
+  honored as a fallback).
 - `sandbox-run: BLOCKED connect to <ip>` — the binary tried a destination outside
   the allowlist; capture the IP and report it.
