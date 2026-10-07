@@ -8,21 +8,103 @@ shell commands, and manages long-running tasks, driven by DeepSeek's
 OpenAI-compatible Chat Completions API. It is a work in progress (see
 [Status](#status) and [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)).
 
-> This is a personal-use tool. There is no release pipeline, packaging, or
-> support. It currently builds from source on Linux/macOS.
+> Pre-built binaries are published on [GitHub Releases](https://github.com/coruairc/deepseek-build/releases)
+> for linux-x86_64, linux-aarch64, darwin-arm64, and darwin-x86_64, with a
+> checksum file and an installer script attached to each release. Building from
+> source remains supported (see [Building from source](#building-from-source)).
 
 ## Status
 
 | Area | State |
 |------|-------|
-| Phase 0 — audit & plan | Done (`PLAN.md`, `DECISIONS.md`) |
-| Phase 1 — cleanup | Done: upload/exfil, telemetry/Sentry/OTLP, xAI voice/Imagine/web_search, auto-update, announcements, cloud-config/remote control, session share/relay, and xAI model/endpoint strings are removed or neutralized. **HARD and SOFT egress gates are green**; rebrand (binary, config dir, ACP namespace, strings) done. |
-| Phase 2 — DeepSeek adapter | Core done: Chat Completions-only backend (`Responses`/`Messages` deleted), `thinking` control, `reasoning_content` round-trip + sanitizer, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-v4-pro`), wiremock suite. Live smoke test still needs a real key. |
-| Phase 3 — TUI | Implemented: reasoning fold (`e`/`E`/`Ctrl+E`), collapsible thinking, status line (model/context/effort/tokens/cache/cost), `/model` `/effort` `/think` `/theme`, Monokai default theme + whale logo. |
-| Phase 4 — harden existing features | Partial: runtime read-before-write guard and dangerous-command warnings are in; plan mode, permissions, resume, subagents, MCP, `AGENTS.md`, and checkpoints exist and need end-to-end exercising. |
-| Phase 5 — testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. |
+| Phase 0 - audit & plan | Done (`PLAN.md`, `DECISIONS.md`) |
+| Phase 1 - cleanup | Done: upload/exfil, telemetry/Sentry/OTLP, xAI voice/Imagine/web_search, auto-update, announcements, cloud-config/remote control, session share/relay, and xAI model/endpoint strings are removed or neutralized. **HARD and SOFT egress gates are green**; rebrand (binary, config dir, ACP namespace, strings) done. |
+| Phase 2 - DeepSeek adapter | Core done: Chat Completions-only backend (`Responses`/`Messages` deleted), `thinking` control, `reasoning_content` round-trip + sanitizer, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-v4-pro`), wiremock suite. Live smoke test still needs a real key. |
+| Phase 3 - TUI | Implemented: reasoning fold (`e`/`E`/`Ctrl+E`), collapsible thinking, status line (model/context/effort/tokens/cache/cost), `/model` `/effort` `/think` `/theme`, Monokai default theme + whale logo. |
+| Phase 4 - harden existing features | Partial: runtime read-before-write guard and dangerous-command warnings are in; plan mode, permissions, resume, subagents, MCP, `AGENTS.md`, and checkpoints exist and need end-to-end exercising. |
+| Phase 5 - testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. Release pipeline (CI tarballs + installer) added; first release pending tag. |
 
 See [`AGENTS.md`](AGENTS.md) for a precise resume-from-here handoff.
+
+## Install
+
+```sh
+curl -fsSL https://github.com/coruairc/deepseek-build/releases/latest/download/install.sh | sh
+```
+
+Piping curl to `sh` executes whatever that URL serves, at download time, with no
+chance to review it first. The slower, recommended alternative: download,
+inspect, then run.
+
+```sh
+curl -fsSLO https://github.com/coruairc/deepseek-build/releases/latest/download/install.sh
+less install.sh        # inspect it
+sh install.sh
+```
+
+The installer is plain POSIX `sh`. It:
+
+- detects OS and arch (supported targets below) and picks the matching tarball;
+- downloads the release tarball and `SHA256SUMS` over HTTPS from GitHub
+  Releases;
+- verifies the checksum **before** extracting anything;
+- installs the binary to `${INSTALL_DIR:-$HOME/.local/bin}` (no sudo), prints a
+  PATH hint if needed, and supports `--uninstall`; rerunning it updates in
+  place;
+- makes no network requests other than those two GitHub downloads - no
+  telemetry.
+
+Pin a version with `VERSION`:
+
+```sh
+VERSION=v0.1.0 sh install.sh
+curl -fsSL .../install.sh | VERSION=v0.1.0 sh
+```
+
+(This works because `VERSION=v0.1.0` before a command is a POSIX env assignment,
+not shell syntax embedded in the script.)
+
+Uninstall:
+
+```sh
+curl -fsSL .../install.sh | sh -s -- --uninstall
+# or, after downloading:
+sh install.sh --uninstall
+```
+
+Manual install, if you prefer to drive every step:
+
+1. Download the tarball for your platform and `SHA256SUMS` from the
+   [releases page](https://github.com/coruairc/deepseek-build/releases).
+2. Verify: `SHA256SUMS` lists all four tarballs, so filter to yours:
+
+   ```sh
+   grep <your-tarball> SHA256SUMS | sha256sum -c -
+   # macOS: grep <your-tarball> SHA256SUMS | shasum -a 256 -c -
+   ```
+
+3. Extract and move `deepseek-build` somewhere on `PATH`.
+
+### Supported platforms
+
+| Target | Typical OS notes |
+|--------|------------------|
+| `x86_64-unknown-linux-gnu` | Linux x86_64, glibc >= 2.35 (Ubuntu 22.04+) |
+| `aarch64-unknown-linux-gnu` | Linux arm64, glibc >= 2.35 (Ubuntu 22.04+) |
+| `aarch64-apple-darwin` | macOS 14 (Sonoma)+ on Apple silicon |
+| `x86_64-apple-darwin` | macOS 13 (Ventura)+ on Intel |
+
+macOS builds come from macOS 15 runners; the listed minimums are conservative.
+The macOS binaries are **not codesigned and not notarized**, so first launch
+may need a right-click **Open**, or
+`xattr -d com.apple.quarantine <path-to-binary>`.
+
+> Independent project, not affiliated with DeepSeek. "DeepSeek" is a trademark
+> of its respective owner; this project merely uses their public API.
+>
+> Forked from [xai-org/grok-build](https://github.com/xai-org/grok-build)
+> (Apache-2.0); see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE) for terms and
+> attribution.
 
 ## Security & network
 
@@ -49,7 +131,10 @@ To watch runtime egress, run the binary through
   `rust-toolchain.toml`). Do not bump it.
 - `protoc` on `PATH` (e.g. `/usr/bin/protoc`). `dotslash` is not needed.
 
-## Build & run
+## Building from source
+
+If you'd rather not use the published binaries (see
+[Install](#install)), build it yourself:
 
 ```sh
 # One-time: install the pinned toolchain
@@ -87,7 +172,7 @@ config.
 ## Testing the binary safely
 
 `scripts/sandbox-run.sh` runs the binary with only `api.deepseek.com` reachable.
-A 20–30 minute manual test plan lives in [`TESTING.md`](TESTING.md); known gaps
+A 20-30 minute manual test plan lives in [`TESTING.md`](TESTING.md); known gaps
 are in [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md).
 
 ## Repository layout
