@@ -49,6 +49,6 @@ COPY deepseek-build-${TARGETARCH} /usr/local/bin/deepseek-build
 RUN chmod 755 /usr/local/bin/deepseek-build
 
 WORKDIR /work
-USER app
+USER 1000:1000
 
 ENTRYPOINT ["deepseek-build"]

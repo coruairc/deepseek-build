@@ -106,6 +106,43 @@ may need a right-click **Open**, or
 > (Apache-2.0); see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE) for terms and
 > attribution.
 
+## Container
+
+Official releases also publish a multi-arch (linux/amd64, linux/arm64) image to
+GitHub Container Registry. It is **not affiliated with DeepSeek**.
+
+```sh
+# Pull (replace <owner> with the GitHub account that published it)
+docker pull ghcr.io/<owner>/deepseek-build:latest
+
+# Interactive session in a repo, key from your environment
+docker run -it --rm \
+  -e DEEPSEEK_API_KEY \
+  -v "$PWD":/work \
+  ghcr.io/<owner>/deepseek-build:latest
+```
+
+Host-owned files: the image runs as uid 1000; pass your own ids so files written
+into the mount stay yours.
+
+```sh
+docker run -it --rm --user "$(id -u):$(id -g)" \
+  -e DEEPSEEK_API_KEY -v "$PWD":/work \
+  ghcr.io/<owner>/deepseek-build:latest
+```
+
+`--version` / headless:
+
+```sh
+docker run --rm ghcr.io/<owner>/deepseek-build:latest --version
+docker run --rm -e DEEPSEEK_API_KEY ghcr.io/<owner>/deepseek-build:latest -p "say hi"
+```
+
+The image is built from the release tarballs (`docker/Dockerfile`, per-arch
+binary via `TARGETARCH`), contains no API key, and ships the license files in
+`/usr/share/doc/deepseek-build/`. Package visibility depends on the GHCR package
+settings (packages default to private for personal accounts).
+
 ## Security & network
 
 There is no telemetry, analytics, or auto-update. The only network destinations
