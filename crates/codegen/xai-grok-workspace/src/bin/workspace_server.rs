@@ -744,17 +744,12 @@ mod tests {
             hub_connect_failure_log_message(ErrorClass::HubAuth),
             WORKSPACE_HUB_AUTH_FAILED_MARKER
         );
-        let auth = WorkspaceError::HubError(
-            xai_computer_hub_sdk::ClientError::AuthError("token rejected".into()).to_string(),
-        );
+        let auth = WorkspaceError::HubError("auth error: token rejected".to_string());
         assert_eq!(
             classify_hub_connect_failure(&auth.to_string()),
             ErrorClass::HubAuth
         );
-        let network = WorkspaceError::HubError(
-            xai_computer_hub_sdk::ClientError::NetworkError("connection refused".into())
-                .to_string(),
-        );
+        let network = WorkspaceError::HubError("network error: connection refused".to_string());
         assert_eq!(
             classify_hub_connect_failure(&network.to_string()),
             ErrorClass::HubConnect

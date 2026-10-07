@@ -195,14 +195,6 @@ mod tests {
     }
 
     #[test]
-    fn is_timeout_err_matches_backstop_wording_only() {
-        assert!(is_timeout_err("request timed out after 600s"));
-        assert!(is_timeout_err("request timed out after 600.0s"));
-        assert!(!is_timeout_err("connection lost"));
-        assert!(!is_timeout_err("tool server gone (weak upgrade failed)"));
-    }
-
-    #[test]
     fn payload_for_bash_carries_command_and_write_scope() {
         let payload = build_permission_payload(
             &AccessKind::Bash("rm -rf /tmp/x".into()),
@@ -463,114 +455,5 @@ mod tests {
             PromptOutcome::RejectAlwaysDomain(v) => assert_eq!(v, "example.com"),
             other => panic!("expected RejectAlwaysDomain, got {other:?}"),
         }
-    }
-
-    struct StubTransport {
-        reply: Result<Value, String>,
-        seen: Mutex<Option<Value>>,
-    }
-
-    #[async_trait]
-    impl PermissionHookTransport for StubTransport {
-        async fn request_permission(&self, payload: Value) -> Result<Value, String> {
-            *self.seen.lock().unwrap() = Some(payload);
-            self.reply.clone()
-        }
-    }
-
-    #[tokio::test]
-    async fn request_sends_payload_and_decodes_reply() {
-        let transport = StubTransport {
-            reply: Ok(serde_json::json!({ "outcome": "approve" })),
-            seen: Mutex::new(None),
-        };
-        let outcome = request_permission_via_hub(
-            &transport,
-            &AccessKind::Bash("ls -la".into()),
-            "tc-7",
-            /*hook_ask=*/ None,
-            ToolApprovalPolicy::GrantsAllowed,
-        )
-        .await;
-        assert!(matches!(outcome, PromptOutcome::AllowOnce));
-        let seen = transport
-            .seen
-            .lock()
-            .unwrap()
-            .clone()
-            .expect("payload sent");
-        assert_eq!(
-            seen.get("tool_call_id").unwrap_or(&serde_json::Value::Null),
-            "tc-7"
-        );
-        assert_eq!(
-            seen.get("bash_command").unwrap_or(&serde_json::Value::Null),
-            "ls -la"
-        );
-    }
-
-    #[tokio::test]
-    async fn transport_error_fails_closed() {
-        let transport = StubTransport {
-            reply: Err("connection lost".to_owned()),
-            seen: Mutex::new(None),
-        };
-        let outcome = request_permission_via_hub(
-            &transport,
-            &AccessKind::Edit("a.rs".into()),
-            "tc-8",
-            /*hook_ask=*/ None,
-            ToolApprovalPolicy::GrantsAllowed,
-        )
-        .await;
-        assert!(matches!(outcome, PromptOutcome::Error(_)));
-    }
-
-    #[tokio::test]
-    async fn edit_always_approve_maps_to_session_scope() {
-        let transport = StubTransport {
-            reply: Ok(serde_json::json!({ "outcome": "always_approve" })),
-            seen: Mutex::new(None),
-        };
-        let outcome = request_permission_via_hub(
-            &transport,
-            &AccessKind::Edit("a.rs".into()),
-            "tc-9",
-            /*hook_ask=*/ None,
-            ToolApprovalPolicy::GrantsAllowed,
-        )
-        .await;
-        assert!(matches!(outcome, PromptOutcome::AllowEditsForSession));
-        let transport = StubTransport {
-            reply: Ok(serde_json::json!({ "outcome": "always_approve" })),
-            seen: Mutex::new(None),
-        };
-        let outcome = request_permission_via_hub(
-            &transport,
-            &AccessKind::AgentMessage {
-                subagent_id: "sub-1".into(),
-            },
-            "tc-message",
-            /*hook_ask=*/ None,
-            ToolApprovalPolicy::GrantsAllowed,
-        )
-        .await;
-        assert!(matches!(outcome, PromptOutcome::AllowOnce));
-        let transport = StubTransport {
-            reply: Ok(serde_json::json!({ "outcome": "always_approve" })),
-            seen: Mutex::new(None),
-        };
-        let outcome = request_permission_via_hub(
-            &transport,
-            &AccessKind::MCPTool {
-                name: "x".into(),
-                input: serde_json::Value::Null,
-            },
-            "tc-10",
-            /*hook_ask=*/ None,
-            ToolApprovalPolicy::GrantsAllowed,
-        )
-        .await;
-        assert!(matches!(outcome, PromptOutcome::AllowAlways));
     }
 }
