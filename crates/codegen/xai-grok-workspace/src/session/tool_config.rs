@@ -608,7 +608,6 @@ pub mod test_support {
                 lsp: None,
                 app_builder_deployer_config: Default::default(),
                 api_key_provider: None,
-                auth_provider: None,
                 attribution_callback: None,
                 system_reminder_tag: xai_grok_tools::reminders::DEFAULT_REMINDER_TAG,
             }
