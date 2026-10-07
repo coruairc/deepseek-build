@@ -1,0 +1,314 @@
+# deepseek-build release pipeline.
+#
+# Trigger: pushing a `v*` tag builds the `release-dist` binary for 4 targets
+# (each on a NATIVE runner — no cross-compilation, no qemu), packages tarballs,
+# then attaches them + SHA256SUMS + the repo-root install.sh to a GitHub release
+# for that tag. `workflow_dispatch` runs the same pipeline for manual testing;
+# it creates NO release (release creation is tag-only).
+#
+# ══ HARD CONSTRAINT (stakeholder) — NO OTHER UPLOADS ═════════════════════════
+# This workflow must not upload anything anywhere else. The ONLY upload paths
+# allowed here are:
+#   1. actions/upload-artifact — GitHub-internal artifact storage, used solely
+#      to hand the tarballs from the build jobs to the publish job within this
+#      same workflow run.
+#   2. the GitHub release itself (softprops/action-gh-release).
+# No S3, no container registries, no codecov, no telemetry, no external
+# mirrors. If you find yourself adding another upload step: stop.
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# All third-party actions are pinned to full-length commit SHAs (floating tags
+# are forbidden). Current pins:
+#   actions/checkout            v7.0.1  3d3c42e5aac5ba805825da76410c181273ba90b1
+#   actions/upload-artifact     v7.0.1  043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+#   actions/download-artifact   v8.0.1  3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+#   Swatinem/rust-cache         v2.9.2  6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+#   softprops/action-gh-release v3.0.3  efb35369e0ad2afab669f228072c1b0d510eae64
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+# Least privilege: the workflow-scope token gets NO permissions; only the
+# publish job elevates to `contents: write` (to create the GitHub release).
+permissions: {}
+
+# Duplicate tag pushes queue instead of racing (cancel-in-progress: false so a
+# queued rerun never kills a publish mid-flight).
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Cheap job: derive the release version string once for all builds.
+  # Tag `v1.2.3` -> `1.2.3` (stamped via GROK_VERSION in the build step).
+  # workflow_dispatch runs have no tag -> fall back to `0.0.0-<shortsha>`.
+  version:
+    name: Derive release version
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.derive.outputs.version }}
+    steps:
+      - name: Derive version from the pushed tag
+        id: derive
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            case "$GITHUB_REF_NAME" in
+              v?*) version="${GITHUB_REF_NAME#v}" ;;
+              *)
+                echo "::error::release tags must match 'v*' (got '${GITHUB_REF_NAME}')"
+                exit 1
+                ;;
+            esac
+          else
+            version="0.0.0-${GITHUB_SHA:0:7}"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "RELEASE_VERSION=${version}"
+
+  # One matrix job per target; every leg runs on a NATIVE runner for its target
+  # (no cross-compilation): linux gnu on ubuntu-22.04 (older glibc base),
+  # linux arm64 on the free-for-public-repos native arm runner, and both macOS
+  # targets on macOS 15 runners (macos-13 is retired; macos-15-intel still
+  # exists and runs natively on Intel hardware).
+  build:
+    name: build (${{ matrix.target }})
+    needs: version
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-22.04
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-22.04-arm
+          - target: aarch64-apple-darwin
+            runner: macos-15
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+    steps:
+      # Tag ref -> HEAD is the tag commit, so `git rev-parse HEAD` in build.rs
+      # stamps the commit correctly at the default shallow fetch-depth (1).
+      - name: Checkout tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      # protoc is HARD-REQUIRED on GitHub Actions: crates/build/xai-proto-build
+      # returns an error when GITHUB_ACTIONS is set and no protoc is found. The
+      # repo's bin/protoc dotslash wrapper must NOT be used in CI (dotslash is
+      # absent and it would try a network fetch), so we set the PROTOC env var
+      # explicitly to the real protoc path — find_protoc checks $PROTOC first
+      # and never reaches the wrapper walk-up.
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends protobuf-compiler cmake
+          # cmake: build prerequisite for aws-lc-sys (rustls) — usually
+          # preinstalled on ubuntu-22.04, installed anyway (idempotent).
+          protoc_path="$(command -v protoc)"
+          if [ -z "${protoc_path}" ]; then
+            echo "::error::protoc was not installed by apt"
+            exit 1
+          fi
+          echo "PROTOC=${protoc_path}" >> "$GITHUB_ENV"
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          # cmake is preinstalled on macOS runners (needed by aws-lc-sys).
+          brew install protobuf
+          protoc_path="$(command -v protoc)"
+          if [ -z "${protoc_path}" ]; then
+            echo "::error::protoc was not installed by brew"
+            exit 1
+          fi
+          echo "PROTOC=${protoc_path}" >> "$GITHUB_ENV"
+
+      # rust-toolchain.toml pins 1.94.0 and rustup picks it up automatically on
+      # the first cargo call inside the repo; install it explicitly up front
+      # (minimal profile, no components — a release build runs no clippy/fmt) so
+      # the version is deterministic instead of lazily resolved.
+      - name: Install Rust toolchain (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.94.0 --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Install Rust toolchain (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.94.0 --profile minimal
+
+      # Per-target cache key so the 4 matrix legs never thrash one cache.
+      - name: Restore cargo cache
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          key: ${{ matrix.target }}
+          cache-on-failure: true
+
+      # GROK_VERSION stamps the release version into the binary (build.rs +
+      # xai-grok-version); without it IS_DEV_BUILD=true and --version omits the
+      # tag's version. jemalloc / ObjC link args in .cargo/config.toml apply
+      # automatically per target.
+      - name: Build release-dist binary
+        run: cargo build --profile release-dist -p xai-grok-pager-bin
+        env:
+          GROK_VERSION: ${{ needs.version.outputs.version }}
+
+      # `deepseek-build <version> (<shortcommit>)` — both shape and stamped
+      # version are asserted; a wrong stamp must fail the job here.
+      - name: Smoke-check the built binary
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          out="$(target/release-dist/deepseek-build --version)"
+          printf 'binary reports: %s\n' "${out}"
+          if ! printf '%s\n' "${out}" | grep -Fq "deepseek-build ${RELEASE_VERSION} ("; then
+            echo "::error::--version does not report the release version: wanted 'deepseek-build ${RELEASE_VERSION} (...)', got '${out}'"
+            exit 1
+          fi
+          if ! printf '%s\n' "${out}" | grep -Eq '^deepseek-build [^ ]+ \([0-9a-f]{7,40}\)$'; then
+            echo "::error::--version output has unexpected shape (name version (commit)): '${out}'"
+            exit 1
+          fi
+
+      # Tarball with the binary + licenses at the TOP LEVEL (no nested dir), so
+      # `tar xf` drops the binary directly. THIRD-PARTY-NOTICES ships because
+      # vendored libgit2's GPL-2.0-with-linking-exception text lives there —
+      # that is the license-safe choice for a public distribution.
+      - name: Package tarball
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          RT: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          stage="$(mktemp -d)"
+          cp target/release-dist/deepseek-build "$stage/deepseek-build"
+          cp LICENSE NOTICE THIRD-PARTY-NOTICES "$stage/"
+          cat > "$stage/README.txt" <<'EOF'
+          deepseek-build
+          ==============
+
+          A terminal coding assistant for DeepSeek models (deepseek-v4-pro / deepseek-flash).
+
+          This binary is an independent project, not affiliated with DeepSeek.
+
+          It is built from source derived from xai-org/grok-build (Apache-2.0). The
+          LICENSE, NOTICE, and THIRD-PARTY-NOTICES files in this archive carry the
+          full license and attribution details, including the vendored libgit2
+          license (GPL-2.0-with-linking-exception).
+
+          Quick start:
+
+              export DEEPSEEK_API_KEY=...       # or DEEPSEEK_BUILD_API_KEY=...
+              ./deepseek-build
+
+          Configuration, sessions, and logs live under ~/.deepseek-build. At runtime
+          the binary only talks to api.deepseek.com over HTTPS.
+          Source and docs: https://github.com/coruairc/deepseek-build
+          EOF
+          tar -czf "deepseek-build-${RELEASE_VERSION}-${RT}.tar.gz" -C "$stage" deepseek-build LICENSE NOTICE THIRD-PARTY-NOTICES README.txt
+          printf '%s\n' "archive contents:"
+          tar -tzf "deepseek-build-${RELEASE_VERSION}-${RT}.tar.gz"
+
+      # GitHub-internal artifact transport only (see the hard constraint above).
+      # The publish job downloads these and attaches them to the release.
+      - name: Upload tarball as a job artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-${{ matrix.target }}
+          path: deepseek-build-*.tar.gz
+          if-no-files-found: error
+
+  # Publish job: runs on ubuntu-22.04 (pinned, not ubuntu-latest, for
+  # consistency with the build matrix; it only hashes and re-uploads files, so
+  # the base image age is irrelevant). Needs the least privilege that exists:
+  # contents: write to create the release, nothing else.
+  publish:
+    name: Publish GitHub release
+    needs: [version, build]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      # Merge all 4 release-* artifacts into one flat directory.
+      - name: Fetch packaged tarballs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+
+      - name: Verify all 4 tarballs arrived
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          for t in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu aarch64-apple-darwin x86_64-apple-darwin; do
+            file="dist/deepseek-build-${RELEASE_VERSION}-${t}.tar.gz"
+            if [ ! -f "${file}" ]; then
+              echo "::error::missing tarball: ${file}"
+              ls -la dist || true
+              exit 1
+            fi
+          done
+
+      - name: Guard — repo-root install.sh must exist to be published
+        run: |
+          set -euo pipefail
+          if [ ! -f install.sh ]; then
+            echo "::error::install.sh is missing at the repo root; it must be published as a release asset"
+            exit 1
+          fi
+
+      # Bare filenames in SHA256SUMS (no path prefix), matching the tarball
+      # names as published on the release.
+      - name: Generate SHA256SUMS
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          sha256sum deepseek-build-*.tar.gz > SHA256SUMS
+          cat SHA256SUMS
+
+      # The release is only created for tag runs (workflow_dispatch is for
+      # pipeline testing: it builds + uploads internal artifacts but skips this
+      # step). The action auto-detects -alpha/-rc tags as prerelease; make_latest
+      # default behavior applies. This is the only external upload: the GitHub
+      # release for the tag.
+      - name: Create the GitHub release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/SHA256SUMS
+            dist/deepseek-build-*.tar.gz
+            install.sh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
