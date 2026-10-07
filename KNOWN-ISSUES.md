@@ -8,17 +8,21 @@ real-use passes (2026-10-07).
 ## Build & tests
 
 - **`cargo test --workspace` does not compile yet.** Two separate problems:
-  - **`xai-grok-workspace` (repaired in Step 6, commits `582cb718`..`f8e67475`):**
-    its test target now **compiles** (`cargo check -p xai-grok-workspace --lib
-    --tests` is green). `TestSessionContextFactory` no longer sets the removed
-    `auth_provider`; tests for deleted hub/MCP/bind behavior were removed with
-    110 ledger entries in `docs/DROPPED-TESTS.md` (no kept-feature test dropped).
-    Running the suite: **1693 passed, 25 failed** — all pre-existing production
-    stubs, not compilation: 9 `permission::manager::tests::*` hit the removed hub
-    permission transport, 14 `sandbox::real_wiring_tests::*` expectation
-    mismatches, 1 `init_metrics_tests` expecting a removed
-    `grok_workspace_rpc_requests_total` baseline. Fixing these needs production
-    changes or explicit test decisions; they were not forced green.
+  - **`xai-grok-workspace` (repaired Step 6 `582cb718`..`f8e67475`; 25 leftover
+    failures resolved `755fb7cf`..`1fab9c64`):** its test target compiles and,
+    with the last 25 failing tests resolved, runs **1692 passed + 1 flaky** (the
+    flake rotates between the pre-existing `session::git_gate` /
+    `restore_fetch` timing tests and passes in isolation). All 25 were tests of
+    the deleted computer hub, not live regressions: 8
+    `permission::manager::tests::*` + helpers drove the removed hub permission
+    transport (`prompter.rs` `unreachable!`), 16 `sandbox::real_wiring_tests::*`
+    asserted the deleted `crate::hub::SessionRoutedToolHandler` dispatch
+    (pre-run gate, mode-layer guard, pin/floor + finish, result decode), and
+    `init_metrics_tests` asserted baselines for the deleted `hub_server` RPC
+    counters and the removed OIDC refresh metric. **Coverage gap to re-home:**
+    the local harness `SessionToolHandle`/`create_local_harness` runs the toolset
+    without that sandbox/pre-run integration, so equivalent local sandbox and
+    pre-run-gate coverage must be re-established (see `docs/DROPPED-TESTS.md`).
   - **`xai-grok-shell` (lib test target, ~96 errors):** test modules still
     reference deleted Phase-1 features — `crate::remote`
     (`Conversation`/`ConversationsClient`/`RemoteSync`), `crate::upload`
