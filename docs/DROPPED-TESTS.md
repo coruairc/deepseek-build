@@ -180,3 +180,63 @@ The workspace no longer hosts the computer hub, its `crate::hub`/`crate::hub_ser
 - `crates/codegen/xai-grok-workspace/src/permission/hub_permission.rs::request_sends_payload_and_decodes_reply` — tested removed `hub_permission::request_permission_via_hub`.
 - `crates/codegen/xai-grok-workspace/src/permission/hub_permission.rs::transport_error_fails_closed` — tested removed `hub_permission::request_permission_via_hub`.
 - `crates/codegen/xai-grok-workspace/src/permission/hub_permission.rs::edit_always_approve_maps_to_session_scope` — tested removed `hub_permission::request_permission_via_hub`.
+
+## `xai-grok-workspace` hub permission transport (manager + prompter)
+
+`prompter::Prompter` no longer carries a hub permission transport: `request` routes
+every prompt through the local ACP gateway and treats a present transport as
+removed (`unreachable!("hub permission transport removed")`). Tests that built a
+manager around `test_manager_with_hub`/`FakeHubTransport` exercised that removed
+transport and were deleted with their helpers.
+
+- `permission::manager::tests::test_manager_with_hub` (helper) — spawned a manager with the removed hub transport.
+- `permission::manager::tests::FakeHubTransport` (helper) — fake implementation of the removed transport.
+- `permission::manager::tests::fake_hub` (helper) — constructor for the fake transport.
+- `permission::manager::tests::hub_permission_approve_allows_and_emits_payload` — asserted the removed hub permission payload.
+- `permission::manager::tests::hub_permission_reject_aborts` — asserted the removed hub reject outcome.
+- `permission::manager::tests::hub_permission_cancelled_aborts_distinctly` — asserted the removed hub cancel outcome.
+- `permission::manager::tests::hub_permission_always_approve_persists_scope` — asserted hub always-approve scope persistence.
+- `permission::manager::tests::session_edit_grant_excludes_protected_target` — drove the removed hub always-approve path.
+- `permission::manager::tests::shared_manager_uses_request_path_context` — drove the removed hub prompt path.
+- `permission::manager::tests::ambiguous_mcp_server_scope_downgrades_to_exact_persisted_grant` — asserted hub-scope downgrade.
+- `permission::manager::tests::edit_session_grant_does_not_predecide_agent_message` — drove the removed hub transport.
+- `permission::manager::tests::agent_message_approval_does_not_grant_later_messages_or_edits` — drove the removed hub transport.
+
+## `xai-grok-workspace` sandbox real-wiring through the deleted hub dispatch
+
+The sandbox real-wiring tests dispatched tool calls through the deleted
+`crate::hub::SessionRoutedToolHandler::handle_call`, which performed the pre-run
+approval gate (`approve_hub_call`), the mode-layer write guard
+(`refuse_mode_layer_write`), sandbox pin/floor and the call-table finish, and the
+shell result decode/replay. That dispatch is gone; the local test shim routes
+through `WorkspaceHandle::create_local_harness` → `SessionToolHandle`, which runs
+the toolset directly and performs none of that integration, so the assertions no
+longer hold. Retained local sandbox behavior (`off` runs, enforce-without-backend
+refusal, daemon-off unasked run, mode-verb engage, proxy-off) stays covered.
+
+- `sandbox::real_wiring_tests::observe_runs_the_real_child_unwrapped_counts_it_and_never_shows_a_card`
+- `sandbox::real_wiring_tests::a_full_call_table_refuses_a_new_command_but_not_a_tool_that_spawns_nothing`
+- `sandbox::real_wiring_tests::an_unpinned_shell_call_spawns_no_weaker_than_its_dispatch_mode_after_a_flip`
+- `sandbox::real_wiring_tests::enforce_decodes_a_refused_write_and_keeps_the_denial_without_a_hub`
+- `sandbox::real_wiring_tests::enforced_pre_run_gate_leaves_shell_calls_to_the_sandbox_gate`
+- `sandbox::real_wiring_tests::enforced_pre_run_gate_still_asks_for_a_run_requested_in_the_background`
+- `sandbox::real_wiring_tests::enforced_pre_run_gate_still_asks_for_shell_calls_under_observe`
+- `sandbox::real_wiring_tests::enforced_pre_run_gate_refuses_a_persisted_deny_before_the_spawn`
+- `sandbox::real_wiring_tests::enforced_pre_run_gate_still_asks_always_prompt_tenants_under_enforce`
+- `sandbox::real_wiring_tests::a_file_tool_never_writes_a_mode_layer_under_enforce`
+- `sandbox::real_wiring_tests::a_file_tool_never_creates_a_missing_mode_layer_under_enforce`
+- `sandbox::real_wiring_tests::a_tool_that_is_no_shell_never_meets_the_sandbox`
+- `sandbox::real_wiring_tests::a_shell_call_whose_enforce_pin_is_gone_is_refused_unrun`
+- `sandbox::real_wiring_tests::shell_call_dispatched_under_observe_runs_observed_after_a_flip_to_enforce`
+- `sandbox::real_wiring_tests::enforce_serves_the_folder_with_a_proxy_the_real_child_is_pointed_at`
+- `sandbox::real_wiring_tests::a_card_answered_over_the_installed_transport_replays_the_real_command_once`
+
+## `xai-grok-workspace` removed metric baselines
+
+`init_metrics_tests::init_metrics_is_idempotent_and_registers_baselines` is
+retained; its assertions for metrics whose families were deleted were removed:
+`grok_workspace_rpc_requests_total` / `grok_workspace_rpc_errors_total`
+(registered by the deleted `hub_server.rs`) and
+`grok_workspace_oidc_proactive_refresh_total` (OAuth/OIDC proactive refresh
+removed with the xAI auth stack). The remaining baseline assertions (startup
+stages, drain, toolset swap, env-capture panic, permission timeout) still run.

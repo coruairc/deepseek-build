@@ -215,14 +215,6 @@ mod init_metrics_tests {
                     })
                 })
         };
-        assert!(has(
-            "grok_workspace_rpc_requests_total",
-            &[("method", "unknown"), ("result", "error")]
-        ));
-        assert!(has(
-            "grok_workspace_rpc_errors_total",
-            &[("method", "unknown"), ("error_kind", "unknown_method")]
-        ));
         for stage in [
             "startup_recovery",
             "tool_catalog",
@@ -248,21 +240,6 @@ mod init_metrics_tests {
             "grok_workspace_toolset_swap_rejected_total",
             &[("reason", "turn_active"), ("trigger", "update_tool_config")]
         ));
-        for outcome in [
-            "ok",
-            "failed_retry",
-            "failed_exhausted",
-            "failed_terminal",
-            "skipped_disabled",
-        ] {
-            assert!(
-                has(
-                    "grok_workspace_oidc_proactive_refresh_total",
-                    &[("outcome", outcome)]
-                ),
-                "missing oidc refresh baseline outcome={outcome}"
-            );
-        }
         assert!(
             families
                 .iter()
