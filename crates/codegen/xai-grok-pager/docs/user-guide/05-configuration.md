@@ -573,8 +573,6 @@ When telemetry is on, enterprises running their own collector can redirect it or
 
 ```toml
 [telemetry]
-events_url = "https://telemetry.your-company.com/events"  # send events to your own collector
-events_api_key = "your-collector-token"                   # auth for your collector, if required
 mixpanel_enabled = false                                  # disable Mixpanel product analytics
 trace_upload = false                                      # disable session/trace uploads (inherits the telemetry toggle when unset)
 ```

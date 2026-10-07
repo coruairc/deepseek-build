@@ -29,11 +29,9 @@ fn event_value(event_name: &str) -> &str {
 fn product_analytics_insert_id() -> String {
     uuid::Uuid::new_v4().simple().to_string()
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TelemetryClient {
     mode: TelemetryMode,
-    events_url: Option<String>,
-    events_api_key: Option<String>,
     user_id: Option<String>,
     team_id: Option<String>,
     deployment_id: Option<String>,
@@ -41,17 +39,6 @@ pub struct TelemetryClient {
     client_type: Option<String>,
     client_version: Option<String>,
     subscription_tier: Option<String>,
-}
-impl std::fmt::Debug for TelemetryClient {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("TelemetryClient")
-            .field("events_url", &self.events_url)
-            .field(
-                "events_api_key",
-                &self.events_api_key.as_ref().map(|_| "***"),
-            )
-            .finish()
-    }
 }
 /// Opts a dev build (no `GROK_VERSION` at compile time) back into the baked production sinks.
 const ALLOW_DEV_BUILD_ENV: &str = "GROK_TELEMETRY_ALLOW_DEV_BUILD";
@@ -88,8 +75,6 @@ impl TelemetryClient {
         };
         Self {
             mode,
-            events_url: config.events_url,
-            events_api_key: config.events_api_key,
             user_id,
             team_id,
             deployment_id,
@@ -407,8 +392,6 @@ mod tests {
         let cfg = TelemetryConfig {
             mixpanel_enabled: true,
             mixpanel_token: Some("test-token".into()),
-            events_url: None,
-            events_api_key: None,
             ..TelemetryConfig::default()
         };
         init(

@@ -2712,19 +2712,12 @@ fn telemetry_config_parses_custom_values_from_toml() {
     let raw: toml::Value = toml::from_str(
         r#"
             [telemetry]
-            events_url     = "https://custom.example.com/events"
-            events_api_key = "custom-key"
             mixpanel_token = "custom-token"
             mixpanel_enabled = false
             "#,
     )
     .unwrap();
     let cfg = Config::new_from_toml_cfg(&raw).expect("should parse");
-    assert_eq!(
-        cfg.telemetry.events_url.as_deref(),
-        Some("https://custom.example.com/events")
-    );
-    assert_eq!(cfg.telemetry.events_api_key.as_deref(), Some("custom-key"));
     assert_eq!(
         cfg.telemetry.mixpanel_token.as_deref(),
         Some("custom-token")
@@ -2768,15 +2761,11 @@ fn telemetry_empty_string_disables_sink() {
     let raw: toml::Value = toml::from_str(
         r#"
             [telemetry]
-            events_url     = ""
-            events_api_key = "  "
             mixpanel_token = "\t"
             "#,
     )
     .unwrap();
     let cfg = Config::new_from_toml_cfg(&raw).expect("should parse");
-    assert!(cfg.telemetry.events_url.is_none());
-    assert!(cfg.telemetry.events_api_key.is_none());
     assert!(cfg.telemetry.mixpanel_token.is_none());
 }
 #[test]
@@ -2784,18 +2773,16 @@ fn telemetry_partial_override_retains_defaults() {
     let raw: toml::Value = toml::from_str(
         r#"
             [telemetry]
-            events_url = "https://my-proxy/events"
+            mixpanel_token = "my-proxy-token"
             "#,
     )
     .unwrap();
     let cfg = Config::new_from_toml_cfg(&raw).expect("should parse");
     assert_eq!(
-        cfg.telemetry.events_url.as_deref(),
-        Some("https://my-proxy/events")
+        cfg.telemetry.mixpanel_token.as_deref(),
+        Some("my-proxy-token")
     );
     let defaults = TelemetryConfig::default();
-    assert_eq!(cfg.telemetry.events_api_key, defaults.events_api_key);
-    assert_eq!(cfg.telemetry.mixpanel_token, defaults.mixpanel_token);
     assert_eq!(cfg.telemetry.mixpanel_enabled, defaults.mixpanel_enabled);
 }
 #[test]

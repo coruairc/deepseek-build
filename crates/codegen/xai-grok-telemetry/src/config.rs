@@ -127,8 +127,6 @@ pub struct TelemetryConfig {
     /// Declared for `serde_ignored`. Actual toggle is `[features] telemetry`.
     #[serde(default)]
     pub enabled: Option<bool>,
-    pub events_url: Option<String>,
-    pub events_api_key: Option<String>,
     pub mixpanel_token: Option<String>,
     pub mixpanel_enabled: bool,
     /// `None` inherits from `[features] telemetry`; `Some(false)` disables GCS uploads only.
@@ -172,8 +170,8 @@ pub struct TelemetryConfig {
     pub otel_metrics_client_key: Option<String>,
     pub otel_metrics_include_session_id: Option<bool>,
 }
-fn internal_defaults() -> (Option<String>, Option<String>, Option<String>, bool) {
-    (None, None, None, false)
+fn internal_defaults() -> (Option<String>, bool) {
+    (None, false)
 }
 fn build_env_default(value: Option<&'static str>) -> Option<String> {
     value
@@ -183,20 +181,12 @@ fn build_env_default(value: Option<&'static str>) -> Option<String> {
 }
 impl Default for TelemetryConfig {
     fn default() -> Self {
-        let (baked_url, baked_key, baked_token, baked_enabled) = internal_defaults();
-        let build_url = build_env_default(option_env!("GROK_TELEMETRY_BUILD_EVENTS_URL"));
-        let build_key = build_env_default(option_env!("GROK_TELEMETRY_BUILD_EVENTS_API_KEY"));
+        let (baked_token, baked_enabled) = internal_defaults();
         let build_token = build_env_default(option_env!("GROK_TELEMETRY_BUILD_MIXPANEL_TOKEN"));
         let mixpanel_enabled = baked_enabled || build_token.is_some();
-        let (events_url, events_api_key, mixpanel_token) = (
-            build_url.or(baked_url),
-            build_key.or(baked_key),
-            build_token.or(baked_token),
-        );
+        let mixpanel_token = build_token.or(baked_token);
         Self {
             enabled: None,
-            events_url,
-            events_api_key,
             mixpanel_token,
             mixpanel_enabled,
             trace_upload: None,
@@ -229,17 +219,10 @@ impl Default for TelemetryConfig {
     }
 }
 impl TelemetryConfig {
-    /// Clears every sink still carrying its baked `internal-telemetry-defaults` value; the events
-    /// key follows the URL, so an explicit URL keeps a baked key. Returns whether anything was cleared.
+    /// Clears the baked `internal-telemetry-defaults` Mixpanel sink value.
+    /// Returns whether anything was cleared.
     pub(crate) fn disarm_baked_sinks(&mut self) -> bool {
-        let (baked_url, _, baked_token, _) = internal_defaults();
-        let events_cleared = self
-            .events_url
-            .take_if(|url| baked_url.as_deref() == Some(url.as_str()))
-            .is_some();
-        if events_cleared {
-            self.events_api_key = None;
-        }
+        let (baked_token, _) = internal_defaults();
         let token_cleared = self
             .mixpanel_token
             .take_if(|token| baked_token.as_deref() == Some(token.as_str()))
@@ -247,16 +230,10 @@ impl TelemetryConfig {
         if token_cleared {
             self.mixpanel_enabled = false;
         }
-        events_cleared || token_cleared
+        token_cleared
     }
     pub fn apply_env_overrides(&mut self) {
         self.normalize();
-        if let Some(value) = Self::env_override("GROK_TELEMETRY_EVENTS_URL") {
-            self.events_url = value;
-        }
-        if let Some(value) = Self::env_override("GROK_TELEMETRY_EVENTS_API_KEY") {
-            self.events_api_key = value;
-        }
         if let Some(value) = Self::env_override("GROK_TELEMETRY_MIXPANEL_TOKEN") {
             self.mixpanel_token = value;
         }
@@ -268,8 +245,6 @@ impl TelemetryConfig {
         }
     }
     fn normalize(&mut self) {
-        self.events_url = Self::normalize_optional_string(self.events_url.take());
-        self.events_api_key = Self::normalize_optional_string(self.events_api_key.take());
         self.mixpanel_token = Self::normalize_optional_string(self.mixpanel_token.take());
     }
     fn env_override(name: &str) -> Option<Option<String>> {
@@ -303,44 +278,28 @@ mod tests {
         assert_eq!(build_env_default(Some(" \t ")), None);
         assert_eq!(build_env_default(Some(" key ")), Some("key".to_owned()));
     }
-    /// The key follows the URL: a baked key next to an explicit URL stays, or the explicit sink would post nothing.
+    /// An explicit Mixpanel token must not be treated as a baked sink and cleared.
     #[test]
-    fn disarm_baked_sinks_keeps_explicit_sinks() {
+    fn disarm_baked_sinks_keeps_explicit_sink() {
         let mut cfg = TelemetryConfig {
-            events_url: Some("http://127.0.0.1:9/events".into()),
             mixpanel_token: Some("explicit-token".into()),
             mixpanel_enabled: true,
             ..TelemetryConfig::default()
         };
-        let key_before = cfg.events_api_key.clone();
         assert!(
             !cfg.disarm_baked_sinks(),
-            "explicit sinks must not count as cleared"
+            "an explicit sink must not count as cleared"
         );
         assert_eq!(
-            (
-                cfg.events_url.as_deref(),
-                cfg.events_api_key == key_before,
-                cfg.mixpanel_token.as_deref(),
-                cfg.mixpanel_enabled
-            ),
-            (
-                Some("http://127.0.0.1:9/events"),
-                true,
-                Some("explicit-token"),
-                true
-            )
+            (cfg.mixpanel_token.as_deref(), cfg.mixpanel_enabled),
+            (Some("explicit-token"), true)
         );
     }
     #[test]
     fn default_is_build_env_layer_when_feature_off() {
         let cfg = TelemetryConfig::default();
-        let url = build_env_default(option_env!("GROK_TELEMETRY_BUILD_EVENTS_URL"));
-        let key = build_env_default(option_env!("GROK_TELEMETRY_BUILD_EVENTS_API_KEY"));
         let token = build_env_default(option_env!("GROK_TELEMETRY_BUILD_MIXPANEL_TOKEN"));
         assert_eq!(cfg.mixpanel_enabled, token.is_some());
-        assert_eq!(cfg.events_url, url);
-        assert_eq!(cfg.events_api_key, key);
         assert_eq!(cfg.mixpanel_token, token);
     }
     #[test]

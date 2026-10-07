@@ -1245,8 +1245,6 @@ fn apply_requirements_inner(
             trace_upload_url: &mut config.endpoints.trace_upload_url,
             feedback_base_url: &mut config.endpoints.feedback_base_url,
             deployment_key: &mut config.endpoints.deployment_key,
-            events_url: &mut config.telemetry.events_url,
-            events_api_key: &mut config.telemetry.events_api_key,
             mixpanel_enabled: &mut config.telemetry.mixpanel_enabled,
             mixpanel_token: &mut config.telemetry.mixpanel_token,
             trace_upload_bucket: &mut config.endpoints.trace_upload_bucket,

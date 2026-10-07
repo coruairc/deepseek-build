@@ -167,17 +167,6 @@ impl Drop for ResetTelemetry {
     }
 }
 
-fn init_product(server: &xai_grok_test_support::MockInferenceServer, mode: TelemetryMode) {
-    let config = xai_grok_telemetry::config::TelemetryConfig {
-        events_url: Some(format!("{}/events", server.url())),
-        events_api_key: Some("test-key".into()),
-        mixpanel_enabled: false,
-        mixpanel_token: None,
-        ..xai_grok_telemetry::config::TelemetryConfig::default()
-    };
-    xai_grok_telemetry::init(config, mode, None, None, None, None, "test".into(), None);
-}
-
 fn tool_call(
     id: &str,
     name: &str,

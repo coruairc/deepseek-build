@@ -126,8 +126,6 @@ trace_upload_endpoint_url = \"https://upload.example\"
 trace_upload_credentials = \"upload-secret\"
 
 [telemetry]
-events_url = \"https://events.example\"
-events_api_key = \"events-secret\"
 mixpanel_enabled = true
 mixpanel_token = \"mix-secret\"
 ",
@@ -151,8 +149,6 @@ mixpanel_token = \"mix-secret\"
     let mut trace_upload_url = Some("other".to_owned());
     let mut feedback_base_url = Some("other".to_owned());
     let mut deployment_key = Some("other".to_owned());
-    let mut events_url = Some("other".to_owned());
-    let mut events_api_key = Some("other".to_owned());
     let mut mixpanel_token = Some("other".to_owned());
     let mut trace_upload_bucket = Some("other".to_owned());
     let mut trace_upload_region = Some("other".to_owned());
@@ -189,8 +185,6 @@ mixpanel_token = \"mix-secret\"
             trace_upload_url: &mut trace_upload_url,
             feedback_base_url: &mut feedback_base_url,
             deployment_key: &mut deployment_key,
-            events_url: &mut events_url,
-            events_api_key: &mut events_api_key,
             mixpanel_enabled: &mut mixpanel_enabled,
             mixpanel_token: &mut mixpanel_token,
             trace_upload_bucket: &mut trace_upload_bucket,
@@ -220,8 +214,6 @@ mixpanel_token = \"mix-secret\"
         ("endpoints.trace_upload_url", "https://traces.example"),
         ("endpoints.feedback_base_url", "https://feedback.example"),
         ("endpoints.deployment_key", "[redacted]"),
-        ("telemetry.events_url", "https://events.example"),
-        ("telemetry.events_api_key", "[redacted]"),
         ("telemetry.mixpanel_enabled", "true"),
         ("telemetry.mixpanel_token", "[redacted]"),
         ("endpoints.trace_upload_bucket", "trace-bucket"),
@@ -276,8 +268,6 @@ mixpanel_token = \"mix-secret\"
                 Some("https://feedback.example")
             ),
             ("endpoints.deployment_key", Some("deploy-secret")),
-            ("telemetry.events_url", Some("https://events.example")),
-            ("telemetry.events_api_key", Some("events-secret")),
             ("telemetry.mixpanel_token", Some("mix-secret")),
             ("endpoints.trace_upload_bucket", Some("trace-bucket")),
             ("endpoints.trace_upload_region", Some("us-east-1")),
@@ -309,8 +299,6 @@ mixpanel_token = \"mix-secret\"
             ("endpoints.trace_upload_url", trace_upload_url.as_deref()),
             ("endpoints.feedback_base_url", feedback_base_url.as_deref()),
             ("endpoints.deployment_key", deployment_key.as_deref()),
-            ("telemetry.events_url", events_url.as_deref()),
-            ("telemetry.events_api_key", events_api_key.as_deref()),
             ("telemetry.mixpanel_token", mixpanel_token.as_deref()),
             (
                 "endpoints.trace_upload_bucket",

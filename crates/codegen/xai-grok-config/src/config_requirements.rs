@@ -153,10 +153,6 @@ pub struct EndpointRequirements {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 pub struct TelemetryRequirements {
-    #[serde(default, deserialize_with = "de_string")]
-    pub events_url: Option<String>,
-    #[serde(default, deserialize_with = "de_string")]
-    pub events_api_key: Option<String>,
     #[serde(default, deserialize_with = "de_mixpanel_enabled")]
     pub mixpanel_enabled: Option<bool>,
     #[serde(default, deserialize_with = "de_string")]
@@ -334,20 +330,6 @@ impl RequirementsToml {
             true,
             push,
         );
-        write_text(
-            pins.events_url,
-            self.telemetry.events_url.as_deref(),
-            "telemetry.events_url",
-            false,
-            push,
-        );
-        write_text(
-            pins.events_api_key,
-            self.telemetry.events_api_key.as_deref(),
-            "telemetry.events_api_key",
-            true,
-            push,
-        );
         write_flag(
             pins.mixpanel_enabled,
             self.telemetry.mixpanel_enabled,
@@ -427,8 +409,6 @@ pub struct UploadTelemetryPins<'a> {
     pub trace_upload_url: &'a mut Option<String>,
     pub feedback_base_url: &'a mut Option<String>,
     pub deployment_key: &'a mut Option<String>,
-    pub events_url: &'a mut Option<String>,
-    pub events_api_key: &'a mut Option<String>,
     pub mixpanel_enabled: &'a mut bool,
     pub mixpanel_token: &'a mut Option<String>,
     pub trace_upload_bucket: &'a mut Option<String>,
