@@ -350,3 +350,25 @@ Repaired, not dropped (kept behavior):
   `inject_*` tests; their wake/admission behavior assertions remain.
 - Repaired `persistence_tests::test_actor_inner` call sites and
   `session_delete_evicts_index.rs` (removed the now-unused auth setup).
+
+## `xai-grok-shell` integration tests
+
+The remote-settings prefetch and the managed-config startup profile were
+removed in Phase 1; tests in `crates/codegen/xai-grok-shell/tests/**` that
+asserted them were deleted with the surface. Local behavior (boot, plugins,
+sessions gauge, subagent bootstrap, spawn timers) is retained and the shared
+`acp_harness` / `common` helpers were repaired.
+
+- `tests/test_startup_prefetch_fallback.rs` — asserted the removed remote-settings prefetch fallback.
+- `tests/test_startup_prefetch_overlap.rs` — asserted the removed remote-settings prefetch overlap.
+- `tests/test_startup_prefetch_policy.rs` — asserted the removed remote-settings fetch policy.
+- `tests/test_startup_prefetch_repair_overlap.rs` — asserted the removed remote-settings repair overlap.
+- `tests/test_startup_prefetch_repair_skip.rs` — asserted the removed remote-settings repair gate.
+- `tests/test_startup_prefetch_shared.rs` — asserted the removed remote-settings prefetch sharing.
+- `tests/test_startup_settings_unpersisted_session.rs` — asserted the removed in-memory remote-settings fetch.
+- `tests/test_startup_boot_current_thread.rs` — asserted the removed `resolve_boot_startup_settings` + `RemoteSettings` path.
+
+Helper cleanup: removed the four dead calls to
+`xai_grok_shell::agent::remote_config::settings_get::reset_startup_settings_for_tests`
+and `xai_grok_shell::managed_config::clear_startup_profile_for_tests` from
+`tests/common/mod.rs` and `tests/acp_harness/mod.rs`.

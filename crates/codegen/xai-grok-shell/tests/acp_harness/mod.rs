@@ -321,12 +321,8 @@ impl RestoreProcessGlobals {
     }
 
     fn reset() {
-        // These seams exist only when the library is built with test-support
-        // (integration tests) or as a unit-test crate.
-        #[cfg(feature = "test-support")]
-        {
-            xai_grok_shell::managed_config::clear_startup_profile_for_tests();
-        }
+        // The previous reset of the removed remote-settings profile cache is
+        // gone with the remote settings; nothing else to do here.
     }
 }
 
@@ -376,7 +372,6 @@ pub fn run_agent_test_with_models<F, Fut>(
     Fut: std::future::Future<Output = ()>,
 {
     let _env_guard = hold_global_env();
-    xai_grok_shell::agent::remote_config::settings_get::reset_startup_settings_for_tests();
     xai_grok_extra_ca::ensure_default_crypto_provider();
 
     // Own thread: agent startup blocks on a models prefetch and would starve the mock.

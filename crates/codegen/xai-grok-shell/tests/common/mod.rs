@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use xai_grok_shell::sampling::{ApiBackend, Client, SamplerConfig};
 
 #[cfg(unix)]
@@ -290,8 +291,6 @@ pub mod leader {
 
 #[allow(dead_code)]
 pub fn isolated_home() -> tempfile::TempDir {
-    xai_grok_shell::agent::remote_config::settings_get::reset_startup_settings_for_tests();
-    xai_grok_shell::managed_config::clear_startup_profile_for_tests();
     let home = tempfile::TempDir::new().expect("grok home tempdir");
     // SAFETY: single-test binary; no other thread reads or writes the environment.
     unsafe { xai_grok_test_support::isolate_grok_env(home.path()) };
