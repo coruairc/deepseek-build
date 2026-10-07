@@ -1387,22 +1387,6 @@ fn feedback_does_not_resolve_when_disabled() {
     );
 }
 
-#[test]
-fn feedback_resolves_when_enabled() {
-    let outcome = resolve(
-        vec![text_block("/feedback hello")],
-        &[],
-        all_gated(),
-        SkillSlashRewrite::default(),
-        &[],
-    )
-    .unwrap_err();
-    assert!(matches!(
-        outcome,
-        SlashCommandOutcome::Builtin(BuiltinAction::Feedback { ref text }) if text == "hello"
-    ));
-}
-
 fn advertised_names_with(availability: CommandAvailability) -> Vec<String> {
     available_commands(&[], availability, &[])
         .into_iter()

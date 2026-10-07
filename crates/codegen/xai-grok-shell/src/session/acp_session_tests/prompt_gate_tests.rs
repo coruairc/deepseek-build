@@ -256,14 +256,11 @@ async fn synthetic_prompt_ignores_hook_block() {
                     PromptMode::Agent,
                     None,
                     None,
-                    None,
-                    None,
                     false,
                     false,
                     None,
                     None,
-                    None,
-                ))
+                    None))
                 .await
             });
 
@@ -323,14 +320,11 @@ async fn subagent_session_ignores_hook_block() {
                     PromptMode::Agent,
                     None,
                     None,
-                    None,
-                    None,
                     false,
                     false,
                     None,
                     None,
-                    None,
-                ))
+                    None))
                 .await
             });
 
@@ -653,14 +647,11 @@ async fn synthetic_prompt_commits_despite_blocking_hook() {
                     PromptMode::Agent,
                     None,
                     None,
-                    None,
-                    None,
                     false,
                     false,
                     None,
                     None,
-                    None,
-                ))
+                    None))
                 .await
             });
 

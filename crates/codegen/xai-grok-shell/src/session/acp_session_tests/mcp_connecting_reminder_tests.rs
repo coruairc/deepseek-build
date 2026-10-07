@@ -362,14 +362,11 @@ fn blocking_prompt_mid_handshake_gets_no_stale_connecting_reminder() {
                     PromptMode::Agent,
                     None,
                     None,
-                    None,
-                    None,
                     /* verbatim */ false,
                     /* send_now */ false,
                     None,
                     Some(ack_tx),
-                    None,
-                )
+                    None)
                 .await
         });
         // Persist-ack is after turn-start reminders and the user item, before the model call.
@@ -412,14 +409,11 @@ fn progressive_prompt_mid_handshake_still_announces_connecting() {
                     PromptMode::Agent,
                     None,
                     None,
-                    None,
-                    None,
                     /* verbatim */ false,
                     /* send_now */ false,
                     None,
                     Some(ack_tx),
-                    None,
-                )
+                    None)
                 .await
         });
 

@@ -1199,36 +1199,6 @@ async fn test_set_tracing_config() {
     actor_handle.await.unwrap();
 }
 
-#[tokio::test]
-async fn test_gcs_queue_snapshot() {
-    let (handle, actor) = SessionSignalsActor::new();
-    let actor_handle = tokio::spawn(actor.run());
-
-    let _ = handle.tx.send(SignalEvent::RecordGcsQueueSnapshot {
-        enqueued: 50,
-        uploaded: 48,
-        failed: 1,
-        fallbacks: 1,
-        circuit_breaker_trips: 0,
-        pending: 3,
-        pending_bytes: 1_048_576,
-        orphans_cleaned: 5,
-    });
-
-    let snap = handle.snapshot().await.unwrap();
-    assert_eq!(snap.gcs_queue_enqueued, 50);
-    assert_eq!(snap.gcs_queue_uploaded, 48);
-    assert_eq!(snap.gcs_queue_failed, 1);
-    assert_eq!(snap.gcs_queue_fallbacks, 1);
-    assert_eq!(snap.gcs_queue_circuit_breaker_trips, 0);
-    assert_eq!(snap.gcs_queue_pending, 3);
-    assert_eq!(snap.gcs_queue_pending_bytes, 1_048_576);
-    assert_eq!(snap.gcs_queue_orphans_cleaned, 5);
-
-    handle.shutdown();
-    actor_handle.await.unwrap();
-}
-
 #[test]
 fn test_sample_rss_bytes_returns_nonzero() {
     let rss = sample_rss_bytes();

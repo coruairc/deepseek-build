@@ -10,7 +10,6 @@ fn human_unsupported_operation_rejects_without_command() {
             agent_client_protocol::TextContent::new("hello"),
         )],
         prompt_mode: PromptMode::Agent,
-        artifact_upload_ctx: None,
         client_identifier: None,
         screen_mode: None,
         verbatim: false,

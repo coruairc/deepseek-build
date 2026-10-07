@@ -2,41 +2,6 @@ use super::*;
 use serial_test::serial;
 use xai_grok_test_support::EnvGuard;
 #[test]
-fn coding_data_opt_out_does_not_block_uploads_to_own_bucket() {
-    let normal = xai_grok_login::GrokAuth::test_default();
-    let opted_out = xai_grok_login::GrokAuth {
-        coding_data_retention_opt_out: true,
-        ..xai_grok_login::GrokAuth::test_default()
-    };
-    let zdr = xai_grok_login::GrokAuth {
-        team_blocked_reasons: vec!["BLOCKED_REASON_NO_LOGS".into()],
-        ..xai_grok_login::GrokAuth::test_default()
-    };
-    let cases = [
-        (None, &normal, false),
-        (None, &opted_out, true),
-        (None, &zdr, true),
-        (Some("file:///tmp/acme-traces"), &normal, false),
-        (Some("file:///tmp/acme-traces"), &opted_out, false),
-        (Some("file:///tmp/acme-traces"), &opted_out, false),
-        (Some("file:///tmp/acme-traces"), &zdr, true),
-        (Some("ftp://acme-traces"), &opted_out, true),
-    ];
-    for (bucket, auth, expected) in cases {
-        let endpoints = EndpointsConfig {
-            trace_upload_bucket: bucket.map(str::to_owned),
-            ..EndpointsConfig::default()
-        };
-        assert_eq!(
-            expected,
-            endpoints.is_trace_upload_blocked_for(auth),
-            "bucket={bucket:?} opt_out={} zdr={}",
-            auth.coding_data_retention_opt_out,
-            auth.is_zdr_team()
-        );
-    }
-}
-#[test]
 fn main_cli_tools_override_preserves_profile_injection_policy() {
     let overrides = CliAgentOverrides {
         tools: Some(vec!["read_file".into()]),

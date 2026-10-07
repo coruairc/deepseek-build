@@ -93,11 +93,8 @@ async fn run_turn_attached(
         actor.process_conversation_turn_with_recovery(
             "req-transient-loop-test",
             None,
-            None,
-            None,
             &mut length_salvage::LengthSalvage::new(None),
-            &mut Default::default(),
-        ),
+            &mut Default::default()),
     )
     .await
     .expect("turn must finish within timeout");
@@ -308,11 +305,8 @@ fn prompt_budget_spans_turn_loop_reentries() {
                     actor.process_conversation_turn_with_recovery(
                         &format!("req-reentry-{entry}"),
                         None,
-                        None,
-                        None,
                         &mut length_salvage::LengthSalvage::new(None),
-                        &mut Default::default(),
-                    ),
+                        &mut Default::default()),
                 )
                 .await
                 .expect("entry must finish within timeout");
@@ -354,11 +348,8 @@ fn turn_phase_prompt_latency_invariants() {
                 actor.process_conversation_turn_with_recovery(
                     "req-turn-phase-invariant",
                     None,
-                    None,
-                    None,
                     &mut length_salvage::LengthSalvage::new(None),
-                    &mut Default::default(),
-                ),
+                    &mut Default::default()),
             )
             .await
             .expect("turn must finish within timeout");

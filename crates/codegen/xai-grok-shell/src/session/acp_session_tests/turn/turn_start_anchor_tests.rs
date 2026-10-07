@@ -28,14 +28,11 @@ fn host_turn_stamps_fresh_turn_start() {
                 PromptMode::Agent,
                 None,
                 None,
-                None,
-                None,
                 false,
                 false,
                 None,
                 None,
-                None,
-            ))
+                None))
             .await
             .expect("/session-info ends the turn host-side");
 

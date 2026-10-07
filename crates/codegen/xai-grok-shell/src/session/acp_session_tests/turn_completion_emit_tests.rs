@@ -84,8 +84,6 @@ pub(super) fn pending_input(prompt_id: &str) -> (InputItem, oneshot::Receiver<Pr
         prompt_id: prompt_id.to_string(),
         prompt_blocks: vec![],
         prompt_mode: PromptMode::Agent,
-        trace_gcs_config: None,
-        artifact_tracker: None,
         client_identifier: None,
         screen_mode: None,
         verbatim: false,

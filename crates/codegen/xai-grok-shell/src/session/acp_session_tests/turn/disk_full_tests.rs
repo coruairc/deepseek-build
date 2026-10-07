@@ -164,14 +164,11 @@ pub(super) async fn run_prompt(
             PromptMode::Agent,
             None,
             None,
-            None,
-            None,
             true,
             /* send_now */ false,
             None,
             None,
-            None,
-        ),
+            None),
     )
     .await
     .expect("turn must finish within timeout")
