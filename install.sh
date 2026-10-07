@@ -136,6 +136,27 @@ expected_hash_for() {
     printf '%s' "$_line" | cut -d' ' -f1
 }
 
+# Find the tarball filename for <target> in a SHA256SUMS file. Returns nonzero
+# if the release has no asset for that target.
+tarball_name_for_target() {
+    # tarball_name_for_target <sums-file> <target>
+    _sums=$1
+    _target=$2
+    _line=$(grep -E "^[0-9a-fA-F]{64}  deepseek-build-[^ ]*-${_target}\.tar\.gz$" "$_sums" | head -n 1 || true)
+    if [ -z "$_line" ]; then
+        return 1
+    fi
+    printf '%s' "$_line" | sed -E 's/^[0-9a-fA-F]{64}[[:space:]]+//'
+}
+
+# Extract the version number from a tarball filename for a known target.
+version_from_tarball() {
+    # version_from_tarball <tarball-name> <target>
+    _name=$1
+    _target=$2
+    printf '%s' "$_name" | sed -E "s/^deepseek-build-(.*)-${_target}\\.tar\\.gz\$/\\1/"
+}
+
 # ---------------------------------------------------------------------------
 # Argument handling
 # ---------------------------------------------------------------------------
@@ -200,40 +221,6 @@ INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 VERSION="${VERSION:-}"
 
 # ---------------------------------------------------------------------------
-# Latest-release resolution
-# ---------------------------------------------------------------------------
-# The release tarball name embeds the version number, so "latest" must be
-# resolved to a concrete tag first. GitHub's /releases/latest/download/<asset>
-# shortcut only works when the asset name is version-independent, which ours is
-# not. Resolution uses the public releases list API (api.github.com, part of
-# the github.com host family) and picks the newest non-draft release tag.
-
-resolve_latest_version() {
-    _api="https://api.github.com/repos/$REPO/releases/latest"
-    _tag=""
-    if have curl; then
-        _tag=$(curl -fsSL --retry 2 "$_api" 2>/dev/null | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4)
-    elif have wget; then
-        _tag=$(wget -q -O - "$_api" 2>/dev/null | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4)
-    fi
-    [ -n "$_tag" ] || die "Could not resolve the latest release tag from api.github.com. Pin one: VERSION=vX.Y.Z sh install.sh"
-    printf '%s' "$_tag"
-}
-
-if [ "$VERSION" = "" ]; then
-    VERSION=$(resolve_latest_version)
-fi
-
-case "$VERSION" in
-    v*) VERSION_TAG="$VERSION"; VERSION_NUM="${VERSION#v}" ;;
-    *) VERSION_TAG="v$VERSION"; VERSION_NUM="$VERSION" ;;
-esac
-case "$VERSION_TAG" in
-    v[0-9]*) ;;
-    *) die "Invalid VERSION: $VERSION (expected vX.Y.Z or X.Y.Z)" ;;
-esac
-
-# ---------------------------------------------------------------------------
 # Platform target
 # ---------------------------------------------------------------------------
 
@@ -242,20 +229,41 @@ if [ -z "$TARGET" ]; then
     die "Unsupported platform: $(uname_s)/$(uname_m). Supported: Linux x86_64/arm64, macOS x86_64/arm64."
 fi
 
-TARBALL="deepseek-build-${VERSION_NUM}-${TARGET}.tar.gz"
-
 # ---------------------------------------------------------------------------
-# Download (tarball + SHA256SUMS) — the only network activity
+# Download (SHA256SUMS + tarball) — the only network activity
 # ---------------------------------------------------------------------------
+# The tarball name embeds the version, so for "latest" the version is learned
+# from the version-independent SHA256SUMS asset on the latest release. Both
+# requests go to github.com; no API host is contacted.
 
 TMPDIR_DSB=$(mktemp -d "${TMPDIR:-/tmp}/dsb-install.XXXXXX")
 trap 'rm -rf "$TMPDIR_DSB"' EXIT HUP INT TERM
 
-log "Downloading $TARBALL"
-fetch "$(base_url)/download/$VERSION_TAG/$TARBALL" "$TMPDIR_DSB/$TARBALL"
-
-log "Downloading SHA256SUMS"
-fetch "$(base_url)/download/$VERSION_TAG/SHA256SUMS" "$TMPDIR_DSB/SHA256SUMS"
+if [ "$VERSION" = "" ]; then
+    log "Resolving the latest release"
+    fetch "$(base_url)/latest/download/SHA256SUMS" "$TMPDIR_DSB/SHA256SUMS"
+    TARBALL=$(tarball_name_for_target "$TMPDIR_DSB/SHA256SUMS" "$TARGET") || \
+        die "The latest release has no asset for $TARGET (not listed in SHA256SUMS)."
+    VERSION_NUM=$(version_from_tarball "$TARBALL" "$TARGET")
+    VERSION_TAG="v$VERSION_NUM"
+    log "Latest release: $VERSION_TAG"
+    log "Downloading $TARBALL"
+    fetch "$(base_url)/latest/download/$TARBALL" "$TMPDIR_DSB/$TARBALL"
+else
+    case "$VERSION" in
+        v*) VERSION_TAG="$VERSION"; VERSION_NUM="${VERSION#v}" ;;
+        *) VERSION_TAG="v$VERSION"; VERSION_NUM="$VERSION" ;;
+    esac
+    case "$VERSION_TAG" in
+        v[0-9]*) ;;
+        *) die "Invalid VERSION: $VERSION (expected vX.Y.Z or X.Y.Z)" ;;
+    esac
+    TARBALL="deepseek-build-${VERSION_NUM}-${TARGET}.tar.gz"
+    log "Downloading $TARBALL"
+    fetch "$(base_url)/download/$VERSION_TAG/$TARBALL" "$TMPDIR_DSB/$TARBALL"
+    log "Downloading SHA256SUMS"
+    fetch "$(base_url)/download/$VERSION_TAG/SHA256SUMS" "$TMPDIR_DSB/SHA256SUMS"
+fi
 
 # ---------------------------------------------------------------------------
 # Verify checksum BEFORE extracting

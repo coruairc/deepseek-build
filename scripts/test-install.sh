@@ -139,10 +139,13 @@ build_fake_tree() {
         say "SKIP: unknown host platform, cannot build fake tree"
         exit 77
     }
-    mkdir -p "$_tree/download/v$FAKE_VERSION" "$_tree/download/v$FAKE_VERSION_2"
+    mkdir -p "$_tree/download/v$FAKE_VERSION" "$_tree/download/v$FAKE_VERSION_2" "$_tree/latest/download"
     make_tarball "$_tree/stage" "$FAKE_VERSION" "$_host" "$_tree/download/v$FAKE_VERSION" "$_corrupt"
     # A second version for the rerun-to-update case.
     make_tarball "$_tree/stage2" "$FAKE_VERSION_2" "$_host" "$_tree/download/v$FAKE_VERSION_2"
+    # The "latest" release points at the newest version (v2).
+    cp "$_tree/download/v$FAKE_VERSION_2/deepseek-build-$FAKE_VERSION_2-$_host.tar.gz" "$_tree/latest/download/"
+    cp "$_tree/download/v$FAKE_VERSION_2/SHA256SUMS" "$_tree/latest/download/SHA256SUMS"
     # install.sh as a release asset (some tests fetch it).
     cp "$INSTALL_SH" "$_tree/install.sh"
 }
@@ -271,6 +274,22 @@ new_sandbox hint
 OUT=$(HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" VERSION="$FAKE_VERSION" \
     PATH="/usr/bin:/bin" DSB_INSTALL_BASE_URL="$BASE" sh "$INSTALL_SH" 2>&1) || true
 assert_contains "$OUT" "not in your PATH" "path-hint: hint printed when dir not on PATH"
+
+# ---------------------------------------------------------------------------
+# Case 1b: default "latest" (no VERSION) resolves via latest/download/SHA256SUMS
+# ---------------------------------------------------------------------------
+
+new_sandbox latest
+OUT=$(HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" \
+    PATH="$SB_BIN:/usr/bin:/bin" DSB_INSTALL_BASE_URL="$BASE" sh "$INSTALL_SH" 2>&1) || fail "latest-install" "exit nonzero"
+if [ -x "$SB_BIN/deepseek-build" ]; then
+    pass "latest-install: binary installed"
+else
+    fail "latest-install" "binary missing"
+fi
+assert_contains "$OUT" "Latest release: v$FAKE_VERSION_2" "latest-install: resolved newest tag"
+assert_contains "$OUT" "deepseek-build $FAKE_VERSION_2" "latest-install: newest version installed"
+assert_contains "$OUT" "Independent project, not affiliated with DeepSeek." "latest-install: non-affiliation line"
 
 # ---------------------------------------------------------------------------
 # Case 2: checksum mismatch — abort, install nothing
