@@ -1,0 +1,40 @@
+# =============================================================================
+# deepseek-build local-test Docker image
+# =============================================================================
+# TEST-ONLY — NOT the production image.
+#
+# Base: debian:unstable-slim (glibc ~2.44), chosen to match a typical
+# modern Linux development host so the locally-built binary runs inside the
+# container without "GLIBC version not found".
+#
+# Scope: Local smoke tests on a developer machine. Because it uses an
+# unstable base it is NOT suitable for production use and is NOT built or
+# published by the CI release pipeline. The production image always uses
+# debian:bookworm-slim regardless of what this file contains.
+#
+# Usage:
+#   docker build -f docker/Dockerfile.localtest -t deepseek-build:localtest .
+#   docker run -it --rm -e DEEPSEEK_API_KEY deepseek-build:localtest --version
+#   docker run -it --rm -e DEEPSEEK_API_KEY -v "$PWD":/work deepseek-build:localtest
+# =============================================================================
+
+FROM debian:unstable-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install a minimal runtime. tini is included so the entrypoint behaves like
+# the production image. No build tools.
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        libgcc-s1 \
+        tini \
+    && rm -rf /var/lib/apt/lists/*
+
+# Run as a writable user so mount points work without permission errors.
+RUN useradd --create-home --uid 1000 app
+
+WORKDIR /app
+
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["./deepseek-build"]
