@@ -74,6 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("paths", nargs="*", type=Path, help="result JSONL files or directories (default: results/)")
     parser.add_argument("--by-task", action="store_true", help="also print per-task, per-config rows")
+    parser.add_argument("--compare", help="baseline config label; print deltas of every other config against it")
     parser.add_argument("--out", type=Path, help="write the Markdown table to this file")
     args = parser.parse_args(argv)
 
@@ -119,10 +120,60 @@ def main(argv: list[str] | None = None) -> int:
             )
         print("\n".join(detail))
 
+    if args.compare:
+        compare_summaries(groups, args.compare)
+
     if args.out:
         args.out.write_text(table + "\n")
         print(f"\nwrote {args.out}")
     return 0
+
+
+def compare_summaries(groups: dict[tuple[str, str], list[dict]], baseline: str) -> None:
+    """Print per-model deltas of each non-baseline config against `baseline`."""
+    by_model: dict[str, dict[str, dict]] = defaultdict(dict)
+    for (config, model), group in groups.items():
+        by_model[model][config] = summarize(group)
+
+    lines = [
+        "| baseline | variant | model | pass rate Δ | wall/task Δ | est. USD/task Δ | cost change |",
+        "|---|---|---|---|---|---|---|",
+    ]
+
+    def signed(value, spec):
+        if value is None:
+            return "—"
+        return f"{value:+{spec}}"
+
+    for model, configs in sorted(by_model.items()):
+        base = configs.get(baseline)
+        if base is None:
+            continue
+        for config, variant in sorted(configs.items()):
+            if config == baseline:
+                continue
+            pass_delta = variant["pass_rate"] - base["pass_rate"]
+            wall_delta = (
+                variant["wall_s"] - base["wall_s"]
+                if variant["wall_s"] is not None and base["wall_s"] is not None
+                else None
+            )
+            cost_delta = None
+            cost_pct = None
+            if (
+                variant["cost_per_task"] is not None
+                and base["cost_per_task"] is not None
+                and base["cost_per_task"] > 0
+            ):
+                cost_delta = variant["cost_per_task"] - base["cost_per_task"]
+                cost_pct = cost_delta / base["cost_per_task"] * 100
+            lines.append(
+                f"| {baseline} | {config} | {model} | {signed(pass_delta, '.0%')} | "
+                f"{signed(wall_delta, '.1f')}s | {signed(cost_delta, '.5f')} | "
+                f"{signed(cost_pct, '.0f')}% |"
+            )
+    print()
+    print("\n".join(lines))
 
 
 if __name__ == "__main__":
