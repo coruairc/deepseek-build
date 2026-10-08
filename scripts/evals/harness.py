@@ -215,6 +215,15 @@ def scrub(text: str, secrets: list[str]) -> str:
     return text
 
 
+def file_sha256(path: Path) -> str | None:
+    """Content hash of a run input (binary, config, prompt), or None."""
+    if path is None or not Path(path).exists():
+        return None
+    import hashlib
+
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
 def parse_headless_json(stdout: str) -> dict | None:
     """Headless `--output-format json` prints one (pretty) JSON object."""
     stdout = stdout.strip()
@@ -301,6 +310,7 @@ def run_agent(
     base_url: str | None,
     keep_work: bool,
     secrets: list[str],
+    system_prompt_file: Path | None = None,
 ) -> dict:
     task_id = task["id"]
     run_dir = workdir / f"{task_id}-{config}-{model}-r{run_index}"
@@ -372,7 +382,15 @@ def run_agent(
         "timed_out": timed_out,
         "error": scrub(error, secrets) if error else None,
         "bin": str(bin_path),
+        "bin_sha256": file_sha256(bin_path),
+        "bin_mtime": datetime.fromtimestamp(
+            bin_path.stat().st_mtime, timezone.utc
+        ).isoformat(timespec="seconds") if bin_path.exists() else None,
+        "config_file": str(config_file) if config_file else None,
+        "config_file_sha256": file_sha256(config_file) if config_file else None,
         "extra_args": extra_args,
+        "system_prompt_file": system_prompt_file,
+        "system_prompt_sha256": file_sha256(system_prompt_file) if system_prompt_file else None,
         **extract_metrics(payload),
         "git": git_snapshot(scratch),
         "workdir": str(run_dir) if keep_work else None,
@@ -499,6 +517,7 @@ def main(argv: list[str] | None = None) -> int:
                     base_url=args.base_url,
                     keep_work=args.keep_work,
                     secrets=secrets,
+                    system_prompt_file=args.system_prompt_file,
                 )
                 fh.write(json.dumps(record) + "\n")
                 fh.flush()
