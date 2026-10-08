@@ -107,6 +107,15 @@ refactor tasks rely on. The shipped default therefore stays `high`; `none` is
 recorded as the floor. Reproduce:
 `python3 scripts/evals/experiment.py --name effort-none --model deepseek-v4-pro --extra-args "--effort none"`.
 
+**Experiment 3 — Flash→Pro escalation.** The escalation question needs a task
+class where Flash fails and Pro succeeds. On the 21-task set there is none:
+Flash passes 63/63 at `$0.00154/task`, 78% cheaper than Pro and 25% faster, so
+pure-Flash routing would dominate Pro on this benchmark. That says the task
+set is too easy to expose the escalation boundary, not that Flash is
+sufficient for real work. No routing policy is changed; `model_routing`
+remains `off` and model choice stays manual (`/model`, `-m`). A follow-up needs
+harder tasks (multi-file, long-horizon) to locate the boundary.
+
 ### E3d — verification loop after edits
 
 _Not started._
