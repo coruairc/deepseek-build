@@ -1,0 +1,29 @@
+{
+  "id": "py-refactor-dedupe",
+  "summary": "Extract duplicated normalization into a helper",
+  "prompt": "report.py normalizes names with the same expression in three places. Extract a helper function normalize_name(name) and use it in all three places. Behavior must not change. Do not modify test_report.py.",
+  "files": {
+    "report.py": "def header(name):\n    return '[ ' + name.strip().lower() + ' ]'\n\n\ndef footer(name):\n    return '( ' + name.strip().lower() + ' )'\n\n\ndef body(name):\n    return '  ' + name.strip().lower()\n",
+    "test_report.py": "import unittest\n\nfrom report import body, footer, header, normalize_name\n\n\nclass TestReport(unittest.TestCase):\n    def test_shapes(self):\n        self.assertEqual(header(' Alice '), '[ alice ]')\n        self.assertEqual(footer(' Bob '), '( bob )')\n        self.assertEqual(body(' Carol '), '  carol')\n\n    def test_helper(self):\n        self.assertEqual(normalize_name(' Dave '), 'dave')\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_report",
+        "-v"
+      ]
+    },
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-c",
+        "import report; assert report.header(' X ') == '[ x ]'"
+      ]
+    }
+  ]
+}

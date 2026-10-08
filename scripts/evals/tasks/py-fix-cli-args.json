@@ -1,0 +1,21 @@
+{
+  "id": "py-fix-cli-args",
+  "summary": "CLI option default shadows the value from argv",
+  "prompt": "cli.py parses --count but ignores it and always prints 1. Fix main(argv) so it prints the number passed to --count (default 1). Do not modify test_cli.py.",
+  "files": {
+    "cli.py": "import argparse\n\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser()\n    parser.add_argument('--count', type=int, default=1)\n    parser.parse_args(argv)\n    return 1\n",
+    "test_cli.py": "import unittest\n\nfrom cli import main\n\n\nclass TestCli(unittest.TestCase):\n    def test_default(self):\n        self.assertEqual(main([]), 1)\n\n    def test_explicit(self):\n        self.assertEqual(main(['--count', '4']), 4)\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_cli",
+        "-v"
+      ]
+    }
+  ]
+}

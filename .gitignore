@@ -2,5 +2,9 @@
 **/*.rs.bk
 .DS_Store
 
+# Eval-harness run artifacts (results are run output, not source)
+/scripts/evals/results/
+/scripts/evals/__pycache__/
+
 # OpenWork chat attachments (not part of the repo)
 .opencode/openwork/inbox/

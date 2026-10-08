@@ -1,0 +1,26 @@
+{
+  "id": "sh-fix-script",
+  "summary": "Shell script returns the wrong exit code and mishandles spaces",
+  "prompt": "check.sh should exit 0 when every argument is a readable file and 1 when any is missing, and it must handle paths containing spaces. It currently always exits 0 and splits quoted paths. Fix check.sh. Do not modify test_check_exec.py.",
+  "files": {
+    "check.sh": "#!/bin/sh\nfor f in $@; do\n  test -r $f\ndone\nexit 0\n",
+    "test_check_exec.py": "import os\nimport subprocess\nimport unittest\n\n\ndef run(*args):\n    return subprocess.run(['sh', 'check.sh', *args], capture_output=True, text=True).returncode\n\n\nclass TestCheckExec(unittest.TestCase):\n    def test_ok(self):\n        open('a.txt', 'w').write('x')\n        self.assertEqual(run('a.txt'), 0)\n\n    def test_missing(self):\n        self.assertEqual(run('nope.txt'), 1)\n\n    def test_spaces(self):\n        open('has space.txt', 'w').write('x')\n        self.assertEqual(run('has space.txt'), 0)\n        self.assertEqual(run('has space.txt', 'also missing.txt'), 1)\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_check_exec",
+        "-v"
+      ]
+    },
+    {
+      "type": "file_contains",
+      "path": "check.sh",
+      "text": "\"$@\""
+    }
+  ]
+}

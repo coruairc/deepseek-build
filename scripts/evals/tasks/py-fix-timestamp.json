@@ -1,0 +1,21 @@
+{
+  "id": "py-fix-timestamp",
+  "summary": "Epoch timestamp is parsed as milliseconds",
+  "prompt": "clock.py treats an epoch-seconds timestamp as milliseconds. Fix from_epoch so it interprets the value as seconds; from_epoch(86400) must be 1970-01-02T00:00:00Z. Do not modify test_clock.py.",
+  "files": {
+    "clock.py": "import datetime\n\n\ndef from_epoch(seconds):\n    return datetime.datetime.fromtimestamp(seconds / 1000, datetime.timezone.utc)\n",
+    "test_clock.py": "import datetime\nimport unittest\n\nfrom clock import from_epoch\n\n\nclass TestClock(unittest.TestCase):\n    def test_epoch(self):\n        self.assertEqual(from_epoch(0), datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc))\n        self.assertEqual(from_epoch(86400), datetime.datetime(1970, 1, 2, tzinfo=datetime.timezone.utc))\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_clock",
+        "-v"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "py-multifile-move",
+  "summary": "Move a function into a new module and re-export",
+  "prompt": "Move the slugify function out of blog.py into a new module textutil.py, and make blog.py import it from textutil so existing imports keep working (from blog import slugify must still work). Do not modify test_blog.py.",
+  "files": {
+    "blog.py": "def slugify(title):\n    return '-'.join(w.lower() for w in title.split())\n\n\ndef make_url(title):\n    return '/posts/' + slugify(title)\n",
+    "test_blog.py": "import unittest\n\nfrom blog import make_url, slugify\nfrom textutil import slugify as raw_slugify\n\n\nclass TestBlog(unittest.TestCase):\n    def test_slugify(self):\n        self.assertEqual(slugify('Hello World'), 'hello-world')\n\n    def test_url(self):\n        self.assertEqual(make_url('Hello World'), '/posts/hello-world')\n\n    def test_moved(self):\n        self.assertEqual(raw_slugify('A B C'), 'a-b-c')\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_blog",
+        "-v"
+      ]
+    },
+    {
+      "type": "file_exists",
+      "path": "textutil.py"
+    },
+    {
+      "type": "file_contains",
+      "path": "textutil.py",
+      "text": "def slugify"
+    },
+    {
+      "type": "file_contains",
+      "path": "blog.py",
+      "text": "textutil"
+    },
+    {
+      "type": "file_not_contains",
+      "path": "blog.py",
+      "text": "def slugify"
+    }
+  ]
+}

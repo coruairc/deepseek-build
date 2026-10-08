@@ -1,0 +1,21 @@
+{
+  "id": "py-fix-dedupe-case",
+  "summary": "Deduping ignores trailing whitespace",
+  "prompt": "dedupe.py is supposed to drop empty entries and deduplicate case-insensitively while preserving order, but it keeps blank strings and treats 'A'/'a' as different. Fix dedupe(items). Do not modify test_dedupe.py.",
+  "files": {
+    "dedupe.py": "def dedupe(items):\n    seen = set()\n    out = []\n    for item in items:\n        if item not in seen:\n            out.append(item)\n            seen.add(item)\n    return out\n",
+    "test_dedupe.py": "import unittest\n\nfrom dedupe import dedupe\n\n\nclass TestDedupe(unittest.TestCase):\n    def test_cases(self):\n        self.assertEqual(dedupe(['A', 'a', 'b']), ['A', 'b'])\n        self.assertEqual(dedupe(['x', '', 'x']), ['x'])\n        self.assertEqual(dedupe([]), [])\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_dedupe",
+        "-v"
+      ]
+    }
+  ]
+}

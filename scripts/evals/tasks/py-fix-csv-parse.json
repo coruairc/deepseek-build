@@ -1,0 +1,21 @@
+{
+  "id": "py-fix-csv-parse",
+  "summary": "CSV splitter breaks on quoted commas",
+  "prompt": "csvline.py splits a CSV row on every comma, so quoted fields containing a comma are split wrongly. Fix split_row so quoted fields keep their commas and quotes are removed. Do not modify test_csvline.py.",
+  "files": {
+    "csvline.py": "def split_row(line):\n    return line.split(',')\n",
+    "test_csvline.py": "import unittest\n\nfrom csvline import split_row\n\n\nclass TestCsv(unittest.TestCase):\n    def test_plain(self):\n        self.assertEqual(split_row('a,b,c'), ['a', 'b', 'c'])\n\n    def test_quoted(self):\n        self.assertEqual(split_row('a,\"b,c\",d'), ['a', 'b,c', 'd'])\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_csvline",
+        "-v"
+      ]
+    }
+  ]
+}

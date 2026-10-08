@@ -1,0 +1,21 @@
+{
+  "id": "py-fix-generator",
+  "summary": "Lazy iteration is implemented as an eager list",
+  "prompt": "stream.py's first_even should be a generator that yields even numbers lazily. Right now it returns a list and next() fails. Fix first_even so it yields even numbers starting from 0. Do not modify test_stream.py.",
+  "files": {
+    "stream.py": "def first_even(limit):\n    return [n for n in range(limit) if n % 2 == 0]\n",
+    "test_stream.py": "import types\nimport unittest\n\nfrom stream import first_even\n\n\nclass TestStream(unittest.TestCase):\n    def test_generator(self):\n        gen = first_even(10)\n        self.assertIsInstance(gen, types.GeneratorType)\n        self.assertEqual(next(gen), 0)\n        self.assertEqual(next(gen), 2)\n        self.assertEqual(list(gen), [4, 6, 8])\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_stream",
+        "-v"
+      ]
+    }
+  ]
+}

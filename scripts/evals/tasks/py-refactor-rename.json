@@ -1,0 +1,32 @@
+{
+  "id": "py-refactor-rename",
+  "summary": "Rename a function across two modules",
+  "prompt": "Rename the function getUser to get_user in users.py and in every place it is used (main.py). Change nothing else. Do not modify test_users.py.",
+  "files": {
+    "users.py": "def getUser(uid):\n    return {'id': uid, 'name': 'user' + str(uid)}\n",
+    "main.py": "from users import getUser\n\n\n\ndef describe(uid):\n    return getUser(uid)['name']\n",
+    "test_users.py": "import unittest\n\nfrom main import describe\nfrom users import get_user\n\n\nclass TestUsers(unittest.TestCase):\n    def test_get_user(self):\n        self.assertEqual(get_user(7)['id'], 7)\n\n    def test_describe(self):\n        self.assertEqual(describe(7), 'user7')\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_users",
+        "-v"
+      ]
+    },
+    {
+      "type": "file_not_contains",
+      "path": "users.py",
+      "text": "getUser"
+    },
+    {
+      "type": "file_not_contains",
+      "path": "main.py",
+      "text": "getUser"
+    }
+  ]
+}

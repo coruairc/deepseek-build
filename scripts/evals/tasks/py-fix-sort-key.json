@@ -1,0 +1,21 @@
+{
+  "id": "py-fix-sort-key",
+  "summary": "Sorting ignores the requested key",
+  "prompt": "ranking.py ranks players by score but ignores the sort order: the scores come back ascending instead of descending. Fix rank_players so higher scores sort first. Do not modify test_ranking.py.",
+  "files": {
+    "ranking.py": "def rank_players(players):\n    return sorted(players, key=lambda p: p['score'])\n",
+    "test_ranking.py": "import unittest\n\nfrom ranking import rank_players\n\n\nclass TestRanking(unittest.TestCase):\n    def test_desc(self):\n        players = [{'name': 'a', 'score': 3}, {'name': 'b', 'score': 9}, {'name': 'c', 'score': 6}]\n        self.assertEqual([p['name'] for p in rank_players(players)], ['b', 'c', 'a'])\n\n    def test_empty(self):\n        self.assertEqual(rank_players([]), [])\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_ranking",
+        "-v"
+      ]
+    }
+  ]
+}

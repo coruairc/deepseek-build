@@ -1,0 +1,21 @@
+{
+  "id": "py-fix-path-join",
+  "summary": "Path built with string concatenation loses the separator",
+  "prompt": "paths.py builds file paths by concatenation, producing 'data/rows.txt' as 'datarows.txt'. Fix join_path so parts are joined with os.path.join. Do not modify test_paths.py.",
+  "files": {
+    "paths.py": "def join_path(*parts):\n    return ''.join(parts)\n",
+    "test_paths.py": "import os\nimport unittest\n\nfrom paths import join_path\n\n\nclass TestPaths(unittest.TestCase):\n    def test_join(self):\n        self.assertEqual(join_path('data', 'rows.txt'), os.path.join('data', 'rows.txt'))\n        self.assertEqual(join_path('a', 'b', 'c'), os.path.join('a', 'b', 'c'))\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_paths",
+        "-v"
+      ]
+    }
+  ]
+}

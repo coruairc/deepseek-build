@@ -1,0 +1,21 @@
+{
+  "id": "py-fix-context-manager",
+  "summary": "Context manager swallows exceptions and never cleans up",
+  "prompt": "resource.py implements __enter__/__exit__, but __exit__ returns True (swallowing all exceptions) and never marks the resource closed. Fix it: closed must become True even on exceptions, and exceptions must propagate (return False). Do not modify test_resource.py.",
+  "files": {
+    "resource.py": "class Resource:\n    def __init__(self):\n        self.closed = False\n\n    def __enter__(self):\n        return self\n\n    def __exit__(self, exc_type, exc, tb):\n        return True\n",
+    "test_resource.py": "import unittest\n\nfrom resource import Resource\n\n\nclass TestResource(unittest.TestCase):\n    def test_closes(self):\n        with Resource() as r:\n            pass\n        self.assertTrue(r.closed)\n\n    def test_propagates(self):\n        with self.assertRaises(ValueError):\n            with Resource() as r:\n                raise ValueError('boom')\n        self.assertTrue(r.closed)\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_resource",
+        "-v"
+      ]
+    }
+  ]
+}

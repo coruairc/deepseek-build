@@ -1,0 +1,31 @@
+{
+  "id": "py-fix-add",
+  "summary": "Arithmetic helper returns wrong operator",
+  "prompt": "calc.py has a bug: sub(a, b) returns a + b. Fix calc.py so that sub(a, b) returns a - b. Do not modify test_calc.py.",
+  "files": {
+    "calc.py": "def add(a, b):\n    return a + b\n\n\ndef sub(a, b):\n    return a + b\n",
+    "test_calc.py": "import unittest\n\nfrom calc import add, sub\n\n\nclass TestCalc(unittest.TestCase):\n    def test_add(self):\n        self.assertEqual(add(2, 3), 5)\n\n    def test_sub(self):\n        self.assertEqual(sub(5, 3), 2)\n        self.assertEqual(sub(3, 5), -2)\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_calc",
+        "-v"
+      ]
+    },
+    {
+      "type": "file_contains",
+      "path": "calc.py",
+      "text": "return a - b"
+    },
+    {
+      "type": "file_contains",
+      "path": "test_calc.py",
+      "text": "assertEqual(sub(5, 3), 2)"
+    }
+  ]
+}

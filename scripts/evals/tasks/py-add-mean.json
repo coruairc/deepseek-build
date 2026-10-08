@@ -1,0 +1,26 @@
+{
+  "id": "py-add-mean",
+  "summary": "Add mean() with correct empty-input behavior",
+  "prompt": "stats.py defines average() only. Add a mean(values) function that returns the arithmetic mean and raises ValueError on an empty sequence. Do not modify test_stats.py.",
+  "files": {
+    "stats.py": "def total(values):\n    return sum(values)\n",
+    "test_stats.py": "import unittest\n\nfrom stats import mean, total\n\n\nclass TestStats(unittest.TestCase):\n    def test_total(self):\n        self.assertEqual(total([1, 2, 3]), 6)\n\n    def test_mean(self):\n        self.assertEqual(mean([1, 2, 3]), 2)\n        self.assertEqual(mean([4]), 4)\n\n    def test_mean_empty(self):\n        with self.assertRaises(ValueError):\n            mean([])\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_stats",
+        "-v"
+      ]
+    },
+    {
+      "type": "file_contains",
+      "path": "stats.py",
+      "text": "def mean("
+    }
+  ]
+}

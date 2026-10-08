@@ -1,0 +1,29 @@
+{
+  "id": "py-fix-offbyone",
+  "summary": "FizzBuzz-style range is off by one",
+  "prompt": "seq.py has an off-by-one bug: count_to(n) returns the numbers 1..n-1. Fix it so count_to(5) == [1, 2, 3, 4, 5]. Do not modify test_seq.py.",
+  "files": {
+    "seq.py": "def count_to(n):\n    return list(range(1, n))\n",
+    "test_seq.py": "import unittest\n\nfrom seq import count_to\n\n\nclass TestSeq(unittest.TestCase):\n    def test_counts(self):\n        self.assertEqual(count_to(5), [1, 2, 3, 4, 5])\n        self.assertEqual(count_to(1), [1])\n        self.assertEqual(count_to(0), [])\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_seq",
+        "-v"
+      ]
+    },
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-c",
+        "from seq import count_to; assert count_to(3) == [1,2,3]"
+      ]
+    }
+  ]
+}

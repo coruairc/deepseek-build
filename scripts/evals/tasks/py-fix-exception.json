@@ -1,0 +1,21 @@
+{
+  "id": "py-fix-exception",
+  "summary": "Config lookup raises KeyError instead of a default",
+  "prompt": "config.py raises KeyError when a key is missing, but callers expect a default. Fix get_value(cfg, key, default=None) to return the default instead of raising. Do not modify test_config.py.",
+  "files": {
+    "config.py": "def get_value(cfg, key, default=None):\n    return cfg[key]\n",
+    "test_config.py": "import unittest\n\nfrom config import get_value\n\n\nclass TestConfig(unittest.TestCase):\n    def test_present(self):\n        self.assertEqual(get_value({'a': 1}, 'a'), 1)\n\n    def test_missing(self):\n        self.assertIsNone(get_value({'a': 1}, 'b'))\n        self.assertEqual(get_value({}, 'b', 0), 0)\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_config",
+        "-v"
+      ]
+    }
+  ]
+}

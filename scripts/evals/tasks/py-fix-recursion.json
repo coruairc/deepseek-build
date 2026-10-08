@@ -1,0 +1,21 @@
+{
+  "id": "py-fix-recursion",
+  "summary": "Recursive factorial base case is wrong",
+  "prompt": "mathx.py returns 0 for every factorial because the base case is wrong. Fix factorial(n) so factorial(0) == 1 and factorial(5) == 120. Do not modify test_mathx.py.",
+  "files": {
+    "mathx.py": "def factorial(n):\n    if n == 0:\n        return 0\n    return n * factorial(n - 1)\n",
+    "test_mathx.py": "import unittest\n\nfrom mathx import factorial\n\n\nclass TestMathx(unittest.TestCase):\n    def test_factorials(self):\n        self.assertEqual(factorial(0), 1)\n        self.assertEqual(factorial(1), 1)\n        self.assertEqual(factorial(5), 120)\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_mathx",
+        "-v"
+      ]
+    }
+  ]
+}

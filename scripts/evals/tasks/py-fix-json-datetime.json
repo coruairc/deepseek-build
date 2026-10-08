@@ -1,0 +1,21 @@
+{
+  "id": "py-fix-json-datetime",
+  "summary": "JSON serialization crashes on date objects",
+  "prompt": "records.py serializes a record dict containing a date object and crashes with TypeError. Fix to_json so dates serialize as ISO strings (YYYY-MM-DD). Do not modify test_records.py.",
+  "files": {
+    "records.py": "import json\n\n\ndef to_json(record):\n    return json.dumps(record)\n",
+    "test_records.py": "import datetime\nimport json\nimport unittest\n\nfrom records import to_json\n\n\nclass TestRecords(unittest.TestCase):\n    def test_date_roundtrip(self):\n        out = to_json({'name': 'a', 'when': datetime.date(2026, 10, 8)})\n        parsed = json.loads(out)\n        self.assertEqual(parsed['when'], '2026-10-08')\n\n    def test_plain(self):\n        self.assertEqual(json.loads(to_json({'n': 1})), {'n': 1})\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_records",
+        "-v"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "py-fix-mutable-default",
+  "summary": "Mutable default argument shares state",
+  "prompt": "store.py has a bug: add_item appends to a shared list, so calls leak into each other. Fix it so each call without an explicit items argument starts with an empty list. Do not modify test_store.py.",
+  "files": {
+    "store.py": "def add_item(item, items=[]):\n    items.append(item)\n    return items\n",
+    "test_store.py": "import unittest\n\nfrom store import add_item\n\n\nclass TestStore(unittest.TestCase):\n    def test_no_shared_state(self):\n        self.assertEqual(add_item('a'), ['a'])\n        self.assertEqual(add_item('b'), ['b'])\n\n    def test_explicit_list(self):\n        base = ['x']\n        self.assertEqual(add_item('y', base), ['x', 'y'])\n        self.assertEqual(base, ['x', 'y'])\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_store",
+        "-v"
+      ]
+    },
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-c",
+        "from store import add_item; assert add_item('a') == ['a'] and add_item('b') == ['b']"
+      ]
+    }
+  ]
+}

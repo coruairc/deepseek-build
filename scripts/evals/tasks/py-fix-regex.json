@@ -1,0 +1,29 @@
+{
+  "id": "py-fix-regex",
+  "summary": "Regex matches empty string instead of digits",
+  "prompt": "parse.py has a regex bug: extract_number('abc123def') should return '123' but the current pattern also matches empty strings. Fix the pattern so it requires at least one digit. Do not modify test_parse.py.",
+  "files": {
+    "parse.py": "import re\n\n\nPATTERN = re.compile(r\"\\d*\")\n\n\ndef extract_number(text):\n    m = PATTERN.search(text)\n    return m.group(0) if m else None\n",
+    "test_parse.py": "import unittest\n\nfrom parse import extract_number\n\n\nclass TestParse(unittest.TestCase):\n    def test_digits(self):\n        self.assertEqual(extract_number('abc123def'), '123')\n        self.assertEqual(extract_number('v2'), '2')\n\n    def test_none(self):\n        self.assertIsNone(extract_number('no digits here'))\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+  },
+  "checks": [
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-m",
+        "unittest",
+        "test_parse",
+        "-v"
+      ]
+    },
+    {
+      "type": "command",
+      "cmd": [
+        "python3",
+        "-c",
+        "from parse import extract_number; assert extract_number('x') is None; assert extract_number('a42')[0] == '4'"
+      ]
+    }
+  ]
+}
