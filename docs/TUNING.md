@@ -67,7 +67,22 @@ promoted to a full run.
 
 ### E3b — file edit format
 
-_Not started._
+Swapped the default grok-build toolset for the codex/`apply_patch` edit format
+via `--agent codex` (a whole-agent swap, which also changes the tool
+descriptions; noted as a caveat).
+
+**Result (2026-10-08): rejected — no win.** 63 runs vs the 63-run Pro baseline:
+
+| configuration | pass | wall/task | out | reasoning | turns | est. USD/task |
+|---|---|---|---|---|---|---|
+| baseline (search_replace) | 63/63 | 9.9s | 654 | 75 | 4.92 | 0.00702 |
+| edit-codex (apply_patch) | 63/63 | 10.5s | 709 | 106 | 5.08 | 0.00736 |
+
+Measured delta: **+5% cost** ($+0.00034/task), +0.6s/task, same 100% pass rate.
+The patch format itself may be fine; the extra output and reasoning (654 → 709
+output, 75 → 106 reasoning tokens) cost more than the edit tool saves.
+Reproduce:
+`python3 scripts/evals/experiment.py --name edit-codex --model deepseek-v4-pro --extra-args "--agent codex"`.
 
 ### E3c — reasoning effort policy and Flash→Pro escalation
 
