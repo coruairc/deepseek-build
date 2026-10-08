@@ -9,9 +9,13 @@ real-use passes (2026-10-07).
 
 - **All lib test targets compile** after the pager repair (`a16308b8`;
   `xai-grok-pager` 9874 passed / 0 failed / 4 ignored, `xai-grok-pager-minimal`
-  94 passed / 0 failed; `cargo check --workspace --tests` green). A full
-  `cargo test --workspace` run is still pending to record the whole-workspace
-  green count.
+  94 passed / 0 failed; `cargo check --workspace --tests` green). The first
+  full `cargo test --workspace` run (2026-10-08) then surfaced four
+  `xai-fast-worktree` failures that per-crate runs could not see (they only
+  compile under the `metadata` feature, which workspace feature unification
+  enables): they test the NFS/Grove backend that this tree stubs off in
+  `nfs_off.rs`. Dropped with a ledger entry (`docs/DROPPED-TESTS.md`);
+  `xai-fast-worktree` is now 455 passed / 0 failed with `--features metadata`.
 - **`xai-grok-shell` lib tests: green.** 6221 passed / 0 failed / 4 ignored.
   Integration tests compile after dropping the 8 remote-settings prefetch tests
   for the deleted `remote_config`/`managed_config` modules.
