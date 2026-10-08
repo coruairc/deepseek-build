@@ -11,28 +11,33 @@ decisions; wins on conflict), [`PLAN.md`](PLAN.md) (audit + phased plan),
 - **Remote:** `origin git@github.com:coruairc/deepseek-build.git`.
 - **Toolchain:** Rust **1.94.0** via rustup (pinned in `rust-toolchain.toml`). Do not bump.
   `protoc` on PATH (`/usr/bin/protoc`); `dotslash` not needed.
-- **Binary:** `target/release/deepseek-build` (~192 MB) — package `xai-grok-pager-bin`
+- **Binary:** `target/release/deepseek-build` (~147 MB) — package `xai-grok-pager-bin`
   (D2 keeps the internal package name). **Rebrand done**: config dir `~/.deepseek-build`,
   ACP namespace `deepseek-build/*`, Monokai theme + DeepSeek whale logo, brand constants
-  in `crates/codegen/xai-grok-brand/`.
+  in `crates/codegen/xai-grok-brand/`; prompt templates carry no Grok Build strings.
 - **Egress gate:** `scripts/check-egress.sh --strict` → **exit 0** (HARD OK, SOFT zero).
 - **Build:** `cargo check -p xai-grok-pager-bin` and `cargo build --release` are green.
-  **`cargo test --workspace` does not compile yet: only `xai-grok-pager` (~252 errors)
-  and `xai-grok-pager-minimal` (2) lib test targets fail** on test-only references to
-  deleted Phase-1 features (`xai_grok_feedback`, removed fields/methods, a 13→12
-  constructor arity). Every other lib test target compiles and passes
-  (shell 6221, workspace 1693, sampler 186, config 467, chat-state 391, agent 576, …).
+  **All lib test targets compile** (the pager/pager-minimal repair landed in `a16308b8`);
+  a full `cargo test --workspace` run is still pending to record the workspace-wide count.
+  Recent per-crate counts: pager 9874+, pager-minimal 94, shell 6221, workspace 1693,
+  sampler 186, config 467, chat-state 391, agent 576, status-line 24.
 - **Runtime egress (observed):** a real model-driven session (shell, edits, web_fetch,
   local MCP, compaction, resume) contacts only `api.deepseek.com:443`, the web_fetch
   host, and AF_UNIX sockets — `scripts/egress-check.sh` reports
   `EGRESS_VIOLATIONS=0`. Measured with an `LD_PRELOAD` connect/send logger
   (`strace` absent).
+- **Eval harness (Phase E):** `scripts/evals/` — 21 auto-checked tasks, JSONL metrics,
+  comparison table, both-ways fixture validation. E2 baseline: both models 63/63,
+  Pro `$0.00702`/task vs Flash `$0.00154`/task at ~97% cache hit. E3 batch done;
+  results in [`docs/TUNING.md`](docs/TUNING.md) (only reasoning-effort reduction
+  won; nothing became a new default).
+- **Headless cost:** `--output-format json` now emits `estimated_cost_usd` +
+  `estimate: true` (local peak-rate estimate, D14) alongside usage.
 - **Status:** usable with a real `DEEPSEEK_API_KEY`. See `TESTING.md`,
   `scripts/smoke-test.sh`, `scripts/egress-check.sh`, `scripts/sandbox-run.sh`,
-  `KNOWN-ISSUES.md`. Remaining: the pager/pager-minimal test-target repair; the
-  local-harness sandbox/pre-run coverage gap noted in `KNOWN-ISSUES.md`; DeepSeek
-  prompt tuning (`docs/TUNING.md`, not started); interactive TUI verified under a pty
-  but not by a human.
+  `KNOWN-ISSUES.md`. Remaining: one full `cargo test --workspace` green run; the
+  local-harness sandbox/pre-run coverage gap noted in `KNOWN-ISSUES.md`; interactive
+  TUI verified under a pty but not by a human.
 
 ## 1. How to resume (another machine)
 
@@ -131,11 +136,7 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
 
 ## 3. What is LEFT (ordered)
 
-1. **Backend removal (D5):** delete the `Responses` and `Messages` backends and their
-   wiring so only `ChatCompletions` remains. In `xai-grok-sampling-types` (`ApiBackend`,
-   `conversation/responses.rs`, `conversation/messages.rs`, `rs` types) and
-   `xai-grok-sampler` (`client.rs` responses/messages paths, `stream/{responses,messages}.rs`).
-   This is adapter-owned — keep it single-owner.
+1. ~~**Backend removal (D5)**~~ **DONE**: `ApiBackend` has only `ChatCompletions`.
 2. ~~**Rebrand (D1/D2) → SOFT gate zero**~~ **DONE** (`dsb/rebrand`, `8fcbff78`). Remaining
    sub-item: rename the remaining `GROK_*` env vars to `DEEPSEEK_BUILD_*` (624 distinct; not
    gated).
@@ -143,50 +144,39 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
    `session/repo_changes`, `feedback_manager`, feedback UI, `share`, vendored
    `shell/src/cloud_config/**`, `xai-computer-hub-{core,sdk,mcp-adapter}` and consumers,
    shell `src/remote/**` relay clients, `agent/relay.rs`.
-4. **Phase 2 proof:**
-   - `wiremock` suite: streaming, a **3+ turn tool-call chain replaying `reasoning_content`**,
-     missing `reasoning_content` backfill, malformed tool-call JSON, partial stream,
-     429/5xx retry with backoff.
-   - non-stream reasoning capture + retries + clear error messages.
-   - cache-stable prefix test (system prompt + tool defs byte-identical / stable order across
-     turns; dynamic state at the tail).
-   - **Live smoke test (STOP condition): needs `DEEPSEEK_API_KEY`** — GET `/models` to confirm
-     `deepseek-v4-pro` / `deepseek-flash`, a plain chat, a streamed chat, a 3-turn thinking
-     tool-call chain, and confirm `prompt_tokens_details.cached_tokens` /
-     `prompt_cache_hit_tokens` and `reasoning_tokens` in usage. Fix + record any doc mismatch.
-5. **Phase 3 TUI:** collapsible reasoning block (keybind), status bar (model, thinking level,
-   tokens, cache hit rate, running cost from a config price table, context usage), slash
-   commands/hotkeys to switch model + `reasoning_effort {none,low,high,max}` + toggle thinking,
-   auto model routing (Flash/no-reasoning vs Pro/high) + manual override, per-turn/session
-   cost + cache breakdown.
+4. ~~**Phase 2 proof**~~ **DONE** (wiremock suite in `xai-grok-sampler/tests/`, live smoke
+   8/8 PASS; see `KNOWN-ISSUES.md` "Phase 2"). Live-verify items are recorded in
+   `DECISIONS.md` O3.
+5. ~~**Phase 3 TUI**~~ **DONE** (reasoning folding, `/think`, `/model`, `/effort`, `/theme`,
+   configurable status line incl. `cost`; see `KNOWN-ISSUES.md` "Phase 3").
 6. **Phase 4 (verify then fix):** plan mode, permission modes + dangerous-command detection,
    read-before-write enforcement, cache-aware compaction, session resume, subagents (Flash for
    research), MCP client, AGENTS.md loading, checkpoints/undo, headless mode.
-7. **Phase 5:** release build + one-line run command, `TESTING.md` (20–30 min manual checklist),
-   `scripts/sandbox-run.sh` (only `api.deepseek.com` reachable), `KNOWN-ISSUES.md`, `strace`
-   runtime egress test, independent verification sub-agent.
+7. ~~**Phase 5 quality bar**~~ release pipeline + installer + docs **DONE** (see §2); one full
+   `cargo test --workspace` green run still owed.
+8. ~~**Phase E (tuning/eval harness)**~~ **DONE**: `scripts/evals/` (21 auto-checked tasks),
+   E2 baseline + E3a–d measured, results in `docs/TUNING.md`.
 
 ## 4. Gates (from the task) and current status
 
-1. `cargo build --release` — **PASS** (`target/release/deepseek-build`). `cargo test --workspace`
-   — **FAIL** (tests don't compile yet). Workspace-wide clippy/fmt not re-verified.
+1. `cargo build --release` — **PASS** (`target/release/deepseek-build`, ~147 MB). `cargo test
+   --workspace` now **compiles** everywhere; one full green run still owed. Workspace-wide
+   clippy/fmt: only per-crate checks done on touched crates.
 2. HARD egress zero — **PASS**. SOFT zero after rebrand — **PASS**
    (`scripts/check-egress.sh --strict` exits 0).
-3. Runtime egress test via `strace -f -e trace=connect` — **NOT RUN**.
-4. Adapter wiremock + live smoke — **NOT DONE** (live needs the key).
+3. Runtime egress test via `strace -f -e trace=connect` — **NOT RUN** (`strace` absent; the
+   `LD_PRELOAD` equivalent in `scripts/egress-check.sh` is used instead).
+4. Adapter wiremock + live smoke — **DONE** (wiremock suite present; live smoke 8/8 PASS).
 5. Independent verification sub-agent — was run once earlier for the adapter; **re-run at the
    end**.
 
 Stop and ask only if: a gate fails twice, a decision is not in `DECISIONS.md`, a change would
-add an outbound destination, or the live smoke test needs a key not provided. **The key is
-currently not provided**, so the live smoke test is blocked.
+add an outbound destination, or the live smoke test needs a key not provided.
 
 ## 5. Known gotchas / incomplete (do not paper over)
 
-- **Tests do not compile.** Many `#[cfg(test)]` modules and `tests/**` files still reference
-  symbols deleted in Phase 1 (`WebSearchInput`, `MediaGenOutput`, `ImageGenConfig`,
-  `emit_announcements`, `heap_profile`, `external::config`, etc.). `cargo check` (non-test) is
-  green; `cargo test` is not. Budget a dedicated pass.
+- **All test targets compile** after the pager repair (`a16308b8`); a full `cargo test
+  --workspace` run is still owed to record the workspace-wide count. See `KNOWN-ISSUES.md`.
 - **Stubs left (no network, but present):** `xai-grok-telemetry/src/{external.rs,otel_layer.rs,
   trace_context.rs}` (no-op OTEL), shell `src/file_utils_compat.rs`, shell
   `session/repo_changes/mod.rs` (pure serde types), shell `session/feedback_manager.rs`,
