@@ -2624,7 +2624,10 @@ impl SessionActor {
         let mut structured_output_retries: u32 = 0;
         let mut media_gen_resamples: u32 = 0;
         let structured_output_validator = json_schema.as_ref().map(|schema| {
-            jsonschema::validator_for(schema).map_err(|e| format!("invalid output schema: {e}"))
+            // `outputSchema` arrives from the ACP client; compile it through the
+            // self-contained path so an external `$ref` can never be fetched.
+            crate::session::workflow::schema_contract::compile_self_contained_schema(schema)
+                .map_err(|e| format!("invalid output schema: {e}"))
         });
         let schema_ok = matches!(structured_output_validator, Some(Ok(_)));
         let native_backend = if json_schema.is_some() {
@@ -4162,7 +4165,8 @@ mod structured_output_validation_tests {
             "required": ["name", "age"],
             "additionalProperties": false,
         });
-        jsonschema::validator_for(&schema).map_err(|e| e.to_string())
+        crate::session::workflow::schema_contract::compile_self_contained_schema(&schema)
+            .map_err(|e| e.to_string())
     }
     #[test]
     fn accepts_conforming_json() {
