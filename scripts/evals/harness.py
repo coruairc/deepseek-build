@@ -26,6 +26,7 @@ Checks:
                       and (optionally) stdout contains `expect_stdout_contains`
   file_contains     — file exists and contains `text` (literal)
   file_not_contains — file exists and does NOT contain `text` (literal)
+  file_matches      — file exists and `pattern` (regex) matches somewhere
   file_absent       — path does not exist
   file_exists       — path exists
 
@@ -48,6 +49,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -62,7 +64,7 @@ DEFAULT_BIN = REPO_ROOT / "target" / "release" / "deepseek-build"
 DEFAULT_TASKS_DIR = Path(__file__).resolve().parent / "tasks"
 DEFAULT_RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
-CHECK_TYPES = ("command", "file_contains", "file_not_contains", "file_absent", "file_exists")
+CHECK_TYPES = ("command", "file_contains", "file_not_contains", "file_matches", "file_absent", "file_exists")
 
 
 # --------------------------------------------------------------------------
@@ -173,6 +175,15 @@ def run_check(check: dict, cwd: Path, timeout_s: int) -> dict:
             return result
         body = path.read_text(errors="replace")
         result["pass"] = text not in body
+        return result
+    if ctype == "file_matches":
+        pattern = check["pattern"]
+        result["pattern"] = pattern
+        if not path.exists():
+            result["detail"] = "file missing"
+            return result
+        body = path.read_text(errors="replace")
+        result["pass"] = re.search(pattern, body) is not None
         return result
     raise AssertionError(f"unreachable check type {ctype!r}")
 
