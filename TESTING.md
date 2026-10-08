@@ -53,7 +53,7 @@ or observable state.
 | 10 | `scripts/key-leak-check.sh` (no real key) | `PASS fake key absent from N saved file(s) and captured output`, exit 0. Runs the binary with a fake key in an isolated `HOME` and scans logs/sessions/stdout/stderr. |
 | 11 | `scripts/check-egress.sh --strict` (no key) | `HARD egress gate: OK`, exit 0, no SOFT branding hits. |
 | 12 | `scripts/sandbox-run.sh --version` (no key) | prints the version; needs no network. |
-| 13 | `scripts/sandbox-run.sh -p "print hello"` (key) | the session completes; any destination other than the provider + loopback is refused and printed as `sandbox-run: BLOCKED connect ...`. The `web_fetch` host is refused as expected (IPv6 refusals print as `non-ip` — cosmetic gap). |
+| 13 | `scripts/sandbox-run.sh -p "print hello"` (key) | the session completes; any destination other than the provider + loopback is refused and printed as `sandbox-run: BLOCKED connect ...`. To see the `web_fetch` host refused, ask it in the same session to fetch `https://example.com/` (IPv6 refusals print as `non-ip` — cosmetic gap; `web_fetch` must be enabled) |
 
 ## 4. Interactive checklist (12–18 min; a real key)
 
