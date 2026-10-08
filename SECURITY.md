@@ -17,9 +17,14 @@ Do not open public GitHub issues for security reports.
 and no auto-update. The **only** network destinations are:
 
 1. the configured model provider — default `https://api.deepseek.com`
-   (`/chat/completions` and `/models`), and
+   (`/chat/completions` and `/models`),
 2. any MCP servers **you** configure (`[mcp_servers.<name>]` in
-   `~/.deepseek-build/config.toml`), plus loopback / local `AF_UNIX` sockets.
+   `~/.deepseek-build/config.toml`), plus loopback / local `AF_UNIX` sockets, and
+3. when the off-by-default `web_fetch` tool is enabled
+   (`[features] web_fetch = true`), the hosts it fetches — restricted to a
+   built-in documentation allowlist unless `[toolset.web_fetch]
+   allowed_domains` overrides it, and gated by a permission prompt for hosts
+   outside that allowlist.
 
 Your prompt, files, and tool output are sent to the configured provider so it
 can answer; nothing is sent anywhere else. The API key is read from
