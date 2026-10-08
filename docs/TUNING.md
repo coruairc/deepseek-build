@@ -90,7 +90,22 @@ but `--effort low` is a documented, measured cost lever. An automatic
 Flash→Pro escalation policy is still **not wired** (`model_routing` defaults
 to `off`).
 
-_`--effort none` (thinking off) measured below._
+**Experiment 2 — `--effort none` (thinking off): cheapest, not adopted as
+default.** 63 runs:
+
+| configuration | pass | wall/task | out | reasoning | turns | est. USD/task |
+|---|---|---|---|---|---|---|
+| baseline (high) | 63/63 | 9.9s | 654 | 75 | 4.92 | 0.00702 |
+| effort-low | 63/63 | 8.8s | 566 | 28 | 4.62 | 0.00640 |
+| effort-none | 63/63 | 9.2s | 578 | 0 | 4.67 | 0.00620 |
+
+Measured delta vs baseline: **−12% cost** ($−0.00082/task), −0.7s/task, same
+100% pass rate, reasoning tokens exactly 0 as expected. It is cheaper than
+`low` on 15 of 21 tasks, but only by 3% — within this task set's noise band —
+and disabling thinking removes the reasoning trace that harder debugging and
+refactor tasks rely on. The shipped default therefore stays `high`; `none` is
+recorded as the floor. Reproduce:
+`python3 scripts/evals/experiment.py --name effort-none --model deepseek-v4-pro --extra-args "--effort none"`.
 
 ### E3d — verification loop after edits
 
