@@ -11,21 +11,28 @@ decisions; wins on conflict), [`PLAN.md`](PLAN.md) (audit + phased plan),
 - **Remote:** `origin git@github.com:coruairc/deepseek-build.git`.
 - **Toolchain:** Rust **1.94.0** via rustup (pinned in `rust-toolchain.toml`). Do not bump.
   `protoc` on PATH (`/usr/bin/protoc`); `dotslash` not needed.
-- **Binary:** `target/release/deepseek-build` (~147 MB) — package `xai-grok-pager-bin`
-  (D2 keeps the internal package name). **Rebrand done**: config dir `~/.deepseek-build`,
-  ACP namespace `deepseek-build/*`, Monokai theme + DeepSeek whale logo, brand constants
-  in `crates/codegen/xai-grok-brand/`; prompt templates carry no Grok Build strings.
+- **Binary:** release binary built via `cargo build --release -p xai-grok-pager-bin`
+  (artifact `target/release/deepseek-build`; last measured build `46aef0920857`: 153,624,024
+  bytes = 147 MiB on linux-x86_64; package `xai-grok-pager-bin`, D2 keeps the internal package
+  name). **Rebrand done**: config dir `~/.deepseek-build`, ACP namespace
+  `deepseek-build/*`, Monokai theme + DeepSeek whale logo, brand constants in
+  `crates/codegen/xai-grok-brand/`; prompt templates carry no Grok Build strings.
 - **Egress gate:** `scripts/check-egress.sh --strict` → **exit 0** (HARD OK, SOFT zero).
 - **Build:** `cargo check -p xai-grok-pager-bin` and `cargo build --release` are green.
-  **All lib test targets compile** (the pager/pager-minimal repair landed in `a16308b8`);
-  a full `cargo test --workspace` run is still pending to record the workspace-wide count.
-  Recent per-crate counts: pager 9874+, pager-minimal 94, shell 6221, workspace 1693,
-  sampler 186, config 467, chat-state 391, agent 576, status-line 24.
+  **All test targets compile** (`cargo check --workspace --tests`), but a full
+  `cargo test --workspace` run is **NOT green yet**: the first run (2026-10-08)
+  found 4 `xai-fast-worktree` NFS/Grove failures (tests of a backend this tree
+  stubs off — dropped, see `docs/DROPPED-TESTS.md`) and a red `xai-grok-login`
+  lane; a clean-`HOME` rerun of that crate alone is **405 passed / 33 failed /
+  1 ignored** and is being investigated. Do not claim the workspace green.
+  Latest green per-crate counts: pager 9876, pager-minimal 94, shell 6221,
+  workspace 1693, sampler 186, config 467, chat-state 391, agent 576,
+  status-line 24. Full detail in [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md).
 - **Runtime egress (observed):** a real model-driven session (shell, edits, web_fetch,
   local MCP, compaction, resume) contacts only `api.deepseek.com:443`, the web_fetch
   host, and AF_UNIX sockets — `scripts/egress-check.sh` reports
   `EGRESS_VIOLATIONS=0`. Measured with an `LD_PRELOAD` connect/send logger
-  (`strace` absent).
+  (`strace` absent). Last verified 2026-10-07 on the author's machine.
 - **Eval harness (Phase E):** `scripts/evals/` — 21 auto-checked tasks, JSONL metrics,
   comparison table, both-ways fixture validation. E2 baseline: both models 63/63,
   Pro `$0.00702`/task vs Flash `$0.00154`/task at ~97% cache hit. E3 batch done;
@@ -33,11 +40,16 @@ decisions; wins on conflict), [`PLAN.md`](PLAN.md) (audit + phased plan),
   won; nothing became a new default).
 - **Headless cost:** `--output-format json` now emits `estimated_cost_usd` +
   `estimate: true` (local peak-rate estimate, D14) alongside usage.
+- **Release/container:** pipeline + installer + `docker/Dockerfile` exist and
+  `scripts/test-install.sh` is 25/25, but **no `v*` tag has been pushed, no release
+  exists, and no container image has ever been built or pulled** (checked
+  2026-10-09). Dry-run procedure: §6.
 - **Status:** usable with a real `DEEPSEEK_API_KEY`. See `TESTING.md`,
   `scripts/smoke-test.sh`, `scripts/egress-check.sh`, `scripts/sandbox-run.sh`,
-  `KNOWN-ISSUES.md`. Remaining: one full `cargo test --workspace` green run; the
-  local-harness sandbox/pre-run coverage gap noted in `KNOWN-ISSUES.md`; interactive
-  TUI verified under a pty but not by a human.
+  `KNOWN-ISSUES.md`. Remaining: make the workspace test run green (login lane);
+  the local-harness sandbox/pre-run coverage gap; interactive TUI only pty-driven,
+  never driven by a human; user-guide prose stale (`grok <command>` examples, see
+  `KNOWN-ISSUES.md`).
 
 ## 1. How to resume (another machine)
 
@@ -131,15 +143,16 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
     copyleft MPL-2.0 crates listed in the audit. No GPL-3/AGPL/LGPL/CDDL.
   - README `## Install` section: curl one-liner, download-inspect-run alternative, VERSION
     pinning, uninstall, manual verify, supported-platform table, attribution + non-affiliation.
-  - **Not yet done:** no tag has been pushed, so no release exists yet. See §6 for the test-tag
-    procedure.
+  - **Not yet done:** no tag has been pushed, so no release exists yet. The release
+    workflow has never run in CI, and the container image has never been built or
+    pulled. See §6 for the test-tag procedure.
 
 ## 3. What is LEFT (ordered)
 
 1. ~~**Backend removal (D5)**~~ **DONE**: `ApiBackend` has only `ChatCompletions`.
 2. ~~**Rebrand (D1/D2) → SOFT gate zero**~~ **DONE** (`dsb/rebrand`, `8fcbff78`). Remaining
-   sub-item: rename the remaining `GROK_*` env vars to `DEEPSEEK_BUILD_*` (624 distinct; not
-   gated).
+   sub-item: rename the remaining `GROK_*` env vars to `DEEPSEEK_BUILD_*` (~580 distinct
+   identifiers at `e6b664cc`, `git grep -oE '\bGROK_[A-Z0-9_]+'`; not gated).
 3. **Finish real deletion of Phase-1 stubs** (see §5): shell `src/upload/*`,
    `session/repo_changes`, `feedback_manager`, feedback UI, `share`, vendored
    `shell/src/cloud_config/**`, `xai-computer-hub-{core,sdk,mcp-adapter}` and consumers,
@@ -152,21 +165,26 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
 6. **Phase 4 (verify then fix):** plan mode, permission modes + dangerous-command detection,
    read-before-write enforcement, cache-aware compaction, session resume, subagents (Flash for
    research), MCP client, AGENTS.md loading, checkpoints/undo, headless mode.
-7. ~~**Phase 5 quality bar**~~ release pipeline + installer + docs **DONE** (see §2); one full
-   `cargo test --workspace` green run still owed.
+7. ~~**Phase 5 quality bar**~~ release pipeline + installer + docs **DONE** (see §2). Still owed:
+   make a full `cargo test --workspace` run green (the `xai-grok-login` lane is red; see
+   `KNOWN-ISSUES.md`), and exercise the release workflow + container via the §6 dry run.
 8. ~~**Phase E (tuning/eval harness)**~~ **DONE**: `scripts/evals/` (21 auto-checked tasks),
    E2 baseline + E3a–d measured, results in `docs/TUNING.md`.
 
 ## 4. Gates (from the task) and current status
 
-1. `cargo build --release` — **PASS** (`target/release/deepseek-build`, ~147 MB). `cargo test
-   --workspace` now **compiles** everywhere; one full green run still owed. Workspace-wide
-   clippy/fmt: only per-crate checks done on touched crates.
+1. `cargo build --release` — **PASS** (artifact `target/release/deepseek-build`; last built
+   and measured at `46aef0920857`: 153,624,024 bytes = 147 MiB linux-x86_64). `cargo test
+   --workspace` now **compiles** everywhere, but the full run is **not green** (red
+   `xai-grok-login` lane; see §0). Workspace-wide clippy/fmt: only per-crate checks done on
+   touched crates.
 2. HARD egress zero — **PASS**. SOFT zero after rebrand — **PASS**
    (`scripts/check-egress.sh --strict` exits 0).
 3. Runtime egress test via `strace -f -e trace=connect` — **NOT RUN** (`strace` absent; the
-   `LD_PRELOAD` equivalent in `scripts/egress-check.sh` is used instead).
-4. Adapter wiremock + live smoke — **DONE** (wiremock suite present; live smoke 8/8 PASS).
+   `LD_PRELOAD` equivalent in `scripts/egress-check.sh` is used instead, last green
+   2026-10-07).
+4. Adapter wiremock + live smoke — **DONE** (wiremock suite present; live smoke 8/8 PASS on
+   the author's machine, 2026-10-07).
 5. Independent verification sub-agent — was run once earlier for the adapter; **re-run at the
    end**.
 
@@ -175,8 +193,12 @@ add an outbound destination, or the live smoke test needs a key not provided.
 
 ## 5. Known gotchas / incomplete (do not paper over)
 
-- **All test targets compile** after the pager repair (`a16308b8`); a full `cargo test
-  --workspace` run is still owed to record the workspace-wide count. See `KNOWN-ISSUES.md`.
+- **All test targets compile**; a full `cargo test --workspace` run is **not green yet** (the
+  `xai-grok-login` lane is red: 405 passed / 33 failed / 1 ignored on the last clean-`HOME`
+  rerun; four `xai-fast-worktree` NFS/Grove tests were dropped). See `KNOWN-ISSUES.md`.
+- **Unexercised:** interactive TUI by a human (only pty-driven), the release workflow in CI
+  (no tag, no release), the container image (never built/pulled), and the live scripts on any
+  machine other than the author's. See `KNOWN-ISSUES.md` "Unexercised surfaces".
 - **Stubs left (no network, but present):** `xai-grok-telemetry/src/{external.rs,otel_layer.rs,
   trace_context.rs}` (no-op OTEL), shell `src/file_utils_compat.rs`, shell
   `session/repo_changes/mod.rs` (pure serde types), shell `session/feedback_manager.rs`,

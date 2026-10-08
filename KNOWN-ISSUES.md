@@ -3,22 +3,37 @@
 Honest list of what is incomplete or broken at this revision. Nothing here is
 hidden behind a "temporary" flag; where code remains it is called out. Claims are
 against the tree on `dsb/integration` after the live-smoke, egress, polish and
-real-use passes (2026-10-07).
+real-use passes (2026-10-07), with the test state refreshed 2026-10-09.
 
 ## Build & tests
 
-- **All lib test targets compile** after the pager repair (`a16308b8`;
-  `xai-grok-pager` 9874 passed / 0 failed / 4 ignored, `xai-grok-pager-minimal`
-  94 passed / 0 failed; `cargo check --workspace --tests` green). The first
-  full `cargo test --workspace` run (2026-10-08) then surfaced four
-  `xai-fast-worktree` failures that per-crate runs could not see (they only
-  compile under the `metadata` feature, which workspace feature unification
-  enables): they test the NFS/Grove backend that this tree stubs off in
-  `nfs_off.rs`. Dropped with a ledger entry (`docs/DROPPED-TESTS.md`);
-  `xai-fast-worktree` is now 455 passed / 0 failed with `--features metadata`.
-- **`xai-grok-shell` lib tests: green.** 6221 passed / 0 failed / 4 ignored.
-  Integration tests compile after dropping the 8 remote-settings prefetch tests
-  for the deleted `remote_config`/`managed_config` modules.
+- **A full `cargo test --workspace` run has NOT gone green yet.** All test
+  targets compile, but the first full-workspace run (2026-10-08) surfaced
+  failures in `xai-grok-login` before its log was cut off mid-run. A follow-up
+  run of that crate alone with a scratch `HOME`/`DEEPSEEK_BUILD_HOME` also failed:
+  `xai-grok-login --lib` = **405 passed / 33 failed / 1 ignored** (one flaky
+  sleep-gate test skipped; log `/tmp/opencode/v2t/login-clean.log` on the author's
+  machine, 2026-10-08 23:54). The failures cluster in
+  `refresh::oidc_refresher` (16), `manager::tests` (9), `flow`, `external_auth`
+  and one `storage` test — the inert OAuth/OIDC scaffolding this fork no longer
+  wires up. Another workstream is still investigating: **do not claim the
+  workspace green until a full run finishes with zero failures.** Separately, the
+  same first full run surfaced four `xai-fast-worktree` failures that per-crate
+  runs could not see (they only compile under the `metadata` feature, which
+  workspace feature unification enables): they test the NFS/Grove backend that
+  this tree stubs off in `nfs_off.rs`. Dropped with a ledger entry
+  (`docs/DROPPED-TESTS.md`); `xai-fast-worktree` is then 455 passed / 0 failed with
+  `--features metadata`.
+- **All test targets compile** (`cargo check --workspace --tests` green).
+  Latest recorded green per-crate runs: `xai-grok-pager` 9876 passed / 0 failed /
+  4 ignored (2026-10-08, `a16308b8` + repairs), `xai-grok-pager-minimal` 94
+  passed / 0 failed.
+- **`xai-grok-shell` lib tests: green in the last per-crate run (2026-10-07).**
+  6221 passed / 0 failed / 4 ignored. Integration tests compile after dropping
+  the 8 remote-settings prefetch tests for the deleted `remote_config` /
+  `managed_config` modules. The 2026-10-08 workspace run did not reach a recorded
+  result for this crate before its log was cut off; treat 6221 as the last
+  measured number, not as part of a green workspace run.
 - **`xai-grok-workspace` test target: compiles and passes** (1693 passed; a
   pre-existing `session::git_gate` / `restore_fetch` timing flake rotates under
   whole-suite saturation and passes in isolation). The last 25 failures were
@@ -27,18 +42,28 @@ real-use passes (2026-10-07).
   the toolset without the deleted hub pre-run/sandbox integration, so
   equivalent local coverage must be re-established (see
   `docs/DROPPED-TESTS.md`).
-- **Per-crate test results (this revision):** sampling-types 240, sampler 186,
-  telemetry 156, status-line 24, brand 2, version 2, config 467, tools-api 15,
-  chat-state 391, session-events 16, active-sessions 6, foreign-sessions 53,
-  config-types 45, http 14, mcp 279, hooks 279, agent 576 — all 0 failures.
+- **Per-crate test results (last recorded per-crate runs, 2026-10-08):**
+  sampling-types 240, sampler 186, telemetry 156, status-line 24, brand 2,
+  version 2, config 467, tools-api 15, chat-state 391, session-events 16,
+  active-sessions 6, foreign-sessions 53, config-types 45, http 14, mcp 279,
+  hooks 279, agent 576 — all 0 failures **in those runs**. These do not cover
+  `xai-grok-login`, `xai-grok-pager` (last 9876) or `xai-fast-worktree`. Because
+  workspace feature unification compiles feature-gated tests that per-crate
+  runs miss (the `xai-fast-worktree` case below), a per-crate pass is necessary
+  but not sufficient evidence for the workspace run.
 - **Non-test build is green:** `cargo check -p xai-grok-pager-bin` and
   `cargo build --release -p xai-grok-pager-bin` succeed; the binary runs
-  (`target/release/deepseek-build`, `deepseek-build 1.0.45`).
+  (`target/release/deepseek-build`, 147 MiB at the last measured build
+  `46aef0920857`, `deepseek-build 1.0.45 (<commit>)`).
 - **Step 6 mutation check:** breaking the sandbox truncation cap (`5_000`→
   `6_000`) made `sandbox_host_caps_task_output_polls_at_5k` fail, confirming the
   sandbox tests still detect the behavior; the change was reverted.
-- **Tags:** `last-known-good-2026-10-06` (`b3847ff8`, last green test compile;
-  still contains egress code — not safe to run).
+- **Tags/releases:** on `origin` only `last-known-good-2026-10-06` (`b3847ff8`,
+  before the pager test repair, still contains egress code — not safe to run) and
+  `parked-test-repair-2026-10-06` (`c7d7f7e4`); two local-only tags
+  (`pre-merge-main-2026-10-07`, `pre-merge-integration-2026-10-07`). **No `v*`
+  release tag has ever been pushed and no GitHub release exists** (checked
+  against `origin` and `gh release list` on 2026-10-09).
 
 ## Network / egress
 
@@ -84,10 +109,13 @@ real-use passes (2026-10-07).
   `scripts/key-leak-check.sh` runs the binary with a fake key and scans debug logs
   and saved sessions — currently PASS. A unit test (`debug_redacts_api_key`)
   pins the redaction.
-- **Live smoke (Step 1, 2026-10-07):** `scripts/smoke-test.sh` = 8/8 PASS. See
-  the smoke results below.
+- **Live smoke (Step 1, 2026-10-07):** `scripts/smoke-test.sh` = 8/8 PASS on the
+  author's machine. See the smoke results below.
 
 ## Step 1 — live adapter results
+
+> All results below are from the author's machine (2026-10-07) and have not been
+> reproduced on another host.
 
 - `GET /models` returns exactly `deepseek-flash`, `deepseek-v4-pro`.
 - Plain and streamed headless chat OK; the hidden `deepseek-v4-flash` alias maps
@@ -102,6 +130,8 @@ real-use passes (2026-10-07).
 - `tool_choice=required` in thinking mode → HTTP 400 (documented in O3).
 
 ## Step 4 — real-use results (scratch repo, headless)
+
+> Author's machine, 2026-10-07; not reproduced elsewhere.
 
 - **Worked:** simple edit; fixing a failing test (it ran `python3 test_calc.py`);
   a multi-file rename (`mul`→`multiply` across 4 files); session resume with
@@ -148,6 +178,26 @@ real-use passes (2026-10-07).
 - Compaction, MCP, resume, headless were exercised headlessly (Step 2). Plan
   mode and permission *prompts* were not exercised interactively.
 
+## Unexercised surfaces (no human, no CI)
+
+- **Interactive TUI by a human: never.** It has been driven under a pty with
+  scripted keystrokes (2026-10-07: welcome logo, `/model`, `/effort`, `/think`,
+  status line), but no person has used it interactively. §4 items in
+  [`TESTING.md`](TESTING.md) are the checklist for that pass.
+- **Release workflow in CI: never run.** `.github/workflows/release.yml` has
+  never executed; no `v*` tag has been pushed; no GitHub release exists
+  (`gh release list` empty, verified 2026-10-09). The test-tag procedure in
+  [`AGENTS.md`](AGENTS.md) §6 is untested end to end.
+- **Container image: never built or pulled.** Neither the production
+  `docker/Dockerfile` (needs staged release tarballs) nor
+  `docker/Dockerfile.localtest` has been exercised; the README's GHCR pull
+  examples cannot work until a release is published.
+- **Live scripts on any machine but the author's: never.** `scripts/smoke-test.sh`
+  (8/8) and `scripts/egress-check.sh` (`EGRESS_VIOLATIONS=0`) passed there on
+  2026-10-07 and have not been reproduced elsewhere.
+- **`scripts/test-install.sh`: green locally** (25/25 assertions) against a
+  loopback fake release; it never touches the real release pipeline.
+
 ## Rebrand / config
 
 - Binary (`deepseek-build`), config dir (`~/.deepseek-build`), ACP namespace
@@ -157,14 +207,17 @@ real-use passes (2026-10-07).
   `GROK_SANDBOX`→`DEEPSEEK_BUILD_SANDBOX`, `GROK_AGENT_DASHBOARD`→
   `DEEPSEEK_BUILD_AGENT_DASHBOARD`. `DEEPSEEK_BUILD_HOME` is primary and
   `GROK_HOME` is the legacy fallback. **Internal-only `GROK_*` names remain**
-  (~580 distinct), per D2; these are not user-facing.
+  (~580 distinct identifiers at `e6b664cc`), per D2; these are not user-facing.
 - No automatic migration from `~/.grok`; set `GROK_HOME` (legacy) to reuse it.
-- **User-guide prose still has pre-removal content.** The docs under
-  `crates/codegen/xai-grok-pager/docs/user-guide/` (shipped in the binary,
-  extracted to `~/.deepseek-build/docs/user-guide/`) still describe removed
-  xAI OAuth/OIDC login flows and use `grok <command>` examples where the binary
-  is now `deepseek-build`. The home-dir paths are fixed; the prose and command
-  examples need a follow-up editing pass.
+- **User-guide prose still has pre-removal content (counted 2026-10-09).** The
+  docs under `crates/codegen/xai-grok-pager/docs/user-guide/` (28 files, shipped
+  in the binary, extracted to `~/.deepseek-build/docs/user-guide/`) still describe
+  removed xAI OAuth/OIDC login flows (129 line hits across 14 files) and use
+  `grok <command>` examples where the binary is now `deepseek-build` (**304
+  occurrences of a `grok <word>` command across 25 of 28 files**, e.g. `grok -p`,
+  `grok inspect`, `grok mcp`, `grok login`). The home-dir paths are fixed; the
+  prose and command examples need a follow-up editing pass. Until then, read the
+  command examples as `deepseek-build <command>`.
 
 ## Licensing
 

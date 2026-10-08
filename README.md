@@ -8,10 +8,13 @@ shell commands, and manages long-running tasks, driven by DeepSeek's
 OpenAI-compatible Chat Completions API. It is a work in progress (see
 [Status](#status) and [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)).
 
-> Pre-built binaries are published on [GitHub Releases](https://github.com/coruairc/deepseek-build/releases)
-> for linux-x86_64, linux-aarch64, darwin-arm64, and darwin-x86_64, with a
-> checksum file and an installer script attached to each release. Building from
-> source remains supported (see [Building from source](#building-from-source)).
+> A release pipeline is in place that builds binaries for linux-x86_64,
+> linux-aarch64, darwin-arm64, and darwin-x86_64, with a checksum file and an
+> installer script attached to each GitHub release. **No release has been
+> published yet** — no `v*` tag has been pushed, so
+> [Releases](https://github.com/coruairc/deepseek-build/releases) is currently
+> empty. Until the first tag, build from source (see
+> [Building from source](#building-from-source)).
 
 ## Status
 
@@ -19,14 +22,23 @@ OpenAI-compatible Chat Completions API. It is a work in progress (see
 |------|-------|
 | Phase 0 - audit & plan | Done (`PLAN.md`, `DECISIONS.md`) |
 | Phase 1 - cleanup | Done: upload/exfil, telemetry/Sentry/OTLP, xAI voice/Imagine/web_search, auto-update, announcements, cloud-config/remote control, session share/relay, and xAI model/endpoint strings are removed or neutralized. **HARD and SOFT egress gates are green**; rebrand (binary, config dir, ACP namespace, strings) done. |
-| Phase 2 - DeepSeek adapter | Core done: Chat Completions-only backend (`Responses`/`Messages` deleted), `thinking` control, `reasoning_content` round-trip + sanitizer, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-v4-pro`), wiremock suite. Live smoke test still needs a real key. |
+| Phase 2 - DeepSeek adapter | Core done: Chat Completions-only backend (`Responses`/`Messages` deleted), `thinking` control, `reasoning_content` round-trip + sanitizer, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-v4-pro`), wiremock suite. Live smoke run 8/8 PASS (2026-10-07, author's machine). |
 | Phase 3 - TUI | Implemented: reasoning fold (`e`/`E`/`Ctrl+E`), collapsible thinking, status line (model/context/effort/tokens/cache/cost), `/model` `/effort` `/think` `/theme`, Monokai default theme + whale logo. |
-| Phase 4 - harden existing features | Partial: runtime read-before-write guard and dangerous-command warnings are in; plan mode, permissions, resume, subagents, MCP, `AGENTS.md`, and checkpoints exist and need end-to-end exercising. |
-| Phase 5 - testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. Release pipeline (CI tarballs + installer) added; first release pending tag. |
+| Phase 4 - harden existing features | Partial: runtime read-before-write guard and dangerous-command warnings are in; plan mode, permissions, resume, subagents, MCP, `AGENTS.md`, and checkpoints exist and need an end-to-end pass. A full `cargo test --workspace` run is **not green yet** (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). |
+| Phase 5 - testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. Release pipeline (CI tarballs + installer) and container definitions are added but **have never run**: no tag pushed, no release, no image. |
 
 See [`AGENTS.md`](AGENTS.md) for a precise resume-from-here handoff.
 
 ## Install
+
+> **No release has been published yet** (checked 2026-10-09): the `curl | sh`
+> and release-asset steps below describe the installer and the intended flow,
+> but they cannot run until the first `v*` tag is pushed. Build from source in
+> the meantime (see [Building from source](#building-from-source)); the installer
+> itself has been exercised against a local fake release
+> (`sh scripts/test-install.sh`, 25/25 assertions).
+
+Once a release exists:
 
 ```sh
 curl -fsSL https://github.com/coruairc/deepseek-build/releases/latest/download/install.sh | sh
@@ -111,6 +123,18 @@ may need a right-click **Open**, or
 Official releases also publish a multi-arch (linux/amd64, linux/arm64) image to
 GitHub Container Registry. It is **not affiliated with DeepSeek**.
 
+> **Not yet built or published.** The container job in the release workflow runs
+> only on a tag push, and no tag has been pushed, so there is no GHCR image to
+> pull and the `docker pull` commands below cannot work yet (checked 2026-10-09).
+> The production image is assembled from a staged context containing the release
+> tarball's binary as `deepseek-build-amd64`/`deepseek-build-arm64` plus the
+> license files; see `docker/Dockerfile` and the container step in
+> `.github/workflows/release.yml`. To smoke-test locally with a binary you built,
+> use `docker/Dockerfile.localtest` (also not yet exercised — see
+> [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)).
+
+Once a release exists:
+
 ```sh
 # Pull (replace <owner> with the GitHub account that published it)
 docker pull ghcr.io/<owner>/deepseek-build:latest
@@ -148,8 +172,12 @@ settings (packages default to private for personal accounts).
 There is no telemetry, analytics, or auto-update. The only network destinations
 are:
 
-1. the configured model provider (default `https://api.deepseek.com`), and
-2. user-configured MCP servers.
+1. the configured model provider (default `https://api.deepseek.com`),
+2. user-configured MCP servers, and
+3. when you enable the `web_fetch` tool (`[features] web_fetch = true`), the
+   hosts that tool fetches — off by default, limited to a built-in documentation
+   allowlist (`[toolset.web_fetch] allowed_domains` overrides it), and gated per
+   non-allowlisted host by a permission prompt.
 
 See [`SECURITY.md`](SECURITY.md#network--privacy) for the full statement and how
 to verify the boundary. Run the static guard at any time:
@@ -170,8 +198,8 @@ To watch runtime egress, run the binary through
 
 ## Building from source
 
-If you'd rather not use the published binaries (see
-[Install](#install)), build it yourself:
+Until the first release is published (see [Install](#install)), this is the only
+way to get the binary:
 
 ```sh
 # One-time: install the pinned toolchain
@@ -209,8 +237,9 @@ config.
 ## Testing the binary safely
 
 `scripts/sandbox-run.sh` runs the binary with only `api.deepseek.com` reachable.
-A 20-30 minute manual test plan lives in [`TESTING.md`](TESTING.md); known gaps
-are in [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md).
+A manual test plan lives in [`TESTING.md`](TESTING.md) (a 20–30 minute core pass
+plus live-script and release/container checks); known gaps and the surfaces that
+have never been exercised are in [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md).
 
 ## Repository layout
 
