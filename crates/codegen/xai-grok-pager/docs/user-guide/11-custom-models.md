@@ -56,7 +56,7 @@ A fleet pin matches the **model id** (not a user-chosen catalog key), so a local
 
 ### Config Default
 
-Set a persistent default in `~/.grok/config.toml`:
+Set a persistent default in `~/.deepseek-build/config.toml`:
 
 ```toml
 [models]
@@ -83,7 +83,7 @@ To send provider-specific authentication or version headers -- for example, Anth
 
 ## Configuring Custom Models
 
-Add custom model endpoints in `~/.grok/config.toml` under `[model.<name>]` sections:
+Add custom model endpoints in `~/.deepseek-build/config.toml` under `[model.<name>]` sections:
 
 ```toml
 [model.my-model]

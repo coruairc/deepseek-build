@@ -305,7 +305,7 @@ Prefixes (only inside search mode):
 
 ## Persistence
 
-Per-user preferences under `[dashboard]` in `~/.grok/config.toml`:
+Per-user preferences under `[dashboard]` in `~/.deepseek-build/config.toml`:
 
 ```toml
 [dashboard]

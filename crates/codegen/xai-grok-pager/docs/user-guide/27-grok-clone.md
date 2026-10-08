@@ -3,12 +3,12 @@
 `grok clone` fetches a Git repository into a Grove content store and mounts a
 projected working tree (NFS on macOS, FUSE on Linux). Each invocation reads
 `GROK_CLONE` / `GROVE_CLONE` in this process, then grok enable-all
-(`GROK_GROVE` or `[cli] grove` in `~/.grok/config.toml`), then `[clone] enabled`
+(`GROK_GROVE` or `[cli] grove` in `~/.deepseek-build/config.toml`), then `[clone] enabled`
 authorize Clone IPC.
 
 This does **not** enable Grove for session / `-w` worktrees. Those use a
 separate gate (`GROK_WORKTREE_TYPE` and `[cli] grove_worktree` in
-`~/.grok/config.toml`; see [Configuration reference](26-config-reference.md)).
+`~/.deepseek-build/config.toml`; see [Configuration reference](26-config-reference.md)).
 `GROK_WORKTREE_TYPE` and `[cli] grove_worktree` do **not** enable `grok clone`.
 `GROK_CLONE` / `GROVE_CLONE` / `[clone] enabled` do **not** enable session /
 `-w` Grove.
@@ -17,7 +17,7 @@ To turn **both** surfaces on without touching the specific knobs:
 
 ```bash
 export GROK_GROVE=1
-# or in ~/.grok/config.toml:
+# or in ~/.deepseek-build/config.toml:
 # [cli]
 # grove = true
 ```
@@ -70,9 +70,9 @@ The two are separate worlds:
 
 | World | Covers | Commands | Store |
 |-------|--------|----------|-------|
-| Grok | the model and API | `grok login`, `grok logout` | `~/.grok/auth.json` |
+| Grok | the model and API | `grok login`, `grok logout` | `~/.deepseek-build/auth.json` |
 
-`grok clone` never reads `~/.grok/auth.json` for Git. Signing into Grok does not
+`grok clone` never reads `~/.deepseek-build/auth.json` for Git. Signing into Grok does not
 give the daemon a credential for the remote, and neither does
 `[clone] enabled = true`: that flag is a **product gate** deciding whether
 `grok clone` runs at all, not authorization for GitHub.
@@ -129,7 +129,7 @@ carrier token, configure `git credential` or `gh auth` first, then reload.
 `grok` does not take the daemon or its mounts down) and waits for the socket.
 
 The `grove` binary is resolved from `PATH`, then from the directory of the
-`grok` executable (for example `~/.grok/bin/grove` next to `grok`). There is
+`grok` executable (for example `~/.deepseek-build/bin/grove` next to `grok`). There is
 no separate install location. macOS has no PATH package for grove; build it
 from the monorepo:
 
