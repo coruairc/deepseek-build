@@ -24,6 +24,23 @@ real-use passes (2026-10-07), with the test state refreshed 2026-10-09.
   this tree stubs off in `nfs_off.rs`. Dropped with a ledger entry
   (`docs/DROPPED-TESTS.md`); `xai-fast-worktree` is then 455 passed / 0 failed with
   `--features metadata`.
+- **`xai-grok-login` has a deterministic test deadlock** (found 2026-10-09):
+  `refresh::oidc_refresher::tests::sleep_gate_e2e_in_flight_refresh_completes_across_imminent_sleep`
+  hangs indefinitely (main thread `futex_wait`, runtime idle; neither the test's
+  5s await bound nor the product's `SLEEP_ACK_MAX_WAIT` fires). Reproduced twice,
+  including single-threaded in isolation (`timeout 180 … ; exit 124`). The test
+  mixes a blocking `std::thread` with a current-thread `#[tokio::test]` runtime.
+  Until fixed, run the workspace suite under a wall-clock bound. See
+  `/tmp/opencode/ws-hang-evidence.md`.
+- **A test failure prints a live API key** (found 2026-10-09, D13):
+  `side_call_bearer::tests::no_credential_is_missing_not_a_fallback` asserts
+  `Err(Missing)` with no session, but the shared API-key provider falls back to
+  `DEEPSEEK_API_KEY` from the caller's environment, so the `assert_eq!` diff
+  prints the key. The test also does not unset `DEEPSEEK_API_KEY` /
+  `DEEPSEEK_BUILD_API_KEY`, so results differ between a developer machine and a
+  clean environment (399/38 with a real key vs 405/33 with a fake one). Both the
+  missing env isolation and the unredacted assertion are being fixed; until then
+  do not run this crate's suite with a real key in the environment.
 - **All test targets compile** (`cargo check --workspace --tests` green).
   Latest recorded green per-crate runs: `xai-grok-pager` 9876 passed / 0 failed /
   4 ignored (2026-10-08, `a16308b8` + repairs), `xai-grok-pager-minimal` 94
