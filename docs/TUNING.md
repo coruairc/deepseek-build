@@ -133,13 +133,46 @@ harder tasks (multi-file, long-horizon) to locate the boundary.
 
 ### E3d — verification loop after edits
 
-_Not started._
+The shipped prompt already asks for verification; this experiment tested
+*additional, explicit* rules appended via `--rules`
+(`scripts/evals/prompts/verify-loop.md`: run a check after every edit, never
+report a change working until a command shows it, prefer the narrowest check).
+
+**Result (2026-10-08): rejected — no win.** 63 runs:
+
+| configuration | pass | wall/task | out | reasoning | turns | est. USD/task |
+|---|---|---|---|---|---|---|
+| baseline | 63/63 | 9.9s | 654 | 75 | 4.92 | 0.00702 |
+| verify-loop rules | 63/63 | 10.4s | 704 | 109 | 4.95 | 0.00752 |
+
+Measured delta: **+7% cost** ($+0.00050/task), +0.5s/task, same 100% pass rate.
+Both arms already verify (the task checks pass either way), so the added rules
+only bought extra reasoning and output tokens. Reproduce:
+`python3 scripts/evals/experiment.py --name verify-loop --model deepseek-v4-pro --rules-file scripts/evals/prompts/verify-loop.md`.
 
 ## Decisions
 
-_Filled in after the first experiment batch, per the Phase E gate: adopt a
-configuration as the default only if it clearly wins; otherwise leave the
-shipped defaults and record the negative result here._
+All four E3 dimensions measured on 63 runs each. **Nothing beat the shipped
+defaults** except explicit reasoning-effort reduction, and even that is a
+per-task policy rather than a new default:
+
+| dimension | variant | measured Δ vs baseline | verdict |
+|---|---|---|---|
+| E3a prompt | short DeepSeek prompt | +6% cost | rejected |
+| E3b edit format | codex `apply_patch` | +5% cost | rejected |
+| E3c effort | `--effort low` | −9% cost, −63% reasoning | measured win; not a new default |
+| E3c effort | `--effort none` | −12% cost | floor; not a new default |
+| E3d verification | extra rules | +7% cost | rejected |
+
+The shipped defaults stay: the system prompt, the grok-build toolset, and
+`high` reasoning effort. The measured cost levers are documented for the user
+(`--effort low` / `-m deepseek-flash`), and no automatic routing was wired.
+The task set is at ceiling (100% for every arm), so these results measure cost
+at fixed correctness; a harder task set is needed to tune for pass rate.
+
+Reproducing the whole batch takes about 50 minutes (7 arms × 63 runs).
+Total measured spend across the baseline and all five variants: **$2.74**
+(442 runs; see `scripts/evals/results/`, gitignored).
 
 ## Reproducing
 
