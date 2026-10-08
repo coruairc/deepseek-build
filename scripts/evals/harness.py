@@ -386,6 +386,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", default="baseline", help="label for this configuration")
     parser.add_argument("--config-file", type=Path, help="TOML copied into the scratch HOME")
     parser.add_argument("--base-url", help="override [model.<model>] base_url (mock/self-test)")
+    parser.add_argument("--system-prompt-file", type=Path,
+                        help="pass this file's contents as --system-prompt-override (E3a)")
     parser.add_argument("--runs", type=int, default=1, help="runs per task")
     parser.add_argument("--timeout", type=int, default=420, help="per-run timeout (s)")
     parser.add_argument("--extra-args", default="", help="extra binary args as one shell-like string")
@@ -439,6 +441,10 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(f"--extra-args: {exc}")
     else:
         extra_args = []
+    if args.system_prompt_file:
+        if not args.system_prompt_file.exists():
+            parser.error(f"no such system prompt file: {args.system_prompt_file}")
+        extra_args = ["--system-prompt-override", args.system_prompt_file.read_text(), *extra_args]
     secrets = [os.environ.get("DEEPSEEK_API_KEY", ""), os.environ.get("DEEPSEEK_BUILD_API_KEY", "")]
     workdir = args.workdir or Path(tempfile.mkdtemp(prefix="deepseek-eval-"))
     workdir.mkdir(parents=True, exist_ok=True)

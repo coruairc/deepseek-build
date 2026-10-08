@@ -65,6 +65,9 @@ BIN=target/release/deepseek-build python3 scripts/evals/harness.py --model deeps
 `--config-file` copies a TOML file into the scratch `$HOME/.deepseek-build/config.toml`,
 which is how to vary reasoning effort, status-line pricing overrides, and so on.
 `--extra-args` passes further binary flags (e.g. `--effort low`).
+`--system-prompt-file` replaces the whole system prompt via the binary's
+`--system-prompt-override`, which is the no-rebuild path for the E3a prompt
+experiments (the tool definitions are unchanged; only the prompt text varies).
 
 ## Task format
 
