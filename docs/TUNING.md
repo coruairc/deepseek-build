@@ -18,15 +18,23 @@ effort (high for v4 Pro).
 
 | configuration | model | runs | pass | pass rate | wall/task | tokens in | cache read | hit rate | out | reasoning | est. USD/task |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| _pending live baseline_ | deepseek-v4-pro | | | | | | | | | | |
-| _pending live baseline_ | deepseek-flash | | | | | | | | | | |
+| baseline | deepseek-v4-pro | 63 | 63 | 100% | 9.9s | 1596 | 52773 | 97% | 654 | 75 | 0.00702 |
+| baseline | deepseek-flash | 63 | 63 | 100% | 7.4s | 1747 | 53079 | 97% | 579 | 59 | 0.00154 |
 
-Notes:
+Measured 2026-10-08 with `scripts/evals/run-baseline.sh` (21 tasks × 3 runs
+each, binary `deepseek-build 1.0.45`, `dsb/integration @ 9113b219`).
 
-- A trivial prompt costs ~14k input tokens because of the inherited system
-  prompt and tool definitions; the harness reports prompt-side tokens per task.
-- Cache hit rate is high after the first run in a session; each eval run is a
-  fresh session, so the numbers reflect cold-then-warm prefix behavior.
+Findings:
+
+- **Both models pass every task**, so pass rate is at its ceiling. The lever
+  for E3 is cost and wall time, not correctness.
+- **Pro costs 4.6× Flash** (`$0.00702` vs `$0.00154` per task) for the same pass
+  rate on this task set. Flash is 25% faster per task.
+- The cache-hit rate is ~97% in both cases: the inherited system prompt and
+  tool definitions dominate the prompt (53k cache-read tokens per task against
+  ~1.7k fresh). A shorter prompt directly reduces the cache-read bucket.
+- Reasoning tokens are modest (75 Pro / 59 Flash per task averaged across
+  turns).
 
 ## Experiment log
 
