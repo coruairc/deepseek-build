@@ -63,12 +63,12 @@ Start with `deepseek-build` and approve tool actions in the TUI as needed.
 | 6 | Fold keys: `e`, `E`, `Ctrl+E` | `e` folds/unfolds the selected entry; `E` folds all; `Ctrl+E` toggles all thinking blocks |
 | 7 | `/think` | Shows/hides reasoning blocks |
 | 8 | Plan mode (`/plan` or Shift+Tab) | Read-only investigation; asks approval before acting; `--no-plan` disables it. **Headless `--permission-mode plan` is read-only but does not emit a plan for a bare edit request (known gap).** |
-| 9 | Permission modes (Shift+Tab; `/auto`; `--allow`/`--deny`/`--permission-mode`) | Modes change behavior; a dangerous `rm -rf` still prompts with a warning. In headless, a gated action is cancelled (empty output, exit 0) rather than prompted |
+| 9 | Permission modes (Shift+Tab; `/auto`; `--allow`/`--deny`/`--permission-mode`) | Modes change behavior; a dangerous `rm -rf` still prompts with a warning. In headless, a gated action is cancelled with a one-line stderr message naming `--always-approve` and a non-zero exit |
 | 10 | Read-before-write | Editing a file not read first is denied with a clear message |
 | 11 | Model switch (`/model`, alias `/m`) | Lists `deepseek-v4-pro`, `deepseek-flash`, hidden `deepseek-v4-flash`; switch works |
 | 12 | Reasoning effort (`/effort <level>`) | Offers `none`, `low`, `high`, `max`; the request honors the chosen level |
 | 13 | Status line | Shows cwd/model/context by default; `[ui.status_line] items` adds `effort`, `tokens`, `cache`, `cost`, `turn_timer`, `session_name` |
-| 14 | Cost/cache (`/usage`) | Token usage and cache-hit/miss shown; cost when a price table is configured. **Headless JSON exposes usage but not cost** (DeepSeek returns no cost) |
+| 14 | Cost/cache (`/usage`) | Token usage and cache-hit/miss shown; cost when a price table is configured. Headless `--output-format json` exposes `estimated_cost_usd` + `estimate: true` (local peak-rate estimate, omitted with no tokens) and `total_cost_usd` only when the provider reported a complete cost |
 | 15 | Themes (`/theme`, alias `/t`) | Switches `deepseek-monokai` (default) or another palette; `auto` follows the system |
 | 16 | Resume (`-c` / `--resume` / `/resume`) | Previous session reloads with history; `-r <id>` reuses the same id |
 | 17 | Headless (`deepseek-build -p "..."`) | Non-interactive reply on stdout, exit 0; `--output-format json` includes `usage` |
