@@ -13,8 +13,11 @@ talks to the configured provider.
 scripts/evals/
   harness.py       # run tasks against a model/config, append JSONL records
   report.py        # aggregate JSONL records into a comparison table
+  validate.py      # both-ways task validation (pristine fails, reference fix passes)
+  run-baseline.sh  # E2 baseline: both models, N runs per task
+  prompts/         # candidate system prompts for E3a
   tasks/*.json     # 21 task definitions (fixture files, prompt, checks)
-  results/*.jsonl  # one JSON line per run (append-only)
+  results/*.jsonl  # one JSON line per run (append-only, gitignored)
 ```
 
 ## Quick start
@@ -91,11 +94,16 @@ experiments (the tool definitions are unchanged; only the prompt text varies).
 Check types: `command` (exit code, optional `expect_stdout_contains`),
 `file_contains`, `file_not_contains`, `file_absent`, `file_exists`.
 
-Add a task by dropping a file in `tasks/`; then verify it both ways:
+Add a task by dropping a file in `tasks/`; then verify it both ways with the
+maintainer tool:
 
-1. `--dry-run` must report it as failing on the pristine fixture
-   (`fails_before: true`).
-2. A reference fix must make every check pass (the golden-patch validation).
+```sh
+python3 scripts/evals/validate.py            # both-ways check, no model calls
+```
+
+It requires that the pristine fixture fails (`fails_before: true`) and that a
+registered reference fix in `validate.py` makes every check pass. A new task
+needs an entry in that file's `PATCHES` before it can be trusted.
 
 ## Notes
 

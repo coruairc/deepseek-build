@@ -192,6 +192,19 @@ def run_checks(task: dict, cwd: Path, timeout_s: int) -> list[dict]:
     return [run_check(c, cwd, timeout_s) for c in task["checks"]]
 
 
+def clear_pycache(root: Path) -> None:
+    """Drop byte-compiled caches so checks never score stale code.
+
+    Python's timestamp-based invalidation has one-second granularity, so an
+    agent edit landing in the same second as a previous test run could be
+    served from a stale `__pycache__` of the same size.
+    """
+    for cache in root.rglob("__pycache__"):
+        shutil.rmtree(cache, ignore_errors=True)
+    for stale in root.rglob("*.pyc"):
+        stale.unlink(missing_ok=True)
+
+
 # --------------------------------------------------------------------------
 # Running the binary
 # --------------------------------------------------------------------------
@@ -344,6 +357,7 @@ def run_agent(
     elif code not in (0, None):
         error = (stderr or stdout).strip().splitlines()[-1][:800] if (stderr or stdout).strip() else None
 
+    clear_pycache(scratch)
     checks = run_checks(task, scratch, timeout_s)
     record = {
         "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -427,6 +441,7 @@ def main(argv: list[str] | None = None) -> int:
             with tempfile.TemporaryDirectory(prefix="eval-dry-") as tmp:
                 scratch = Path(tmp) / "repo"
                 build_fixture(task, scratch)
+                clear_pycache(scratch)
                 checks = run_checks(task, scratch, args.timeout)
             verdict = "checks-fail (expected for fails_before)" if task.get("fails_before", True) else "checks-pass"
             if task.get("fails_before", True) and all(c["pass"] for c in checks):
