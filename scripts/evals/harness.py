@@ -389,7 +389,7 @@ def run_agent(
         "config_file": str(config_file) if config_file else None,
         "config_file_sha256": file_sha256(config_file) if config_file else None,
         "extra_args": extra_args,
-        "system_prompt_file": system_prompt_file,
+        "system_prompt_file": str(system_prompt_file) if system_prompt_file else None,
         "system_prompt_sha256": file_sha256(system_prompt_file) if system_prompt_file else None,
         **extract_metrics(payload),
         "git": git_snapshot(scratch),
