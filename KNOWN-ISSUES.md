@@ -147,13 +147,20 @@ real-use passes (2026-10-07).
 ## Rebrand / config
 
 - Binary (`deepseek-build`), config dir (`~/.deepseek-build`), ACP namespace
-  (`deepseek-build/*`), theme, and user-facing strings are rebranded.
+  (`deepseek-build/*`), theme, user-facing strings, and the shipped user-guide
+  docs' user-home paths are rebranded.
 - **User-visible env vars renamed** with legacy fallbacks:
   `GROK_SANDBOX`→`DEEPSEEK_BUILD_SANDBOX`, `GROK_AGENT_DASHBOARD`→
   `DEEPSEEK_BUILD_AGENT_DASHBOARD`. `DEEPSEEK_BUILD_HOME` is primary and
   `GROK_HOME` is the legacy fallback. **Internal-only `GROK_*` names remain**
   (~580 distinct), per D2; these are not user-facing.
 - No automatic migration from `~/.grok`; set `GROK_HOME` (legacy) to reuse it.
+- **User-guide prose still has pre-removal content.** The docs under
+  `crates/codegen/xai-grok-pager/docs/user-guide/` (shipped in the binary,
+  extracted to `~/.deepseek-build/docs/user-guide/`) still describe removed
+  xAI OAuth/OIDC login flows and use `grok <command>` examples where the binary
+  is now `deepseek-build`. The home-dir paths are fixed; the prose and command
+  examples need a follow-up editing pass.
 
 ## Licensing
 
