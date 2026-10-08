@@ -66,3 +66,18 @@ _Not started._
 _Filled in after the first experiment batch, per the Phase E gate: adopt a
 configuration as the default only if it clearly wins; otherwise leave the
 shipped defaults and record the negative result here._
+
+## Reproducing
+
+```sh
+export DEEPSEEK_API_KEY=...
+scripts/evals/run-baseline.sh                       # E2 baseline (both models, 3 runs)
+python3 scripts/evals/experiment.py --name <variant> --model <model> \
+    [--extra-args "…" | --system-prompt-file … | --config-file …]
+python3 scripts/evals/report.py --compare baseline  # measured deltas
+```
+
+Each run's record carries the binary hash, config/prompt hashes, and token and
+cost metrics, so a variant measured against a different build stays
+distinguishable. Every task fixture is validated both ways (fails pristine,
+passes with a reference fix) by `scripts/evals/validate.py`.
