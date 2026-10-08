@@ -47,7 +47,23 @@ Candidate prompt: `scripts/evals/prompts/short-deepseek.md`, passed with
 `harness.py --system-prompt-file`. It replaces the prompt text only, not the
 tool definitions, so this experiment measures the prompt change alone.
 
-_Not started._
+**Result (2026-10-08): rejected — no win.** 63 runs vs the 63-run Pro baseline:
+
+| configuration | pass | wall/task | tokens in | cache read | out | reasoning | turns | est. USD/task |
+|---|---|---|---|---|---|---|---|---|
+| baseline | 63/63 | 9.9s | 1596 | 52773 | 654 | 75 | 4.92 | 0.00702 |
+| short-prompt | 63/63 | 10.2s | 1829 | 48488 | 724 | 78 | 5.40 | 0.00741 |
+
+Measured delta: **+6% cost** ($+0.00040/task), +0.3s/task, 14 of 21 tasks more
+expensive. The shorter prompt did shrink the cached prefix (52,773 → 48,488
+cache-read tokens, −8%), but fresh input grew 15%, output grew 11%, and turns
+rose 4.92 → 5.40, so the net is a loss. Reproduce:
+`python3 scripts/evals/experiment.py --name short-prompt --model deepseek-v4-pro --system-prompt-file scripts/evals/prompts/short-deepseek.md`.
+
+Secondary probe: the built-in concise toolset (`--agent grok-build-concise`,
+shorter tool descriptions) was **worse** on a 1-run probe (`$0.01343` vs
+`$0.00702`), driven by a much larger fresh-input bucket (8859 vs 1596) — not
+promoted to a full run.
 
 ### E3b — file edit format
 
