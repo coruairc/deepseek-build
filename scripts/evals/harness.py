@@ -477,6 +477,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.bin.exists():
         parser.error(f"binary not found: {args.bin} (build with: cargo build --release -p xai-grok-pager-bin)")
+    # Runs execute with cwd set to the scratch repo, so the binary and any
+    # config paths must be absolute.
+    args.bin = args.bin.resolve()
+    if args.config_file:
+        args.config_file = args.config_file.resolve()
+    if args.system_prompt_file:
+        args.system_prompt_file = args.system_prompt_file.resolve()
 
     if args.extra_args:
         try:
