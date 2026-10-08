@@ -15,6 +15,7 @@ scripts/evals/
   report.py        # aggregate JSONL records into a comparison table
   validate.py      # both-ways task validation (pristine fails, reference fix passes)
   run-baseline.sh  # E2 baseline: both models, N runs per task
+  experiment.py    # one-variable E3 run + automatic baseline comparison
   prompts/         # candidate system prompts for E3a
   tasks/*.json     # 21 task definitions (fixture files, prompt, checks)
   results/*.jsonl  # one JSON line per run (append-only, gitignored)
@@ -33,6 +34,8 @@ python3 scripts/evals/harness.py --dry-run
 python3 scripts/evals/harness.py --tasks py-fix-add --model deepseek-flash
 
 # The baseline (spec E2): all tasks, both models, 3 runs each:
+scripts/evals/run-baseline.sh
+# ...or manually:
 python3 scripts/evals/harness.py --model deepseek-v4-pro --config baseline --runs 3
 python3 scripts/evals/harness.py --model deepseek-flash   --config baseline --runs 3
 
@@ -71,6 +74,15 @@ which is how to vary reasoning effort, status-line pricing overrides, and so on.
 `--system-prompt-file` replaces the whole system prompt via the binary's
 `--system-prompt-override`, which is the no-rebuild path for the E3a prompt
 experiments (the tool definitions are unchanged; only the prompt text varies).
+
+Run a variant and get the baseline comparison in one command:
+
+```sh
+python3 scripts/evals/experiment.py --name effort-low --model deepseek-v4-pro \
+    --extra-args "--effort low"
+python3 scripts/evals/experiment.py --name short-prompt --model deepseek-v4-pro \
+    --system-prompt-file scripts/evals/prompts/short-deepseek.md
+```
 
 ## Task format
 
