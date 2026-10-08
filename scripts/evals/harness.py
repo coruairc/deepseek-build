@@ -311,6 +311,7 @@ def run_agent(
     keep_work: bool,
     secrets: list[str],
     system_prompt_file: Path | None = None,
+    rules_file: Path | None = None,
 ) -> dict:
     task_id = task["id"]
     run_dir = workdir / f"{task_id}-{config}-{model}-r{run_index}"
@@ -360,6 +361,19 @@ def run_agent(
         code = None
     wall_s = time.monotonic() - started
 
+    # Keep the record readable: files injected as flags are recorded by path+hash, not inline.
+    recorded_extra_args: list[str] = []
+    index = 0
+    while index < len(extra_args):
+        arg = extra_args[index]
+        if arg in ("--system-prompt-override", "--rules") and index + 1 < len(extra_args):
+            recorded_extra_args.append(arg)
+            recorded_extra_args.append(f"<{len(extra_args[index + 1])} bytes from file>")
+            index += 2
+            continue
+        recorded_extra_args.append(arg)
+        index += 1
+
     payload = parse_headless_json(stdout)
     error = None
     if isinstance(payload, dict) and payload.get("type") == "error":
@@ -388,9 +402,11 @@ def run_agent(
         ).isoformat(timespec="seconds") if bin_path.exists() else None,
         "config_file": str(config_file) if config_file else None,
         "config_file_sha256": file_sha256(config_file) if config_file else None,
-        "extra_args": extra_args,
+        "extra_args": recorded_extra_args,
         "system_prompt_file": str(system_prompt_file) if system_prompt_file else None,
         "system_prompt_sha256": file_sha256(system_prompt_file) if system_prompt_file else None,
+        "rules_file": str(rules_file) if rules_file else None,
+        "rules_sha256": file_sha256(rules_file) if rules_file else None,
         **extract_metrics(payload),
         "git": git_snapshot(scratch),
         "workdir": str(run_dir) if keep_work else None,
@@ -431,6 +447,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--base-url", help="override [model.<model>] base_url (mock/self-test)")
     parser.add_argument("--system-prompt-file", type=Path,
                         help="pass this file's contents as --system-prompt-override (E3a)")
+    parser.add_argument("--rules-file", type=Path,
+                        help="pass this file's contents as --rules (E3d; appends to the system prompt)")
     parser.add_argument("--runs", type=int, default=1, help="runs per task")
     parser.add_argument("--timeout", type=int, default=420, help="per-run timeout (s)")
     parser.add_argument("--extra-args", default="", help="extra binary args as one shell-like string")
@@ -496,6 +514,10 @@ def main(argv: list[str] | None = None) -> int:
         if not args.system_prompt_file.exists():
             parser.error(f"no such system prompt file: {args.system_prompt_file}")
         extra_args = ["--system-prompt-override", args.system_prompt_file.read_text(), *extra_args]
+    if args.rules_file:
+        if not args.rules_file.exists():
+            parser.error(f"no such rules file: {args.rules_file}")
+        extra_args = ["--rules", args.rules_file.read_text(), *extra_args]
     secrets = [os.environ.get("DEEPSEEK_API_KEY", ""), os.environ.get("DEEPSEEK_BUILD_API_KEY", "")]
     workdir = args.workdir or Path(tempfile.mkdtemp(prefix="deepseek-eval-"))
     workdir.mkdir(parents=True, exist_ok=True)
@@ -525,6 +547,7 @@ def main(argv: list[str] | None = None) -> int:
                     keep_work=args.keep_work,
                     secrets=secrets,
                     system_prompt_file=args.system_prompt_file,
+                    rules_file=args.rules_file,
                 )
                 fh.write(json.dumps(record) + "\n")
                 fh.flush()

@@ -42,6 +42,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--extra-args", default="")
     parser.add_argument("--config-file", type=Path)
     parser.add_argument("--system-prompt-file", type=Path)
+    parser.add_argument("--rules-file", type=Path, help="appended as --rules (E3d)")
     parser.add_argument("--baseline-config", default="baseline")
     parser.add_argument("--baseline-model", default=None, help="model to compare against (default: same as --model)")
     parser.add_argument("--dry-run", action="store_true", help="print the command and exit")
@@ -52,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
         "extra_args": args.extra_args,
         "config_file": str(args.config_file) if args.config_file else None,
         "system_prompt_file": str(args.system_prompt_file) if args.system_prompt_file else None,
+        "rules_file": str(args.rules_file) if args.rules_file else None,
     }
     changed = [k for k, v in dimensions.items() if v and k != "model"]
     if len(changed) > 1:
@@ -76,6 +78,8 @@ def main(argv: list[str] | None = None) -> int:
         command += ["--config-file", str(args.config_file)]
     if args.system_prompt_file:
         command += ["--system-prompt-file", str(args.system_prompt_file)]
+    if args.rules_file:
+        command += ["--rules-file", str(args.rules_file)]
 
     print("running:", " ".join(command))
     if args.dry_run:
