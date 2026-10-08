@@ -74,6 +74,8 @@ which is how to vary reasoning effort, status-line pricing overrides, and so on.
 `--system-prompt-file` replaces the whole system prompt via the binary's
 `--system-prompt-override`, which is the no-rebuild path for the E3a prompt
 experiments (the tool definitions are unchanged; only the prompt text varies).
+`--rules-file` passes a file's contents as `--rules`, which appends to the
+system prompt (the E3d verification-loop path).
 
 Run a variant and get the baseline comparison in one command:
 
@@ -82,6 +84,8 @@ python3 scripts/evals/experiment.py --name effort-low --model deepseek-v4-pro \
     --extra-args "--effort low"
 python3 scripts/evals/experiment.py --name short-prompt --model deepseek-v4-pro \
     --system-prompt-file scripts/evals/prompts/short-deepseek.md
+python3 scripts/evals/experiment.py --name verify-loop --model deepseek-v4-pro \
+    --rules-file scripts/evals/prompts/verify-loop.md
 ```
 
 ## Task format
