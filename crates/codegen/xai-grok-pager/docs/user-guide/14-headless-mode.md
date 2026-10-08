@@ -192,6 +192,14 @@ Usage notes:
   (1 USD = 10^10 ticks) and appears under the same conditions. Use it for
   billing reconciliation: summing per-invocation ticks matches the server's
   usage export exactly, which float dollars cannot guarantee.
+- `estimated_cost_usd` + `estimate: true` is a **local estimate** priced from
+  the shipped DeepSeek price table (peak rates; see
+  [Status line](25-status-line.md#pricing)) over the same disjoint token
+  buckets. It appears whenever tokens were recorded, so it is available on
+  providers that report tokens but no price. It is omitted when no tokens were
+  recorded (never a false `$0`), and any provider-reported `total_cost_usd` is
+  left untouched beside it. Treat it as an upper bound: the table has no clock
+  and always prices at peak.
 - When subagent usage could not be applied, nested subagent usage was incomplete,
   or the success-path drain timed out (up to 120s on the turn task),
   `usage_is_incomplete` is true and cost floats are omitted the same way

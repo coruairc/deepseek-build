@@ -101,6 +101,8 @@ struct HeadlessEmitter {
     /// Schema-validated output read from the prompt-response `_meta`.
     structured_output: Option<Result<serde_json::Value, String>>,
     usage: Option<serde_json::Value>,
+    /// The session's model id, latched at `begin_session` for the local cost estimate.
+    session_model: Option<String>,
     /// Reducer for the streaming formats; `None` for `plain`/`json`.
     reducer: Option<Box<dyn Reducer>>,
     /// Set when the prompt is sent; `result.duration_ms` on the terminal line is measured from it.
@@ -120,6 +122,7 @@ impl HeadlessEmitter {
             thought_buffer: String::new(),
             structured_output: None,
             usage: None,
+            session_model: None,
             reducer: reducer_for(format),
             prompt_started: None,
             out: std::io::stdout(),
@@ -177,6 +180,8 @@ impl HeadlessEmitter {
     }
     /// Emit the reducer preamble once the session context is known.
     fn begin_session(&mut self, ctx: SessionContext) {
+        // Latch the model for the local cost estimate; `plain`/`json` have no reducer.
+        self.session_model = ctx.model.clone();
         let Some(reducer) = self.reducer.as_mut() else {
             return;
         };
@@ -295,9 +300,43 @@ impl HeadlessEmitter {
         }
         if let Some(usage) = &self.usage {
             attach_result_usage(&mut result, usage);
+            self.attach_cost_estimate(&mut result);
         }
         self.attach_structured_output(&mut result);
         result
+    }
+    /// Attach the locally estimated cost (`estimated_cost_usd` + `estimate: true`) to a result/error object.
+    ///
+    /// Mirrors the `streaming-messages-json` result: priced from the shipped DeepSeek table with the session model,
+    /// reading the already-projected `usage` buckets. Omitted when no tokens were recorded, so a no-usage payload
+    /// never shows a false `$0`; the ledger's provider-reported cost is left untouched.
+    fn attach_cost_estimate(&self, target: &mut serde_json::Value) {
+        let Some(usage) = target.get("usage") else {
+            return;
+        };
+        let n = |key: &str| {
+            usage
+                .get(key)
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0)
+        };
+        let session_usage = xai_grok_status_line::StatusLineSessionUsage {
+            input_tokens: n("input_tokens"),
+            output_tokens: n("output_tokens"),
+            cache_creation_input_tokens: n("cache_creation_input_tokens"),
+            cache_read_input_tokens: n("cache_read_input_tokens"),
+            reasoning_tokens: n("reasoning_tokens"),
+        };
+        let model = self.session_model.as_deref().unwrap_or("");
+        let Some(estimate) =
+            xai_grok_status_line::PricingTable::default().cost_usd(model, &session_usage)
+        else {
+            return;
+        };
+        if let Some(obj) = target.as_object_mut() {
+            obj.insert("estimated_cost_usd".into(), serde_json::json!(estimate));
+            obj.insert("estimate".into(), serde_json::json!(true));
+        }
     }
     fn on_end(&mut self, stop_reason: &str, session_id: &str, request_id: &str) {
         match self.format {
@@ -355,6 +394,7 @@ impl HeadlessEmitter {
                 let mut err = serde_json::json!({"type":"error","message": message});
                 if let Some(usage) = &self.usage {
                     attach_result_usage(&mut err, usage);
+                    self.attach_cost_estimate(&mut err);
                 }
                 self.emit_line(&err);
             }

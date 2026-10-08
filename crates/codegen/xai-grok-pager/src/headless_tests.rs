@@ -662,6 +662,64 @@ fn bash_colon_wildcard_deny_translates_to_prefix() {
 }
 
 #[test]
+fn json_result_carries_local_cost_estimate_marked_estimate() {
+    let mut emitter = HeadlessEmitter::new(OutputFormat::Json, false);
+    emitter.session_model = Some("deepseek-flash".to_string());
+    // Raw `_meta.usage` (PromptUsage camelCase). `inputTokens` is the full prompt
+    // including cache reads (ACP identity); the headless projection subtracts them.
+    emitter.usage = Some(serde_json::json!({
+        "inputTokens": 5000,
+        "outputTokens": 500,
+        "totalTokens": 9500,
+        "cachedReadTokens": 4000,
+        "cacheCreationTokens": 0,
+        "reasoningTokens": 40,
+        "numTurns": 2
+    }));
+    let result = emitter.build_json_result("EndTurn", "sess-1", "req-1");
+    assert_eq!(
+        result
+            .get("usage")
+            .and_then(|u| u.get("input_tokens"))
+            .and_then(|v| v.as_u64()),
+        Some(1000)
+    );
+    // flash peak: 1000 miss @ 0.30 + 4000 hit @ 0.006 + 500 out @ 1.20 per 1M.
+    let expected = (1000.0 * 0.30 + 4000.0 * 0.006 + 500.0 * 1.20) / 1_000_000.0;
+    assert_eq!(result.get("estimate").and_then(|v| v.as_bool()), Some(true));
+    let got = result
+        .get("estimated_cost_usd")
+        .and_then(|v| v.as_f64())
+        .expect("estimated_cost_usd");
+    assert!((got - expected).abs() < 1e-15, "{got} != {expected}");
+    // The provider-reported figure is untouched by the estimate.
+    assert!(result.get("total_cost_usd").is_none());
+}
+
+#[test]
+fn json_result_omits_estimate_when_no_tokens_recorded() {
+    let mut emitter = HeadlessEmitter::new(OutputFormat::Json, false);
+    emitter.session_model = Some("deepseek-flash".to_string());
+    let result = emitter.build_json_result("EndTurn", "sess-1", "req-1");
+    assert!(result.get("estimated_cost_usd").is_none());
+    assert!(result.get("estimate").is_none());
+
+    // Tokens recorded but all zero (incomplete usage) must still not show a false $0.
+    emitter.usage = Some(serde_json::json!({
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0,
+        "cachedReadTokens": 0,
+        "cacheCreationTokens": 0,
+        "reasoningTokens": 0,
+        "numTurns": 1
+    }));
+    let result = emitter.build_json_result("EndTurn", "sess-1", "req-1");
+    assert!(result.get("estimated_cost_usd").is_none());
+    assert!(result.get("estimate").is_none());
+}
+
+#[test]
 fn structured_output_without_meta_errors_never_parses_text() {
     let mut emitter = HeadlessEmitter::new(OutputFormat::Json, true);
     emitter.text_buffer = r#"{"name":"alice","age":30}"#.into();
