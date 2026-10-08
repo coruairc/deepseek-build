@@ -7,14 +7,11 @@ real-use passes (2026-10-07).
 
 ## Build & tests
 
-- **`cargo test --workspace` does not compile yet: only `xai-grok-pager`
-  (~252 errors) and `xai-grok-pager-minimal` (2 errors) fail their lib test
-  targets.** They reference deleted Phase-1 features: the removed
-  `xai_grok_feedback` crate (`app/dispatch/tests/notes.rs`), removed
-  fields/methods on dashboard/dispatch test fixtures (E0609 ×84, E0599 ×83),
-  and a 13→12 constructor arity (E0061 ×18). All other lib test targets
-  compile and pass (see below). This is a bounded compiler-driven pass; do not
-  mass-delete kept tests to force it green.
+- **All lib test targets compile** after the pager repair (`a16308b8`;
+  `xai-grok-pager` 9874 passed / 0 failed / 4 ignored, `xai-grok-pager-minimal`
+  94 passed / 0 failed; `cargo check --workspace --tests` green). A full
+  `cargo test --workspace` run is still pending to record the whole-workspace
+  green count.
 - **`xai-grok-shell` lib tests: green.** 6221 passed / 0 failed / 4 ignored.
   Integration tests compile after dropping the 8 remote-settings prefetch tests
   for the deleted `remote_config`/`managed_config` modules.
@@ -111,12 +108,14 @@ real-use passes (2026-10-07).
   turn with empty output instead of a plan. A prompt that explicitly asks for a
   plan produces one.
 - **Headless cannot prompt:** a permission-gated action (e.g. `rm -rf`) ends as
-  `permission_cancelled` with empty output and exit 0 — safe (the canary dir
-  survived) but indistinguishable at the CLI from other cancellations.
-  `--always-approve` is required for unattended actions.
-- **Cost is not exposed** in headless output: DeepSeek returns no
-  `cost_usd_ticks`, so `total_cost_usd` is omitted. Cache hit rate is derivable
-  from `usage`.
+  `permission_cancelled` with a one-line stderr message naming `--always-approve`
+  and a non-zero exit (`d3a9c176`). `--always-approve` is required for unattended
+  actions.
+- **Cost:** the provider still reports no `cost_usd_ticks`, so `total_cost_usd`
+  is omitted. The headless `--output-format json` result carries a local estimate
+  instead: `estimated_cost_usd` + `estimate: true`, priced from the shipped
+  DeepSeek peak-rate table (D14), omitted when no tokens were recorded. The eval
+  harness records it per task (`scripts/evals/`).
 
 ## Phase 2 — adapter
 
