@@ -42,6 +42,10 @@
 #   EGRESS_WORKDIR          keep artifacts here (default: a fresh mktemp dir)
 #   KEEP=1                  do not delete the work dir on exit
 #
+# This is a bash script (see the shebang); pipefail is intentional. The repo
+# also lints scripts with `shellcheck --shell=sh` for consistency, so declare
+# that here.
+# shellcheck disable=SC3040
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -92,6 +96,7 @@ fi
 
 WORK="${EGRESS_WORKDIR:-$(mktemp -d)}"
 mkdir -p "$WORK"
+# shellcheck disable=SC2317  # reached via trap
 cleanup() { [ "${KEEP:-0}" = "1" ] || rm -rf "$WORK"; }
 trap cleanup EXIT
 
@@ -269,7 +274,11 @@ run_dsb --cwd "$SCRATCH" --always-approve --no-plan -m deepseek-v4-pro --max-tur
   --debug-file "$WORK/s1.debug.log" --output-format json -p "$PROMPT1" \
   >"$WORK/s1.json" 2>"$WORK/s1.err"
 RC1=$?
-[ "$RC1" -eq 0 ] && ok "session 1 exited 0" || bad "session 1 exit=$RC1 (see $WORK/s1.err)"
+if [ "$RC1" -eq 0 ]; then
+  ok "session 1 exited 0"
+else
+  bad "session 1 exit=$RC1 (see $WORK/s1.err)"
+fi
 [ -s "$WORK/s1.json" ] || { bad "session 1 produced no JSON"; note "stderr:"; sed -n '1,40p' "$WORK/s1.err"; exit 1; }
 
 SID="$(python3 - "$WORK/s1.json" <<'PY'
@@ -280,7 +289,11 @@ except Exception:
     print("")
 PY
 )"
-[ -n "$SID" ] && ok "session id: $SID" || bad "could not read sessionId from session 1"
+if [ -n "$SID" ]; then
+  ok "session id: $SID"
+else
+  bad "could not read sessionId from session 1"
+fi
 
 hdr "session 2 (resume the same session)"
 if [ -n "$SID" ]; then
@@ -288,7 +301,11 @@ if [ -n "$SID" ]; then
     --debug-file "$WORK/s2.debug.log" --output-format json -r "$SID" -p "$PROMPT2" \
     >"$WORK/s2.json" 2>"$WORK/s2.err"
   RC2=$?
-  [ "$RC2" -eq 0 ] && ok "resume exited 0" || bad "resume exit=$RC2 (see $WORK/s2.err)"
+  if [ "$RC2" -eq 0 ]; then
+    ok "resume exited 0"
+  else
+    bad "resume exit=$RC2 (see $WORK/s2.err)"
+  fi
   SID2="$(python3 - "$WORK/s2.json" <<'PY'
 import json, sys
 try:
@@ -297,7 +314,11 @@ except Exception:
     print("")
 PY
 )"
-  [ "$SID2" = "$SID" ] && ok "resume reused session id ($SID2)" || bad "resume session id mismatch ('$SID2' != '$SID')"
+  if [ "$SID2" = "$SID" ]; then
+    ok "resume reused session id ($SID2)"
+  else
+    bad "resume session id mismatch ('$SID2' != '$SID')"
+  fi
 else
   bad "skipped resume (no session id)"
 fi
@@ -336,7 +357,7 @@ else
 fi
 
 COMPACT_HITS="$(grep -hE 'auto-compact trigger|Replacing chat history \(compaction\)|compaction_tokens_before' \
-  "$WORK/s1.debug.log" "$WORK/s2.debug.log" 2>/dev/null | wc -l | tr -d ' ')"
+  "$WORK/s1.debug.log" "$WORK/s2.debug.log" 2>/dev/null | awk 'END { print NR+0 }')"
 [ -z "$COMPACT_HITS" ] && COMPACT_HITS=0
 if [ "${COMPACT_HITS:-0}" -gt 0 ]; then
   ok "auto-compaction ran ($COMPACT_HITS debug marker(s); threshold=1%)"
@@ -502,7 +523,11 @@ timeout "$SANDBOX_TIMEOUT" "$REPO_ROOT/scripts/sandbox-run.sh" \
   --output-format json -p "$SB_PROMPT" \
   >"$WORK/sandbox.json" 2>"$WORK/sandbox.err"
 SB_RC=$?
-[ "$SB_RC" -eq 0 ] && note "sandbox-run.sh session exited 0" || note "sandbox-run.sh session exit=$SB_RC"
+if [ "$SB_RC" -eq 0 ]; then
+  note "sandbox-run.sh session exited 0"
+else
+  note "sandbox-run.sh session exit=$SB_RC"
+fi
 if [ -s "$WORK/sandbox.json" ]; then
   note "sandbox-run.sh result: $(python3 - "$WORK/sandbox.json" <<'PY'
 import json, sys
