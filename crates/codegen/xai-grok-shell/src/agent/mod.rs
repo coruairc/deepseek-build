@@ -12,7 +12,6 @@ pub(crate) mod model_catalog;
 pub mod model_providers;
 pub mod mvp_agent;
 pub(crate) mod otel_gate;
-pub(crate) mod proxy;
 pub(crate) mod proxy_headers;
 pub(crate) mod restore_code;
 pub mod roster;
