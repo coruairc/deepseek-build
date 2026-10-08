@@ -71,7 +71,26 @@ _Not started._
 
 ### E3c — reasoning effort policy and Flash→Pro escalation
 
-_Not started._
+**Experiment 1 — `--effort low` on Pro: kept (clear win).** 63 runs vs the
+63-run Pro baseline:
+
+| configuration | pass | wall/task | tokens in | cache read | out | reasoning | turns | est. USD/task |
+|---|---|---|---|---|---|---|---|---|
+| baseline (high) | 63/63 | 9.9s | 1596 | 52773 | 654 | 75 | 4.92 | 0.00702 |
+| effort-low | 63/63 | 8.8s | 1513 | 48647 | 545 | 28 | 4.62 | 0.00640 |
+
+Measured delta: **−9% cost** ($−0.00061/task) and −1.1s/task at the same 100%
+pass rate; 19 of 21 tasks cheaper. Reasoning tokens fell 75 → 28 (−63%) and
+output tokens −17%. Reproduce:
+`python3 scripts/evals/experiment.py --name effort-low --model deepseek-v4-pro --extra-args "--effort low"`.
+
+This is a *policy* result for this 21-task set (small, bounded fixes); the
+shipped default stays `high` because harder work benefits from more thinking,
+but `--effort low` is a documented, measured cost lever. An automatic
+Flash→Pro escalation policy is still **not wired** (`model_routing` defaults
+to `off`).
+
+_`--effort none` (thinking off) measured below._
 
 ### E3d — verification loop after edits
 
