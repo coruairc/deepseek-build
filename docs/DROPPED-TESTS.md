@@ -413,3 +413,30 @@ deleted `/feedback` as their example freeform builtin (`queue_edit.rs`'s
 `doctor >>>` managed-block markers, the fake-binary name) were corrected in the
 diagnostics/doctor/notifications/version-mismatch tests so the suite runs green;
 those tests were not dropped.
+
+## `xai-fast-worktree` NFS/Grove-feature tests
+
+Upstream disabled the real NFS/Grove worktree backend in this tree: `lib.rs`
+maps `mod nfs` to `nfs_off.rs`, whose `candidate_data_dirs()` returns empty and
+whose `gc_orphan_pins()` is a no-op (the real `nfs.rs` is not present). Four
+tests in the `metadata`-gated modules still asserted the removed NFS behavior
+(backing-directory markers, XDG data-dir scanning, the orphan-pin GC sweep).
+They only compile when the `metadata` feature is on, which workspace-wide
+feature unification enables — so they were invisible to per-crate runs and
+first executed by the full `cargo test --workspace` run (2026-10-08), where
+they failed deterministically.
+
+Dropped test functions:
+
+- `api/gc.rs` → `api/gc/tests.rs` — `run_pass_prunes_orphan_grove_pins_after_grace`
+  (asserted the production GC invokes the pin sweep; `nfs_off::gc_orphan_pins`
+  is a no-op, so `pin_gc_examined` is always 0).
+- `discovery.rs` — `rebuild_nfs_under_managed_roots_is_not_labeled_linked`,
+  `rebuild_registers_nfs_from_backing_marker`,
+  `rebuild_scans_xdg_grove_without_grove_data_dir` (all build a real Grove
+  backing-dir marker and expect `rebuild_worktree_db*` to register an NFS row;
+  `nfs_off::candidate_data_dirs()` is empty, so `discovered`/`registered` are 0).
+
+The local filesystem rebuild behavior (the non-NFS rows) remains covered by the
+retained `discovery` tests. After the drop: `xai-fast-worktree` lib tests
+455 passed / 0 failed / 2 ignored with `--features metadata` (was 4 failed).
