@@ -8,6 +8,10 @@
 #   scripts/key-leak-check.sh
 #   BIN=target/debug/deepseek-build scripts/key-leak-check.sh
 #
+# This is a bash script (see the shebang); pipefail is intentional. The repo
+# also lints scripts with `shellcheck --shell=sh` for consistency, so declare
+# that here.
+# shellcheck disable=SC3040
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"

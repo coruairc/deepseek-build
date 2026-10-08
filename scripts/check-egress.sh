@@ -13,6 +13,11 @@
 #   rebrand slice; pass `--strict` to make it fatal (used after rebrand).
 #
 # Usage: scripts/check-egress.sh [--strict]
+#
+# This is a bash script (see the shebang); the pipefail option, arrays, and
+# `local`/array references below are intentional. The repo also lints scripts
+# with `shellcheck --shell=sh` for consistency, so declare them here.
+# shellcheck disable=SC3040,SC3030,SC3043,SC3054
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

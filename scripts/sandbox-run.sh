@@ -14,6 +14,10 @@
 #   scripts/sandbox-run.sh [deepseek-build args...]
 #   DEEPSEEK_BUILD_EGRESS_HOST=my.proxy.example scripts/sandbox-run.sh -p "hi"
 #
+# This is a bash script (see the shebang); pipefail is intentional. The repo
+# also lints scripts with `shellcheck --shell=sh` for consistency, so declare
+# that here.
+# shellcheck disable=SC3040
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

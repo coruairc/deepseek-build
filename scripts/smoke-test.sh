@@ -20,6 +20,10 @@
 #   7. deepseek-flash and the hidden deepseek-v4-flash alias are accepted
 #   8. raw /chat/completions cached_tokens == prompt_cache_hit_tokens on a cache hit
 #
+# This is a bash script (see the shebang); pipefail is intentional. The repo
+# also lints scripts with `shellcheck --shell=sh` for consistency, so declare
+# that here.
+# shellcheck disable=SC3040
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -134,7 +138,11 @@ d=json.load(open(sys.argv[1]))
 assert "deepseek-flash" in (d.get("modelUsage") or {}), d.get("modelUsage")
 PY
 done
-[ "$flash_ok" -eq 1 ] && ok "deepseek-flash and hidden deepseek-v4-flash alias accepted" || bad "flash model acceptance"
+if [ "$flash_ok" -eq 1 ]; then
+  ok "deepseek-flash and hidden deepseek-v4-flash alias accepted"
+else
+  bad "flash model acceptance"
+fi
 
 # --- 8. cached_tokens == prompt_cache_hit_tokens --------------------------
 if BASE_URL="$BASE_URL" python3 - <<'PY' 2>&1

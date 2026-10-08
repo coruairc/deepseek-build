@@ -11,6 +11,10 @@
 #   RUNS=1 scripts/evals/run-baseline.sh          # quick pass
 #   BIN=target/debug/deepseek-build scripts/evals/run-baseline.sh
 #
+# This is a bash script (see the shebang); pipefail is intentional. The repo
+# also lints scripts with `shellcheck --shell=sh` for consistency, so declare
+# that here.
+# shellcheck disable=SC3040
 set -uo pipefail
 
 cd "$(dirname "$0")/../.." || exit 1
