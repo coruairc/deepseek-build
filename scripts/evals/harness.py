@@ -48,6 +48,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -431,7 +432,13 @@ def main(argv: list[str] | None = None) -> int:
     if not args.bin.exists():
         parser.error(f"binary not found: {args.bin} (build with: cargo build --release -p xai-grok-pager-bin)")
 
-    extra_args = args.extra_args.split() if args.extra_args else []
+    if args.extra_args:
+        try:
+            extra_args = shlex.split(args.extra_args)
+        except ValueError as exc:
+            parser.error(f"--extra-args: {exc}")
+    else:
+        extra_args = []
     secrets = [os.environ.get("DEEPSEEK_API_KEY", ""), os.environ.get("DEEPSEEK_BUILD_API_KEY", "")]
     workdir = args.workdir or Path(tempfile.mkdtemp(prefix="deepseek-eval-"))
     workdir.mkdir(parents=True, exist_ok=True)
