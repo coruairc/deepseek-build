@@ -51,6 +51,12 @@ if [ ! -x "$BIN" ]; then
   printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
   exit 1
 fi
+# Runs happen with cwd set to the scratch repo, so a relative BIN would resolve
+# against it and fail with exit 127. Pin it to an absolute path.
+case "$BIN" in
+  /*) ;;
+  *) BIN="$REPO_ROOT/$BIN" ;;
+esac
 
 export HOME="$HOME_DIR"
 export DEEPSEEK_API_KEY="$KEY"
