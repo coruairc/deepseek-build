@@ -92,6 +92,8 @@ pub unsafe fn isolate_grok_env(home: &Path) {
             "GROK_MODELS_BASE_URL",
             "GROK_MODELS_LIST_URL",
             "XAI_API_KEY",
+            "DEEPSEEK_API_KEY",
+            "DEEPSEEK_BUILD_API_KEY",
             "GROK_API_KEY",
             "HTTP_PROXY",
             "HTTPS_PROXY",
@@ -207,6 +209,8 @@ pub fn ensure_cargo_bin_with_features(
     binary
 }
 
+/// Resolve the pager binary: the prebuilt `target/debug/<name>`, else `cargo build -p xai-grok-pager-bin --bin <name>`.
+/// The bin target was renamed to `deepseek-build` with the rebrand; the package name is unchanged (D2).
 pub fn grok_binary() -> PathBuf {
     if let Some(path) = resolved_override() {
         return path;
@@ -215,14 +219,14 @@ pub fn grok_binary() -> PathBuf {
         return path;
     }
 
-    if let Ok(path) = std::env::var("CARGO_BIN_EXE_xai-grok-pager") {
+    if let Ok(path) = std::env::var("CARGO_BIN_EXE_deepseek-build") {
         let p = PathBuf::from(path);
         if p.exists() {
             return p;
         }
     }
 
-    ensure_cargo_bin("xai-grok-pager-bin", "xai-grok-pager")
+    ensure_cargo_bin("xai-grok-pager-bin", "deepseek-build")
 }
 
 fn resolved_override() -> Option<PathBuf> {

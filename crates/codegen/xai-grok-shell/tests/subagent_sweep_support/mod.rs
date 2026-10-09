@@ -496,7 +496,7 @@ pub fn sweep_env_init() -> SweepEnv {
     let grok_home = TempDir::new().expect("grok home");
     unsafe {
         std::env::set_var("GROK_HOME", grok_home.path());
-        std::env::set_var("XAI_API_KEY", "test-key-for-ci");
+        std::env::set_var("DEEPSEEK_API_KEY", "test-key-for-ci");
         std::env::set_var("GROK_TELEMETRY_ENABLED", "false");
         std::env::set_var("GROK_FEEDBACK_ENABLED", "false");
         std::env::set_var("GROK_TRACE_UPLOAD", "false");

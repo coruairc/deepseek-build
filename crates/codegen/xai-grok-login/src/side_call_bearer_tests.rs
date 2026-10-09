@@ -51,8 +51,8 @@ fn api_key(key: &str) -> GrokAuth {
 /// The process env may carry a developer's key; every test pins it out so the credential alone decides.
 fn static_key_guards() -> [EnvGuard; 3] {
     [
-        EnvGuard::unset("XAI_API_KEY"),
-        EnvGuard::unset("GROK_CODE_XAI_API_KEY"),
+        EnvGuard::unset(crate::auth_method::XAI_API_KEY_ENV_VAR),
+        EnvGuard::unset(crate::auth_method::LEGACY_XAI_API_KEY_ENV_VAR),
         EnvGuard::unset("GROK_AUTH_PATH"),
     ]
 }

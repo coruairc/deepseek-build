@@ -48,7 +48,7 @@ fn dirs_next_home() -> Option<PathBuf> {
 /// `gate_on` pins the auto-permission-mode feature gate so each test is deterministic regardless of the runner's shell.
 fn prepare_sandbox(sandbox: &mut TestSandbox, gate_on: bool) -> Vec<(String, String)> {
     // Remove rather than empty the fake API key so seeded OIDC remains authoritative.
-    sandbox.remove_env("XAI_API_KEY");
+    sandbox.remove_env("DEEPSEEK_API_KEY");
 
     let home = sandbox.home();
     let grok = sandbox.grok_home();

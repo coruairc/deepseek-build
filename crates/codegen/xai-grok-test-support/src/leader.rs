@@ -189,7 +189,7 @@ impl LeaderFixture {
             .env("GROK_MODELS_BASE_URL", base_url)
             .env("GROK_FEEDBACK_BASE_URL", base_url)
             .env("GROK_TRACE_UPLOAD_URL", base_url)
-            .env("XAI_API_KEY", "test-key-for-ci")
+            .env("DEEPSEEK_API_KEY", "test-key-for-ci")
             .env("GROK_LEADER_SOCKET", &socket)
             .env("RUST_LOG", "xai_grok_shell=debug,xai_grok_login=debug");
         let log_path = sandbox.grok_home().join("leader.log");
@@ -572,7 +572,7 @@ impl LeaderStdioClient {
                 .env("GROK_MODELS_BASE_URL", base_url)
                 .env("GROK_FEEDBACK_BASE_URL", base_url)
                 .env("GROK_TRACE_UPLOAD_URL", base_url)
-                .env("XAI_API_KEY", "test-key-for-ci")
+                .env("DEEPSEEK_API_KEY", "test-key-for-ci")
                 .env("GROK_LEADER_SOCKET", leader_socket)
                 .env("RUST_LOG", "xai_grok_shell=debug,xai_grok_login=debug"),
         )

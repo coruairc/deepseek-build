@@ -128,6 +128,21 @@ fn spawn_agent_local(remote: Option<xai_grok_shell::util::config::RemoteSettings
 
     let mut agent_config = AgentConfig::default();
     agent_config.remote_settings = remote;
+    // The mock catalog used to arrive via the `/v1/models` prefetch, which this
+    // build removed (local config is authoritative). Seed the mock's model as a
+    // local `[model.*]` entry so `session/new` `modelId: test-model` resolves to
+    // the mock endpoint instead of falling back to a bundled model aimed at the
+    // real provider.
+    let mock_url = agent_config.endpoints.xai_api_base_url.clone();
+    agent_config.config_models.insert(
+        "test-model".to_owned(),
+        xai_grok_shell::agent::config::ConfigModelOverride {
+            model: Some("test-model".to_owned()),
+            base_url: Some(mock_url.clone()),
+            api_base_url: Some(mock_url),
+            ..Default::default()
+        },
+    );
     let auth_manager = Arc::new(agent_config.create_auth_manager());
     let (gw_tx, gw_rx) = tokio::sync::mpsc::unbounded_channel();
     let agent = MvpAgent::new(
@@ -338,7 +353,7 @@ fn set_test_env(grok_home: &std::path::Path, server_url: &str) {
         std::env::set_var("GROK_HOME", grok_home);
         std::env::set_var("GROK_CLI_CHAT_PROXY_BASE_URL", server_url);
         std::env::set_var("GROK_XAI_API_BASE_URL", server_url);
-        std::env::set_var("XAI_API_KEY", "test-key-for-ci");
+        std::env::set_var("DEEPSEEK_API_KEY", "test-key-for-ci");
         std::env::set_var("GROK_TELEMETRY_ENABLED", "false");
         std::env::set_var("GROK_FEEDBACK_ENABLED", "false");
         std::env::set_var("GROK_TRACE_UPLOAD", "false");

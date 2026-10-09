@@ -288,7 +288,7 @@ fn apply_mock_url(env: &mut BTreeMap<OsString, OsString>, url: String) {
     ] {
         env.insert(key.into(), url.clone().into());
     }
-    env.insert("XAI_API_KEY".into(), TEST_API_KEY.into());
+    env.insert("DEEPSEEK_API_KEY".into(), TEST_API_KEY.into());
 }
 
 fn baseline_env(
@@ -790,7 +790,7 @@ mod tests {
             Some(sandbox.temp_dir().join("lock-slots").into())
         );
         assert_eq!(
-            env_value(&sandbox, "XAI_API_KEY").as_deref(),
+            env_value(&sandbox, "DEEPSEEK_API_KEY").as_deref(),
             Some(OsStr::new(TEST_API_KEY))
         );
         assert_eq!(

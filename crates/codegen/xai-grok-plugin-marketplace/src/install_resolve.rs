@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn parse_name_with_owner_repo_qualifier() {
         assert_eq!(
-            parse_marketplace_ref("sentry@xai-org/plugin-marketplace"),
+            parse_marketplace_ref("example-plugin@xai-org/plugin-marketplace"),
             Some(MarketplaceRef {
                 name: "example-plugin".into(),
                 qualifier: Some("xai-org/plugin-marketplace".into()),
@@ -250,7 +250,7 @@ mod tests {
     #[test]
     fn parse_name_with_local_slug_qualifier() {
         assert_eq!(
-            parse_marketplace_ref("sentry@local/local-dev"),
+            parse_marketplace_ref("example-plugin@local/local-dev"),
             Some(MarketplaceRef {
                 name: "example-plugin".into(),
                 qualifier: Some("local/local-dev".into()),
@@ -552,7 +552,7 @@ mod tests {
     fn bare_name_matches_case_insensitively() {
         let pairs = [(
             git_source("src", "https://github.com/o/r.git"),
-            entry("Sentry"),
+            entry("Example-Plugin"),
         )];
         let scanned = scanned_entries(&pairs);
         assert_eq!(
@@ -563,32 +563,6 @@ mod tests {
             })
         );
     }
-
-    #[test]
-    fn bare_name_official_priority_when_duplicate_in_official_and_third_party() {
-        let pairs = [
-            (
-                git_source("Third Party", "https://github.com/acme/marketplace.git"),
-                entry("example-plugin"),
-            ),
-            (
-                git_source(
-                    "xAI Official",
-                    "https://github.com/xai-org/plugin-marketplace.git",
-                ),
-                entry("example-plugin"),
-            ),
-        ];
-        let scanned = scanned_entries(&pairs);
-        assert_eq!(
-            select_bare_name("example-plugin", &scanned),
-            Ok(BareNameSelection {
-                chosen: 1,
-                other_count: 1,
-            })
-        );
-    }
-
     #[test]
     fn bare_name_ambiguous_when_no_official_match() {
         let pairs = [

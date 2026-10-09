@@ -554,6 +554,9 @@ mod write_fallback_tests {
     fn atomic_write_writes_through_symlink_and_keeps_owner_only() {
         use std::os::unix::fs::PermissionsExt;
         let dir = tempfile::tempdir().unwrap();
+        // `DEEPSEEK_BUILD_HOME` outranks the legacy `GROK_HOME`; clear it so this
+        // test's temp home is the resolved grok home whatever the developer env holds.
+        let _primary = xai_grok_test_support::EnvGuard::unset("DEEPSEEK_BUILD_HOME");
         let _home = xai_grok_test_support::EnvGuard::set("GROK_HOME", dir.path());
         let target = dir.path().join("shared").join("auth.json");
         write_auth_json(&target, &AuthStore::new()).unwrap();
