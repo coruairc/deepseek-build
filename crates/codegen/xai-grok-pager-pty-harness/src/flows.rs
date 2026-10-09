@@ -173,7 +173,7 @@ fn seed_fake_oauth_raw(
 /// The `auth.json` entry written by [`seed_fake_oauth`] then determines the advertised auth method.
 pub fn oauth_credential_ops() -> [crate::EnvOp<'static>; 3] {
     [
-        crate::EnvOp::remove("XAI_API_KEY"),
+        crate::EnvOp::remove("DEEPSEEK_API_KEY"),
         crate::EnvOp::remove("GROK_MODELS_BASE_URL"),
         crate::EnvOp::remove("GROK_MODELS_LIST_URL"),
     ]

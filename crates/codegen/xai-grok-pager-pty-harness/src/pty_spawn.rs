@@ -425,9 +425,9 @@ mod tests {
         cmd.env_clear();
         sandbox.apply_to_command_builder(&mut cmd);
 
-        apply_child_env(&mut cmd, &[EnvOp::remove("XAI_API_KEY")]);
+        apply_child_env(&mut cmd, &[EnvOp::remove("DEEPSEEK_API_KEY")]);
 
-        assert_eq!(cmd.get_env("XAI_API_KEY"), None);
+        assert_eq!(cmd.get_env("DEEPSEEK_API_KEY"), None);
         assert_eq!(
             cmd.get_env("GROK_XAI_API_BASE_URL")
                 .and_then(|v| v.to_str()),
