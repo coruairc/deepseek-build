@@ -7,50 +7,30 @@ real-use passes (2026-10-07), with the test state refreshed 2026-10-09.
 
 ## Build & tests
 
-- **A full `cargo test --workspace` run has NOT gone green yet.** All test
-  targets compile, but the first full-workspace run (2026-10-08) surfaced
-  failures in `xai-grok-login` before its log was cut off mid-run. A follow-up
-  run of that crate alone with a scratch `HOME`/`DEEPSEEK_BUILD_HOME` also failed:
-  `xai-grok-login --lib` = **405 passed / 33 failed / 1 ignored** (one flaky
-  sleep-gate test skipped; log `/tmp/opencode/v2t/login-clean.log` on the author's
-  machine, 2026-10-08 23:54). The failures cluster in
-  `refresh::oidc_refresher` (16), `manager::tests` (9), `flow`, `external_auth`
-  and one `storage` test — the inert OAuth/OIDC scaffolding this fork no longer
-  wires up. Another workstream is still investigating: **do not claim the
-  workspace green until a full run finishes with zero failures.** Separately, the
-  same first full run surfaced four `xai-fast-worktree` failures that per-crate
-  runs could not see (they only compile under the `metadata` feature, which
-  workspace feature unification enables): they test the NFS/Grove backend that
-  this tree stubs off in `nfs_off.rs`. Dropped with a ledger entry
-  (`docs/DROPPED-TESTS.md`); `xai-fast-worktree` is then 455 passed / 0 failed with
-  `--features metadata`.
-- **`xai-grok-login` has a deterministic test deadlock** (found 2026-10-09):
-  `refresh::oidc_refresher::tests::sleep_gate_e2e_in_flight_refresh_completes_across_imminent_sleep`
-  hangs indefinitely (main thread `futex_wait`, runtime idle; neither the test's
-  5s await bound nor the product's `SLEEP_ACK_MAX_WAIT` fires). Reproduced twice,
-  including single-threaded in isolation (`timeout 180 … ; exit 124`). The test
-  mixes a blocking `std::thread` with a current-thread `#[tokio::test]` runtime.
-  Until fixed, run the workspace suite under a wall-clock bound. See
-  `/tmp/opencode/ws-hang-evidence.md`.
-- **A test failure prints a live API key** (found 2026-10-09, D13):
-  `side_call_bearer::tests::no_credential_is_missing_not_a_fallback` asserts
-  `Err(Missing)` with no session, but the shared API-key provider falls back to
-  `DEEPSEEK_API_KEY` from the caller's environment, so the `assert_eq!` diff
-  prints the key. The test also does not unset `DEEPSEEK_API_KEY` /
-  `DEEPSEEK_BUILD_API_KEY`, so results differ between a developer machine and a
-  clean environment (399/38 with a real key vs 405/33 with a fake one). Both the
-  missing env isolation and the unredacted assertion are being fixed; until then
-  do not run this crate's suite with a real key in the environment.
+- **A full `cargo test --workspace` run is green except for two host-only
+  failures.** The last full run (`cargo test --workspace --no-fail-fast --
+  --test-threads=4`, 2026-10-09) reported **31,939 passed / 2 failed / 388
+  ignored across 307 targets**. The 2 failures are
+  `xai-grok-sandbox --test deny_paths_e2e` (`devbox_genuine_reexec_applies_enforcement`,
+  `read_deny_empty_set_verifies_inside_bwrap`): `bwrap` fails with
+  `Can't mkdir parents for /run/containerd/containerd.sock: Permission denied`
+  because this host's `/run/containerd` is root-only. The crate is byte-identical
+  to `last-known-good-2026-10-06`, and a bare `bwrap` with the same bind flags
+  reproduces the failure, so these are environment, not code — they should pass
+  where `/run/containerd` is readable. A full run on the final `cc6e6948` tree was
+  in flight at session end.
+- **`xai-grok-login`: green — 413 → 395 passed / 0 failed / 1 ignored.** The
+  lane was red (405/33/1) because inert OAuth/OIDC scaffolding tests could never
+  pass, and one e2e test deadlocked. Fixed 2026-10-09: the dead xAI login/OIDC
+  surface was deleted (dropping 18 tests of removed behavior, ledgered), the
+  sleep-gate test was rewritten to drive the real drain with a controllable
+  refresher (was a deterministic hang), and the API-key env vars are now guarded so
+  a developer's exported key can neither change results nor leak. See
+  `docs/DROPPED-TESTS.md`.
+- **`xai-grok-shell`: 6197 passed / 0 failed / 4 ignored** on the final tree (was
+  6221; the 24-test drop is inside the deleted login surface). `xai-grok-pager`
+  9876 / 0 / 4 and `xai-grok-pager-minimal` 94 / 0 unchanged.
 - **All test targets compile** (`cargo check --workspace --tests` green).
-  Latest recorded green per-crate runs: `xai-grok-pager` 9876 passed / 0 failed /
-  4 ignored (2026-10-08, `a16308b8` + repairs), `xai-grok-pager-minimal` 94
-  passed / 0 failed.
-- **`xai-grok-shell` lib tests: green in the last per-crate run (2026-10-07).**
-  6221 passed / 0 failed / 4 ignored. Integration tests compile after dropping
-  the 8 remote-settings prefetch tests for the deleted `remote_config` /
-  `managed_config` modules. The 2026-10-08 workspace run did not reach a recorded
-  result for this crate before its log was cut off; treat 6221 as the last
-  measured number, not as part of a green workspace run.
 - **`xai-grok-workspace` test target: compiles and passes** (1693 passed; a
   pre-existing `session::git_gate` / `restore_fetch` timing flake rotates under
   whole-suite saturation and passes in isolation). The last 25 failures were

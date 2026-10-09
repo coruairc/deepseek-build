@@ -3,31 +3,33 @@
 Read this first when resuming. It records exact state, what remains, and the
 commands to continue. Companion docs: [`DECISIONS.md`](DECISIONS.md) (locked
 decisions; wins on conflict), [`PLAN.md`](PLAN.md) (audit + phased plan),
-[`README.md`](README.md).
+[`README.md`](README.md). Latest dated handoff:
+[`HANDOFF-2026-10-09.md`](HANDOFF-2026-10-09.md).
 
 ## 0. Snapshot
 
 - **Branch:** `dsb/integration` (the integration branch; all work merged here).
+  `main` is a strict ancestor — fast-forward it after pushing.
 - **Remote:** `origin git@github.com:coruairc/deepseek-build.git`.
 - **Toolchain:** Rust **1.94.0** via rustup (pinned in `rust-toolchain.toml`). Do not bump.
-  `protoc` on PATH (`/usr/bin/protoc`); `dotslash` not needed.
+  `protoc` on PATH (`/usr/bin/protoc`); `dotslash` not needed. `strace` absent (use
+  `scripts/egress-check.sh`).
 - **Binary:** release binary built via `cargo build --release -p xai-grok-pager-bin`
-  (artifact `target/release/deepseek-build`; last measured build `46aef0920857`: 153,624,024
-  bytes = 147 MiB on linux-x86_64; package `xai-grok-pager-bin`, D2 keeps the internal package
-  name). **Rebrand done**: config dir `~/.deepseek-build`, ACP namespace
-  `deepseek-build/*`, Monokai theme + DeepSeek whale logo, brand constants in
-  `crates/codegen/xai-grok-brand/`; prompt templates carry no Grok Build strings.
+  (artifact `target/release/deepseek-build`; ~147 MiB on linux-x86_64; package
+  `xai-grok-pager-bin`, D2 keeps the internal package name). Installed on the
+  author's machine at `~/.local/bin/deepseek-build` as
+  `deepseek-build 1.0.45 (cc6e6948c8db)`. **Rebrand done**: config dir
+  `~/.deepseek-build`, ACP namespace `deepseek-build/*`, Monokai theme + DeepSeek
+  whale logo, brand constants in `crates/codegen/xai-grok-brand/`; prompt templates
+  carry no Grok Build strings.
 - **Egress gate:** `scripts/check-egress.sh --strict` → **exit 0** (HARD OK, SOFT zero).
 - **Build:** `cargo check -p xai-grok-pager-bin` and `cargo build --release` are green.
-  **All test targets compile** (`cargo check --workspace --tests`), but a full
-  `cargo test --workspace` run is **NOT green yet**: the first run (2026-10-08)
-  found 4 `xai-fast-worktree` NFS/Grove failures (tests of a backend this tree
-  stubs off — dropped, see `docs/DROPPED-TESTS.md`) and a red `xai-grok-login`
-  lane; a clean-`HOME` rerun of that crate alone is **405 passed / 33 failed /
-  1 ignored** and is being investigated. Do not claim the workspace green.
-  Latest green per-crate counts: pager 9876, pager-minimal 94, shell 6221,
-  workspace 1693, sampler 186, config 467, chat-state 391, agent 576,
-  status-line 24. Full detail in [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md).
+  **All test targets compile**; the last full `cargo test --workspace --no-fail-fast`
+  was **31,939 passed / 2 failed / 388 ignored across 307 targets**. The 2 failures
+  are host-environment `xai-grok-sandbox --test deny_paths_e2e` bwrap failures
+  (root-owned `/run/containerd`), not code — the crate is byte-identical to the
+  `last-known-good-2026-10-06` tag. A full run on `cc6e6948` is in flight; see
+  `KNOWN-ISSUES.md`.
 - **Runtime egress (observed):** a real model-driven session (shell, edits, web_fetch,
   local MCP, compaction, resume) contacts only `api.deepseek.com:443`, the web_fetch
   host, and AF_UNIX sockets — `scripts/egress-check.sh` reports
@@ -38,18 +40,18 @@ decisions; wins on conflict), [`PLAN.md`](PLAN.md) (audit + phased plan),
   Pro `$0.00702`/task vs Flash `$0.00154`/task at ~97% cache hit. E3 batch done;
   results in [`docs/TUNING.md`](docs/TUNING.md) (only reasoning-effort reduction
   won; nothing became a new default).
-- **Headless cost:** `--output-format json` now emits `estimated_cost_usd` +
+- **Headless cost:** `--output-format json` emits `estimated_cost_usd` +
   `estimate: true` (local peak-rate estimate, D14) alongside usage.
 - **Release/container:** pipeline + installer + `docker/Dockerfile` exist and
   `scripts/test-install.sh` is 25/25, but **no `v*` tag has been pushed, no release
-  exists, and no container image has ever been built or pulled** (checked
-  2026-10-09). Dry-run procedure: §6.
+  exists, and no container image has been built or pulled** (checked 2026-10-09).
+  Dry-run procedure: §6.
 - **Status:** usable with a real `DEEPSEEK_API_KEY`. See `TESTING.md`,
   `scripts/smoke-test.sh`, `scripts/egress-check.sh`, `scripts/sandbox-run.sh`,
-  `KNOWN-ISSUES.md`. Remaining: make the workspace test run green (login lane);
-  the local-harness sandbox/pre-run coverage gap; interactive TUI only pty-driven,
-  never driven by a human; user-guide prose stale (`grok <command>` examples, see
-  `KNOWN-ISSUES.md`).
+  `KNOWN-ISSUES.md`. Remaining: confirm one full green workspace run (host-only
+  sandbox failures excepted); exercise the release workflow + container via the §6
+  dry run; interactive TUI driven only under a pty, never by a human; user-guide
+  prose stale (`grok <command>` examples, see `KNOWN-ISSUES.md`).
 
 ## 1. How to resume (another machine)
 
@@ -156,7 +158,9 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
 3. **Finish real deletion of Phase-1 stubs** (see §5): shell `src/upload/*`,
    `session/repo_changes`, `feedback_manager`, feedback UI, `share`, vendored
    `shell/src/cloud_config/**`, `xai-computer-hub-{core,sdk,mcp-adapter}` and consumers,
-   shell `src/remote/**` relay clients, `agent/relay.rs`.
+   shell `src/remote/**` relay clients, `agent/relay.rs`. All inert (no network); this is
+   cleanup, not security. The dead **xAI login/OIDC surface was deleted** 2026-10-09
+   (`cc6e6948`, −1,352 lines).
 4. ~~**Phase 2 proof**~~ **DONE** (wiremock suite in `xai-grok-sampler/tests/`, live smoke
    8/8 PASS; see `KNOWN-ISSUES.md` "Phase 2"). Live-verify items are recorded in
    `DECISIONS.md` O3.
@@ -166,36 +170,39 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
    read-before-write enforcement, cache-aware compaction, session resume, subagents (Flash for
    research), MCP client, AGENTS.md loading, checkpoints/undo, headless mode.
 7. ~~**Phase 5 quality bar**~~ release pipeline + installer + docs **DONE** (see §2). Still owed:
-   make a full `cargo test --workspace` run green (the `xai-grok-login` lane is red; see
-   `KNOWN-ISSUES.md`), and exercise the release workflow + container via the §6 dry run.
+   exercise the release workflow + container via the §6 dry run, and confirm one full
+   `cargo test --workspace` run green on a clean host (the only known failures are
+   host-environment bwrap ones; see §0).
 8. ~~**Phase E (tuning/eval harness)**~~ **DONE**: `scripts/evals/` (21 auto-checked tasks),
    E2 baseline + E3a–d measured, results in `docs/TUNING.md`.
 
 ## 4. Gates (from the task) and current status
 
-1. `cargo build --release` — **PASS** (artifact `target/release/deepseek-build`; last built
-   and measured at `46aef0920857`: 153,624,024 bytes = 147 MiB linux-x86_64). `cargo test
-   --workspace` now **compiles** everywhere, but the full run is **not green** (red
-   `xai-grok-login` lane; see §0). Workspace-wide clippy/fmt: only per-crate checks done on
-   touched crates.
+1. `cargo build --release` — **PASS** (artifact `target/release/deepseek-build`, ~147 MiB
+   linux-x86_64). `cargo test --workspace` — all targets compile; last full run
+   31,939 passed / 2 failed / 388 ignored across 307 targets, the 2 being host-only
+   `xai-grok-sandbox` bwrap failures (see §0). `cargo fmt --all --check` clean;
+   clippy 0 errors on the touched crates (16 pre-existing warnings).
 2. HARD egress zero — **PASS**. SOFT zero after rebrand — **PASS**
-   (`scripts/check-egress.sh --strict` exits 0).
+   (`scripts/check-egress.sh --strict` exits 0). `opentelemetry`/`aws-config`/
+   `google-cloud-storage` have zero dependents; `jsonschema`'s `$ref` fetch path closed.
 3. Runtime egress test via `strace -f -e trace=connect` — **NOT RUN** (`strace` absent; the
    `LD_PRELOAD` equivalent in `scripts/egress-check.sh` is used instead, last green
    2026-10-07).
 4. Adapter wiremock + live smoke — **DONE** (wiremock suite present; live smoke 8/8 PASS on
-   the author's machine, 2026-10-07).
-5. Independent verification sub-agent — was run once earlier for the adapter; **re-run at the
-   end**.
+   the author's machine, 2026-10-07; re-confirmed 2026-10-09 on the merged tree).
+5. Independent verification sub-agent — ran 2026-10-09 (V1/V2/V3/V4/V6 workstreams; see
+   `HANDOFF-2026-10-09.md`).
 
 Stop and ask only if: a gate fails twice, a decision is not in `DECISIONS.md`, a change would
 add an outbound destination, or the live smoke test needs a key not provided.
 
 ## 5. Known gotchas / incomplete (do not paper over)
 
-- **All test targets compile**; a full `cargo test --workspace` run is **not green yet** (the
-  `xai-grok-login` lane is red: 405 passed / 33 failed / 1 ignored on the last clean-`HOME`
-  rerun; four `xai-fast-worktree` NFS/Grove tests were dropped). See `KNOWN-ISSUES.md`.
+- **All test targets compile.** The last full `cargo test --workspace` was 31,939 passed /
+  2 failed / 388 ignored across 307 targets; the 2 are host-environment `xai-grok-sandbox`
+  bwrap failures (root-owned `/run/containerd`), not code. A full run on `cc6e6948` is in
+  flight. See `KNOWN-ISSUES.md`.
 - **Unexercised:** interactive TUI by a human (only pty-driven), the release workflow in CI
   (no tag, no release), the container image (never built/pulled), and the live scripts on any
   machine other than the author's. See `KNOWN-ISSUES.md` "Unexercised surfaces".
