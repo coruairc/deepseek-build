@@ -1,21 +1,16 @@
-//! Inert authentication primitives.
+//! Pure login-policy helpers for the OIDC credential path.
 //!
 //! The interactive OIDC/OAuth2/device-code network stack (discovery, PKCE,
 //! loopback callback, token exchange, JWKS validation, refresh) has been
-//! removed. Authentication is API-key driven; the types and pure helpers that
-//! the rest of the crate (and downstream crates) depend on are retained here,
-//! with every network-capable entry point stubbed.
+//! removed. Authentication is API-key driven; the pure helpers that the rest
+//! of the crate depends on are retained here.
 
-use super::config::{ForceLoginTeam, GrokComConfig, OidcAuthConfig};
-use super::{AuthManager, GrokAuth};
-use std::sync::Arc;
+use super::config::{ForceLoginTeam, GrokComConfig};
 
 /// Authentication errors that survive the removal of the interactive flow.
 /// Kept as a public-in-crate enum so callers can pattern-match and downcast.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum OidcError {
-    #[error("OIDC not configured")]
-    NotConfigured,
     #[error(
         "This deployment requires logging into {expected}; your login returned {}",
         actual.as_deref().unwrap_or("no team principal")
@@ -30,39 +25,6 @@ pub enum OidcError {
          list, so no team is permitted to sign in"
     )]
     ForceLoginNoPrincipalsAllowed,
-}
-
-/// No-op retained for signature compatibility; never attaches headers.
-pub fn with_alpha_test_key(builder: reqwest::RequestBuilder, url: &str) -> reqwest::RequestBuilder {
-    let _ = url;
-    builder
-}
-
-pub fn is_configured(config: &GrokComConfig) -> bool {
-    config.oidc.is_some()
-}
-
-/// Peek at the unverified access token JWT to extract the `principal_type`,
-/// `principal_id`, and `team_id`. Pure, no network.
-pub fn peek_access_token_principal(access_token: &str) -> Option<(String, String, Option<String>)> {
-    #[derive(serde::Deserialize)]
-    struct MinimalClaims {
-        #[serde(default, alias = "principalType")]
-        principal_type: Option<String>,
-        #[serde(default, alias = "principalId")]
-        principal_id: Option<String>,
-        #[serde(default)]
-        team_id: Option<String>,
-    }
-    let token_data =
-        jsonwebtoken::dangerous::insecure_decode::<MinimalClaims>(access_token).ok()?;
-    let pt = token_data.claims.principal_type?;
-    let pid = token_data.claims.principal_id?;
-    if pt.is_empty() || pid.is_empty() {
-        return None;
-    }
-    let tid = token_data.claims.team_id.filter(|s| !s.is_empty());
-    Some((pt, pid, tid))
 }
 
 /// Extract just the `principal_id` claim for `force_login_team_uuid` matching.
@@ -123,43 +85,4 @@ pub fn enforce_login_principal(
         expected,
         actual: actual.map(str::to_owned),
     }))
-}
-
-/// Outcome of a pure OIDC token refresh (no AuthManager mutations).
-/// Retained for source compatibility with the refresh chain; the OIDC
-/// network path is removed, so exchanges always fail.
-pub enum OidcRefreshResult {
-    /// Fresh token obtained. Caller must persist.
-    Success(Box<GrokAuth>),
-    /// Terminal error from the IdP, already classified into a reason.
-    TerminalError {
-        reason: crate::error::RefreshTokenFailedReason,
-    },
-    /// Non-terminal failure (network/authority unavailable).
-    Failed { network_unreachable: bool },
-}
-
-/// OIDC refresh network stack removed; always reports a non-terminal failure.
-pub async fn oidc_token_exchange(_auth: &GrokAuth) -> OidcRefreshResult {
-    OidcRefreshResult::Failed {
-        network_unreachable: false,
-    }
-}
-
-/// Interactive login network stack removed.
-pub async fn run_login_flow(
-    _config: &GrokComConfig,
-    _auth_manager: &Arc<AuthManager>,
-    _channels: Option<crate::flow::AuthChannels>,
-) -> anyhow::Result<(GrokAuth, bool)> {
-    Err(anyhow::Error::new(OidcError::NotConfigured))
-}
-
-/// Interactive login network stack removed.
-pub async fn run_login_flow_with_config(
-    _oidc: &OidcAuthConfig,
-    _auth_manager: &Arc<AuthManager>,
-    _channels: Option<crate::flow::AuthChannels>,
-) -> anyhow::Result<(GrokAuth, bool)> {
-    Err(anyhow::Error::new(OidcError::NotConfigured))
 }

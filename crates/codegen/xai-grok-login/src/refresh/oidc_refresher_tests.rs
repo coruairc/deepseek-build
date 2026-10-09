@@ -6,186 +6,12 @@ use super::*;
 use crate::{GrokAuth, GrokComConfig};
 use chrono::{Duration, Utc};
 
-// ── OIDC refresh E2E with mock IdP ─────────────────────────────────
-
-/// Start a mock server that handles OIDC discovery, token refresh, and the proxy /user endpoint (called by AuthManager::update).
-async fn start_mock_oidc_and_proxy() -> (String, tokio::task::JoinHandle<()>) {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let base = format!("http://127.0.0.1:{}", listener.local_addr().unwrap().port());
-    let base_for_discovery = base.clone();
-
-    let app = axum::Router::new()
-        .route(
-            "/.well-known/openid-configuration",
-            axum::routing::get(move || {
-                let b = base_for_discovery.clone();
-                async move {
-                    axum::Json(serde_json::json!({
-                        "authorization_endpoint": format!("{b}/authorize"),
-                        "token_endpoint": format!("{b}/token"),
-                    }))
-                }
-            }),
-        )
-        .route(
-            "/token",
-            axum::routing::post(
-                |body: axum::extract::Form<Vec<(String, String)>>| async move {
-                    // Verify the request is a refresh_token grant.
-                    let grant_type = body
-                        .iter()
-                        .find(|(k, _)| k == "grant_type")
-                        .map(|(_, v)| v.as_str());
-                    assert_eq!(
-                        grant_type,
-                        Some("refresh_token"),
-                        "expected refresh_token grant"
-                    );
-
-                    axum::Json(serde_json::json!({
-                        "access_token": "oidc-refreshed-token",
-                        "refresh_token": "oidc-new-rt",
-                        "expires_in": 3600,
-                    }))
-                },
-            ),
-        )
-        .route(
-            "/user",
-            axum::routing::get(|| async {
-                axum::Json(serde_json::json!({
-                    "userId": "user-42",
-                    "email": "test@corp.com",
-                }))
-            }),
-        );
-
-    let handle = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
-    (base, handle)
-}
-
 fn write_auth_to_disk(dir: &std::path::Path, scope: &str, auth: &GrokAuth) {
     let path = dir.join("auth.json");
     let mut map = crate::read_auth_json(&path).unwrap_or_default();
     map.insert(scope.to_owned(), auth.clone());
     let json = serde_json::to_string_pretty(&map).unwrap();
     std::fs::write(&path, json).unwrap();
-}
-#[tokio::test]
-async fn oidc_refresher_e2e_proactive_returns_cached_when_valid() {
-    let (base_url, server) = start_mock_oidc_and_proxy().await;
-    let dir = tempfile::tempdir().unwrap();
-    let mgr = Arc::new(
-        AuthManager::new(dir.path(), GrokComConfig::default()).with_proxy_base_url(&base_url),
-    );
-
-    // Seed a valid (not expired) OIDC token.
-    let valid = GrokAuth {
-        key: "still-valid-token".into(),
-        user_id: "user-42".into(),
-        email: Some("test@corp.com".into()),
-        refresh_token: Some("rt".into()),
-        expires_at: Some(Utc::now() + Duration::hours(1)),
-        oidc_issuer: Some(base_url.clone()),
-        oidc_client_id: Some("test-client".into()),
-        ..GrokAuth::test_default()
-    };
-    mgr.hot_swap(valid);
-
-    let refresher = OidcRefresher::new(mgr.clone());
-    // PreRequest with a valid token: the refresher finds no expired_auth (token is valid) and no disk token, so it returns TransientFailure
-    // The PreRequest fast-path is handled by refresh_chain (not the refresher).
-    let result = refresher.refresh(RefreshReason::PreRequest).await;
-    assert!(
-        matches!(result, RefreshOutcome::TransientFailure { .. }),
-        "PreRequest with valid token should return TransientFailure (refresh_chain handles fast-path)"
-    );
-
-    server.abort();
-}
-/// The IdP would return `invalid_client`, but disk auth.json already holds a valid token with a different client_id.
-/// That means a sibling re-authenticated during a client rotation, so `auth()` adopts the sibling's disk token instead of failing.
-#[tokio::test]
-async fn oidc_refresher_e2e_invalid_client_adopts_valid_sibling_disk_token() {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let base_url = format!("http://127.0.0.1:{}", listener.local_addr().unwrap().port());
-    let base_for_discovery = base_url.clone();
-
-    let app = axum::Router::new()
-        .route(
-            "/.well-known/openid-configuration",
-            axum::routing::get(move || {
-                let b = base_for_discovery.clone();
-                async move {
-                    axum::Json(serde_json::json!({
-                        "authorization_endpoint": format!("{b}/authorize"),
-                        "token_endpoint": format!("{b}/token"),
-                    }))
-                }
-            }),
-        )
-        .route(
-            "/token",
-            axum::routing::post(|| async {
-                (
-                    axum::http::StatusCode::UNAUTHORIZED,
-                    axum::Json(serde_json::json!({
-                        "error": "invalid_client",
-                        "error_description": "Unknown client"
-                    })),
-                )
-            }),
-        );
-
-    let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
-
-    let dir = tempfile::tempdir().unwrap();
-    let cfg = GrokComConfig::default();
-    let scope = cfg.auth_scope();
-    let mgr = Arc::new(AuthManager::new(dir.path(), cfg).with_proxy_base_url(&base_url));
-
-    // Pre-populate disk with auth that has a *different* client_id, simulating another process having re-authenticated
-    let disk_auth = GrokAuth {
-        key: "disk-fresh-token".into(),
-        user_id: "user-42".into(),
-        refresh_token: Some("rt-disk".into()),
-        expires_at: Some(Utc::now() + Duration::hours(1)),
-        oidc_issuer: Some(base_url.clone()),
-        oidc_client_id: Some("rotated-new-client-id".into()),
-        ..GrokAuth::test_default()
-    };
-    let mut store = std::collections::BTreeMap::new();
-    store.insert(scope, disk_auth);
-    let json = serde_json::to_string_pretty(&store).unwrap();
-    std::fs::write(dir.path().join("auth.json"), json).unwrap();
-
-    // In-memory auth has the OLD client_id that the server rejects.
-    let expired = GrokAuth {
-        key: "old-token".into(),
-        create_time: Utc::now() - Duration::hours(2),
-        user_id: "user-42".into(),
-        refresh_token: Some("rt-old".into()),
-        expires_at: Some(Utc::now() - Duration::hours(1)),
-        oidc_issuer: Some(base_url.clone()),
-        oidc_client_id: Some("deleted-client-id".into()),
-        ..GrokAuth::test_default()
-    };
-    mgr.hot_swap(expired);
-
-    // auth() picks up the valid disk token via try_use_disk_token (disk has a different, unexpired entry from a sibling process)
-    mgr.set_refresher(std::sync::Arc::new(OidcRefresher::new(mgr.clone())));
-    let refreshed = mgr.auth().await;
-    assert!(
-        refreshed.is_ok(),
-        "auth() should pick up the valid disk token, got: {refreshed:?}"
-    );
-    assert_eq!(
-        refreshed.unwrap().oidc_client_id.as_deref(),
-        Some("rotated-new-client-id"),
-        "should use the sibling's rotated client_id from disk"
-    );
-
-    server.abort();
 }
 
 // The standalone `try_refresh_session_token` helper once tested here was removed when refresh was centralized in `AuthManager`
@@ -420,7 +246,7 @@ fn transient_blip_budget_is_scoped_to_the_credential() {
     // Accrue blips up to just under the escalation threshold on credential A.
     for _ in 0..MAX_CONSECUTIVE_TRANSIENT_FAILURES - 1 {
         assert!(matches!(
-            refresher.record_transient_failure("blip".into(), key_a.clone(), false),
+            refresher.record_transient_failure("blip".into(), key_a.clone()),
             RefreshOutcome::TransientFailure { .. }
         ));
     }
@@ -428,44 +254,9 @@ fn transient_blip_budget_is_scoped_to_the_credential() {
     // Credential B's first blip must stay transient, not escalate to permanent.
     assert!(
         matches!(
-            refresher.record_transient_failure("blip".into(), Some("cred-b".to_owned()), false),
+            refresher.record_transient_failure("blip".into(), Some("cred-b".to_owned())),
             RefreshOutcome::TransientFailure { .. }
         ),
         "a fresh credential must not inherit a prior credential's blip count",
-    );
-}
-
-/// Network-unreachable failures (DNS/connect/timeout, the post-wake offline window) must never consume the escalation budget.
-/// No amount of them may produce a `PermanentFailure` ("Run `grok login`") verdict, because they prove nothing about the credential.
-/// Counted failures accrued before or after are unaffected (the budget is neither consumed nor reset).
-#[test]
-fn network_unreachable_blips_never_escalate() {
-    let refresher = OidcRefresher::new(Arc::new(EmptySnapshot));
-    let key = Some("cred-a".to_owned());
-
-    // Far more unreachable blips than the budget: all stay transient.
-    for _ in 0..MAX_CONSECUTIVE_TRANSIENT_FAILURES * 3 {
-        assert!(
-            matches!(
-                refresher.record_transient_failure("wifi down".into(), key.clone(), true),
-                RefreshOutcome::TransientFailure { .. }
-            ),
-            "a network-unreachable failure must never escalate to permanent",
-        );
-    }
-
-    // The budget was not consumed: counted (IdP-reaching) blips still get the full threshold before escalating
-    for _ in 0..MAX_CONSECUTIVE_TRANSIENT_FAILURES - 1 {
-        assert!(matches!(
-            refresher.record_transient_failure("5xx".into(), key.clone(), false),
-            RefreshOutcome::TransientFailure { .. }
-        ));
-    }
-    assert!(
-        matches!(
-            refresher.record_transient_failure("5xx".into(), key.clone(), false),
-            RefreshOutcome::PermanentFailure { .. }
-        ),
-        "counted blips must still escalate at the threshold",
     );
 }

@@ -546,3 +546,47 @@ unrenamed (a half-done sed), and that test also asserts the deleted tie-break.
   the deleted priority is gone. The other three half-scrubbed fixtures
   (`parse_name_with_owner_repo_qualifier`, `parse_name_with_local_slug_qualifier`,
   `bare_name_matches_case_insensitively`) were repaired to the renamed input.
+
+## `xai-grok-login` dead xAI login/OIDC surface
+
+The xAI account-login network stack (OAuth2 / OIDC device-code / JWKS token
+exchange) was deleted in the `dsb/auth` slice (`3f56baf7`) but large dead
+remnants stayed compiled: `is_xai_oauth2_issuer()` was hardcoded `false`,
+`oidc_token_exchange()` was an inert stub, and the device-code flow, OIDC
+login flow, and their config/refresh plumbing were unreachable from the
+DeepSeek API-key path. This pass deletes that remnant (D6: delete, never
+disable) — **−1,355 lines across 22 files**, including `src/device_code.rs`
+and the OIDC login flow in `src/oidc/mod.rs` — and updates the four consumer
+call sites (`xai-grok-shell` agent ops, `xai-grok-pager` session startup and
+ACP spawn, `xai-grok-pager-bin`). `configure_refresher` loses its dead second
+argument; `is_xai_auth()` is now a constant `false` (no issuer is first-party in
+this build) and the dead issuer config field is gone.
+
+Dropped tests (all exercised the deleted network paths; each drove a mock IdP,
+a `/user` enrichment fetch, or a device-code endpoint the stubs can never
+serve, so they could not pass in this build):
+
+- `flow.rs` — `resolve_device_flow`, `cli_should_use_device`,
+  `should_use_device_flow`, `fetch_login_device_flow` and the device-flow
+  precedence matrix (`device_flow_precedence_*`,
+  `device_flow_still_runs_external_provider`, `enterprise_oidc_never_uses_device_flow`,
+  `device_flow_records_deciding_tier`, `device_flow_remote_then_default`),
+  plus their `with_device_flow_env`/`oidc_session`/`login_config_response_parses_tristate`
+  helpers and the login-config mock server.
+- `oidc/mod.rs` — the OIDC login flow (`run_login_flow`,
+  `run_login_flow_with_config`, `oidc_token_exchange`, `is_configured`,
+  `with_alpha_test_key`, `peek_access_token_principal`).
+- `refresh/oidc_refresher.rs` — the mock-IdP e2e suite
+  (`oidc_refresher_e2e_proactive_returns_cached_when_valid`,
+  `oidc_refresher_e2e_invalid_client_adopts_valid_sibling_disk_token`,
+  `network_unreachable_blips_never_escalate`) and `start_mock_oidc_and_proxy`;
+  `refresh/auth_backend_contract_tests.rs` — `start_idp`, `expired_oidc`, and
+  the contract cases built on them.
+- Retained and repaired: the escalation/retry budget, disk-adoption, readiness
+  bound, and the rewritten sleep-gate tests (which drive a controllable
+  refresher, no network).
+
+Test count: `xai-grok-login --lib` **413 passed / 0 failed / 1 ignored → 395
+passed / 0 failed / 1 ignored** (−18, ≈4% of the crate; well under the 25% cap).
+Retained coverage: `manager`, `credential_provider`, `api_key_probe`,
+`side_call_bearer`, `storage`, and the refresh state machine.

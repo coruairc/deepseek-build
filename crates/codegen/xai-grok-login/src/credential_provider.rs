@@ -269,17 +269,6 @@ impl OtelAuthCredentialProvider {
         self.deployment_key.store(Arc::new(Some(key)));
     }
 
-    /// Email for the external stream: OIDC/gateway only, never API-key,
-    /// deployment-key, git, or blank. Identity, not a content gate.
-    fn oauth_gateway_email(&self) -> Option<String> {
-        if self.deployment_key.load().is_some() {
-            return None;
-        }
-        let (am, _) = self.load_state();
-        let auth = am.current_or_expired()?;
-        oauth_gateway_email_from_auth(&auth)
-    }
-
     /// Loads `live` once, returning the live manager when set, else the bootstrap.
     fn load_state(&self) -> (Arc<AuthManager>, bool) {
         let guard = self.live.load();
@@ -401,18 +390,6 @@ pub fn wire_otel_auth_manager(auth_manager: Arc<AuthManager>) {
     }
     // The external stream's identity attributes come from the same snapshot, so re-sync it here
     sync_external_otel_identity();
-}
-
-/// Email for the external OTEL stream. OIDC/gateway only; never API-key,
-/// WebLogin, or a blank address. Callers must also skip deployment-key
-/// snapshots — this helper only inspects `GrokAuth`.
-pub fn oauth_gateway_email_from_auth(auth: &crate::GrokAuth) -> Option<String> {
-    match auth.auth_mode {
-        crate::AuthMode::Oidc | crate::AuthMode::External => {
-            auth.email.clone().filter(|e| !e.is_empty())
-        }
-        crate::AuthMode::ApiKey | crate::AuthMode::WebLogin => None,
-    }
 }
 
 /// No-op: the external OTEL stream was removed.
@@ -1172,42 +1149,5 @@ mod tests {
         assert_eq!(snap.token.as_deref(), Some("deployment-key-12345"));
         // The deployment-key path returns a `None` user_id per the CredentialSnapshot contract; only user-token resolution carries a user_id
         assert!(snap.user_id.is_none());
-    }
-
-    #[test]
-    fn oauth_gateway_email_oidc_and_external_only() {
-        let oidc = GrokAuth {
-            auth_mode: crate::AuthMode::Oidc,
-            email: Some("alice@corp.example".into()),
-            ..GrokAuth::test_default()
-        };
-        assert_eq!(
-            oauth_gateway_email_from_auth(&oidc).as_deref(),
-            Some("alice@corp.example")
-        );
-
-        let external = GrokAuth {
-            auth_mode: crate::AuthMode::External,
-            email: Some("bob@gateway.example".into()),
-            ..GrokAuth::test_default()
-        };
-        assert_eq!(
-            oauth_gateway_email_from_auth(&external).as_deref(),
-            Some("bob@gateway.example")
-        );
-
-        let blank = GrokAuth {
-            auth_mode: crate::AuthMode::Oidc,
-            email: Some(String::new()),
-            ..GrokAuth::test_default()
-        };
-        assert_eq!(oauth_gateway_email_from_auth(&blank), None);
-
-        let api = GrokAuth {
-            auth_mode: crate::AuthMode::ApiKey,
-            email: Some("should-not-export@example.com".into()),
-            ..GrokAuth::test_default()
-        };
-        assert_eq!(oauth_gateway_email_from_auth(&api), None);
     }
 }

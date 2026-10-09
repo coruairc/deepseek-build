@@ -2014,9 +2014,9 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
             }
             Command::Login {
                 legacy: _,
-                oauth,
-                device_auth,
-                devbox,
+                oauth: _,
+                device_auth: _,
+                devbox: _,
             } => {
                 init_tracing_simple("cli");
                 let config = xai_grok_shell::config::load_agent_config_disk_only()
@@ -2025,9 +2025,6 @@ async fn async_main(mut args: PagerArgs) -> Result<()> {
                     config.grok_com_config.clone(),
                     config.login_device_flow,
                     config.endpoints.proxy_url(),
-                    oauth,
-                    device_auth,
-                    devbox,
                     |auth_manager| {
                         xai_grok_shell::agent::init::update_telemetry_config(&config, auth_manager)
                     },

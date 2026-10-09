@@ -799,10 +799,7 @@ pub(crate) fn pre_acp_auth_manager(
         agent_config.grok_com_config.clone(),
         agent_config.endpoints.proxy_url(),
     ));
-    auth.configure_refresher(
-        agent_config.grok_com_config.auth_provider_command.clone(),
-        None,
-    );
+    auth.configure_refresher(agent_config.grok_com_config.auth_provider_command.clone());
     auth
 }
 /// Pre-TUI remote restore (session state and memory only).

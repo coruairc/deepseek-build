@@ -21,24 +21,6 @@ pub fn should_probe_first_party_env_key(
     !disable_api_key_auth && !has_byok && has_env_key && !preferred_method_pinned
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ApiKeyProbeVerdict {
-    Usable,
-    /// An auth error, or a rejected key.
-    Unusable,
-    /// A timeout or unknown error; the probe fails open.
-    Unknown,
-}
-
-impl ApiKeyProbeVerdict {
-    pub fn allows_advertise(self) -> bool {
-        match self {
-            Self::Usable | Self::Unknown => true,
-            Self::Unusable => false,
-        }
-    }
-}
-
 /// No network probe: a present env key is advertised; a missing/empty one is not.
 pub async fn first_party_env_key_allows_advertise(_api_base_url: &str, _timeout: Duration) -> bool {
     match crate::auth_method::read_xai_api_key_env() {
