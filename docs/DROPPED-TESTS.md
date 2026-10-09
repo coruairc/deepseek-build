@@ -440,3 +440,76 @@ Dropped test functions:
 The local filesystem rebuild behavior (the non-NFS rows) remains covered by the
 retained `discovery` tests. After the drop: `xai-fast-worktree` lib tests
 455 passed / 0 failed / 2 ignored with `--features metadata` (was 4 failed).
+
+## `xai-grok-login` removed-network tests
+
+The `dsb/auth` slice (e4c1809a) deleted the xAI OAuth/OIDC/device-code network
+stack and stubbed its entry points: `oidc_token_exchange` always returns a
+transient failure without touching the network, `fetch_login_device_flow`
+always returns `None`, and the `/user` enrichment fetch returns `None`. The
+crate's tests were never swept after that slice, so these tests failed or hung
+deterministically (never reached a real IdP in this build):
+
+- `refresh/oidc_refresher_tests.rs` — the mock-IdP e2e suite:
+  `oidc_refresher_e2e_full_refresh_cycle`,
+  `oidc_refresher_e2e_force_refreshes_locally_valid_token`,
+  `oidc_refresher_e2e_near_expiry_within_buffer_refreshes`,
+  `oidc_refresher_attributes_the_refresh_token_it_spent_on_invalid_grant`,
+  `oidc_refresher_e2e_near_expiry_idp_rejects_refresh`,
+  `oidc_refresher_e2e_invalid_client_retains_credentials`,
+  `oidc_refresh_uses_disk_refresh_token`,
+  `lock_timeout_falls_through_to_refresh`,
+  `refresher_retries_with_disk_token_after_invalid_grant`,
+  `refresher_disk_retry_invalid_client_with_different_client_id_preserves_disk`,
+  `refresher_disk_retry_is_one_shot`, and the now-unused helpers
+  `start_mock_oidc_with_disk_rotation`, `start_counting_mock_oidc`,
+  `expired_oidc_for`. Retained and repaired: the two sleep-gate tests now
+  drive the real gate/drain with a controllable `TokenRefresher` instead of a
+  mock IdP (`sleep_gate_e2e_defers_then_recovers_on_wake`,
+  `sleep_gate_e2e_in_flight_refresh_completes_across_imminent_sleep`), which
+  also removes the deadlock they had (they waited forever on a mock `/token`
+  hit that the inert exchange can never produce).
+- `refresh/auth_backend_contract_tests.rs` —
+  `auth_backend_contract_token_responses_map_to_outcomes`,
+  `auth_backend_contract_concurrent_401s_hit_idp_once`,
+  `auth_backend_contract_dead_token_emits_typed_manual_auth_event`,
+  `auth_backend_contract_two_instances_share_one_idp_call` (all drive a mock
+  IdP token endpoint). `auth_backend_contract_transient_failures_escalate_to_non_sticky_permanent`
+  stays: escalation is local logic the stub still exercises.
+- `flow.rs` — `expired_refreshable_session_gate` (an xAI-session fallback whose
+  filter `is_xai_auth()` is permanently false in this build),
+  `external_reauth_without_prev_auth_enriches_inline` (asserted the removed
+  `/user` fetch), `run_auth_flow_falls_through_when_no_refresh_token` (asserted
+  the removed device-code request), `no_mint_readiness_auth_is_bounded`
+  (bounded a hanging OIDC IdP; the retained bound stays pinned by the
+  `STARTUP_AUTH_REFRESH_TIMEOUT < REFRESH_LOCK_TIMEOUT` const assert and by
+  `readiness_auth_stays_bounded_when_auth_lock_is_held`),
+  `fetch_login_device_flow_parses_2xx_bodies`,
+  `fetch_login_device_flow_sends_only_unauthenticated_headers`, and the
+  helper `start_hanging_oidc_idp`.
+- `manager_tests.rs` — the background `/user` enrichment suite:
+  `update_writes_disk_before_user_enrichment`,
+  `enrichment_task_preserves_interleaved_token_rotation`,
+  `enrichment_overlays_team_login_placeholder_user_id`,
+  `enrich_auth_inline_populates_zdr_flags`,
+  `enrich_auth_inline_keeps_fields_absent_from_response`, and the helper
+  `spawn_user_stub`. The retained local merge behavior stays covered by the
+  `apply_user_info_enrichment_*` tests.
+
+Repaired, not dropped (retained behavior):
+- `external_auth::tests::parse_output_issuer_claim_enables_xai_auth` renamed to
+  `parse_output_issuer_claim_is_stored_but_never_first_party`: an issuer claim
+  is still parsed and stored, but no issuer classifies as first-party xAI auth
+  in this build.
+- Every test that pinned the API-key env vars now guards the names the product
+  actually reads (`DEEPSEEK_API_KEY`, `DEEPSEEK_BUILD_API_KEY`) instead of the
+  removed `XAI_API_KEY` / `GROK_CODE_XAI_API_KEY`, so a developer's exported
+  key can no longer leak into the expectations.
+- `storage::write_fallback_tests::atomic_write_writes_through_symlink_and_keeps_owner_only`
+  clears `DEEPSEEK_BUILD_HOME` (which outranks its `GROK_HOME` guard) so a
+  developer env override can no longer defeat the test's temp home.
+
+Follow-up (not done here): `flow::expired_refreshable_session` is now dead code
+(its `is_xai_auth()` filter is permanently false); the xAI-session fallback
+call path should be excised in the same sweep that removes the remaining
+retained-stub surfaces.

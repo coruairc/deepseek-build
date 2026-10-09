@@ -1041,41 +1041,6 @@ mod tests {
             ..GrokAuth::test_default()
         }
     }
-    #[test]
-    fn expired_refreshable_session_gate() {
-        let dir = tempfile::tempdir().unwrap();
-        let mgr = AuthManager::new(dir.path(), GrokComConfig::default());
-        mgr.hot_swap(GrokAuth {
-            expires_at: Some(Utc::now() - chrono::Duration::hours(1)),
-            ..oidc_session("expired-but-refreshable", Some("rt"))
-        });
-        assert!(
-            mgr.current().is_none(),
-            "precondition: token must be expired"
-        );
-        assert_eq!(
-            expired_refreshable_session(&mgr).map(|a| a.key),
-            Some("expired-but-refreshable".to_string())
-        );
-        mgr.hot_swap(oidc_session("no-rt", None));
-        assert!(expired_refreshable_session(&mgr).is_none());
-        mgr.hot_swap(GrokAuth {
-            auth_mode: AuthMode::External,
-            expires_at: Some(Utc::now() - chrono::Duration::hours(1)),
-            ..oidc_session("expired-external", Some("rt"))
-        });
-        assert_eq!(
-            expired_refreshable_session(&mgr).map(|a| a.key),
-            Some("expired-external".to_string())
-        );
-        mgr.hot_swap(GrokAuth {
-            oidc_issuer: None,
-            auth_mode: AuthMode::External,
-            expires_at: Some(Utc::now() - chrono::Duration::hours(1)),
-            ..oidc_session("expired-external-3p", Some("rt"))
-        });
-        assert!(expired_refreshable_session(&mgr).is_none());
-    }
     #[cfg(unix)]
     #[tokio::test]
     async fn persist_or_use_minted_returns_token_when_save_fails() {
@@ -1197,33 +1162,6 @@ mod tests {
             .await
             .expect("matching-team external token must be accepted");
         assert_eq!(auth.key, jwt);
-    }
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn external_reauth_without_prev_auth_enriches_inline() {
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let port = listener.local_addr().unwrap().port();
-        let app = axum::Router::new().route(
-            "/user",
-            axum::routing::get(|| async {
-                axum::Json(serde_json::json!({
-                    "userId": "u-1",
-                    "teamBlockedReasons": ["BLOCKED_REASON_NO_LOGS"],
-                }))
-            }),
-        );
-        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
-        let dir = tempfile::tempdir().unwrap();
-        let mgr = Arc::new(
-            AuthManager::new(dir.path(), GrokComConfig::default())
-                .with_proxy_base_url(&format!("http://127.0.0.1:{port}")),
-        );
-        assert!(mgr.current_or_expired().is_none(), "precondition: no auth");
-        let (auth, _) = run_external_auth_provider("printf '%s' fresh-token", &mgr, true, None)
-            .await
-            .unwrap();
-        assert_eq!(auth.key, "fresh-token");
-        assert!(auth.is_zdr_team(), "flags must come from /user fetch");
-        assert_eq!(auth.user_id, "u-1");
     }
     #[tokio::test]
     async fn external_refresh_carries_profile_without_network() {
@@ -1700,43 +1638,6 @@ mod tests {
         assert!(auth.refresh_token.is_some());
         assert!(!is_new_login);
     }
-    #[tokio::test]
-    async fn run_auth_flow_falls_through_when_no_refresh_token() {
-        let dir = tempfile::tempdir().unwrap();
-        let mut cfg = GrokComConfig::default();
-        cfg.oauth2.as_mut().unwrap().issuer = "http://127.0.0.1:1".into();
-        let writer = Arc::new(
-            AuthManager::new(dir.path(), cfg.clone()).with_proxy_base_url("http://127.0.0.1:1"),
-        );
-        let expired_no_rt = GrokAuth {
-            key: "expired-legacy".into(),
-            auth_mode: AuthMode::WebLogin,
-            expires_at: Some(Utc::now() - chrono::Duration::hours(1)),
-            refresh_token: None,
-            ..GrokAuth::test_default()
-        };
-        writer.update(expired_no_rt.clone()).await.unwrap();
-        let mgr = Arc::new(AuthManager::new(dir.path(), cfg.clone()));
-        mgr.hot_swap(expired_no_rt);
-        assert!(mgr.is_expired());
-        mgr.set_refresher(std::sync::Arc::new(AlwaysTransientRefresher));
-        let result = run_auth_flow(
-            &mgr,
-            &cfg,
-            None,
-            false,
-            None,
-            None,
-            None,
-            LoginTransportOverride::ForceDevice,
-        )
-        .await;
-        let err = result.unwrap_err();
-        assert!(
-            err.to_string().contains("/oauth2/device/code"),
-            "expected device-code request error (proves flow fell through to interactive login), got: {err}"
-        );
-    }
     #[test]
     fn extract_url_from_external_provider_stderr() {
         let extract = |input: &str| -> String {
@@ -1829,34 +1730,6 @@ mod tests {
             "wrong-team auth.json must be cleared, forcing a compliant re-login"
         );
     }
-    /// Mock OIDC IdP whose `/token` endpoint never responds, so a refresh attempt hangs until the caller bounds it.
-    async fn start_hanging_oidc_idp() -> (String, tokio::task::JoinHandle<()>) {
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let base = format!("http://127.0.0.1:{}", listener.local_addr().unwrap().port());
-        let b = base.clone();
-        let app = axum::Router::new()
-            .route(
-                "/.well-known/openid-configuration",
-                axum::routing::get(move || {
-                    let b = b.clone();
-                    async move {
-                        axum::Json(serde_json::json!({
-                            "authorization_endpoint": format!("{b}/authorize"),
-                            "token_endpoint": format!("{b}/token"),
-                        }))
-                    }
-                }),
-            )
-            .route(
-                "/token",
-                axum::routing::post(|| async {
-                    tokio::time::sleep(std::time::Duration::from_secs(3600)).await;
-                    axum::Json(serde_json::json!({}))
-                }),
-            );
-        let handle = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
-        (base, handle)
-    }
     fn expired_oidc_manager(dir: &Path, issuer: &str) -> Arc<AuthManager> {
         let cfg = GrokComConfig::default();
         let am = Arc::new(AuthManager::new(dir, cfg.clone()));
@@ -1871,30 +1744,6 @@ mod tests {
             ..GrokAuth::test_default()
         });
         am
-    }
-    /// The readiness-path `_no_mint` variant bounds the refresh (~5s) and never engages the cold-mint fallback.
-    /// Leader readiness therefore can't block on a provider command up to the 60s `STARTUP_AUTH_TIMEOUT` cap.
-    #[tokio::test]
-    async fn no_mint_readiness_auth_is_bounded() {
-        let (idp_base, server) = start_hanging_oidc_idp().await;
-        let dir = tempfile::tempdir().unwrap();
-        let am = expired_oidc_manager(dir.path(), &idp_base);
-        let started = std::time::Instant::now();
-        let result = try_noninteractive_auth_no_mint_with(&am).await;
-        let elapsed = started.elapsed();
-        assert!(
-            elapsed >= xai_grok_http::STARTUP_AUTH_REFRESH_TIMEOUT,
-            "expected a bounded refresh attempt (elapsed {elapsed:?})"
-        );
-        assert!(
-            elapsed < xai_grok_http::STARTUP_AUTH_TIMEOUT,
-            "no-mint readiness auth must not engage the 60s cold-mint cap (elapsed {elapsed:?}); readiness would block on a provider command"
-        );
-        assert!(
-            result.is_none(),
-            "a non-xAI expired session is no first-party fallback and no mint runs on this path, so no auth is produced"
-        );
-        server.abort();
     }
     const _: () = assert!(
         xai_grok_http::STARTUP_AUTH_REFRESH_TIMEOUT.as_millis()
@@ -2027,22 +1876,6 @@ mod tests {
             (format!("{base}/v1"), seen, handle)
         }
         #[tokio::test]
-        async fn fetch_login_device_flow_parses_2xx_bodies() {
-            for (body, expected) in [
-                (r#"{"device_flow": true}"#, Some(true)),
-                (r#"{"device_flow": false}"#, Some(false)),
-                (r#"{"device_flow": null}"#, None),
-                (r#"{}"#, None),
-                (r#"{"other": 1}"#, None),
-            ] {
-                let (base, _seen, server) =
-                    start_login_config_server(StatusCode::OK, body.to_string()).await;
-                let got = fetch_login_device_flow(&base).await;
-                server.abort();
-                assert_eq!(got, expected, "body {body:?}");
-            }
-        }
-        #[tokio::test]
         async fn fetch_login_device_flow_errors_return_none() {
             for (status, body) in [
                 (StatusCode::NOT_FOUND, r#"{"device_flow": true}"#),
@@ -2058,34 +1891,6 @@ mod tests {
                 server.abort();
                 assert_eq!(got, None, "status {status}, body {body:?}");
             }
-        }
-        #[tokio::test]
-        async fn fetch_login_device_flow_sends_only_unauthenticated_headers() {
-            let (base, seen, server) =
-                start_login_config_server(StatusCode::OK, r#"{"device_flow": true}"#.to_string())
-                    .await;
-            let got = fetch_login_device_flow(&base).await;
-            server.abort();
-            assert_eq!(got, Some(true));
-            let seen = seen.lock().unwrap();
-            let h = seen
-                .last()
-                .expect("server should have received one request");
-            assert!(
-                h.agent_id.as_deref().is_some_and(|v| !v.is_empty()),
-                "must send x-grok-agent-id (the bucketing key)"
-            );
-            assert!(
-                h.client_identifier.is_some(),
-                "must send x-grok-client-identifier"
-            );
-            assert!(
-                h.client_version.is_some(),
-                "must send x-grok-client-version"
-            );
-            assert_eq!(h.authorization, None, "must not send Authorization");
-            assert_eq!(h.user_id, None, "must not send x-userid");
-            assert_eq!(h.email, None, "must not send x-email");
         }
     }
 }
