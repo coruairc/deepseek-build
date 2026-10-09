@@ -1106,82 +1106,70 @@ async fn refresher_disk_retry_is_one_shot() {
     server.abort();
 }
 
-// ── Sleep-gate E2E (real OidcRefresher + mock IdP) ─────────────────
+// ── Sleep-gate E2E (controllable refresher) ────────────────────────
+//
+// The OIDC token exchange is inert in this build (the xAI network stack was
+// removed), so a mock IdP can never be reached. These tests drive the real
+// sleep-gate drain with a controllable refresher instead: it signals when the
+// exchange is in flight and completes only once released, so the gate/hold
+// semantics under test do not depend on any network.
 
-/// Mock IdP that counts `/token` POSTs so a test can prove a deferred refresh suppressed the network call rather than just changing the return value.
-async fn start_counting_mock_oidc(
-    token_hits: Arc<std::sync::atomic::AtomicU32>,
-) -> (String, tokio::task::JoinHandle<()>) {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let base = format!("http://127.0.0.1:{}", listener.local_addr().unwrap().port());
-    let base_for_discovery = base.clone();
-
-    let app = axum::Router::new()
-        .route(
-            "/.well-known/openid-configuration",
-            axum::routing::get(move || {
-                let b = base_for_discovery.clone();
-                async move {
-                    axum::Json(serde_json::json!({
-                        "authorization_endpoint": format!("{b}/authorize"),
-                        "token_endpoint": format!("{b}/token"),
-                    }))
-                }
-            }),
-        )
-        .route(
-            "/token",
-            axum::routing::post(move || {
-                let hits = token_hits.clone();
-                async move {
-                    hits.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                    axum::Json(serde_json::json!({
-                        "access_token": "oidc-refreshed-token",
-                        "refresh_token": "oidc-new-rt",
-                        "expires_in": 3600,
-                    }))
-                }
-            }),
-        )
-        .route(
-            "/user",
-            axum::routing::get(|| async {
-                axum::Json(serde_json::json!({ "userId": "user-42", "email": "test@corp.com" }))
-            }),
-        );
-
-    let handle = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
-    (base, handle)
+/// Refresher that reports the exchange as in flight and (when a release handle
+/// is set) only completes once released; succeeds with a fixed rotated token.
+struct SleepGateRefresher {
+    in_flight: Arc<tokio::sync::Notify>,
+    release: Option<Arc<tokio::sync::Notify>>,
+    calls: Arc<std::sync::atomic::AtomicU32>,
 }
 
-fn expired_oidc_for(base_url: &str) -> GrokAuth {
+#[async_trait::async_trait]
+impl TokenRefresher for SleepGateRefresher {
+    async fn refresh(&self, _reason: RefreshReason) -> RefreshOutcome {
+        self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.in_flight.notify_one();
+        if let Some(release) = &self.release {
+            release.notified().await;
+        }
+        RefreshOutcome::success(GrokAuth {
+            key: "oidc-refreshed-token".into(),
+            auth_mode: crate::model::AuthMode::Oidc,
+            refresh_token: Some("oidc-new-rt".into()),
+            user_id: "user-42".into(),
+            oidc_issuer: Some("https://idp.example".into()),
+            expires_at: Some(Utc::now() + Duration::hours(1)),
+            create_time: Utc::now(),
+            ..GrokAuth::test_default()
+        })
+    }
+}
+
+fn expired_oidc_for() -> GrokAuth {
     GrokAuth {
         key: "old-expired-token".into(),
         create_time: Utc::now() - Duration::hours(2),
         user_id: "user-42".into(),
-        email: Some("test@corp.com".into()),
         refresh_token: Some("rt-valid".into()),
         expires_at: Some(Utc::now() - Duration::hours(1)),
-        oidc_issuer: Some(base_url.to_owned()),
+        oidc_issuer: Some("https://idp.example".into()),
         oidc_client_id: Some("test-client".into()),
         ..GrokAuth::test_default()
     }
 }
 
-/// While sleep is imminent, `auth()` defers and never reaches the IdP; after wake it recovers via a real OIDC refresh.
-/// Exercises the production `OidcRefresher` against a mock IdP, not a stub.
+/// While sleep is imminent, `auth()` defers and the refresher is never called; after wake, the next `auth()` runs exactly one successful refresh.
 #[tokio::test]
 async fn sleep_gate_e2e_defers_then_recovers_on_wake() {
     use std::sync::atomic::{AtomicU32, Ordering};
 
-    let token_hits = Arc::new(AtomicU32::new(0));
-    let (base_url, server) = start_counting_mock_oidc(token_hits.clone()).await;
+    let calls = Arc::new(AtomicU32::new(0));
     let dir = tempfile::tempdir().unwrap();
-    let mgr = Arc::new(
-        AuthManager::new(dir.path(), GrokComConfig::default()).with_proxy_base_url(&base_url),
-    );
-    mgr.hot_swap(expired_oidc_for(&base_url));
-    mgr.set_refresher(Arc::new(OidcRefresher::new(mgr.clone())));
+    let mgr = Arc::new(AuthManager::new(dir.path(), GrokComConfig::default()));
+    mgr.hot_swap(expired_oidc_for());
+    mgr.set_refresher(Arc::new(SleepGateRefresher {
+        in_flight: Arc::new(tokio::sync::Notify::new()),
+        release: None,
+        calls: calls.clone(),
+    }));
 
     mgr.set_system_sleep_imminent(true);
     let err = mgr.auth().await.unwrap_err();
@@ -1193,90 +1181,62 @@ async fn sleep_gate_e2e_defers_then_recovers_on_wake() {
         "gated refresh must return a transient refresh error, got {err:?}"
     );
     assert_eq!(
-        token_hits.load(Ordering::SeqCst),
+        calls.load(Ordering::SeqCst),
         0,
-        "a deferred refresh must not reach the IdP token endpoint"
+        "a deferred refresh must not start the exchange"
     );
 
     mgr.set_system_sleep_imminent(false);
     let fresh = mgr.auth().await.expect("refresh must succeed after wake");
     assert_eq!(fresh.key, "oidc-refreshed-token");
     assert_eq!(
-        token_hits.load(Ordering::SeqCst),
+        calls.load(Ordering::SeqCst),
         1,
-        "exactly one IdP token call once the gate clears"
+        "exactly one refresh once the gate clears"
     );
-
-    server.abort();
 }
 
 /// A refresh already in flight when sleep becomes imminent runs to completion and persists its rotated token (no abort).
-/// This is proven through the real `OidcRefresher` by holding the mock `/token` open until after the gate is raised.
-/// The refresh token has already reached the IdP at that point, so aborting would discard the rotated successor, the failure we guard against.
-#[tokio::test]
+/// `set_system_sleep_imminent` holds the OS sleep ack until the in-flight exchange drains; the refresher here is held open until after the gate is raised, the exact window in which aborting would discard the rotated successor token.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sleep_gate_e2e_in_flight_refresh_completes_across_imminent_sleep() {
-    let idp_hit = Arc::new(tokio::sync::Notify::new());
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    let calls = Arc::new(AtomicU32::new(0));
+    let in_flight = Arc::new(tokio::sync::Notify::new());
     let release = Arc::new(tokio::sync::Notify::new());
-    let idp_hit_h = idp_hit.clone();
-    let release_h = release.clone();
-
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let base_url = format!("http://127.0.0.1:{}", listener.local_addr().unwrap().port());
-    let base_for_discovery = base_url.clone();
-    let app = axum::Router::new()
-        .route(
-            "/.well-known/openid-configuration",
-            axum::routing::get(move || {
-                let b = base_for_discovery.clone();
-                async move {
-                    axum::Json(serde_json::json!({
-                        "authorization_endpoint": format!("{b}/authorize"),
-                        "token_endpoint": format!("{b}/token"),
-                    }))
-                }
-            }),
-        )
-        .route(
-            "/token",
-            axum::routing::post(move || {
-                let idp_hit = idp_hit_h.clone();
-                let release = release_h.clone();
-                async move {
-                    // Signal that the RT has reached the IdP, then block until released; this span is the in-flight window
-                    idp_hit.notify_one();
-                    release.notified().await;
-                    axum::Json(serde_json::json!({
-                        "access_token": "oidc-refreshed-token",
-                        "refresh_token": "oidc-new-rt",
-                        "expires_in": 3600,
-                    }))
-                }
-            }),
-        )
-        .route(
-            "/user",
-            axum::routing::get(|| async {
-                axum::Json(serde_json::json!({ "userId": "user-42", "email": "test@corp.com" }))
-            }),
-        );
-    let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
-
     let dir = tempfile::tempdir().unwrap();
-    let mgr = Arc::new(
-        AuthManager::new(dir.path(), GrokComConfig::default()).with_proxy_base_url(&base_url),
-    );
-    mgr.hot_swap(expired_oidc_for(&base_url));
-    mgr.set_refresher(Arc::new(OidcRefresher::new(mgr.clone())));
+    let mgr = Arc::new(AuthManager::new(dir.path(), GrokComConfig::default()));
+    mgr.hot_swap(expired_oidc_for());
+    mgr.set_refresher(Arc::new(SleepGateRefresher {
+        in_flight: in_flight.clone(),
+        release: Some(release.clone()),
+        calls: calls.clone(),
+    }));
 
     let m = mgr.clone();
     let handle = tokio::spawn(async move { m.auth().await });
 
-    idp_hit.notified().await;
+    in_flight.notified().await; // the exchange is in flight and will not finish until released
 
     // `set_system_sleep_imminent` holds the OS sleep ack until the in-flight refresh drains
     // Drive it off the runtime (as the real OS power-listener thread does) so the runtime can complete the refresh while it waits
     let sleeper = mgr.clone();
     let ack = std::thread::spawn(move || sleeper.set_system_sleep_imminent(true));
+
+    // Wait for the gate to be raised so the hold is entered while the refresh is in flight
+    for _ in 0..500 {
+        if mgr.is_sleep_gated() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    assert!(
+        mgr.is_sleep_gated(),
+        "the ack thread must raise the sleep gate"
+    );
+    // Give the ack thread a moment to park in the drain wait before releasing the exchange
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     release.notify_one();
 
     let fresh = tokio::time::timeout(std::time::Duration::from_secs(5), handle)
@@ -1285,16 +1245,14 @@ async fn sleep_gate_e2e_in_flight_refresh_completes_across_imminent_sleep() {
         .unwrap()
         .expect("in-flight refresh must complete across imminent sleep");
     ack.join().expect("ack thread panicked");
+    assert_eq!(calls.load(Ordering::SeqCst), 1, "exactly one exchange");
     assert_eq!(fresh.key, "oidc-refreshed-token");
     assert_eq!(
         mgr.current().map(|a| a.key),
         Some("oidc-refreshed-token".to_owned()),
         "the rotated token must be persisted, not discarded"
     );
-
-    server.abort();
 }
-
 // ── Transient-blip budget is per-credential ─────────────────────────
 
 /// Minimal `AuthSnapshot` for exercising `record_transient_failure` in isolation (it never reads credential state).
