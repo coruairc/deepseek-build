@@ -143,14 +143,16 @@ mod tests {
     }
 
     #[test]
-    fn parse_output_issuer_claim_enables_xai_auth() {
+    fn parse_output_issuer_claim_is_stored_but_never_first_party() {
         let ok = |stdout: &str| std::process::Output {
             status: std::process::Command::new("true").status().unwrap(),
             stdout: stdout.as_bytes().to_vec(),
             stderr: vec![],
         };
 
-        // An x.ai issuer claim yields a first-party session (relay-eligible)
+        // The interactive first-party issuer stack is removed: an issuer claim
+        // is preserved on the credential, but no issuer classifies as
+        // first-party xAI auth in this build.
         let auth = parse_output(&ok(
             r#"{"access_token":"t","expires_in":900,"issuer":"https://api.deepseek.com"}"#,
         ))
@@ -159,9 +161,12 @@ mod tests {
             auth.oidc_issuer.as_deref(),
             Some("https://api.deepseek.com")
         );
-        assert!(auth.is_xai_auth());
+        assert!(
+            !auth.is_xai_auth(),
+            "no issuer may classify as first-party xAI auth in this build"
+        );
 
-        // Non-x.ai issuer is stored but stays third-party.
+        // Non-x.ai issuer is stored and stays third-party.
         let auth = parse_output(&ok(
             r#"{"access_token":"t","issuer":"https://idp.acme.example"}"#,
         ))
