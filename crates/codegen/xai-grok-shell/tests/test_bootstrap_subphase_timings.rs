@@ -35,15 +35,17 @@ fn startup_completed_carries_bootstrap_subphase_fields() {
         })
         .expect("startup complete record");
 
-    for field in [
-        "init_process_ms",
-        "resolve_config_ms",
-        "remote_settings_ms",
-        "models_manager_ms",
-    ] {
+    for field in ["init_process_ms", "resolve_config_ms", "models_manager_ms"] {
         assert!(
             ctx.get(field).and_then(serde_json::Value::as_u64).is_some(),
             "{field} must be populated on StartupCompleted, ctx={ctx}"
         );
     }
+    // The remote-settings fetch was removed, so its subphase must never run
+    // (nor be reported) on StartupCompleted.
+    assert!(
+        ctx.get("remote_settings_ms")
+            .is_none_or(serde_json::Value::is_null),
+        "remote_settings_ms must be absent after the remote-fetch removal, ctx={ctx}"
+    );
 }

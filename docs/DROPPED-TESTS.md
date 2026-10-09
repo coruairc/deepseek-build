@@ -513,3 +513,36 @@ Follow-up (not done here): `flow::expired_refreshable_session` is now dead code
 (its `is_xai_auth()` filter is permanently false); the xAI-session fallback
 call path should be excised in the same sweep that removes the remaining
 retained-stub surfaces.
+
+## `xai-grok-pager-pty-harness` auto-update e2e
+
+The auto-updater (`xai-grok-update`), the `update` subcommand, and background
+update checks were deleted in the `dsb/autoupdate` slice (`6cd2277d`). The pty
+e2e file asserted the deleted command's behavior end to end (a local channel
+pointer server, `update --check --json`, WinGet hand-off and no-update-state
+invariants), so it cannot pass against this build: `deepseek-build update`
+is no longer a valid command.
+
+Removed file and its tests:
+
+- `crates/codegen/xai-grok-pager-pty-harness/tests/update_never_blocked_by_config.rs`
+  — `corrupt_config_never_changes_update_outcome`,
+  `winget_install_update_hands_off_without_update_writes`, plus the
+  file-local pointer-server and WinGet-package helpers built only for them.
+
+## `xai-grok-plugin-marketplace` official-source priority
+
+The `dsb/tools` slice (`eb165260`) stripped the official xAI marketplace source
+(`github.com/xai-org/plugin-marketplace`, "xAI Official") and deleted
+`is_official_source_url`; `select_bare_name` no longer breaks a multi-match tie
+toward an official copy. The egress scrub (`b68327ca`) then renamed the fixture
+inputs from `sentry` to `example-plugin` but left the expectation in one test
+unrenamed (a half-done sed), and that test also asserts the deleted tie-break.
+
+- `install_resolve.rs` — `bare_name_official_priority_when_duplicate_in_official_and_third_party`
+  (asserted an official-source copy wins a bare-name tie). The remaining
+  behavior stays covered by `bare_name_ambiguous_when_no_official_match` and
+  `bare_name_ambiguous_when_more_than_one_official_match`, both of which assert
+  the deleted priority is gone. The other three half-scrubbed fixtures
+  (`parse_name_with_owner_repo_qualifier`, `parse_name_with_local_slug_qualifier`,
+  `bare_name_matches_case_insensitively`) were repaired to the renamed input.
