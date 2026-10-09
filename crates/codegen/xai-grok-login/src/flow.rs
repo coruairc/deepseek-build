@@ -863,7 +863,9 @@ async fn run_cli_login_steps(
     .await
     {
         if grok_com_config.oauth2.is_none() {
-            anyhow::bail!("Sign-in is not available for this deployment. Set XAI_API_KEY instead.");
+            anyhow::bail!(
+                "Sign-in is not available for this deployment. Set DEEPSEEK_API_KEY instead."
+            );
         }
         let (auth, did_auth) = run_auth_flow_interactive(
             auth_manager,
