@@ -2235,7 +2235,10 @@ mod tests {
         );
         assert_eq!(
             resolve_worker_override("100000", cores).notice().unwrap(),
-            "grok: clamped GROK_WORKER_THREADS=100000 to 360 (valid range is 1..=360)"
+            format!(
+                "{}: clamped GROK_WORKER_THREADS=100000 to 360 (valid range is 1..=360)",
+                xai_grok_brand::NAME
+            )
         );
     }
     #[test]
@@ -2248,7 +2251,10 @@ mod tests {
         }
         assert_eq!(
             resolve_worker_override("abc", cores).notice().unwrap(),
-            "grok: ignoring GROK_WORKER_THREADS=\"abc\" (not a valid integer)"
+            format!(
+                "{}: ignoring GROK_WORKER_THREADS=\"abc\" (not a valid integer)",
+                xai_grok_brand::NAME
+            )
         );
     }
     #[test]
