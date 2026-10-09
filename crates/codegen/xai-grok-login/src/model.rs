@@ -3,8 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use xai_grok_auth::bearer_suffix;
 
-use super::is_xai_oauth2_issuer;
-
 pub const TOKEN_TTL: Duration = Duration::days(30);
 const DEFAULT_EARLY_INVALIDATION_SECS: u64 = 300; // 5 minutes
 
@@ -162,17 +160,11 @@ impl GrokAuth {
             .num_seconds()
     }
 
-    /// `true` when the token comes from a first-party xAI account. The
-    /// interactive issuer stack is removed, so this is always `false`.
+    /// `true` when the token comes from a first-party xAI account.
+    /// The interactive issuer stack is removed, so no credential is first-party.
     /// It is a client-side hint, not a trust assertion, and never influences endpoints.
     pub fn is_xai_auth(&self) -> bool {
-        match self.auth_mode {
-            AuthMode::Oidc | AuthMode::External => self
-                .oidc_issuer
-                .as_deref()
-                .is_some_and(is_xai_oauth2_issuer),
-            AuthMode::ApiKey | AuthMode::WebLogin => false,
-        }
+        false
     }
 
     /// `true` when this auth can access managed MCP connectors. Session auth
@@ -434,7 +426,6 @@ mod tests {
 
         // The first-party issuer stack was removed, so external-provider
         // credentials never qualify as session auth.
-        assert!(!crate::is_xai_oauth2_issuer("https://api.deepseek.com"));
         assert!(
             !with_issuer(AuthMode::External, Some("https://api.deepseek.com")).is_session_auth()
         );

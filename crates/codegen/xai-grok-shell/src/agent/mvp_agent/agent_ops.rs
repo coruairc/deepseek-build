@@ -1908,10 +1908,7 @@ impl MvpAgent {
         };
         instance
             .auth_manager
-            .configure_refresher(
-                instance.cfg.borrow().grok_com_config.auth_provider_command.clone(),
-                None,
-            );
+            .configure_refresher(instance.cfg.borrow().grok_com_config.auth_provider_command.clone());
         xai_grok_login::credential_provider::wire_otel_auth_manager(
             instance.auth_manager.clone(),
         );

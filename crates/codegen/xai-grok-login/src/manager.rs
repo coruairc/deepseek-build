@@ -142,7 +142,7 @@ pub struct AuthManager {
     grok_com_config: GrokComConfig,
     proxy_base_url: String,
     refresher: RwLock<Option<Arc<dyn TokenRefresher>>>,
-    /// Idempotency guard for `configure_refresher` so double-calls don't reset internal state (e.g. `OidcRefresher::upload_in_flight`).
+    /// Idempotency guard for `configure_refresher` so double-calls don't reset internal state (e.g. the transient-failure budget).
     refresher_configured: std::sync::atomic::AtomicBool,
     /// Idempotency guard for `start_proactive_refresh` so we don't spawn competing refresh loops on the same Arc.
     proactive_started: std::sync::atomic::AtomicBool,
@@ -1266,12 +1266,8 @@ impl AuthManager {
     }
     /// Set up refresh capability. Call once per `Arc<AuthManager>` at startup.
     /// Subsequent calls are no-op via an atomic guard.
-    /// Per-session call sites therefore don't reset refresher-internal state like `OidcRefresher::upload_in_flight`.
-    pub fn configure_refresher(
-        self: &Arc<Self>,
-        auth_provider_command: Option<String>,
-        diagnostic_uploader: Option<super::refresh::DiagnosticUploader>,
-    ) -> bool {
+    /// Per-session call sites therefore don't reset refresher-internal state like the transient-failure budget.
+    pub fn configure_refresher(self: &Arc<Self>, auth_provider_command: Option<String>) -> bool {
         use std::sync::atomic::Ordering;
         if !Distribution::current().allows(Capability::AccountLogin) {
             return false;
@@ -1284,11 +1280,7 @@ impl AuthManager {
             tracing::debug!("auth: configure_refresher already wired; ignoring");
             return false;
         }
-        let refresher = super::refresh::build_refresher(
-            Arc::clone(self),
-            auth_provider_command,
-            diagnostic_uploader,
-        );
+        let refresher = super::refresh::build_refresher(Arc::clone(self), auth_provider_command);
         *self.refresher.write() = Some(refresher);
         true
     }

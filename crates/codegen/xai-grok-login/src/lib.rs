@@ -18,7 +18,6 @@ pub mod auth_provider;
 pub mod backend;
 pub mod config;
 pub mod credential_provider;
-pub mod device_code;
 pub mod error;
 pub mod external_auth;
 pub mod flow;
@@ -47,7 +46,7 @@ pub use auth_provider::{test_backdate_provider_mint, test_counting_provider};
 pub use config::LEGACY_AUTH_SCOPE;
 pub use config::{
     CLI_CHAT_PROXY_BASE_URL_DEFAULT, ForceLoginTeam, GrokComConfig, OAuth2ProviderConfig,
-    OidcAuthConfig, PreferredAuthMethod, expand_auth_alias, is_xai_oauth2_issuer,
+    OidcAuthConfig, PreferredAuthMethod, expand_auth_alias,
 };
 pub use config::{
     force_login_team_from_env, force_login_team_from_requirements,
@@ -60,8 +59,7 @@ pub use flow::{
 };
 pub use flow::{
     AuthUrlInfo, AuthUrlMode, LoginTransportOverride, LogoutResult, ensure_authenticated,
-    ensure_authenticated_or_noninteractive, ensure_authenticated_with_override, perform_logout,
-    run_cli_login, try_ensure_fresh_auth,
+    ensure_authenticated_with_override, perform_logout, run_cli_login, try_ensure_fresh_auth,
 };
 pub use jwt::{is_jwt_expired_or_near, parse_jwt_expiration, parse_jwt_subject};
 pub use pre_tui::{PreTuiLoginOutcome, maybe_run_pre_tui_external_login};
@@ -75,7 +73,6 @@ pub use manager::{
 pub use meta::{AuthMeta, GateInfo};
 pub use model::{AuthMode, GrokAuth, lookup_auth};
 pub use model::{TOKEN_TTL, UserInfo, default_coding_data_retention_opt_out, is_expired};
-pub use refresh::DiagnosticUploader;
 pub use side_call_bearer::{SharedAuthKeyProvider, shared_api_key_provider};
 pub use storage::auth_json_path;
 pub use storage::{clear_api_key, read_api_key, read_auth_json, store_api_key};

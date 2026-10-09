@@ -226,7 +226,7 @@ mod tests {
         let command = config.auth_provider_command.clone();
         let manager = Arc::new(AuthManager::new(dir, config));
         manager.hot_swap(credential);
-        manager.configure_refresher(command, None);
+        manager.configure_refresher(command);
         manager
     }
     /// The verdict-free arm.
@@ -298,7 +298,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let manager = Arc::new(AuthManager::new(dir.path(), GrokComConfig::default()));
         manager.hot_swap(external_credential(Utc::now() - Duration::hours(1)));
-        manager.configure_refresher(None, None);
+        manager.configure_refresher(None);
         assert_eq!(manager.auth_remedy(), AuthRemedy::SelfHealing);
         manager.record_permanent_failure(
             "external".to_owned(),

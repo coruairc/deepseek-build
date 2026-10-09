@@ -252,10 +252,7 @@ pub(crate) fn boot_auth_manager(
         agent_config.grok_com_config.clone(),
         agent_config.endpoints.proxy_url(),
     ));
-    auth_manager.configure_refresher(
-        agent_config.grok_com_config.auth_provider_command.clone(),
-        None,
-    );
+    auth_manager.configure_refresher(agent_config.grok_com_config.auth_provider_command.clone());
     auth_manager
 }
 

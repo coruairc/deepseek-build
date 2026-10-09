@@ -122,11 +122,6 @@ pub struct OAuth2ProviderConfig {
     pub referrer: Option<String>,
 }
 const DEFAULT_OAUTH2_REFERRER: &str = "grok-build";
-/// The interactive first-party issuer stack has been removed. No issuer is
-/// first-party xAI auth in this build.
-pub fn is_xai_oauth2_issuer(_issuer: &str) -> bool {
-    false
-}
 /// auth.json scope key used by the pre-OIDC `grok login --legacy` flow.
 /// The remote relay that produced this key is gone; the string is retained
 /// only so legacy local auth.json files can still be recognized and skipped.

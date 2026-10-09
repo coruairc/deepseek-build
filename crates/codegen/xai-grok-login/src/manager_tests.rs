@@ -3147,7 +3147,7 @@ async fn enrich_auth_inline_unreachable_server_leaves_auth_unchanged() {
 fn ensure_crypto_provider() {
     let _ = jsonwebtoken::crypto::rust_crypto::DEFAULT_PROVIDER.install_default();
 }
-/// A signed (HS256) access token carrying a `Team` principal, matching the shape `peek_access_token_principal` extracts in production.
+/// A signed (HS256) access token carrying a `Team` principal, matching the shape `peek_access_token_principal_id` reads in production.
 fn team_jwt(principal_id: &str) -> String {
     ensure_crypto_provider();
     jsonwebtoken::encode(
