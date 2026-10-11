@@ -94,11 +94,11 @@ auto_light_theme = "deepseek-day"
 | **macOS** | Reads `AppleInterfaceStyle` system preference |
 | **Linux** | Queries XDG Desktop Portal (`org.freedesktop.appearance.color-scheme`) |
 | **Windows** | Reads the system personalization registry |
-| **SSH / tmux / headless** | `GROK_APPEARANCE` or `LC_GROK_APPEARANCE` (`dark`/`light`), then `COLORFGBG`, then a startup OSC 11 background query. `deepseek-build wrap ssh …` stamps `LC_GROK_APPEARANCE` from the local OS theme so it survives SSH into the login shell. New tmux sessions inherit it only if the tmux server/session was created with that env (or `update-environment` includes it). OSC 11 is DCS-wrapped for tmux ≥ 3.3 when tmux is the immediate terminal (not an editor `:terminal`); reaching the outer emulator also needs `allow-passthrough`, and replies are best-effort. |
+| **SSH / tmux / headless** | `DEEPSEEK_BUILD_APPEARANCE` or `LC_DEEPSEEK_BUILD_APPEARANCE` (`dark`/`light`), then `COLORFGBG`, then a startup OSC 11 background query. `deepseek-build wrap ssh …` stamps `LC_DEEPSEEK_BUILD_APPEARANCE` from the local OS theme so it survives SSH into the login shell. New tmux sessions inherit it only if the tmux server/session was created with that env (or `update-environment` includes it). OSC 11 is DCS-wrapped for tmux ≥ 3.3 when tmux is the immediate terminal (not an editor `:terminal`); reaching the outer emulator also needs `allow-passthrough`, and replies are best-effort. |
 
 Once running, deepseek-build polls desktop APIs and env hints every 5 seconds. Toggling your OS between light and dark mode on a local desktop takes effect within seconds without restarting. Over SSH the wrap-stamped env is fixed for that hop.
 
-You can also set `GROK_THEME` (or `LC_GROK_THEME`) to force a theme or `auto` without editing `config.toml`.
+You can also set `DEEPSEEK_BUILD_THEME` (or `LC_DEEPSEEK_BUILD_THEME`) to force a theme or `auto` without editing `config.toml`.
 
 ### Via the Settings Pane
 
