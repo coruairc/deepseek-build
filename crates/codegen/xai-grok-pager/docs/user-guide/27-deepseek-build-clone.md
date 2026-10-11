@@ -68,11 +68,11 @@ On macOS you can also install a KeepAlive agent:
 
 The two are separate worlds:
 
-| World | Covers | Commands | Store |
-|-------|--------|----------|-------|
-| deepseek-build | the model and API | `deepseek-build login`, `deepseek-build logout` | `~/.deepseek-build/auth.json` |
+| World | Covers | Credential | Store |
+|-------|--------|------------|-------|
+| deepseek-build | the model and API | `DEEPSEEK_API_KEY` | environment |
 
-`deepseek-build clone` never reads `~/.deepseek-build/auth.json` for Git. Signing into deepseek-build does not
+`deepseek-build clone` never reads your model provider credentials for Git. Your `DEEPSEEK_API_KEY` does not
 give the daemon a credential for the remote, and neither does
 `[clone] enabled = true`: that flag is a **product gate** deciding whether
 `deepseek-build clone` runs at all, not authorization for GitHub.

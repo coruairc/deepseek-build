@@ -6,7 +6,7 @@ deepseek-build connects to custom model endpoints for alternative providers, sel
 
 ## Default Models
 
-By default, deepseek-build uses models hosted by DeepSeek, and new sessions start with `deepseek-v4-pro`. Default models require no configuration. Authenticate with `deepseek-build login` or an API key, then start a session.
+By default, deepseek-build uses models hosted by DeepSeek, and new sessions start with `deepseek-v4-pro`. Default models require no configuration. Set `DEEPSEEK_API_KEY`, then start a session.
 
 List all available models:
 
@@ -41,18 +41,6 @@ Or use the alias:
 ### Model Picker (Ctrl+M)
 
 Press `Ctrl+M` from the scrollback pane to open the model picker. It lists all available models, both built-in and custom, and lets you switch with a single keystroke. With the prompt focused, `Ctrl+M` toggles multiline input instead -- use `/model` to switch without leaving the prompt.
-
-### Fleet allowlist (`requirements.toml`)
-
-Enterprise hosts can pin the **selectable** set — not only the default — in signed `requirements.toml`. That list **replaces** any user `allowed_models` (it is not a union), so `/model`, `Ctrl+M`, and `-m` cannot offer models outside it.
-
-```toml
-[models]
-default = "deepseek-v4-pro"
-allowed_models = ["deepseek-v4-pro", "deepseek-*"]
-```
-
-A fleet pin matches the **model id** (not a user-chosen catalog key), so a local `[model.<name>]` entry cannot widen the set. User-config `allowed_models` still matches catalog key or model id. Omit the key to leave user config standing. An empty array is unrestricted. A present-but-unreadable pin fail-closes (nothing selectable). A default or `-m` value outside the pinned set is rejected once the model catalog is fetched — contact your administrator; the list is not user-editable.
 
 ### Config Default
 
@@ -110,8 +98,7 @@ deepseek-build resolves the API key in this order:
 
 1. The `api_key` field in the model config
 2. The environment variable(s) named by `env_key` — a single string or an array of names. The first set, non-empty value wins (for example `env_key = ["ANTHROPIC_AUTH_TOKEN", "LC_ANTHROPIC_AUTH_TOKEN"]` for SSH `LC_*` forwarding)
-3. Your signed-in session token (from `deepseek-build login`), for a model with no `api_key`/`env_key` of its own
-4. The `DEEPSEEK_API_KEY` environment variable (global fallback; deepseek-build also accepts `GROK_CODE_XAI_API_KEY` for backward compatibility)
+3. The `DEEPSEEK_API_KEY` environment variable (global fallback)
 
 ### Context Window
 
@@ -289,20 +276,16 @@ On the Responses API, deepseek-build asks for a `concise` reasoning summary by d
 
 ### AWS Bedrock (Mantle)
 
-Bedrock's OpenAI-compatible gateway rejects `reasoning.summary`, so set `reasoning_summary = "none"`. It authenticates with a Bedrock API key as a bearer token; the example below mints a short-lived one through a named auth provider:
+Bedrock's OpenAI-compatible gateway rejects `reasoning.summary`, so set `reasoning_summary = "none"`. It authenticates with a Bedrock API key as a bearer token:
 
 ```toml
-[auth_provider.bedrock]
-command = "aws-bedrock-token"   # prints a Bedrock API key on stdout (e.g. via aws-bedrock-token-generator)
-token_ttl_secs = 3600
-
 [model."bedrock-deepseek-v4-pro"]
 model = "deepseek-v4-pro"
 base_url = "https://bedrock-mantle.us-west-2.api.aws/openai/v1"
 name = "deepseek-build 4.6 (Bedrock)"
 api_backend = "responses"
 reasoning_summary = "none"
-auth_provider = "bedrock"
+env_key = "AWS_BEARER_TOKEN_BEDROCK"
 context_window = 500000
 ```
 
@@ -352,7 +335,7 @@ Point deepseek-build at a custom OpenAI-compatible `/v1/models` endpoint instead
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `GROK_MODELS_BASE_URL` | Yes | Base URL for inference. deepseek-build fetches the model list from `{base_url}/models`. |
-| `DEEPSEEK_API_KEY` | Yes | API key sent as `Authorization: Bearer`. deepseek-build also accepts `GROK_CODE_XAI_API_KEY`. |
+| `DEEPSEEK_API_KEY` | Yes | API key sent as `Authorization: Bearer`. |
 | `GROK_MODELS_LIST_URL` | No | Override the model-list URL when it differs from `{base_url}/models`. |
 
 ### Setup
@@ -378,7 +361,7 @@ When you use `[endpoints]` with partial model overrides, deepseek-build inherits
 
 ### Auth Behavior
 
-When you set `models_base_url`, deepseek-build authenticates the model-list request with `DEEPSEEK_API_KEY` only (`Authorization: Bearer`). That request never uses your `deepseek-build login` session. With an external auth provider (`auth_provider_command`) and no `DEEPSEEK_API_KEY`, it sends the provider's token instead. Otherwise, if `DEEPSEEK_API_KEY` is unset, the fetch fails with an error asking you to set it. Inference requests to the custom host authenticate separately. An `api_key` or `env_key` on each model makes those requests use an API key too.
+When you set `models_base_url`, deepseek-build authenticates the model-list request with `DEEPSEEK_API_KEY` only (`Authorization: Bearer`). If `DEEPSEEK_API_KEY` is unset, the fetch fails with an error asking you to set it. Inference requests to the custom host authenticate separately: an `api_key` or `env_key` on each model makes those requests use that key.
 
 ---
 
@@ -437,11 +420,6 @@ A complete config for an enterprise deployment with custom models:
 [cli]
 auto_update = false
 
-[auth]
-auth_provider_command = "/usr/local/bin/my-company-auth-provider"
-auth_provider_label = "Acme Corp"
-auth_token_ttl = 3600
-
 [models]
 default = "company-deepseek-build"
 
@@ -450,9 +428,6 @@ model = "deepseek-v4-pro"
 base_url = "https://model-proxy.acme.com/"
 name = "deepseek-build 4.6 (Proxy)"
 context_window = 128000
-
-[features]
-telemetry = false
 ```
 
 ---

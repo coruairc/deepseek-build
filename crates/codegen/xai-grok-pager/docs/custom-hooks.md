@@ -51,7 +51,7 @@ Hooks are discovered from several places (all are merged):
 | Global    | `~/.claude/settings.json`         | Always       | Claude Code compatibility |
 | Project   | `<project>/.grok/hooks/*.json`    | Requires trust | Per-repo automation |
 | Project   | `<project>/.claude/settings.json` | Requires trust | Claude compatibility |
-| Config    | `config.toml`, `managed_config.toml`, `requirements.toml` | Always | Hooks shipped in your (or your organization's) config |
+| Config    | `config.toml` | Always | Hooks shipped in your config |
 | Plugin    | Bundled inside installed plugins  | Per-plugin   | Shared team hooks |
 
 Config-file hooks use the same schema in TOML form; see the [Hooks user guide](user-guide/10-hooks.md#hooks-in-config-files) for details.
@@ -274,10 +274,10 @@ The full event envelope is POSTed as JSON. Useful for webhooks, analytics, or se
 
 See the built-in examples in the `xai-grok-hooks` crate:
 
-- [Safe Shell Guard](../../../xai-grok-hooks/examples/hooks/safe-shell.json)
-- [No Recursive Grep](../../../xai-grok-hooks/examples/hooks/no-recursive-grep.json): hard-blocks `grep -r`/`grep -R`/`rgrep` (OOM guard)
-- [Session Audit Log](../../../xai-grok-hooks/examples/hooks/session-log.json)
-- [Tool Activity Logger](../../../xai-grok-hooks/examples/hooks/tool-logger.json)
+- [Safe Shell Guard](../../xai-grok-hooks/examples/hooks/safe-shell.json)
+- [No Recursive Grep](../../xai-grok-hooks/examples/hooks/no-recursive-grep.json): hard-blocks `grep -r`/`grep -R`/`rgrep` (OOM guard)
+- [Session Audit Log](../../xai-grok-hooks/examples/hooks/session-log.json)
+- [Tool Activity Logger](../../xai-grok-hooks/examples/hooks/tool-logger.json)
 
 Copy them to `~/.deepseek-build/hooks/` and customize.
 

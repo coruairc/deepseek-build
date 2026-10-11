@@ -1,6 +1,6 @@
 # Configuration
 
-deepseek-build reads settings from config files, environment variables, and CLI flags. This page covers the common options. The field list for `config.toml`, `managed_config.toml`, and `requirements.toml` is [26-config-reference.md](26-config-reference.md) (extracted to `~/.deepseek-build/docs/user-guide/` on launch).
+deepseek-build reads settings from config files, environment variables, and CLI flags. This page covers the common options. The field list for `config.toml` is [26-config-reference.md](26-config-reference.md) (extracted to `~/.deepseek-build/docs/user-guide/` on launch).
 
 ---
 
@@ -10,24 +10,22 @@ Settings resolve highest-priority first:
 
 1. **CLI flags** (e.g. `--yolo`, `--model`, `--sandbox`)
 2. **Environment variables** (e.g. `DEEPSEEK_API_KEY`, `GROK_MEMORY`)
-3. **`requirements.toml` / MDM** (org-enforced; clamps every config layer below, including the overlay)
-4. **`GROK_CONFIG` / `GROK_CONFIG_PATH` overlay** (above `config.toml` and managed, below `requirements.toml` / MDM)
-5. **config.toml** (`~/.deepseek-build/config.toml`)
-6. **`managed_config.toml`** (org-deployed defaults; below `config.toml`)
-7. **Built-in defaults**
+3. **`GROK_CONFIG` / `GROK_CONFIG_PATH` overlay** (above `config.toml`)
+4. **config.toml** (`~/.deepseek-build/config.toml`)
+5. **Built-in defaults**
 
-Within the config-file tier, the layers merge lowest-to-highest: `managed_config.toml` → `config.toml` → `GROK_CONFIG` overlay → `requirements.toml` / MDM. So `requirements.toml` and MDM clamp **both** your `config.toml` and the overlay.
+Within the config-file tier, the layers merge lowest-to-highest: `config.toml` → `GROK_CONFIG` overlay.
 
-`GROK_CONFIG` / `GROK_CONFIG_PATH` (tier 4) are config **overlays**: a merged config layer, not direct-setting environment variables like `DEEPSEEK_API_KEY` (tier 2). They set config keys (subject to the allowlist below), so read them as part of the config-file tier rather than the env-var tier.
+`GROK_CONFIG` / `GROK_CONFIG_PATH` (tier 3) are config **overlays**: a merged config layer, not direct-setting environment variables like `DEEPSEEK_API_KEY` (tier 2). They set config keys (subject to the allowlist below), so read them as part of the config-file tier rather than the env-var tier.
 
 ### Injecting config with `GROK_CONFIG`
 
-A harness or ACP client that launches `deepseek-build agent stdio` can inject settings without writing a `config.toml` or relocating `$GROK_HOME`:
+A harness or ACP client that launches `deepseek-build agent stdio` can inject settings without writing a `config.toml` or relocating `$DEEPSEEK_BUILD_HOME`:
 
 - **`GROK_CONFIG`**: an inline JSON object overlay.
 - **`GROK_CONFIG_PATH`**: an *additional* file overlay (not a replacement for `config.toml`), a JSON or TOML file read by its extension (`.json` → JSON, else TOML). `GROK_CONFIG` wins if both are set. An empty `GROK_CONFIG` is treated as unset, and a malformed one logs a warning and falls through to `GROK_CONFIG_PATH`.
 
-The overlay is **deep-merged** on top of your `config.toml` (it overrides only the keys it sets), placed above the user/managed layers but **below** `requirements.toml` / MDM so an enterprise pin still wins. A malformed blob is ignored with a warning. This mirrors `CODEX_CONFIG` from the `codex-acp` adapter (a JSON object merged into the session config); deepseek-build is ACP-native, so the overlay lives in the agent itself. It only affects settings read from the merged config, and it is **not** a permission-escalation path. The overlay is confined, fail-closed, to an **allowlist** of soft settings (`models`, `features`, a narrowed `toolset`, and a `shell_environment_policy` limited to its filter fields, which select among env names the launcher already controls and cannot inject an env value into tool subprocesses); every other table is dropped at the choke point, so the overlay cannot spawn commands, set auth policy, redirect network traffic, elevate trust, or add a discovery source. Even on the allowlisted settings, a specific set of security gates read the raw disk layers rather than the overlay. The `ConfigLayers::env_overlay` rustdoc is the canonical list of what the overlay can and cannot reach and which gates read it overlay-free; see also the [internal environment-variables reference](../internal/22-environment-variables.md). Use `GROK_DEFAULT_SELECTED_PERMISSION` for headless permission control. For example, to set the default reasoning effort:
+The overlay is **deep-merged** on top of your `config.toml` (it overrides only the keys it sets). A malformed blob is ignored with a warning. This mirrors `CODEX_CONFIG` from the `codex-acp` adapter (a JSON object merged into the session config); deepseek-build is ACP-native, so the overlay lives in the agent itself. It only affects settings read from the merged config, and it is **not** a permission-escalation path. The overlay is confined, fail-closed, to an **allowlist** of soft settings (`models`, `features`, a narrowed `toolset`, and a `shell_environment_policy` limited to its filter fields, which select among env names the launcher already controls and cannot inject an env value into tool subprocesses); every other table is dropped at the choke point, so the overlay cannot spawn commands, set auth policy, redirect network traffic, elevate trust, or add a discovery source. Even on the allowlisted settings, a specific set of security gates read the raw disk layers rather than the overlay. The `ConfigLayers::env_overlay` rustdoc is the canonical list of what the overlay can and cannot reach and which gates read it overlay-free; see also the [configuration reference](26-config-reference.md). Use `GROK_DEFAULT_SELECTED_PERMISSION` for headless permission control. For example, to set the default reasoning effort:
 
 ```bash
 GROK_CONFIG='{"models": {"default_reasoning_effort": "high"}}' deepseek-build agent stdio
@@ -95,9 +93,6 @@ feedback = true                        # feedback system (default: true)
 lsp_tools = false                      # expose the lsp tool
 codebase_indexing = true               # code graph indexing (default: true)
 two_pass_compaction = true             # prefire two-pass compaction (default: true)
-remote_fetch = true                    # allow optional online model-catalog fetches (default: true;
-                                       # set false for firewalled/air-gapped deployments; background
-                                       # managed-config sync has its own switch: managed_config)
 
 [session]
 auto_compact_threshold_percent = 85    # auto-compact at this % of context window (default: 85)
@@ -243,26 +238,9 @@ allowed_domains = ["platform.deepseek.com", "arxiv.org"]
 
 `allow_local` is off by default (SSRF fail-closed). Turn it on (or set `GROK_WEB_FETCH_ALLOW_LOCAL=1`) and `web_fetch` may reach **explicit** loopback hosts only — private, link-local, and cloud-metadata ranges stay blocked. Resolution: TOML > env > default off.
 
-`[toolset.web_search]` constrains the `web_search` tool's domains — the allowlist/blocklist the search itself runs under (not a post-filter). `allowed_domains` and `excluded_domains` are **mutually exclusive**; if you set both, the allowlist wins and the blocklist is dropped with a warning. An empty or absent list is unbounded. This applies to both the backend-hosted search (models with server-side search) and the client-side fallback. A configured policy is **authoritative**: it cannot be bypassed by the model — the model's own per-call `allowed_domains` is ignored whenever you have set `allowed_domains` or `excluded_domains` here (so a blocklist is a real block). The model's per-call allowlist only applies when you have configured nothing. Resolution: requirements → user `config.toml` → managed → default (unset). Config is read at session start, so edit it before starting a session — changes don't apply mid-session.
+`[toolset.web_search]` constrains the `web_search` tool's domains — the allowlist/blocklist the search itself runs under (not a post-filter). `allowed_domains` and `excluded_domains` are **mutually exclusive**; if you set both, the allowlist wins and the blocklist is dropped with a warning. An empty or absent list is unbounded. This applies to both the backend-hosted search (models with server-side search) and the client-side fallback. A configured policy is **authoritative**: it cannot be bypassed by the model — the model's own per-call `allowed_domains` is ignored whenever you have set `allowed_domains` or `excluded_domains` here (so a blocklist is a real block). The model's per-call allowlist only applies when you have configured nothing. Resolution: user `config.toml` → default (unset). Config is read at session start, so edit it before starting a session — changes don't apply mid-session.
 
-`[toolset.ask_user_question]` is honored across **requirements.toml**, **managed config**, and your user **`config.toml`**. Precedence: requirements → env (`GROK_ASK_USER_QUESTION_TIMEOUT_ENABLED` / `GROK_ASK_USER_QUESTION_TIMEOUT_SECS`) → user config → managed → defaults. Set `timeout_enabled = false` in your user config to disable the automatic questionnaire timeout for yourself; `timeout_secs` must be a positive integer. You can also toggle `timeout_enabled` from `/settings` → **Ask-Question timeout** (under Agent & Approval); changes apply to newly started sessions.
-
-### Authentication
-
-See [Authentication](02-authentication.md) for the full story.
-
-```toml
-[auth]
-auth_provider_command = "/usr/local/bin/my-auth-provider"
-auth_provider_label = "Acme Corp"
-auth_token_ttl = 3600
-
-[grok_com_config.oidc]
-issuer = "https://acme.okta.com"
-client_id = "0oa1b2c3d4e5f6g7h8i9"
-# scopes = ["openid", "profile", "email", "offline_access", "api:access"]
-# audience = "https://api.acme.com"
-```
+`[toolset.ask_user_question]` is honored from your user **`config.toml`**. Precedence: env (`GROK_ASK_USER_QUESTION_TIMEOUT_ENABLED` / `GROK_ASK_USER_QUESTION_TIMEOUT_SECS`) → user config → defaults. Set `timeout_enabled = false` in your user config to disable the automatic questionnaire timeout for yourself; `timeout_secs` must be a positive integer. You can also toggle `timeout_enabled` from `/settings` → **Ask-Question timeout** (under Agent & Approval); changes apply to newly started sessions.
 
 ### Custom models
 
@@ -284,7 +262,7 @@ query_params = { api-version = "2026-07-22" } # query params appended to every r
 env_http_headers = { "X-Tenant" = "TENANT_TOKEN" }    # request headers from env vars, resolved at client build
 ```
 
-Credential resolution: `api_key` > `env_key` > signed-in session token > `DEEPSEEK_API_KEY`. See [Custom Models](11-custom-models.md#request-query-parameters) for `query_params` and `env_http_headers`, and [Sandbox Mode](18-sandbox.md#shell-environment-policy) for `[shell_environment_policy]`, which restricts the environment variables tool subprocesses inherit.
+Credential resolution: `api_key` > `env_key` > `DEEPSEEK_API_KEY`. See [Custom Models](11-custom-models.md#request-query-parameters) for `query_params` and `env_http_headers`, and [Sandbox Mode](18-sandbox.md#shell-environment-policy) for `[shell_environment_policy]`, which restricts the environment variables tool subprocesses inherit.
 
 To override a built-in model, use its name as the section key and set only the fields you need:
 
@@ -316,9 +294,9 @@ url = "https://mcp.example.com/api/mcp"  # HTTP/SSE transport
 headers = { "x-mcp-session-id" = "{{session_id}}" }
 ```
 
-Remote (HTTP/SSE) servers receive a default `User-Agent: grok-cli/<version>` header; a
+Remote (HTTP/SSE) servers receive a default `User-Agent: deepseek-build/<version>` header; a
 valid `User-Agent` entry in `headers` overrides it (Figma servers receive bare
-`grok-cli`). See [MCP servers](07-mcp-servers.md) for details.
+`deepseek-build`). See [MCP servers](07-mcp-servers.md) for details.
 
 MCP servers can also be set per-project in `.grok/config.toml`. Project-scoped config contributes `[mcp_servers]`, `[plugins]`, and `[permission]` rules; every other section loads only from `~/.deepseek-build/config.toml`.
 
@@ -327,8 +305,7 @@ Priority for `[mcp_servers]` and `[plugins]`: `.grok/config.toml` (current dir) 
 ### Memory
 
 Persist knowledge across sessions. Enable it with `[memory] enabled = true` or
-`GROK_MEMORY=1`; an explicit `[memory] enabled = false` turns it off even when a
-managed remote setting enables it. Notes recorded by earlier versions are
+`GROK_MEMORY=1`; an explicit `[memory] enabled = false` turns it off. Notes recorded by earlier versions are
 carried over automatically. See [13-memory.md](13-memory.md).
 
 ```toml
@@ -375,7 +352,7 @@ To pin the model a subagent uses, set its entry under `[subagents.models]`.
 
 `/goal` has two drivers, chosen by the background-workflows setting. With workflows enabled, the host-owned workflow engine evaluates rounds and drives completion verification; with them disabled, `/goal` falls back to the legacy model-facing `update_goal` tool. Whether `/goal` is available at all is a separate switch (the goal feature setting).
 
-Background workflows — the `workflow` tool, named `.grok/workflows/*.rhai` scripts, `/deep-research`, and `/workflow` launches — are **on by default**. Disable with config, env, or remote settings.
+Background workflows — the `workflow` tool, named `.grok/workflows/*.rhai` scripts, `/deep-research`, and `/workflow` launches — are **on by default**. Disable with config or env.
 
 ```toml
 [workflows]
@@ -440,7 +417,7 @@ disabled = ["user/a1b2c3d4/noisy-plugin"]
 
 `[hints]` holds small persisted UI preferences: remembered answers and modal layout. deepseek-build writes these for you as you use the TUI, but you can edit or delete them by hand; removing a key restores the default.
 
-`[hints]` is read from the **effective config merge**, with the usual precedence: system managed → user `managed_config.toml` → user `config.toml` → user `requirements.toml` → system `requirements.toml`, higher layers winning. The TUI only ever **writes** these to your user `~/.deepseek-build/config.toml`.
+`[hints]` is read from your user **`~/.deepseek-build/config.toml`**; the TUI only ever **writes** these there.
 
 ```toml
 [hints]
@@ -560,48 +537,6 @@ Minimal mode has no status-line row; it uses the terminal tab title instead (see
 
 Keyboard shortcuts are **not** configurable — all bindings are built in. See [Keyboard Shortcuts](03-keyboard-shortcuts.md) for the complete reference.
 
-### Telemetry
-
-These are independent knobs (see [Monitoring Usage](24-monitoring-usage.md#related-settings)):
-
-- **`[features] telemetry`** / `GROK_TELEMETRY_ENABLED` — the product-analytics master switch. `/privacy` doesn't change it.
-- **Coding data, retention, and training** — the Settings row `/privacy` opens; coding-data sharing, separate from telemetry.
-- **`[telemetry] trace_upload`** / `GROK_TELEMETRY_TRACE_UPLOAD` — session traces; follows telemetry when unset.
-- **`[telemetry] otel_*`** / `GROK_EXTERNAL_OTEL` — external OTEL to your own collector (below).
-
-When telemetry is on, enterprises running their own collector can redirect it or turn parts off under `[telemetry]`:
-
-```toml
-[telemetry]
-mixpanel_enabled = false                                  # disable Mixpanel product analytics
-trace_upload = false                                      # disable session/trace uploads (inherits the telemetry toggle when unset)
-```
-
-Set these only to point telemetry at your own infrastructure or to switch parts off. The built-in endpoint and credentials are managed by deepseek-build — leave them unset to use the defaults.
-
-The same `[telemetry]` table also configures the **external OpenTelemetry stream**, an independent opt-in (it doesn't require the telemetry toggle above) that ships a curated, content-free usage schema to your *own* OTLP collector. Collector auth comes from `OTEL_EXPORTER_OTLP_HEADERS` and is never stored on disk. See [Monitoring & Usage](24-monitoring-usage.md) for the full schema, env vars, and privacy model.
-
-```toml
-[telemetry]
-otel_enabled = true                                       # external OTEL master switch (= GROK_EXTERNAL_OTEL)
-otel_metrics_exporter = "otlp"                            # otlp | console | none
-otel_logs_exporter = "otlp"                               # otlp | console | none
-otel_endpoint = "https://collector.corp.example:4318"     # OTLP base endpoint
-otel_protocol = "http/protobuf"                           # http/protobuf | grpc
-otel_certificate = "/etc/ssl/corp-ca.pem"                 # optional: trust private CA (path only)
-otel_client_certificate = "/etc/ssl/client.crt"           # optional: mTLS client cert (path only)
-otel_client_key = "/etc/ssl/client.key"                   # optional: mTLS client key (path only)
-otel_log_user_prompts = false                             # content gate (admins pin via requirements)
-otel_log_assistant_responses = false                      # unset follows prompts; pin false for prompts-only
-otel_log_tool_details = true                              # metadata/preview; enterprise default on for SIEM join
-otel_log_tool_content = false                             # full-body gate; independent of details — does not imply names/paths
-```
-
-Listed `[telemetry] otel_*` keys in signed `requirements.toml` **pin** over
-process env (destination lock). `managed_config.toml` does not. There is no
-`headers` key — collector tokens stay in `OTEL_EXPORTER_OTLP_HEADERS`. See
-[Monitoring & Usage](24-monitoring-usage.md).
-
 ### Version pinning
 
 Control which versions the CLI may auto-update to and which versions may run. Set
@@ -645,11 +580,6 @@ A complete config for enterprise use:
 [cli]
 auto_update = false
 
-[auth]
-auth_provider_command = "/usr/local/bin/my-company-auth-provider"
-auth_provider_label = "Acme Corp"
-auth_token_ttl = 3600
-
 [models]
 default = "company-deepseek-build"
 
@@ -658,9 +588,6 @@ model = "deepseek-v4-pro"
 base_url = "https://model-proxy.acme.com/"
 name = "deepseek-build 4.6 (Proxy)"
 context_window = 128000
-
-[features]
-telemetry = false
 ```
 
 ---
@@ -777,12 +704,6 @@ The key ones. See the README for the complete list.
 | Variable | Description |
 |----------|-------------|
 | `DEEPSEEK_API_KEY` | API key from platform.deepseek.com |
-| `GROK_AUTH_PROVIDER_COMMAND` | External auth binary path |
-| `GROK_AUTH_PROVIDER_LABEL` | Display name on TUI login screen |
-| `GROK_AUTH_TOKEN_TTL` | Token lifetime in seconds |
-| `GROK_AUTH_EARLY_INVALIDATION_SECS` | Seconds before expiry to refresh (default: 300) |
-| `GROK_OIDC_ISSUER` | OIDC issuer URL |
-| `GROK_OIDC_CLIENT_ID` | OIDC client ID |
 
 ### Endpoints
 
@@ -800,7 +721,7 @@ The key ones. See the README for the complete list.
 | `GROK_WEB_FETCH` | Enable (`1`) or disable (`0`) the web_fetch tool |
 | `GROK_WEB_FETCH_ALLOW_LOCAL` | Allow `web_fetch` to explicit loopback hosts only (`localhost` / `127.0.0.0/8` / `::1`). Same as `[toolset.web_fetch] allow_local`. Default off; private/metadata stay blocked. |
 | `GROK_AGENT` | Custom agent definition path or name |
-| `GROK_SANDBOX` | Sandbox profile (off, workspace, devbox, read-only, strict; or a custom profile name) |
+| `DEEPSEEK_BUILD_SANDBOX` | Sandbox profile (off, workspace, devbox, read-only, strict; or a custom profile name) |
 | `GROK_EXIT_TIMEOUT_SECS` | Seconds after a quit is requested before the process is force-exited if teardown hangs (default: 20, `0` disables; a hard exit follows 5s later) |
 
 ### Logging
@@ -814,19 +735,8 @@ The key ones. See the README for the complete list.
 
 | Variable | Description |
 |----------|-------------|
-| `GROK_HOME` | Override config directory (default: `~/.deepseek-build`) |
+| `DEEPSEEK_BUILD_HOME` | Override config directory (default: `~/.deepseek-build`) |
 | `GROK_RESPECT_GITIGNORE` | Force gitignore filtering on (`1`) or off (`0`); overrides `[tools] respect_gitignore` |
-
-### Telemetry
-
-| Variable | Description |
-|----------|-------------|
-| `GROK_TELEMETRY_ENABLED` | Enable/disable telemetry |
-| `GROK_TELEMETRY_TRACE_UPLOAD` | Enable/disable session trace upload |
-| `GROK_TELEMETRY_MIXPANEL_ENABLED` | Enable/disable Mixpanel specifically |
-| `GROK_EXTERNAL_OTEL` | External OTEL to your collector (see [24-monitoring-usage.md](24-monitoring-usage.md)) |
-| `GROK_FEEDBACK_ENABLED` | Enable/disable feedback system |
-| `GROK_DEPLOYMENT_KEY` | Management API key for enterprise |
 
 ---
 
@@ -836,7 +746,6 @@ The key ones. See the README for the complete list.
 |------|-------------|
 | `~/.deepseek-build/config.toml` | Main configuration file |
 | `~/.deepseek-build/pager.toml` | TUI appearance configuration |
-| `~/.deepseek-build/auth.json` | Authentication credentials (auto-managed) |
 | `~/.deepseek-build/sessions/` | Persisted sessions (organized by working directory) |
 | `~/.deepseek-build/memory/` | Cross-session memory files and index |
 | `~/.deepseek-build/skills/` | User-scoped skill definitions |

@@ -15,7 +15,7 @@ A session is a persistent conversation with full history. It includes:
 - Token usage and turn counts
 - Subagent sessions (when enabled)
 
-Sessions are identified by a unique session ID (a UUIDv7 when deepseek-build generates it; a client may supply its own ID with `-s`) and stored on disk under `~/.deepseek-build/sessions/`. Set `GROK_HOME` to override the base directory; when it is unset, deepseek-build uses `~/.deepseek-build`.
+Sessions are identified by a unique session ID (a UUIDv7 when deepseek-build generates it; a client may supply its own ID with `-s`) and stored on disk under `~/.deepseek-build/sessions/`. Set `DEEPSEEK_BUILD_HOME` to override the base directory; when it is unset, deepseek-build uses `~/.deepseek-build`.
 
 ---
 
@@ -185,7 +185,7 @@ This shows:
 
 - Session title (when set)
 - Shell version
-- Auth method (OAuth vs API key; API-key sessions also suggest `deepseek-build login` to use an authenticated session instead)
+- Auth method (API key)
 - Session ID
 - Working directory
 - Model (with a model hash for coding models)
@@ -269,7 +269,7 @@ deepseek-build sessions list --limit 50
 deepseek-build sessions search "rate limit"
 ```
 
-`deepseek-build sessions list` shows sessions for the current working directory, grouped by worktree label. Each row lists the session ID, the creation and update dates, the source status, and the summary. `deepseek-build sessions search` combines a local SQLite index with remote results.
+`deepseek-build sessions list` shows sessions for the current working directory, grouped by worktree label. Each row lists the session ID, the creation and update dates, the source status, and the summary. `deepseek-build sessions search` searches a local SQLite index over session titles and prompts.
 
 ---
 
@@ -285,7 +285,7 @@ deepseek-build usage <session-id>
 deepseek-build usage <session-id> 3
 ```
 
-Output is JSON with `sessionId`, `updatedAt`, `session`, and `turns`. A specific turn uses the same envelope with one element in `turns`. Session totals cover the whole conversation, including history inherited by resume or fork. `costUsdTicks` is 10¹⁰ ticks per USD (divide by `1e10` for dollars). A missing turn number is an error. Interactive credit and billing stay on `/usage` in the TUI.
+Output is JSON with `sessionId`, `updatedAt`, `session`, and `turns`. A specific turn uses the same envelope with one element in `turns`. Session totals cover the whole conversation, including history inherited by resume or fork. `costUsdTicks` is 10¹⁰ ticks per USD (divide by `1e10` for dollars). A missing turn number is an error.
 
 ---
 

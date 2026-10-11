@@ -18,7 +18,7 @@ See the [MCP specification](https://modelcontextprotocol.io) for protocol detail
 
 MCP servers are configured in `~/.deepseek-build/config.toml` under `[mcp_servers.<name>]` sections.
 
-To distribute MCP servers to a team, or to restrict which servers users may run (`allowedMcpServers` / `deniedMcpServers` in `requirements.toml` / `managed_config.toml`, with Claude `managed-settings.json` advisory for foreign-defined servers), see [Distribute across an organization](09-plugins.md#distribute-across-an-organization) in the Plugins guide.
+MCP servers can also be shipped inside a plugin that users install; see [Plugins](09-plugins.md) for how to bundle and share them.
 
 ### stdio Transport (Local Process)
 
@@ -57,8 +57,8 @@ tool_timeouts = { slow_op = 120 }     # Per-tool timeout overrides, seconds
 > max_output_bytes = 40000
 > ```
 >
-> Precedence: requirements.toml > env > repo `.grok/config.toml` >
-> user/managed config > default. Repo edits apply to running sessions in that
+> Precedence: env > repo `.grok/config.toml` >
+> user config > default. Repo edits apply to running sessions in that
 > directory via config hot-reload.
 
 ### HTTP/SSE Transport (Remote Server)
@@ -72,14 +72,14 @@ headers = { "Authorization" = "Bearer token" }
 ```
 
 MCP data-plane requests (JSON-RPC and SSE) and the anonymous-access probe carry a
-default `User-Agent: grok-cli/<version>` header, where `<version>` is the deepseek-build binary
+default `User-Agent: deepseek-build/<version>` header, where `<version>` is the deepseek-build binary
 version. OAuth discovery, client registration, and token requests are issued by the
 rmcp OAuth client and keep its own behavior (no default `User-Agent`). A valid
 `User-Agent` entry in the server's `headers` overrides the default; an invalid
 configured `User-Agent` value is dropped by header parsing (with a warning), so such a
 server still receives the default. Exception: Figma MCP servers (server name `figma`,
 legacy managed name `grok_com_figma`, or a `figma.com` host — all case-insensitive)
-send the bare token `grok-cli` with no version unless the config supplies its own
+send the bare token `deepseek-build` with no version unless the config supplies its own
 `User-Agent`.
 
 ### Streamable HTTP with Session ID
@@ -435,10 +435,6 @@ For stdio servers, deepseek-build captures the process's standard error to `~/.d
 ```bash
 tail -f ~/.deepseek-build/logs/mcp/filesystem.stderr.log
 ```
-
-### Blocked by organization policy
-
-If native TOML policy or Claude `managed-settings.json` sets `deniedMcpServers`, a nonempty `allowedMcpServers`, or `allowManagedMcpServersOnly`, deepseek-build drops non-matching servers at merge time and logs `MCP server blocked by managed settings policy`. Native deepseek-build layers bind every server; the Claude file binds foreign-defined servers only. `deepseek-build inspect` shows the lists, lockdown scope, and each remaining server. Details and examples: [Restrict which MCP servers can run](09-plugins.md#restrict-which-mcp-servers-can-run).
 
 ### A listed tool never appears
 

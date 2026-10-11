@@ -207,7 +207,7 @@ deepseek-build reads the index from `.grok-plugin/marketplace.json`. It also acc
 Each plugin's `source` points at its files, in one of two ways:
 
 - **In this repository**: `{ "type": "local", "path": "./plugins/gdrive" }`. The plain string `"./plugins/gdrive"` also works.
-- **In a separate repository**: `{ "source": "url", "url": "https://github.com/my-org/gdrive.git", "sha": "<full commit sha>" }`. Pin a `sha` so installs are reproducible (required when you [require pinned versions](#require-pinned-versions)).
+- **In a separate repository**: `{ "source": "url", "url": "https://github.com/my-org/gdrive.git", "sha": "<full commit sha>" }`. Pin a `sha` so installs are reproducible (required when the `marketplace.require_sha` gate is on).
 
 Optional per-plugin fields: `version`, `author`, `homepage`, `tags`, and `keywords`.
 
@@ -237,143 +237,7 @@ deepseek-build plugin marketplace add my-org/my-org-plugins   # GitHub shorthand
 deepseek-build plugin install gdrive --trust
 ```
 
-To install it for everyone automatically instead of person by person, see [Distribute across an organization](#distribute-across-an-organization).
-
----
-
-## Distribute across an organization
-
-Admins control plugins, marketplaces, and MCP servers through deepseek-build's TOML layers plus an optional Claude policy file:
-
-- **`managed_config.toml` / `requirements.toml`** (and macOS MDM) are **native** policy. Put allowlists, denylists, and pins here when deepseek-build should enforce them on every server and marketplace, including ones defined in the user's own config or by plugins. `requirements.toml` / MDM is the tamper-resistant tier; user-writable `~/.deepseek-build` copies are self-imposed only.
-- **Claude `managed-settings.json`** is **advisory**. Its MCP and marketplace restrictions bind **foreign** subjects only — project files (`.grok/config.toml`, `.mcp.json`), imported Claude configs, CLI overrides, and client-injected servers. They never bind native subjects (user/system `config.toml`, plugin-provided definitions, admin pins). **Adding** a marketplace or installing a new source is always treated as foreign, so an advisory strict list still refuses unlisted `marketplace add` / `plugin install` sources.
-
-Layers combine **strictest-wins**: any deny wins, every restricted source must allow, and boolean pins only tighten (`false` sticks; a later `true` cannot unpin). CamelCase Claude keys and snake_case deepseek-build keys are both accepted in TOML.
-
-`deepseek-build inspect` (and `deepseek-build inspect --json`) shows the loaded MCP/marketplace lists, whether `allowManagedMcpServersOnly` is `off` / `advisory` / `enforced`, extra marketplace pins, and tighten-only pins under **Enforced by policy**.
-
-### Roll a marketplace out to everyone
-
-Add the source, and turn on the plugins you want, in `managed_config.toml`:
-
-```toml
-[[marketplace.sources]]
-name = "My Org Plugins"
-git = "https://github.com/my-org/my-org-plugins.git"
-
-# Plugins stay off until enabled. List plugin names (from `deepseek-build plugin list`)
-# or full IDs (`<scope>/<hash>/<name>`).
-[plugins]
-enabled = ["gdrive"]
-```
-
-For a hands-off install with no per-person step, also place the plugin's files where deepseek-build discovers and trusts them automatically: `~/.deepseek-build/plugins/`, or a directory your device-management tool manages that you point to with `[plugins].paths`. Then enable them with `[plugins].enabled`.
-
-A managed workspace can also sync skills to users directly, without a plugin. Synced skills appear with the `server` scope and are administered by the workspace; a user's own skill of the same name shadows the synced one. See [Skills](08-skills.md).
-
-### Restrict which marketplaces can be added
-
-List the only git sources people may add. Any other git URL is refused. Honored entries are `{ "source": "git", "url": "…" }` and `{ "source": "github", "repo": "owner/repo" }` (canonicalized to `https://github.com/owner/repo.git`). An optional `ref` / `branch` is stored on extra pins; it is not part of allowlist identity. `local` entries in the strict list are dropped with a warning; they never allow anything.
-
-The key being **present** is what restricts: an empty list (`strict_known_marketplaces = []`), a list whose every entry is unsupported, or a key with the wrong type is a complete lockdown that refuses every add and install until it is fixed. Leave the key out to leave marketplaces unrestricted.
-
-Adding a **local path** while a binding strict list is present is refused (paths never match a git-URL allowlist; fail closed), unless an **admin** `extraKnownMarketplaces` pin names that exact path. A pin from a user-writable `~/.deepseek-build` layer cannot carve that exception. Existing git sources that fail the list are dropped at load (`Marketplace source blocked by allowlist`).
-
-```toml
-# /etc/deepseek-build/requirements.toml  (native: binds every marketplace)
-[[strict_known_marketplaces]]
-source = "git"
-url = "git@github.enterprise.example:ACME/my-org-plugins.git"
-
-[[strict_known_marketplaces]]
-source = "github"
-repo = "ACME/more-plugins"
-```
-
-The same lists work in Claude `managed-settings.json` (advisory for already-configured native sources). URL comparison folds case on the **scheme and host only**, and strips exactly one trailing `.git` (`repo.git.git` is a different repo). Use `deepseek-build inspect` to see the loaded allowlist.
-
-Provision extra sources from policy with `extraKnownMarketplaces` / `extra_known_marketplaces`. First pinning layer wins a name; a configured source already holding that name with a different URL is not overwritten (logged). `autoUpdate = false` on an extra pin turns **global** session-start plugin auto-update off (there is no per-marketplace deepseek-build equivalent).
-
-```toml
-[extra_known_marketplaces.acme]
-source = { source = "git", url = "https://github.com/ACME/my-org-plugins.git", ref = "main" }
-```
-
-### Restrict which MCP servers can run
-
-deepseek-build enforces MCP allow/deny lists from every native TOML policy layer and from Claude `managed-settings.json` (advisory; see above). `deepseek-build inspect` prints the merged lists.
-
-Each allow or deny entry is one of:
-
-| Field | Matches |
-| --- | --- |
-| `serverUrl` / `server_url` | HTTP/SSE server URL. Host and path follow the Claude `serverUrl` rules on both lists: `*` wildcards match host and path separately (`https://*.example.com/*` cannot match a lookalike path on another host); a pattern with no path (`https://mcp.example.com`, or with a bare trailing `/`) matches every path on that host; a pattern with a path matches only that path, so use `/mcp/*` to scope a grant. **Allow entries** are stricter than Claude on scheme and port. The scheme is literal or a bare `*` (`*` matches the supported remote schemes, http and https, and nothing else); a scheme-less `*.example.com/*` or a partial scheme glob such as Claude's `http*://` never matches and logs a warning at startup. Ports stay literal (an explicit `:443` on https and no port are the same target); a glob port such as Claude's `http://localhost:*/*` never matches and logs a warning at startup — list each port. **Deny entries** match by host and path across every scheme and port: `mcp.untrusted.example/*` and `http://mcp.untrusted.example:*/*` both block that host on any scheme and port, without a warning. |
-| `command` | stdio executable name, exact match on the configured command (not the rest of argv). |
-| `serverCommand` / `server_command` | stdio argv, exact match on `[command, args…]`. A partial array (non-string or empty) would match the wrong command: on an allow list it grants nothing; on a deny list it locks the source down (see below). |
-| `serverName` / `server_name` | Config name on any transport. Comparison is case-insensitive after spaces become `_`; a `grok_com_` prefix on the runtime name is stripped. |
-
-**Deny wins.** A server that matches `deniedMcpServers` is blocked even if it also matches `allowedMcpServers`. If `allowedMcpServers` is present, every unlisted server is blocked; a present but empty list (`allowed_mcp_servers = []`) blocks every server the file binds, so do not ship it as a scaffold. A deny-only file blocks the listed servers and leaves the rest alone (an empty deny list is harmless). Across layers, a server must pass **every** restricted source.
-
-**Misconfiguration locks down rather than failing open.** A policy key with the wrong type (a table or string where a list belongs), a key written in both spellings with different values, an allow list whose every entry is unsupported, or a deny entry that cannot be enforced (unknown fields, a partial `serverCommand`, a `serverUrl` that can never match) locks that file's MCP policy down: every server it binds is blocked with the reason `locked down by policy (<file>)` until the file is fixed. Startup logs name the file and the offending key. An unusable **allow** entry only grants nothing.
-
-`allowManagedMcpServersOnly = true` (or `allow_managed_mcp_servers_only`) is a lockdown: a positive allow-entry match is required even when the allow list is empty. Native TOML shows as `enforced` in inspect; Claude-only shows as `advisory` (native servers exempt).
-
-`enableAllProjectMcpServers = false` drops project-scoped MCP unless the server also matches an allow entry.
-
-```toml
-# /etc/deepseek-build/requirements.toml
-allow_managed_mcp_servers_only = true
-enable_all_project_mcp_servers = false
-
-[[allowed_mcp_servers]]
-server_url = "https://*.example.com/*"
-
-[[allowed_mcp_servers]]
-command = "npx"
-
-[[allowed_mcp_servers]]
-server_command = ["npx", "@corp/mcp"]
-
-[[allowed_mcp_servers]]
-server_name = "linear"
-
-[[denied_mcp_servers]]
-command = "node"
-
-[[denied_mcp_servers]]
-server_url = "https://mcp.untrusted.example/*"
-```
-
-The lists apply after deepseek-build merges user, project, plugin, and imported MCP config. A blocked server is dropped from the session (logged as `MCP server blocked by managed settings policy`) with a reason of matching `deniedMcpServers`, not in `allowedMcpServers`, locked down by policy, or the project-MCP pin, plus the policy file path (inspect/JSON/logs keep the full path; user-facing refusals show the file name).
-
-The deployment can also send MCP servers to users directly. Native allowlists still bound what any configuration, managed or personal, is allowed to run.
-
-### Turn off session-start plugin auto-update
-
-`plugin_auto_update = false` / `pluginAutoUpdate = false` is tighten-only. This global pin is deepseek-build's own key with no Claude counterpart. When pinned, session start does not scan marketplaces or fan out per-plugin updates (no toast). Manual `deepseek-build plugin update` still works. Claude's per-marketplace `extraKnownMarketplaces.<name>.autoUpdate: false` pins the same global switch.
-
-### Require pinned versions
-
-Refuse any remote plugin install or update that is not pinned to a full commit sha:
-
-```toml
-[marketplace]
-require_sha = true
-```
-
-You can also set `GROK_MARKETPLACE_REQUIRE_SHA=1`. Both only tighten the policy; neither turns it back off. Publish `sha` values in your marketplace's `plugin-index.json` so installs from it satisfy the rule. Plugins vendored directly inside a marketplace repository are copied from that repository's checkout, so pin them the same way, with `sha` values in `plugin-index.json`.
-
-### Turn off the plugins UI
-
-To hide the plugins and hooks interface, set this in `pager.toml`:
-
-```toml
-disable_plugins = true
-```
-
-### What this does not cover
-
-Marketplaces distribute deepseek-build content: skills, commands, agents, hooks, and MCP server configurations. They do not install a program onto a machine. A skill or MCP server that runs a helper binary (for example a custom sign-in tool) still needs that binary delivered separately, bundled with your deployment or pushed through your device-management tool.
+To install it for everyone automatically, add it to a marketplace that others are pointed at.
 
 ---
 
@@ -383,13 +247,9 @@ Marketplaces distribute deepseek-build content: skills, commands, agents, hooks,
 
 **A plugin's skills, hooks, or MCP servers don't load.** They stay inactive until the plugin is trusted. Reinstall with `--trust`, or place the plugin under `~/.deepseek-build/plugins/` (auto-trusted). See [Trust and security](#trust-and-security).
 
-**A skill or MCP server from a marketplace is missing.** Refresh the source with `deepseek-build plugin marketplace update`, confirm the plugin is installed and enabled, and, if your organization restricts sources, check that the marketplace is still allowed (see [Distribute across an organization](#distribute-across-an-organization)). Some MCP servers require a sign-in and will not appear until you authenticate.
+**A skill or MCP server from a marketplace is missing.** Refresh the source with `deepseek-build plugin marketplace update` and confirm the plugin is installed and enabled. Some MCP servers require a sign-in and will not appear until you authenticate.
 
-**An MCP server is configured but never starts.** Org policy may have blocked it. `deepseek-build inspect` lists `allowedMcpServers` / `deniedMcpServers`, `mcpManagedServersOnly`, any locked-down policy files, and each server's source. A deny match, an allowlist / lockdown that does not grant the server, a locked-down policy file, or `enableAllProjectMcpServers = false` on a project-scoped server drops it before spawn. See [Restrict which MCP servers can run](#restrict-which-mcp-servers-can-run).
-
-**Adding a marketplace is refused.** A `strictKnownMarketplaces` list is in effect. Only the listed git / GitHub URLs can be added; local-path adds are refused unless an admin `extraKnownMarketplaces` pin names that exact path. If `deepseek-build inspect` shows the list as locked down, the key is present but empty, malformed, or names only unsupported sources, and nothing can be added until it is fixed.
-
-**An install is refused as unpinned.** Your deployment requires pinned commits. Install an exact commit (`owner/repo@<sha>`), or use a marketplace whose `plugin-index.json` publishes `sha` values. See [Require pinned versions](#require-pinned-versions).
+**An install is refused as unpinned.** Your deployment requires pinned commits. Install an exact commit (`owner/repo@<sha>`), or use a marketplace whose `plugin-index.json` publishes `sha` values.
 
 **See exactly what loaded.** Run `deepseek-build inspect` (add `--json` for machine-readable output) to list every discovered plugin and the skills, agents, hooks, and MCP servers it provides, each labeled with its `plugin: <name>` source.
 
@@ -410,7 +270,7 @@ A plugin is a directory with any combination of:
 
 An optional `plugin.json` manifest can override paths or add metadata; without one, deepseek-build discovers components from these standard directories. For example, a `team-tools` plugin might bundle a deploy skill, a code-review agent, pre-commit hooks, and a Linear MCP server, installed together in one step.
 
-A skill or command may ship a **helper script** next to its SKILL.md (for example a Python file it calls). Put the script in the plugin and have the skill run it by relative path; it is copied to the machine with the plugin. The script's runtime and any packages it imports must already be present, plugins deliver files, not runtimes or native binaries (see [What this does not cover](#what-this-does-not-cover)).
+A skill or command may ship a **helper script** next to its SKILL.md (for example a Python file it calls). Put the script in the plugin and have the skill run it by relative path; it is copied to the machine with the plugin. The script's runtime and any packages it imports must already be present, because plugins deliver files, not runtimes or native binaries.
 
 ### Where deepseek-build looks for plugins
 

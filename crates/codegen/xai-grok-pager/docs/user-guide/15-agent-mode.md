@@ -65,7 +65,6 @@ deepseek-build agent --always-approve serve --bind 127.0.0.1:2419 --secret <toke
 | ---- | ----------- |
 | `-m, --model <MODEL>` | Model ID (for example `deepseek-v4-pro`). |
 | `--always-approve` | Run without interactive tool-permission prompts. Alias: `--yolo`. |
-| `--reauth` | Authenticate before the agent starts. |
 | `--agent-profile <PATH>` | Load an agent profile from a file. |
 | `--leader` / `--no-leader` | Connect to a shared leader process, or force a local agent. When a non-`off` sandbox profile is requested, leader mode is refused so tools stay in-process (see [Sandbox Mode](18-sandbox.md)). |
 
@@ -78,18 +77,6 @@ deepseek-build agent --always-approve serve --bind 127.0.0.1:2419 --secret <toke
 ```
 
 Clients connect over WebSocket and authenticate with the secret token. If you omit `--secret`, the agent prints a generated token at startup, or set `GROK_AGENT_SECRET`. The process keeps state across client reconnects. Permissions match other entry points; see [Permissions and safety](22-permissions-and-safety.md).
-
-This is a server you run yourself — deepseek-build's hosted cloud sandboxes do not run `deepseek-build agent serve`.
-
----
-
-## WebSocket relay
-
-To reach the agent over the internet, connect the agent to a relay and point browsers at the same relay:
-
-```bash
-deepseek-build agent --always-approve headless --deepseek-build-ws-url wss://your-relay.example.com/ws
-```
 
 ---
 

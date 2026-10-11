@@ -101,19 +101,6 @@ Deny always wins over allow and over always-approve’s normal pass-through. See
 
 For automation that must run tools without interactive approval, use always-approve (and deny rules if you need hard blocks) rather than Auto-review alone.
 
-### Disable always-approve (administrators)
-
-Organizations can prevent always-approve from being enabled via CLI, TUI, or `/always-approve`. Set this in `requirements.toml` (user-level under `~/.deepseek-build/`, or system-wide under `/etc/deepseek-build/` for enforcement users cannot remove):
-
-```toml
-[ui]
-disable_bypass_permissions_mode = true
-```
-
-Do not use `permission_mode` for this lock; that key is a switchable default. The legacy `[ui] yolo = false` key in `requirements.toml` also disables always-approve for compatibility.
-
-deepseek-build can still load Claude-style permission **rules** from managed settings; always-approve is locked with `requirements.toml` as shown above.
-
 ---
 
 ## How a tool call is authorized
@@ -252,8 +239,6 @@ The structured `tool` field accepts the lowercase names `bash`, `read`, `edit`, 
 Because `deny` always wins, you cannot combine these `allow` rules with a catch-all `deny` on `bash` to mean "only allow git/gh"; a `deny tool = "bash"` rule would block `git` and `gh` too. For deny-by-default, use `defaultMode: "dontAsk"` in `.claude/settings.json` or a `PreToolUse` hook (below).
 
 Rules from the global `~/.deepseek-build/config.toml` and every project `.grok/config.toml` (from the repo root down to your working directory) are merged into one rule set, alongside any `.claude/settings.json` rules.
-
-Managed configuration deployed by your organization also contributes `[permission]` rules: the system `/etc/deepseek-build/managed_config.toml`, and a user-level copy that deepseek-build maintains automatically at `~/.deepseek-build/managed_config.toml`. Managed rules merge like rules from any other source, with two properties specific to managed `allow` rules: your own `deny` and `ask` rules win over a managed `allow` (severity ordering), and a catch-all managed `allow` is ignored when always-approve is locked off. For rules that users cannot edit away, use the root-owned system `/etc/deepseek-build/requirements.toml`.
 
 Permission rules from every source are read once, when a session starts. Changes apply to the next session.
 
@@ -403,7 +388,7 @@ A narrower set of options remembers just the specific command, MCP tool, or web-
 remember_tool_approvals = false
 ```
 
-Organizations can disable them via the same key in `requirements.toml` or managed configuration. With the gate enabled (the default), prompts gain:
+With the gate enabled (the default), prompts gain:
 
 - **`Always allow: <command>`**, which persists an allow for the command prefix.
 - A matching "never allow" row, which persists a deny the same way.
@@ -417,7 +402,7 @@ Commands on the [dangerous list](#dangerous-commands) (for example `git push` an
 
 Interactive grants are stored in deepseek-build's own state directory under your home directory, scoped to the git repository you launched deepseek-build in (its repository root), so a grant accepted at the repo root also applies in sessions started from a subdirectory of the same repository. Outside a git repository, grants are scoped to the launch directory, and each git worktree keeps its own grants. A grant made in one project never applies in another, grants are not written into the repository, and they are not meant to be hand-edited.
 
-To inspect or reset a project's grants, open the `sessions` subdirectory of your deepseek-build home (the `~/.deepseek-build` directory under your home directory, or `$GROK_HOME`): each project directory there (URL-encoded scope root) holds a `permission.toml` (plus per-client `permission_<client>.toml` variants) listing the remembered command prefixes, globs, MCP tools/servers, web-fetch domains, and "never allow" entries. Deleting the file resets that project's grants; the next matching tool call prompts again. Treat it as read-only state — to *add* rules, use the declarative `[permission]` configuration instead.
+To inspect or reset a project's grants, open the `sessions` subdirectory of your deepseek-build home (the `~/.deepseek-build` directory under your home directory, or `$DEEPSEEK_BUILD_HOME`): each project directory there (URL-encoded scope root) holds a `permission.toml` (plus per-client `permission_<client>.toml` variants) listing the remembered command prefixes, globs, MCP tools/servers, web-fetch domains, and "never allow" entries. Deleting the file resets that project's grants; the next matching tool call prompts again. Treat it as read-only state — to *add* rules, use the declarative `[permission]` configuration instead.
 
 Interactive grants are personal, per-machine state. For an allowlist you can review in code review and share with teammates, use declarative rules in the project's `.grok/config.toml` instead.
 

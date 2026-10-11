@@ -60,7 +60,7 @@ deepseek-build
 
 ### Force-Disable
 
-To disable memory for the process even when TOML or remote settings enable it:
+To disable memory for the process even when TOML enables it:
 
 ```bash
 export GROK_MEMORY=0
@@ -79,11 +79,9 @@ The toggle cannot override the process-wide force-disable (`--no-memory` or `GRO
 
 1. A process-wide force-disable (`--no-memory` compatibility flag or
    `GROK_MEMORY=0`) turns memory off.
-2. An explicit `[memory] enabled = false` in effective TOML turns memory off,
-   including anything enabled by managed remote settings. The `/memory` `t`
-   toggle can still turn it on for the current session.
-3. Otherwise memory is enabled by `GROK_MEMORY=1`, `[memory] enabled = true`,
-   or a managed remote setting.
+2. An explicit `[memory] enabled = false` in effective TOML turns memory off.
+   The `/memory` `t` toggle can still turn it on for the current session.
+3. Otherwise memory is enabled by `GROK_MEMORY=1` or `[memory] enabled = true`.
 
 Staged-rollout and kill-switch controls for operators are documented in the
 internal hardening notes, not here.

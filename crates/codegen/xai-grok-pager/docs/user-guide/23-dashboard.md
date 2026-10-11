@@ -19,7 +19,7 @@ disk), or the workflows run UI (`/workflow runs`).
   from inside a session.
 - **`Ctrl+\`** — same view as the slash command.
 
-Hidden in minimal mode. Set `GROK_AGENT_DASHBOARD=0` or
+Hidden in minimal mode. Set `DEEPSEEK_BUILD_AGENT_DASHBOARD=0` or
 `[dashboard].enabled = false` to disable.
 
 ---

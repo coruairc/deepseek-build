@@ -29,7 +29,7 @@ deepseek-build clone <url> [dir]
 The default is a depth-1 checkout of the selected branch. Pass `--full-history`
 for a complete clone. Clone enablement is independent of session / `-w` Grove
 worktrees (the convenience above turns both on; the specific knobs still win).
-the DeepSeek sign-in below — see [deepseek-build clone](27-deepseek-build-clone.md#authentication)
+See [deepseek-build clone](27-deepseek-build-clone.md)
 and [Configuration reference](26-config-reference.md).
 
 ---
@@ -42,16 +42,12 @@ Start deepseek-build by running:
 deepseek-build
 ```
 
-On first launch, deepseek-build opens your browser to authenticate with DeepSeek. After you sign in, deepseek-build stores your credentials in `~/.deepseek-build/auth.json`, where they persist across sessions. deepseek-build refreshes your credentials automatically and prompts you to sign in again when they can no longer be renewed.
-
-If you prefer API key authentication (e.g., for CI/CD or environments without a browser), set the `DEEPSEEK_API_KEY` environment variable instead:
+deepseek-build needs a DeepSeek API key. Get one from [platform.deepseek.com](https://platform.deepseek.com), then set the `DEEPSEEK_API_KEY` environment variable:
 
 ```bash
 export DEEPSEEK_API_KEY="sk-..."
 deepseek-build
 ```
-
-See [Authentication](02-authentication.md) for the full set of auth options including OIDC, external auth providers, and device code flow.
 
 ---
 
@@ -235,7 +231,6 @@ Deeper files take precedence. deepseek-build also reads `CLAUDE.md` files for co
 
 | Document | What You Will Learn |
 |----------|-------------------|
-| [Authentication](02-authentication.md) | Browser login, API keys, OIDC, external auth, device code flow |
 | [Keyboard Shortcuts](03-keyboard-shortcuts.md) | Complete reference for all key bindings |
 | [Slash Commands](04-slash-commands.md) | All available `/` commands |
 | [Configuration](05-configuration.md) | config.toml, pager.toml, environment variables |

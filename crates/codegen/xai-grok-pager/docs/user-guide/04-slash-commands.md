@@ -2,7 +2,7 @@
 
 Type `/` in the prompt to open the command menu. It fuzzy-matches as you type, and picking a command runs it immediately.
 
-Commands come from two places: **shell builtins**, handled by the agent backend (xai-grok-shell), and **pager builtins**, handled by the pager frontend (xai-grok-pager). Both show up in the same menu, and any enabled skill with `user-invocable: true` appears there too. If a skill reuses a built-in name such as `login`, the built-in keeps `/login` and the skill stays available as `/plugin-name:login` — the menu badges both so the collision is visible.
+Commands come from two places: **shell builtins**, handled by the agent backend (xai-grok-shell), and **pager builtins**, handled by the pager frontend (xai-grok-pager). Both show up in the same menu, and any enabled skill with `user-invocable: true` appears there too. If a skill reuses a built-in name such as `memory`, the built-in keeps `/memory` and the skill stays available as `/plugin-name:memory` — the menu badges both so the collision is visible.
 
 Every command below lists its aliases where it has them. A few commands only appear when a feature or session state enables them; those cases are called out inline. The menu is also filtered by render mode — see [`/minimal` and `/fullscreen`](#minimal-and-fullscreen).
 
@@ -22,7 +22,7 @@ Open the session picker to reload a previous session from disk.
 
 Open the [Agent Dashboard](23-dashboard.md): live roster of top-level sessions in this pager (peek, reply, dispatch, pin, rename, stop, attach). Aliases: `/agents-dashboard`, `/sessions`.
 
-Not `/config-agents` (alias `/agents`), which manages agent *definitions* and personas. Hidden in minimal mode; disable with `GROK_AGENT_DASHBOARD=0` or `[dashboard].enabled = false`.
+Not `/config-agents` (alias `/agents`), which manages agent *definitions* and personas. Hidden in minimal mode; disable with `DEEPSEEK_BUILD_AGENT_DASHBOARD=0` or `[dashboard].enabled = false`.
 
 ### `/compact`
 
@@ -180,7 +180,7 @@ Open a preview of the current saved plan. Aliases: `/show-plan`, `/plan-view`.
 
 ## Memory
 
-`/flush` and `/dream` require memory enabled through `GROK_MEMORY=1`, `[memory] enabled = true`, or managed remote settings. `/memory` is available whenever a memory store is configured for the session, including when `[memory] enabled = false` turned memory off, so you can browse saved notes and turn memory on for the session from inside the modal. It is hidden only when no memory store is configured, or when `--no-memory` / `GROK_MEMORY=0` turned memory off for the whole process. `/remember` is always available.
+`/flush` and `/dream` require memory enabled through `GROK_MEMORY=1` or `[memory] enabled = true`. `/memory` is available whenever a memory store is configured for the session, including when `[memory] enabled = false` turned memory off, so you can browse saved notes and turn memory on for the session from inside the modal. It is hidden only when no memory store is configured, or when `--no-memory` / `GROK_MEMORY=0` turned memory off for the whole process. `/remember` is always available.
 
 ### `/memory`
 
@@ -336,15 +336,6 @@ Open the extensions modal on the **Workflows** tab — a browse-only catalog of 
 
 Switch the color theme. Alias: `/t`.
 
-### `/feedback [message]`
-
-Report an issue or send feedback. Bare `/feedback` opens the feedback form in every mode, including `--minimal`. Its **Write** tab is a report box: `Enter` sends, `Esc` closes. Its **Drafts** tab (`Ctrl+Tab` switches) holds reports saved for later — failed sends and feedback the agent drafted for you — and `Enter` loads one into Write so you can review, pick a type, and send it. `/feedback <message>` sends the message immediately, in any mode; if the send fails, the message is saved to Drafts.
-
-```
-/feedback
-/feedback Something isn't working correctly
-```
-
 ### `/btw`
 
 Send an aside to the agent without interrupting the current task. In minimal mode (`--minimal`), the answer shows up in a dismissible panel above the prompt: `Esc` dismisses it, a finished answer is saved into native scrollback, and a late reply to an already-dismissed panel is dropped. The side question and its answer aren't part of the main turn.
@@ -370,7 +361,7 @@ View release notes for the current version. Alias: `/changelog`.
 
 ### `/docs`
 
-Browse the built-in How-to Guides, open the online Build docs, or jump straight to a guide by title. Aliases: `/howto`, `/guides`.
+Browse the built-in How-to Guides, open the project on GitHub, or jump straight to a guide by title. Aliases: `/howto`, `/guides`.
 
 ```
 /docs
@@ -379,7 +370,7 @@ Browse the built-in How-to Guides, open the online Build docs, or jump straight 
 ```
 
 - Bare `/docs` (or `/docs how-to`) opens the How-to Guides picker.
-- `/docs web` opens https://docs.deepseek-build/build/overview in your browser.
+- `/docs web` opens https://github.com/coruairc/deepseek-build in your browser.
 - `/docs <title>` opens a specific guide by case-insensitive title match.
 
 ### `/tutorial`
@@ -409,42 +400,6 @@ Not the live multi-session [Agent Dashboard](23-dashboard.md) (`/dashboard` / `C
 ### `/personas`
 
 Create, edit, and delete personas. A subagent can apply a persona to shape how it behaves.
-
----
-
-## Account and Billing
-
-### `/login`
-
-Log in or re-authenticate without leaving the session.
-
-### `/logout`
-
-Log out and return to the login screen.
-
-### `/usage`
-
-View credit usage or manage billing. Alias: `/cost`.
-
-```
-/usage
-/usage manage
-```
-
-Inside a session this opens the usage modal with the account allowance plus that session's context and token totals. From the [Agent Dashboard](23-dashboard.md#dispatch-input) the same modal opens over the dashboard; there is no session there, so only the **Usage limit** tab carries data.
-
-For persisted per-turn token and cost totals of any local session, use `deepseek-build usage <session-id> [turn]` from the shell. See [Session Management](17-sessions.md#the-deepseek-build-usage-subcommand).
-
-### `/privacy`
-
-Open Settings on **Coding data, retention, and training**, where you choose
-**Opt in** or **Opt out**. Takes no arguments.
-
-```
-/privacy
-```
-
-This setting doesn't touch `[features] telemetry`, `trace_upload`, or your external OTEL settings — see [Monitoring Usage](24-monitoring-usage.md#related-settings). On team accounts only a team admin can change it, and admins can also enable or disable Zero Data Retention for the team ([how to enable ZDR](https://docs.deepseek-build/developers/faq/security#how-to-enable-zdr)). When the choice isn't yours to make, the row says so — `ZDR` or `· Admin Managed` — instead of opening the chooser. ZDR locks coding-data sharing; it does not mute external OTEL or `user.email` — see [ZDR and this stream](24-monitoring-usage.md#zdr-and-this-stream).
 
 ---
 

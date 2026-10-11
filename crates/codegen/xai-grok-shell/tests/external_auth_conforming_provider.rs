@@ -25,7 +25,7 @@ const LOGIN_BUDGET: Duration = Duration::from_secs(60);
 /// Measured at ~0.3s healthy and 47s while the flow contended with its own `auth.json.lock`; loose enough for a loaded CI runner in between.
 const NO_SELF_CONTENTION: Duration = Duration::from_secs(20);
 
-/// The skeleton published in `README.md` and `docs/user-guide/02-authentication.md`, which operators copy.
+/// The skeleton published in `README.md`, which operators copy.
 fn write_conforming_provider(home: &Path) -> String {
     use std::os::unix::fs::PermissionsExt;
 

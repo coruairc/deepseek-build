@@ -51,11 +51,6 @@ pub static USER_GUIDE: &[Doc] = &[
         "Installation, first launch, and basic interaction"
     ),
     guide!(
-        "02-authentication.md",
-        "Authentication",
-        "Browser login, API keys, OIDC, external auth providers"
-    ),
-    guide!(
         "03-keyboard-shortcuts.md",
         "Keyboard Shortcuts",
         "Complete reference for all TUI key bindings"
@@ -118,7 +113,7 @@ pub static USER_GUIDE: &[Doc] = &[
     guide!(
         "15-agent-mode.md",
         "Agent Mode and IDE Integration",
-        "ACP stdio transport, WebSocket relay, SDK integration"
+        "ACP stdio transport, server mode, SDK integration"
     ),
     guide!(
         "16-subagents.md",
@@ -161,11 +156,6 @@ pub static USER_GUIDE: &[Doc] = &[
         "Live multi-session roster: peek, dispatch, pin, stop, and search"
     ),
     guide!(
-        "24-monitoring-usage.md",
-        "Monitoring Usage (External OpenTelemetry)",
-        "Export usage metrics to a customer OpenTelemetry collector"
-    ),
-    guide!(
         "25-status-line.md",
         "Status Line",
         "A bottom row of live session context, or the output of your own script"
@@ -173,7 +163,7 @@ pub static USER_GUIDE: &[Doc] = &[
     guide!(
         "26-config-reference.md",
         "Configuration Reference",
-        "Field list for config.toml, managed_config.toml, and requirements.toml"
+        "Field list for config.toml"
     ),
     // Direct include_str! so gazelle can put this file in compile_data.
     // `guide!` hides the path inside concat!($file) and gazelle cannot see it.

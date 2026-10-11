@@ -182,9 +182,8 @@ Usage notes:
   `modelUsage.*.modelCalls`. This is the same counter family as `--max-turns`,
   not a guarantee of exact equality when rounds lack usage or hit gates.
 - `total_cost_usd` appears only when the server reported a **complete** cost.
-  Absence means unreported or incomplete, never free. Cost is stamped for
-  API-key traffic today; pool/OAuth paths often omit it until the server
-  stamps cost. When some calls lacked cost, `cost_is_partial` is true and
+  Absence means unreported or incomplete, never free. When some calls lacked
+  cost, `cost_is_partial` is true and
   **all** cost floats are omitted (`total_cost_usd` and every
   `modelUsage.*.costUSD`) so consumers cannot sum model rows into a fake
   complete bill.
@@ -288,7 +287,7 @@ On `init`, `skills` is live. It lists the session's user-invocable skill names, 
 
 The other `init` fields carry real data:
 
-- `apiKeySource` is `user` for API-key auth and `oauth` otherwise. deepseek-build does not distinguish the schema's `project`, `org`, and `temporary` sources.
+- `apiKeySource` is `user` for API-key auth. deepseek-build does not distinguish the schema's `project`, `org`, and `temporary` sources.
 - `permissionMode` is the effective headless mode mapped to the Messages enum: the `--permission-mode` value, or `bypassPermissions` under `--yolo`, else `default`. deepseek-build-only modes such as `auto` collapse to `default`.
 - `mcp_servers[].status` is one `deepseek-build/mcp/list` snapshot, emitted only for `streaming-messages-json`: `connected`, `failed`, `needs-auth`, `pending`, or `disabled`. Servers still handshaking are `pending`. `disabled` is only stamped after the session reports `sessionMcpResolved`; an unresolved list row is `pending` even when `enabled` is still false. The snapshot does not wait for the Blocking startup grace; that grace still applies to the prompt's toolset. Other output formats omit the array and do not call `deepseek-build/mcp/list`.
 
@@ -550,8 +549,8 @@ Key environment variables that affect headless mode:
 
 | Variable                        | Description                                                   |
 | ------------------------------- | ------------------------------------------------------------- |
-| `DEEPSEEK_API_KEY`        | API key for authentication (required when no browser login)   |
-| `GROK_HOME`                    | Override config directory (default: `~/.deepseek-build`)                |
+| `DEEPSEEK_API_KEY`        | API key for authentication                                    |
+| `DEEPSEEK_BUILD_HOME`                    | Override config directory (default: `~/.deepseek-build`)                |
 | `GROK_LOG_FILE`                | Path to a log file (used verbatim as the path; works in headless and TUI, honors `RUST_LOG`) |
 | `RUST_LOG`                     | Log level filter (e.g. `debug`). Headless logs to stderr.     |
 
@@ -572,19 +571,6 @@ deepseek-build -p "Run the test suite" --yolo
 | `1`  | Error. Authentication failure, network error, or runtime error |
 | `130` | Interrupted by SIGINT (Ctrl+C)                                   |
 | `143` | Terminated by SIGTERM                                            |
-
----
-
-## Authentication for Headless Environments
-
-For headless use, authenticate with one of:
-
-- **`DEEPSEEK_API_KEY`**: simplest for CI. See [Environment Variables](#environment-variables-for-headless) above.
-- **`deepseek-build login --device-auth`** (or `--device-code`): no browser needed on the target machine.
-  See [Authentication > Device Code Flow](02-authentication.md#device-code-flow).
-- **`deepseek-build login`**: browser-based OAuth2 on machines with a GUI.
-
-If you've previously logged in, cached credentials are used automatically.
 
 ---
 
@@ -611,14 +597,13 @@ the scope small.
 
 ## File Locations
 
-deepseek-build stores data in `~/.deepseek-build` (override with `GROK_HOME`; see [Environment Variables for Headless](#environment-variables-for-headless)):
+deepseek-build stores data in `~/.deepseek-build` (override with `DEEPSEEK_BUILD_HOME`; see [Environment Variables for Headless](#environment-variables-for-headless)):
 
 | Path                     | Contents                              |
 | ------------------------ | ------------------------------------- |
 | `config.toml`            | User configuration                    |
-| `auth.json`              | Cached OAuth2/API credentials         |
 | `version.json`           | Version cache for update checks       |
-| `sessions/`              | Session transcripts (SQLite)          |
+| `sessions/`              | Session transcripts (JSONL)          |
 | `memory/`                | Cross-session memory store            |
 | `logs/`                  | Internal log files (for example `unified.jsonl`) |
 | `logs/mcp/`              | MCP server logs                       |
@@ -632,13 +617,12 @@ deepseek-build stores data in `~/.deepseek-build` (override with `GROK_HOME`; se
 
 For containers or CI, mount `~/.deepseek-build` read-only:
 
-- Pre-populate `auth.json` or use `DEEPSEEK_API_KEY`
+- Use `DEEPSEEK_API_KEY`
 - Session persistence fails silently (ephemeral)
 - Update checks log a warning and skip
 
 ```bash
 export DEEPSEEK_API_KEY="sk-..."
-export GROK_DISABLE_AUTOUPDATER=1
 deepseek-build -p "..." --no-auto-update
 ```
 
@@ -649,15 +633,8 @@ deepseek-build -p "..." --no-auto-update
 | Method                          | Scope     |
 | ------------------------------- | --------- |
 | `--no-auto-update`              | Session   |
-| `GROK_DISABLE_AUTOUPDATER=1`    | Process   |
 | Non-TTY stderr (auto-detected)  | Automatic |
 | `[cli] auto_update = false`     | Persistent|
-
-`GROK_DISABLE_AUTOUPDATER` set to a falsy value (`0`, `false`, `off`, `no`, or empty, any
-case) counts as not set. The agent SDKs
-inject `GROK_DISABLE_AUTOUPDATER=1` for the non-leader agents they spawn (a falsy value in
-the SDK's isolation env keeps updates on), and the stdio agent skips its background update
-unless it runs from the managed install (`$GROK_HOME/bin/deepseek-build`).
 
 Update messages go to **stderr**. Stdout stays clean for `--output-format json`. See also [Environment Variables for Headless](#environment-variables-for-headless).
 

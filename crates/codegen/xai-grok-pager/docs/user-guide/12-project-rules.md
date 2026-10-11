@@ -39,7 +39,7 @@ deepseek-build also scans home-level rules, regardless of where it starts. These
 
 | Location | Notes |
 |----------|-------|
-| `$GROK_HOME/rules/` (default `~/.deepseek-build/rules/`) | Always scanned; applies to all projects |
+| `$DEEPSEEK_BUILD_HOME/rules/` (default `~/.deepseek-build/rules/`) | Always scanned; applies to all projects |
 | `~/.claude/rules/` | Controlled by `compat.claude.rules` |
 | `~/.cursor/rules/` | Controlled by `compat.cursor.rules` |
 | Each entry of `[paths] extra_rule_dirs` | Any absolute directory you list in `config.toml`; `~` is expanded |
@@ -59,7 +59,7 @@ Every `*.md` directly inside a listed directory is loaded as a rule (subdirector
 
 deepseek-build scans for project rules in this order:
 
-1. **Home rules**: `$GROK_HOME`, then enabled `~/.claude/` and `~/.cursor/` sources, then `[paths] extra_rule_dirs`
+1. **Home rules**: `$DEEPSEEK_BUILD_HOME`, then enabled `~/.claude/` and `~/.cursor/` sources, then `[paths] extra_rule_dirs`
 2. **Repo rules**: If inside a git repo, every directory from the repo root down to the current working directory (inclusive)
 3. **CWD-only**: If not inside a git repo, only the current working directory
 

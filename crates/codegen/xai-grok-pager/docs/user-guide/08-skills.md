@@ -142,7 +142,7 @@ deepseek-build asks where to save the skill:
 - **Project** (`<repo_root>/.grok/skills/<name>/`) -- available only in this repository and shareable with teammates through version control. deepseek-build recommends this scope inside a git repository.
 - **User** (`~/.deepseek-build/skills/<name>/`) -- available across all your projects.
 
-To distribute a skill to a whole team or organization, package it in a plugin and publish it through a marketplace. See [Create your own marketplace](09-plugins.md#create-your-own-marketplace) and [Distribute across an organization](09-plugins.md#distribute-across-an-organization).
+To distribute a skill to a whole team or organization, package it in a plugin and publish it through a marketplace. See [Create your own marketplace](09-plugins.md#create-your-own-marketplace).
 
 The new skill appears in the slash menu within a few seconds, because deepseek-build reloads skills when files change on disk.
 
@@ -169,17 +169,17 @@ To browse your skills, type `/` to open the slash-command menu. deepseek-build l
 
 ### Qualified Names
 
-When a skill's name collides with another skill or a built-in command, deepseek-build keeps **both** invocable. The built-in keeps the bare name (`/login`, `/compact`, …). The skill is advertised under a qualified name prefixed by its scope -- `local:`, `repo:`, `user:`, or the plugin name:
+When a skill's name collides with another skill or a built-in command, deepseek-build keeps **both** invocable. The built-in keeps the bare name (`/compact`, `/memory`, …). The skill is advertised under a qualified name prefixed by its scope -- `local:`, `repo:`, `user:`, or the plugin name:
 
 ```
 /local:commit        # The "commit" skill from ./.grok/skills/
 /user:commit         # The "commit" skill from ~/.deepseek-build/skills/
-/acme:login          # A plugin skill named "login" (built-in /login is unchanged)
+/acme:compact        # A plugin skill named "compact" (built-in /compact is unchanged)
 ```
 
-Typing `/login` in the slash menu shows both rows, with a right-aligned **built-in** or **skill · plugin-name** badge so you can tell them apart. Rename the skill (or its directory) if you want the bare `/name` for the skill instead.
+Typing `/compact` in the slash menu shows both rows, with a right-aligned **built-in** or **skill · plugin-name** badge so you can tell them apart. Rename the skill (or its directory) if you want the bare `/name` for the skill instead.
 
-`deepseek-build inspect` tags colliding skills with `[collides with /login → /acme:login]`.
+`deepseek-build inspect` tags colliding skills with `[collides with /compact → /acme:compact]`.
 
 ### Automatic Invocation
 

@@ -284,7 +284,7 @@ Per-type model overrides apply for any parent. Without an override, a subagent i
 
 ### Model Selection by the Agent
 
-The `spawn_subagent` tool offers the agent a `model` argument, and its description lists the models you can pick, for when you explicitly ask for a subagent on a different model. With `[features] subagent_model_inheritance = true` (or `GROK_SUBAGENT_MODEL_INHERITANCE=1`), both are hidden whenever every model in your picker is an DeepSeek model: subagents then always inherit the parent's model, and a spawn that still names one fails with a message asking the agent to retry without it. Catalogs with a third-party model, a model with no declared family, or a catalog still loading keep the argument. `[subagents.models]` pins, roles, and personas are unaffected. Read when a session starts; changing it requires a restart. Precedence: a `requirements.toml`/MDM pin, then the environment variable, then `config.toml`, then remote settings, then the default (off).
+The `spawn_subagent` tool offers the agent a `model` argument, and its description lists the models you can pick, for when you explicitly ask for a subagent on a different model. With `[features] subagent_model_inheritance = true` (or `GROK_SUBAGENT_MODEL_INHERITANCE=1`), both are hidden whenever every model in your picker is an DeepSeek model: subagents then always inherit the parent's model, and a spawn that still names one fails with a message asking the agent to retry without it. Catalogs with a third-party model, a model with no declared family, or a catalog still loading keep the argument. `[subagents.models]` pins, roles, and personas are unaffected. Read when a session starts; changing it requires a restart. Precedence: the environment variable, then `config.toml`, then the default (off).
 
 You can also toggle it from `/settings` → Models → **Subagent model inheritance**:
 
@@ -292,7 +292,7 @@ You can also toggle it from `/settings` → Models → **Subagent model inherita
 - Off: deepseek-build may choose a different model for a subagent. Takes effect after restart.
 - NOTE: This setting only applies when all models are DeepSeek "model_family". You likely don't need to configure this setting.
 
-The row shows the value that applies after restart. Toggling writes `[features] subagent_model_inheritance = true` or `= false` (an explicit `false` overrides a remote `true`); `d` (reset) deletes the key so `managed_config.toml`, remote settings, or the default apply again. Agents already running keep the mode they started with. When a layer your `config.toml` cannot override decides the value — a `requirements.toml`/MDM pin, the environment variable, the `GROK_CONFIG` overlay, or an active campaign — both the toggle and the reset are refused with a toast that names that layer.
+The row shows the value that applies after restart. Toggling writes `[features] subagent_model_inheritance = true` or `= false`; `d` (reset) deletes the key so the default applies again. Agents already running keep the mode they started with. When a layer your `config.toml` cannot override decides the value — the environment variable or the `GROK_CONFIG` overlay — both the toggle and the reset are refused with a toast that names that layer.
 
 ### Custom Roles and Personas
 

@@ -70,11 +70,9 @@ Hooks are discovered from several places (all are merged):
 | Project | `<project>/.claude/settings.json` (and `settings.local.json`) | Requires trust | Claude compatibility (configurable) |
 | Project | `<project>/.cursor/hooks.json` | Requires trust | Cursor compatibility (configurable) |
 | Config | `~/.deepseek-build/config.toml` | Always | Your hooks alongside the rest of your config |
-| Config | `managed_config.toml` (`$GROK_HOME` and `/etc/deepseek-build`) | Always | Organization-distributed hooks (server-synced and on-device) |
-| Config | `requirements.toml` (signed cache, and `/etc/deepseek-build`) | Always | Organization-enforced hooks; see [Enforced hooks](#enforced-hooks) |
 | Plugin | Bundled inside installed plugins | Per-plugin | Shared team hooks |
 
-Config-file hooks live in the same TOML your organization already controls; see [Hooks in Config Files](#hooks-in-config-files) for the format. The compatible vendor hook sources are scanned by default. To disable scanning for a specific vendor, set `[compat.<vendor>] hooks = false` in `~/.deepseek-build/config.toml` or the corresponding environment variable. See [Configuration](05-configuration.md#harness-compatibility) for details.
+Config-file hooks live in your own `config.toml`; see [Hooks in Config Files](#hooks-in-config-files) for the format. The compatible vendor hook sources are scanned by default. To disable scanning for a specific vendor, set `[compat.<vendor>] hooks = false` in `~/.deepseek-build/config.toml` or the corresponding environment variable. See [Configuration](05-configuration.md#harness-compatibility) for details.
 
 **Trusting a project**: The first time you open a project with hooks, you must trust it before its project hooks will run; until then they are silently skipped. Grant trust by running `/hooks-trust` (or launching with `--trust`); the decision is recorded in the unified folder-trust store (`~/.deepseek-build/trusted_folders.toml`), the same gate that governs repo-local MCP/LSP servers. Global hooks in `~/.deepseek-build/hooks/` are always trusted and need no entry. This prevents untrusted repos from running arbitrary code.
 
@@ -194,13 +192,7 @@ When an event fires, deepseek-build resolves it in four steps:
 
 ## Hooks in Config Files
 
-Hooks can also live directly in your deepseek-build config, so a team can distribute them with the rest of their configuration instead of shipping separate JSON files. The same `hooks` object is read from three TOML files:
-
-| File | Tier | Who sets it |
-|------|------|-------------|
-| `~/.deepseek-build/config.toml` | User | You |
-| `managed_config.toml` (`$GROK_HOME`, `/etc/deepseek-build`) | Managed / system | Your organization |
-| `requirements.toml` (`$GROK_HOME` signed cache, `/etc/deepseek-build`) | Requirements | Your organization |
+Hooks can also live directly in your deepseek-build config, so you can keep them with the rest of your configuration instead of shipping separate JSON files. They are read from the `hooks` table in `~/.deepseek-build/config.toml`.
 
 The TOML is structurally identical to the JSON hook object, so an existing hook transliterates directly:
 
@@ -227,36 +219,9 @@ timeout = 10
 
 Prefer the inline form to avoid repeating the `[[hooks.<Event>.hooks]]` header for each handler.
 
-- **Additive across layers.** Every layer's hooks run; a lower-priority layer adds hooks but never replaces another layer's block. A hook defined identically in more than one layer is deduplicated, keeping the highest-authority copy.
-- **Provenance labels.** Config hooks appear in `/hooks` tagged by origin (`managed:`, `requirements/signed:`, `requirements/user:`, `user:`, and so on) so you can see which layer contributed each one.
+- **Additive across sources.** Every source's hooks run; a lower-priority source adds hooks but never replaces another source's block. A hook defined identically in more than one source is deduplicated, keeping the highest-authority copy.
+- **Provenance labels.** Config hooks appear in `/hooks` tagged `user:`.
 - **No read-time expansion.** A literal `${VAR}` in a `command` or `url` reaches the hook runner unchanged, matching JSON hook-file semantics; the runner performs the single expansion.
-
-### Enforced hooks
-
-Hooks from the config layers your organization controls are enforced: they carry a `[policy]` badge in `/hooks`, `Space` refuses to disable them, an entry in `~/.deepseek-build/disabled-hooks` does not skip them, and their source cannot be removed. Two layers qualify:
-
-- The root-owned system files `/etc/deepseek-build/requirements.toml` and `/etc/deepseek-build/managed_config.toml` (`requirements/system:` and `system_managed:` names).
-- The `~/.deepseek-build/requirements.toml` that the deployment sync writes, while its bytes match the signed policy the server sent (`requirements/signed:` names). If the file is edited or its signature file is missing or unreadable, its hooks load as your own (`requirements/user:` names) and can be disabled again; an unreadable `requirements.toml` contributes no hooks. Organizations that need the file to stay intact set `fail_closed = true` in the same requirements, which refuses to start on an edited copy or a missing signature (an unreadable file is a read error and still starts). See [Configuration](26-config-reference.md#requirementstoml).
-
-Hooks in `~/.deepseek-build/managed_config.toml` and `~/.deepseek-build/config.toml` are distribution, not enforcement: you can disable them.
-
-### Allow only managed hooks
-
-An organization can restrict a machine to the hooks it enforces:
-
-```toml
-# /etc/deepseek-build/requirements.toml
-allow_managed_hooks_only = true
-```
-
-With this set:
-
-- **What runs.** Only [enforced hooks](#enforced-hooks): the ones from the root-owned `/etc/deepseek-build/requirements.toml` and `/etc/deepseek-build/managed_config.toml`, and the ones in the synced `~/.deepseek-build/requirements.toml` while it matches its signature. An edited synced file loads as your own hooks, which the pin skips.
-- **What is skipped.** Every other hook, at dispatch: `~/.deepseek-build/hooks`, every `~/.deepseek-build/*.toml` file, project hooks, plugin hooks, agent frontmatter hooks, and the Claude and Cursor compatibility files. In `/hooks` they show `[disabled]`, and enabling them is refused ("Hooks outside managed policy are disabled by your organization."); `deepseek-build inspect` names the file that set the pin.
-- **What still runs.** Hooks the embedding client registers over ACP (an IDE or the desktop app), as under Claude Code's `allowManagedHooksOnly`. The pager's `[[ui.notifications.hooks]]` commands are a separate mechanism.
-- **Windows.** There is no root-owned layer (no `/etc/deepseek-build`), so only the signed synced `requirements.toml` hooks and ACP client hooks still run.
-
-The key is a tighten-only policy pin: any native policy layer (`requirements.toml` or `managed_config.toml` in `$GROK_HOME` or `/etc/deepseek-build`, or macOS MDM) or Claude's `managed-settings.json` can set it, the camelCase `allowManagedHooksOnly` is accepted everywhere, no layer can release it, and a non-boolean value engages it. Like the other policy pins it is read once at startup, so a pin added mid-session applies at the next start, not on `/hooks` Reload. `deepseek-build inspect` lists it under **Enforced by policy** as "Hooks outside managed policy disabled" with the file that set it.
 
 ---
 
@@ -618,7 +583,7 @@ Hooks are quiet unless they hold the turn up or change its course:
 
 - While the turn is blocked on a hook batch (a `PreToolUse` gate before a tool, the `UserPromptSubmit` gate, a `Stop` gate), the status row reads `Running pre_tool_use hook…` (or `Running 3 stop hooks…`) once the batch has run for about 300 ms. The timer counts from when the batch started, so a slow hook shows its full wait; a fast one never shows at all.
 - A hook that ran and allowed leaves no trace. Its stdout is not shown.
-- A hook that denies a tool call, blocks a prompt, or stops or continues the agent gets one annotation line with the reason. Hooks from `~/.deepseek-build`, project, and plugin files are named; hooks from managed configuration read as "a managed policy hook".
+- A hook that denies a tool call, blocks a prompt, or stops or continues the agent gets one annotation line with the reason. Hooks from `~/.deepseek-build`, project, and plugin files are named.
 - A hook that fails (non-zero exit, timeout, crash, malformed output) gets one line: `<event> hook (<name>) failed, ignored: <reason>`, where the reason is the exit code with the first stderr line, or the timeout. "Ignored" is literal: failures are fail-open, so the tool call or turn proceeds as if the hook had allowed it.
 
 Deny and failure lines carry the same bullet as the tool rows, so they read as part of the tool call above them.

@@ -52,13 +52,13 @@ Under `workspace`, `read-only`, and `strict` (and custom profiles that extend th
 - `~/.deepseek-build/hooks/` (hook directory)
 - `~/.deepseek-build/hooks-paths` (registry file; not loaded as hook JSON — only its absolute targets are)
 - Absolute targets listed in `hooks-paths` (relative lines are ignored; missing targets refuse sandbox start)
-- `~/.deepseek-build/config.toml`, `~/.deepseek-build/trusted_folders.toml`, `~/.deepseek-build/managed_config.toml`, `~/.deepseek-build/requirements.toml`, `~/.deepseek-build/sandbox.toml` (settings, folder trust, managed policy, requirements, and sandbox profiles)
+- `~/.deepseek-build/config.toml`, `~/.deepseek-build/trusted_folders.toml`, `~/.deepseek-build/sandbox.toml` (settings, folder trust, and sandbox profiles)
 
 Because these files are read-only under these profiles, a change that would be saved to them applies to the current session only. Accepting a folder-trust prompt, switching the model with `/model`, and changing the permission mode (`/auto` or Shift+Tab) take effect for the session but are not saved. To save folder trust, run `deepseek-build --trust` in the directory before starting the sandbox. To change the default model or permission mode, edit `~/.deepseek-build/config.toml` directly.
 
 On first launch under these profiles, deepseek-build creates a real empty `hooks/` directory and empty `hooks-paths` file when they are missing (never symlinks or wrong types). Claude/Cursor global settings are **not** covered by this write-deny; discovery of those vendors remains separately gated by compatibility settings.
 
-A symlinked `$GROK_HOME` or a `hooks-paths` entry with a symlink component is refused at sandbox start (prevents retargeting). Existing parent directories of protected paths are pinned so they cannot be renamed out from under the deny (siblings remain writable). On Linux, nested user namespaces are disabled inside bubblewrap so mount binds cannot be rearranged. Project hooks remain gated by folder trust. The `devbox` profile does not apply this protection (disposable VMs). Profiles that require it refuse to start if the kernel policy cannot be applied (including Linux without verified read-only mounts).
+A symlinked `$DEEPSEEK_BUILD_HOME` or a `hooks-paths` entry with a symlink component is refused at sandbox start (prevents retargeting). Existing parent directories of protected paths are pinned so they cannot be renamed out from under the deny (siblings remain writable). On Linux, nested user namespaces are disabled inside bubblewrap so mount binds cannot be rearranged. Project hooks remain gated by folder trust. The `devbox` profile does not apply this protection (disposable VMs). Profiles that require it refuse to start if the kernel policy cannot be applied (including Linux without verified read-only mounts).
 
 ---
 
@@ -173,7 +173,7 @@ The sandbox is applied to the **entire deepseek-build process** at startup using
 - `bash` commands, `grep` (rg) -- child processes inherit FS restrictions automatically
 - Network -- on Linux, child processes can be blocked via seccomp; on macOS this is a no-op
 
-When a non-`off` sandbox profile is **requested** (CLI, `GROK_SANDBOX`, config, or a managed requirement):
+When a non-`off` sandbox profile is **requested** (CLI, `DEEPSEEK_BUILD_SANDBOX`, or config):
 
 - The agent runs **in-process**, not through the shared leader, so tool calls stay in this process when the profile is enforced. If leader mode would otherwise have been on, a one-line note at startup says so
 - If a built-in profile fails to apply, deepseek-build warns and continues without enforcement (see [Platform Support](#platform-support)), but still refuses the leader so tools are not delegated elsewhere
@@ -205,7 +205,7 @@ Resuming will **not** change a session's sandbox:
 
 Profile resolution order for a **new** session:
 
-1. An explicit `--sandbox <profile>` flag or `GROK_SANDBOX` environment variable
+1. An explicit `--sandbox <profile>` flag or `DEEPSEEK_BUILD_SANDBOX` environment variable
 2. The `[sandbox] profile` in your config
 3. `off` (no sandbox)
 
