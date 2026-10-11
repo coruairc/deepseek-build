@@ -93,6 +93,8 @@ pub enum TitleItem {
     Cwd,
     Model,
     TurnTimer,
+    /// The product-name segment (prints [`xai_grok_brand::NAME`]).
+    #[serde(rename = "deepseek")]
     DeepSeek,
     ActionRequired,
 }
@@ -167,8 +169,8 @@ session_recap_threshold_secs = 30
 # Set the terminal/tab title to reflect agent state.
 enabled = true
 # Items shown in the title. Options: action-required, spinner, activity,
-# session-name, cwd, model, turn-timer, grok
-items = [\"action-required\", \"spinner\", \"activity\", \"session-name\", \"grok\"]
+# session-name, cwd, model, turn-timer, deepseek
+items = [\"action-required\", \"spinner\", \"activity\", \"session-name\", \"deepseek\"]
 
 # [[ui.notifications.hooks]]
 # command = \"terminal-notifier -title 'deepseek-build' -message '$GROK_MESSAGE'\"

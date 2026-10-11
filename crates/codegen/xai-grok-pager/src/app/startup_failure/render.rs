@@ -1,5 +1,5 @@
 use super::{ConnectAttempt, Context, EarlierAttempt, Reason, StartupFailure};
-use crate::app::connect_timeout::CONNECT_UI_TIMEOUT_TRY_COMMAND;
+use crate::app::connect_timeout::connect_ui_timeout_try_command;
 use std::fmt::Write as _;
 use std::time::Duration;
 use xai_grok_telemetry::startup::{AgentKind, PhaseSnapshot, StartupPhase, format_duration};
@@ -150,9 +150,7 @@ impl NextStep {
     /// Kept out of the prose so wrapping can never split it.
     fn command(self) -> Option<String> {
         match self {
-            Self::Retry | Self::CheckNetworkThenRetry => {
-                Some(CONNECT_UI_TIMEOUT_TRY_COMMAND.to_owned())
-            }
+            Self::Retry | Self::CheckNetworkThenRetry => Some(connect_ui_timeout_try_command()),
             Self::RestartSharedLeader => Some(format!("{} leader kill", xai_grok_brand::NAME)),
         }
     }

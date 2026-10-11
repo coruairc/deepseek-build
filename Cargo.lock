@@ -12502,6 +12502,7 @@ dependencies = [
  "webbrowser",
  "wiremock",
  "xai-grok-auth",
+ "xai-grok-brand",
  "xai-grok-config",
  "xai-grok-config-types",
  "xai-grok-env",
@@ -12824,6 +12825,7 @@ dependencies = [
  "tracing",
  "unicode-width 0.2.0",
  "uuid",
+ "xai-grok-brand",
  "xai-grok-pager",
  "xai-grok-pager-diff",
  "xai-grok-shell",
@@ -13811,6 +13813,7 @@ name = "xai-system-power"
 version = "0.1.0"
 dependencies = [
  "windows-sys 0.59.0",
+ "xai-grok-brand",
  "zbus",
 ]
 

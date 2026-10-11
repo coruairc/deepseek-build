@@ -116,7 +116,7 @@ pub struct AddArgs {
     command_or_url: Option<String>,
 
     /// Arguments passed to the server command.
-    /// Place them after `--` so flags such as `-y` are passed to the server instead of grok.
+    /// Place them after `--` so flags such as `-y` are passed to the server instead of deepseek-build.
     #[arg(value_name = "ARGS")]
     args: Vec<String>,
 
@@ -124,7 +124,7 @@ pub struct AddArgs {
     #[arg(short = 't', long, value_enum)]
     transport: Option<McpTransport>,
 
-    /// Config to write to: user (~/.grok/config.toml) or project (./.grok/config.toml)
+    /// Config to write to: user (~/.deepseek-build/config.toml) or project (./.grok/config.toml)
     #[arg(short = 's', long, value_enum, default_value = "user")]
     scope: McpScope,
 

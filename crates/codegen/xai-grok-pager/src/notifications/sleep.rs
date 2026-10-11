@@ -97,9 +97,10 @@ impl SleepInhibitor {
     #[cfg(target_os = "linux")]
     fn platform_inhibit(&self) -> bool {
         let mut cmd = std::process::Command::new("systemd-inhibit");
+        let who = format!("--who={}", xai_grok_brand::NAME);
         cmd.args([
             "--what=idle",
-            "--who=grok",
+            who.as_str(),
             "--why=agent turn in progress",
             "sleep",
             "infinity",

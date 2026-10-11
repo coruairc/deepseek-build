@@ -269,7 +269,7 @@ fn rebuild_worktree_db_from_grove_dirs(
         if !path_under_worktree_roots(&path, &roots) {
             tracing::warn!(
                 path = %path.display(),
-                "rebuild skipped path outside grok worktrees/worktree_pool"
+                "rebuild skipped path outside the deepseek-build worktrees area"
             );
             continue;
         }

@@ -24,7 +24,9 @@ xai-grok-pager = { path = "../xai-grok-pager", default-features = false }
 # Rendering primitives (must match the pager's versions).
 ratatui = { workspace = true, features = ["crossterm", "unstable-widget-ref"] }
 crossterm = { workspace = true, features = ["event-stream", "bracketed-paste"] }
-# Transcript temp-file names (`grok-transcript-<uuid>.ansi`).
+# Product name for transcript temp-file names.
+xai-grok-brand = { workspace = true }
+# Transcript temp-file names (`deepseek-build-transcript-<uuid>.ansi`).
 uuid = { workspace = true, features = ["v4"] }
 tracing = { workspace = true }
 

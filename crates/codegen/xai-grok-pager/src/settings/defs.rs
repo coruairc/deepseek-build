@@ -718,7 +718,7 @@ pub fn default_settings() -> Vec<SettingMeta> {
             description: "On: deepseek-build cannot set models for subagents\n\
                           Off: deepseek-build may choose a different model for a subagent. Takes effect \
                           after restart.\n\
-                          NOTE: This setting only applies when all models are xAI \
+                          NOTE: This setting only applies when all models come from the same \
                           \"model_family\". You likely don't need to configure this setting.",
             keywords: &[
                 "subagent",

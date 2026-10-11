@@ -160,7 +160,7 @@ fn apply_agent_endpoint_args(
     if let Some(v) = &agent_args.cli_chat_proxy_base_url {
         config.endpoints.cli_chat_proxy_base_url = Some(v.clone());
     }
-    if let Some(v) = &agent_args.xai_api_base_url {
+    if let Some(v) = &agent_args.model_api_base_url {
         config.endpoints.xai_api_base_url = v.clone();
     }
 }

@@ -1,12 +1,12 @@
 # Hooks
 
-Hooks let you run a script or send an HTTP request at key moments in a Grok session. Use them to automate tasks, enforce safety checks, log activity, send notifications, and integrate your own tools.
+Hooks let you run a script or send an HTTP request at key moments in a deepseek-build session. Use them to automate tasks, enforce safety checks, log activity, send notifications, and integrate your own tools.
 
 ---
 
 ## What Are Hooks?
 
-A hook is a shell command or HTTP endpoint that Grok calls when a specific lifecycle event occurs. Hooks can:
+A hook is a shell command or HTTP endpoint that deepseek-build calls when a specific lifecycle event occurs. Hooks can:
 
 - **Block actions**: A `PreToolUse` hook can deny a dangerous command before it runs.
 - **Keep the agent working**: A `Stop` hook can block the agent from finishing its turn until a condition holds (e.g. the test suite passes) and feed the reason back to the model.
@@ -43,7 +43,7 @@ A hook is a shell command or HTTP endpoint that Grok calls when a specific lifec
        "SessionStart": [
          {
            "hooks": [
-             { "type": "command", "command": "echo 'Grok session started in '$(pwd)" }
+             { "type": "command", "command": "echo 'deepseek-build session started in '$(pwd)" }
            ]
          }
        ]
@@ -51,7 +51,7 @@ A hook is a shell command or HTTP endpoint that Grok calls when a specific lifec
    }
    ```
 
-3. Start (or restart) a Grok session. The hook runs automatically on `SessionStart`.
+3. Start (or restart) a deepseek-build session. The hook runs automatically on `SessionStart`.
 
 4. Press `Ctrl+L` on non–VS Code family terminals (or run `/hooks` anywhere — preferred on VS Code family) and check the Hooks tab to confirm it loaded.
 
@@ -70,8 +70,8 @@ Hooks are discovered from several places (all are merged):
 | Project | `<project>/.claude/settings.json` (and `settings.local.json`) | Requires trust | Claude compatibility (configurable) |
 | Project | `<project>/.cursor/hooks.json` | Requires trust | Cursor compatibility (configurable) |
 | Config | `~/.deepseek-build/config.toml` | Always | Your hooks alongside the rest of your config |
-| Config | `managed_config.toml` (`$GROK_HOME` and `/etc/grok`) | Always | Organization-distributed hooks (server-synced and on-device) |
-| Config | `requirements.toml` (signed cache, and `/etc/grok`) | Always | Organization-enforced hooks; see [Enforced hooks](#enforced-hooks) |
+| Config | `managed_config.toml` (`$GROK_HOME` and `/etc/deepseek-build`) | Always | Organization-distributed hooks (server-synced and on-device) |
+| Config | `requirements.toml` (signed cache, and `/etc/deepseek-build`) | Always | Organization-enforced hooks; see [Enforced hooks](#enforced-hooks) |
 | Plugin | Bundled inside installed plugins | Per-plugin | Shared team hooks |
 
 Config-file hooks live in the same TOML your organization already controls; see [Hooks in Config Files](#hooks-in-config-files) for the format. The compatible vendor hook sources are scanned by default. To disable scanning for a specific vendor, set `[compat.<vendor>] hooks = false` in `~/.deepseek-build/config.toml` or the corresponding environment variable. See [Configuration](05-configuration.md#harness-compatibility) for details.
@@ -114,7 +114,7 @@ After a block, prompts already queued behind the blocked one do not auto-run: th
 
 ### Cursor Hook Compatibility
 
-Grok accepts Cursor's camelCase hook event names, so `~/.cursor/hooks.json` loads unchanged:
+deepseek-build accepts Cursor's camelCase hook event names, so `~/.cursor/hooks.json` loads unchanged:
 
 | Cursor event | Maps to |
 |---|---|
@@ -159,7 +159,7 @@ Each `.json` file can define hooks for multiple events:
 
 ### Key Fields
 
-- **Event name** (top-level key): any event listed in [Hook Events](#hook-events). Grok skips unrecognized event names so a shared Claude or Cursor settings file still loads.
+- **Event name** (top-level key): any event listed in [Hook Events](#hook-events). deepseek-build skips unrecognized event names so a shared Claude or Cursor settings file still loads.
 - **matcher** (optional): A regular expression that selects which invocations trigger the hook. What it tests depends on the event: the tool name on tool events (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionDenied`), the notification type on `Notification`, the subagent type on `SubagentStart`/`SubagentStop` (e.g. `explore`), the start source on `SessionStart` (`startup`, `resume`, …), the end reason on `SessionEnd`, the compaction trigger on `PreCompact`/`PostCompact` (`manual` or `auto`), the error type on `StopFailure` (`rate_limit`, `authentication_failed`, `invalid_request`, `server_error`, `max_output_tokens`, or `unknown`), and the reason on `StopCancelled` (`user_interrupt`, `permission_rejected`, `permission_cancelled`, `max_turns`, `no_progress`, or `unknown`). A matcher on `Stop` or `UserPromptSubmit` is ignored with a warning (those events always fire). An empty or omitted matcher matches everything. A finish-thinking chime should set `matcher` to `idle_prompt` on `Notification` (any turn end, then sustained idle); `permission_prompt` fires only when a permission UI is actually waiting. The matcher tests the real tool name; MCP calls routed through the internal `use_tool` dispatcher appear as the qualified `server__tool` name (e.g. `linear__save_issue`), so match on that, not the dispatcher name.
 - **type**: `"command"` (run a script or shell one-liner) or `"http"` (POST the event to a URL).
 - **command**: Path to executable (relative to the JSON file) or inline shell command.
@@ -167,7 +167,7 @@ Each `.json` file can define hooks for multiple events:
 
 ### Tool Name Aliases
 
-In a `matcher`, Grok maps Claude-style tool names to its own so hooks migrated from Claude fire correctly. Common aliases include:
+In a `matcher`, deepseek-build maps Claude-style tool names to its own so hooks migrated from Claude fire correctly. Common aliases include:
 
 - `Bash` → `run_terminal_command`
 - `Read` → `read_file`
@@ -183,7 +183,7 @@ A matcher keeps its original name too, so `Bash` matches both `Bash` and `run_te
 
 ## How a Hook Resolves
 
-When an event fires, Grok resolves it in four steps:
+When an event fires, deepseek-build resolves it in four steps:
 
 1. **Select matching groups.** For that event, each matcher group whose `matcher` matches the event's field runs. The matcher tests the tool name on tool events, the notification type on `Notification`, and so on (see [Key Fields](#key-fields)). An empty or omitted matcher matches everything.
 2. **Run the handlers in order.** Handlers in the selected groups run in config order, each receiving the event as JSON on stdin, until one returns `deny` (which stops the chain). Handlers from different sources (global, project, plugin, config) are merged, and identical handlers are deduplicated. Every handler sees the model's original tool input; a `PreToolUse` `updatedInput` is applied only after all handlers finish, so one handler cannot see another's rewrite (the last rewrite wins).
@@ -194,13 +194,13 @@ When an event fires, Grok resolves it in four steps:
 
 ## Hooks in Config Files
 
-Hooks can also live directly in your Grok config, so a team can distribute them with the rest of their configuration instead of shipping separate JSON files. The same `hooks` object is read from three TOML files:
+Hooks can also live directly in your deepseek-build config, so a team can distribute them with the rest of their configuration instead of shipping separate JSON files. The same `hooks` object is read from three TOML files:
 
 | File | Tier | Who sets it |
 |------|------|-------------|
 | `~/.deepseek-build/config.toml` | User | You |
-| `managed_config.toml` (`$GROK_HOME`, `/etc/grok`) | Managed / system | Your organization |
-| `requirements.toml` (`$GROK_HOME` signed cache, `/etc/grok`) | Requirements | Your organization |
+| `managed_config.toml` (`$GROK_HOME`, `/etc/deepseek-build`) | Managed / system | Your organization |
+| `requirements.toml` (`$GROK_HOME` signed cache, `/etc/deepseek-build`) | Requirements | Your organization |
 
 The TOML is structurally identical to the JSON hook object, so an existing hook transliterates directly:
 
@@ -235,7 +235,7 @@ Prefer the inline form to avoid repeating the `[[hooks.<Event>.hooks]]` header f
 
 Hooks from the config layers your organization controls are enforced: they carry a `[policy]` badge in `/hooks`, `Space` refuses to disable them, an entry in `~/.deepseek-build/disabled-hooks` does not skip them, and their source cannot be removed. Two layers qualify:
 
-- The root-owned system files `/etc/grok/requirements.toml` and `/etc/grok/managed_config.toml` (`requirements/system:` and `system_managed:` names).
+- The root-owned system files `/etc/deepseek-build/requirements.toml` and `/etc/deepseek-build/managed_config.toml` (`requirements/system:` and `system_managed:` names).
 - The `~/.deepseek-build/requirements.toml` that the deployment sync writes, while its bytes match the signed policy the server sent (`requirements/signed:` names). If the file is edited or its signature file is missing or unreadable, its hooks load as your own (`requirements/user:` names) and can be disabled again; an unreadable `requirements.toml` contributes no hooks. Organizations that need the file to stay intact set `fail_closed = true` in the same requirements, which refuses to start on an edited copy or a missing signature (an unreadable file is a read error and still starts). See [Configuration](26-config-reference.md#requirementstoml).
 
 Hooks in `~/.deepseek-build/managed_config.toml` and `~/.deepseek-build/config.toml` are distribution, not enforcement: you can disable them.
@@ -245,18 +245,18 @@ Hooks in `~/.deepseek-build/managed_config.toml` and `~/.deepseek-build/config.t
 An organization can restrict a machine to the hooks it enforces:
 
 ```toml
-# /etc/grok/requirements.toml
+# /etc/deepseek-build/requirements.toml
 allow_managed_hooks_only = true
 ```
 
 With this set:
 
-- **What runs.** Only [enforced hooks](#enforced-hooks): the ones from the root-owned `/etc/grok/requirements.toml` and `/etc/grok/managed_config.toml`, and the ones in the synced `~/.deepseek-build/requirements.toml` while it matches its signature. An edited synced file loads as your own hooks, which the pin skips.
-- **What is skipped.** Every other hook, at dispatch: `~/.deepseek-build/hooks`, every `~/.deepseek-build/*.toml` file, project hooks, plugin hooks, agent frontmatter hooks, and the Claude and Cursor compatibility files. In `/hooks` they show `[disabled]`, and enabling them is refused ("Hooks outside managed policy are disabled by your organization."); `grok inspect` names the file that set the pin.
+- **What runs.** Only [enforced hooks](#enforced-hooks): the ones from the root-owned `/etc/deepseek-build/requirements.toml` and `/etc/deepseek-build/managed_config.toml`, and the ones in the synced `~/.deepseek-build/requirements.toml` while it matches its signature. An edited synced file loads as your own hooks, which the pin skips.
+- **What is skipped.** Every other hook, at dispatch: `~/.deepseek-build/hooks`, every `~/.deepseek-build/*.toml` file, project hooks, plugin hooks, agent frontmatter hooks, and the Claude and Cursor compatibility files. In `/hooks` they show `[disabled]`, and enabling them is refused ("Hooks outside managed policy are disabled by your organization."); `deepseek-build inspect` names the file that set the pin.
 - **What still runs.** Hooks the embedding client registers over ACP (an IDE or the desktop app), as under Claude Code's `allowManagedHooksOnly`. The pager's `[[ui.notifications.hooks]]` commands are a separate mechanism.
-- **Windows.** There is no root-owned layer (no `/etc/grok`), so only the signed synced `requirements.toml` hooks and ACP client hooks still run.
+- **Windows.** There is no root-owned layer (no `/etc/deepseek-build`), so only the signed synced `requirements.toml` hooks and ACP client hooks still run.
 
-The key is a tighten-only policy pin: any native policy layer (`requirements.toml` or `managed_config.toml` in `$GROK_HOME` or `/etc/grok`, or macOS MDM) or Claude's `managed-settings.json` can set it, the camelCase `allowManagedHooksOnly` is accepted everywhere, no layer can release it, and a non-boolean value engages it. Like the other policy pins it is read once at startup, so a pin added mid-session applies at the next start, not on `/hooks` Reload. `grok inspect` lists it under **Enforced by policy** as "Hooks outside managed policy disabled" with the file that set it.
+The key is a tighten-only policy pin: any native policy layer (`requirements.toml` or `managed_config.toml` in `$GROK_HOME` or `/etc/deepseek-build`, or macOS MDM) or Claude's `managed-settings.json` can set it, the camelCase `allowManagedHooksOnly` is accepted everywhere, no layer can release it, and a non-boolean value engages it. Like the other policy pins it is read once at startup, so a pin added mid-session applies at the next start, not on `/hooks` Reload. `deepseek-build inspect` lists it under **Enforced by policy** as "Hooks outside managed policy disabled" with the file that set it.
 
 ---
 
@@ -280,7 +280,7 @@ The event is sent as JSON on **stdin** (for example, a `PreToolUse` event; the p
 }
 ```
 
-Every event carries the same common fields: `hookEventName`, `sessionId`, `cwd`, `workspaceRoot`, `timestamp`, `permissionMode` (`default`, `auto`, `plan`, or `bypassPermissions`), and `promptId` (the turn the event belongs to; absent for session-scoped events), plus event-specific fields like `toolName` above. The `hook_event_name` (snake_case key) carries Claude's PascalCase value; `hookEventName` (camelCase key) carries grok's snake_case value.
+Every event carries the same common fields: `hookEventName`, `sessionId`, `cwd`, `workspaceRoot`, `timestamp`, `permissionMode` (`default`, `auto`, `plan`, or `bypassPermissions`), and `promptId` (the turn the event belongs to; absent for session-scoped events), plus event-specific fields like `toolName` above. The `hook_event_name` (snake_case key) carries Claude's PascalCase value; `hookEventName` (camelCase key) carries deepseek-build's snake_case value.
 
 ### Output (Blocking Hooks)
 
@@ -307,7 +307,7 @@ The value must be a JSON object; a non-object fails the hook. If the rewritten i
 
 A `deny` discards any `updatedInput`; when several hooks return one, the last wins. Omitting `decision` while returning `updatedInput` allows the call and applies the rewrite.
 
-A `defer` neither blocks the call nor approves it: the call takes the normal permission flow, exactly as if your hook had not answered, and a warning naming the hook goes to the log. It also acts on nothing else you sent — an `updatedInput` or `additionalContext` next to a `defer` is ignored and named in the log. Across hooks `defer` ranks below `ask`, so where one of your hooks defers and another asks, grok prompts.
+A `defer` neither blocks the call nor approves it: the call takes the normal permission flow, exactly as if your hook had not answered, and a warning naming the hook goes to the log. It also acts on nothing else you sent — an `updatedInput` or `additionalContext` next to a `defer` is ignored and named in the log. Across hooks `defer` ranks below `ask`, so where one of your hooks defers and another asks, deepseek-build prompts.
 
 `additionalContext` is a note for the model. It arrives after the call has run — never before — with the results of the batch the call belongs to, wrapped in your harness's reminder tag (`<system-reminder>` by default) and naming the hook that wrote it, so the model can tell your text from the user's. Every hook that sends one is delivered, in the order the hooks ran (unlike `updatedInput`, where the last writer wins). A `deny` drops all of it, since the call never runs, and names the drop in the log. Text over 10,000 characters is clipped, the same ceiling `Stop` feedback carries.
 
@@ -335,7 +335,7 @@ A `defer` neither blocks the call nor approves it: the call takes the normal per
 | `updatedMCPToolOutput` | MCP-only alias for `updatedToolOutput`. Ignored on a built-in tool. |
 
 - **Delivery.** The block reason and `additionalContext` arrive after the tool result, wrapped in your harness's reminder tag and naming the hook that wrote them, so the model can act in the same turn. Every hook's block reason and `additionalContext` are delivered in the order the hooks ran, so one hook's finding cannot drop another's. Only replacements are last-writer-wins: when two hooks return one, the last survives and the drop is named in the log.
-- **Building `updatedToolOutput`.** On a built-in tool it must carry grok's own output shape for the tool that ran, a tagged object such as `{"type": "Bash", …}`. Take the `toolResult` the event handed you, edit it, and send it back — that is exactly the shape it is validated against. A replacement that fails to parse or parses as another tool's output is ignored and the original stands, but the hook's run is recorded `Failed` with the reason, so an exit-0 hook that shows "failed" is reporting a dropped replacement, not that it never ran. A mistyped `decision` (only `"block"` is honored) is reported the same way. Check `toolResultTruncated` first: an oversized payload reaches the hook as a plain string and cannot be echoed back.
+- **Building `updatedToolOutput`.** On a built-in tool it must carry deepseek-build's own output shape for the tool that ran, a tagged object such as `{"type": "Bash", …}`. Take the `toolResult` the event handed you, edit it, and send it back — that is exactly the shape it is validated against. A replacement that fails to parse or parses as another tool's output is ignored and the original stands, but the hook's run is recorded `Failed` with the reason, so an exit-0 hook that shows "failed" is reporting a dropped replacement, not that it never ran. A mistyped `decision` (only `"block"` is honored) is reported the same way. Check `toolResultTruncated` first: an oversized payload reaches the hook as a plain string and cannot be echoed back.
 - **MCP tools.** There is no shape to enforce, so both `updatedToolOutput` and `updatedMCPToolOutput` pass through un-checked — a JSON string becomes the model-facing text verbatim, any other value is serialized — and the last hook to write wins across both keys.
 - **Caps.** The block reason and `additionalContext` are clipped at 10,000 characters, the ceiling `Stop` feedback and `PreToolUse` context share. A replacement gets 64 K characters. Caps are measured on the rendered model-facing text and applied once the replacement has rendered, so a long `updatedToolOutput` is clipped like a string, not dropped for its size. A structured replacement is dropped only when it does not match the tool's own output shape.
 - **Broken hook.** A non-zero exit — exit 2 included — keeps the block reason and drops everything else: `additionalContext` and the replacement are dropped and the drop is named in the log, the same rule `PreToolUse` applies to `updatedInput`. The block is the fail-safe direction.
@@ -382,7 +382,7 @@ If your host must never miss an idle transition, listen for the `idle_prompt` `N
 
 A cancelled turn's report is dispatched off the session's command loop, so an interrupt is never delayed by your hook. The report can therefore arrive **after** the next turn's `UserPromptSubmit`, and turn-end reports are not ordered against each other across paths.
 
-A script that tracks busy and idle should key on `promptId`, following the rules below. grok mints one per turn, but a client that supplies its own in `_meta` owns its uniqueness, so treat the id as opaque and scope it to the session.
+A script that tracks busy and idle should key on `promptId`, following the rules below. deepseek-build mints one per turn, but a client that supplies its own in `_meta` owns its uniqueness, so treat the id as opaque and scope it to the session.
 
 Every turn-end report goes through one worker, so a slow hook delays the next report but never the turn it belongs to. Keep observe-hook timeouts short.
 
@@ -439,7 +439,7 @@ What the two scripts have to get right:
 
 - **Track the newest `promptId` and ignore reports for older turns.** A cancelled turn's report is
   dispatched off the command loop, so it can arrive after the next turn's `UserPromptSubmit`.
-- **Settle unconditionally when there is no `promptId`.** That is grok reporting on the session
+- **Settle unconditionally when there is no `promptId`.** That is deepseek-build reporting on the session
   rather than a turn: the `idle_prompt` ping and the session-end `Stop`. It is what makes the
   backstop work for a rewind or a superseded turn, which report nothing.
 - **Treat a `promptId` you never saw start as idle.** An interrupted bash-mode turn reports without
@@ -462,7 +462,7 @@ Both scripts also run inside a subagent's own session. Every event either script
 filters a child out of both halves. This matters most for a background subagent, which outlives
 the parent turn and would otherwise hold the host busy after the parent went idle.
 
-`Stop` input also carries `backgroundTasks` and `sessionCrons`, so a hook can distinguish "session is done" from "session is paused waiting for background work to wake it back up". Both arrays are empty when nothing is in flight or scheduled. Each `backgroundTasks` entry describes one in-flight task: `id`, `type` (`shell`, `monitor`, or `subagent`), `status`, and (depending on the type) `command` (shell tasks only), `description` (a monitor's watched command line, or a subagent's task description), and `agentType` (subagents). Each `sessionCrons` entry describes one scheduled wakeup (`scheduler_create` or `/loop`): `id`, `schedule`, `recurring`, and `prompt`. The `schedule` value is a human-readable interval such as `every 5 minutes`; grok schedules are intervals, not cron expressions. Free-text entry fields are capped at 1000 characters with an in-string `… [+N chars]` marker.
+`Stop` input also carries `backgroundTasks` and `sessionCrons`, so a hook can distinguish "session is done" from "session is paused waiting for background work to wake it back up". Both arrays are empty when nothing is in flight or scheduled. Each `backgroundTasks` entry describes one in-flight task: `id`, `type` (`shell`, `monitor`, or `subagent`), `status`, and (depending on the type) `command` (shell tasks only), `description` (a monitor's watched command line, or a subagent's task description), and `agentType` (subagents). Each `sessionCrons` entry describes one scheduled wakeup (`scheduler_create` or `/loop`): `id`, `schedule`, `recurring`, and `prompt`. The `schedule` value is a human-readable interval such as `every 5 minutes`; deepseek-build schedules are intervals, not cron expressions. Free-text entry fields are capped at 1000 characters with an in-string `… [+N chars]` marker.
 
 Inside a subagent, the gate fires as `SubagentStop` (agent-frontmatter `Stop` hooks are automatically remapped). A `Stop` hook only gates the main agent.
 
@@ -470,21 +470,21 @@ Inside a subagent, the gate fires as `SubagentStop` (agent-frontmatter `Stop` ho
 
 **Porting Claude Code stop hooks**: the output vocabulary (`decision`, `reason`, `continue`, `stopReason`, `additionalContext`) works unchanged. Check this list for what does not match Claude:
 
-- **camelCase input**: grok's stdin envelope uses camelCase keys throughout where Claude uses snake_case. A script reading `.stop_hook_active` or `.background_tasks[].agent_type` must switch to `.stopHookActive` and `.backgroundTasks[].agentType` (the `hook_event_name` snake_case key carries Claude's PascalCase value, e.g. `"Stop"`; the `hookEventName` camelCase key carries grok's snake_case value, e.g. `"stop"`). Hooks registered through the grok-agent-sdk convert both the top-level keys and the `backgroundTasks`/`sessionCrons` entry keys to snake_case, so the wire's `.backgroundTasks[].agentType` reads as `.background_tasks[].agent_type` in the SDK.
-- **`toolResult` field**: the `PostToolUse` tool output is `toolResult` (SDK: `tool_result`); grok also emits a `tool_response` snake alias that copies `toolResult`, so a hook reading Claude's `.tool_response` works unchanged.
-- **`updatedToolOutput` carries grok's own output shape on built-in tools**: a `PostToolUse` replacement for a built-in tool is validated against the tool's output as grok serializes it — the tagged object in that event's `toolResult` — so one written against another runtime's field names parses as the wrong shape and is ignored. On an MCP tool there is no shape to enforce, so `updatedToolOutput` passes through like its `updatedMCPToolOutput` alias. See [PostToolUse Output](#posttooluse-output).
+- **camelCase input**: deepseek-build's stdin envelope uses camelCase keys throughout where Claude uses snake_case. A script reading `.stop_hook_active` or `.background_tasks[].agent_type` must switch to `.stopHookActive` and `.backgroundTasks[].agentType` (the `hook_event_name` snake_case key carries Claude's PascalCase value, e.g. `"Stop"`; the `hookEventName` camelCase key carries deepseek-build's snake_case value, e.g. `"stop"`). Hooks registered through the grok-agent-sdk convert both the top-level keys and the `backgroundTasks`/`sessionCrons` entry keys to snake_case, so the wire's `.backgroundTasks[].agentType` reads as `.background_tasks[].agent_type` in the SDK.
+- **`toolResult` field**: the `PostToolUse` tool output is `toolResult` (SDK: `tool_result`); deepseek-build also emits a `tool_response` snake alias that copies `toolResult`, so a hook reading Claude's `.tool_response` works unchanged.
+- **`updatedToolOutput` carries deepseek-build's own output shape on built-in tools**: a `PostToolUse` replacement for a built-in tool is validated against the tool's output as deepseek-build serializes it — the tagged object in that event's `toolResult` — so one written against another runtime's field names parses as the wrong shape and is ignored. On an MCP tool there is no shape to enforce, so `updatedToolOutput` passes through like its `updatedMCPToolOutput` alias. See [PostToolUse Output](#posttooluse-output).
 - **Session-end fire**: an extra observe-only Stop fires at session end; filter on `reason == "end_turn"` (see above).
 - **Interval schedules**: `sessionCrons[].schedule` is a human-readable interval, never a cron expression.
 - **Task types**: `backgroundTasks[].type` is only `shell`, `monitor`, or `subagent`; Claude's other labels (`workflow`, `teammate`, …) are not emitted.
-- **StopFailure classes**: grok emits six (`rate_limit`, `authentication_failed`, `invalid_request`, `server_error`, `max_output_tokens`, `unknown`). Capacity errors (503/529) classify as `rate_limit`. A matcher on an error class grok does not emit never fires.
-- **Default timeout**: grok defaults observe hooks to 5 seconds, which is shorter than most. Set `timeout` explicitly on an imported hook that does real work.
+- **StopFailure classes**: deepseek-build emits six (`rate_limit`, `authentication_failed`, `invalid_request`, `server_error`, `max_output_tokens`, `unknown`). Capacity errors (503/529) classify as `rate_limit`. A matcher on an error class deepseek-build does not emit never fires.
+- **Default timeout**: deepseek-build defaults observe hooks to 5 seconds, which is shorter than most. Set `timeout` explicitly on an imported hook that does real work.
 - **`UserPromptSubmit` blocks, with one gap**: exit 2 and `decision: "block"` reject the prompt like Claude, and a blocked prompt never enters the conversation history — but an allowing hook's stdout / `additionalContext` is discarded rather than added as context.
-- **`StopCancelled` is grok-specific**: a config that uses it is not portable to a runtime with no interrupt hook.
-- **`idle_prompt` fires on any turn end**: grok fires it after an interrupted or errored turn too, not only a completed one, because it reports a state rather than an outcome. Its `message` is display text and can change between releases, so match on `notificationType` instead.
-- **Subagent identity is `subagentType`, not `agent_type`**: grok puts it in the payload of the events that can fire inside a subagent, matching its own `SubagentStart`/`SubagentStop`, rather than in the common fields.
-- **permission_mode values**: grok emits `default`, `auto`, `plan`, or `bypassPermissions`. Claude's `acceptEdits`/`dontAsk` have no grok equivalent (grok's `auto` is the nearest), so a check like `permission_mode === "acceptEdits"` never matches.
+- **`StopCancelled` is deepseek-build-specific**: a config that uses it is not portable to a runtime with no interrupt hook.
+- **`idle_prompt` fires on any turn end**: deepseek-build fires it after an interrupted or errored turn too, not only a completed one, because it reports a state rather than an outcome. Its `message` is display text and can change between releases, so match on `notificationType` instead.
+- **Subagent identity is `subagentType`, not `agent_type`**: deepseek-build puts it in the payload of the events that can fire inside a subagent, matching its own `SubagentStart`/`SubagentStop`, rather than in the common fields.
+- **permission_mode values**: deepseek-build emits `default`, `auto`, `plan`, or `bypassPermissions`. Claude's `acceptEdits`/`dontAsk` have no deepseek-build equivalent (deepseek-build's `auto` is the nearest), so a check like `permission_mode === "acceptEdits"` never matches.
 - **Client (SDK) gate timeouts**: SDK `Stop`/`SubagentStop` gates default to 600 seconds like file hooks; `PreToolUse` client gates default to 30 seconds (the interactive hot path). Either can be overridden per matcher group via `timeoutS`, capped at 600.
-- **`/goal`**: grok's goal loop is a separate feature that runs before the stop gate; it is not a prompt-type Stop hook.
+- **`/goal`**: deepseek-build's goal loop is a separate feature that runs before the stop gate; it is not a prompt-type Stop hook.
 
 A complete keep-working policy in one script:
 
@@ -506,7 +506,7 @@ For events like `SessionStart` or `Notification`, stdout is ignored. Just exit 0
 
 ### Environment Variables
 
-Grok sets several environment variables on every hook process. These are useful when writing context-aware or plugin-aware hook scripts.
+deepseek-build sets several environment variables on every hook process. These are useful when writing context-aware or plugin-aware hook scripts.
 
 #### Runner-injected variables (always available)
 
@@ -516,7 +516,7 @@ These variables are set by the hook runner for **every** hook:
 |-----------------------|-------------|
 | `GROK_HOOK_EVENT`     | The name of the event that triggered the hook (e.g. `pre_tool_use`, `session_start`, `post_tool_use`, `session_end`, `stop`, `notification`). |
 | `GROK_HOOK_NAME`      | The configured name of this specific hook (includes the plugin prefix for plugin-provided hooks). |
-| `GROK_SESSION_ID`     | The unique identifier of the current Grok session. |
+| `GROK_SESSION_ID`     | The unique identifier of the current deepseek-build session. |
 | `GROK_WORKSPACE_ROOT` | Absolute path to the root of the current workspace. |
 | `CLAUDE_PROJECT_DIR`  | Absolute path to the workspace root. A Claude Code-compatible alias for `GROK_WORKSPACE_ROOT`, set for every hook. |
 
@@ -524,7 +524,7 @@ These variables are **reserved**. Any values you attempt to set for them via the
 
 #### Plugin hook variables
 
-When a hook originates from a plugin, Grok additionally injects the following variables:
+When a hook originates from a plugin, deepseek-build additionally injects the following variables:
 
 | Variable             | Description |
 |----------------------|-------------|
@@ -561,7 +561,7 @@ Both `command` and `url` support `${VAR}` and `$VAR` expansion. On Windows Power
 Instead of a local script, call a remote endpoint:
 
 ```json
-{ "type": "http", "url": "https://hooks.example.com/grok-event", "timeout": 15 }
+{ "type": "http", "url": "https://hooks.example.com/deepseek-build-event", "timeout": 15 }
 ```
 
 The full event envelope is POSTed as JSON.
@@ -608,7 +608,7 @@ Enable or disable an individual hook at runtime by pressing `Space` in the Hooks
 
 ### Mid-Session Reload
 
-Press `r` in the Hooks tab to reload all hooks from disk. Grok re-reads every hook source, so this picks up changes you made to hook files during the session.
+Press `r` in the Hooks tab to reload all hooks from disk. deepseek-build re-reads every hook source, so this picks up changes you made to hook files during the session.
 
 ---
 
@@ -688,4 +688,4 @@ echo '{"decision": "allow"}'
 - **Hook not running?** Press `Ctrl+L` on non–VS Code family (or run `/hooks` anywhere) to see if it is loaded and matched.
 - **Project hooks ignored?** The folder may be untrusted. Run `/hooks-trust` (or relaunch with `--trust`).
 - **Script not found?** Check the path is relative to the `.json` file and executable (`chmod +x`).
-- **See errors?** Capture logs by launching with `RUST_LOG=debug GROK_LOG_FILE=/tmp/grok.log grok`, then check `/tmp/grok.log`.
+- **See errors?** Capture logs by launching with `RUST_LOG=debug GROK_LOG_FILE=/tmp/deepseek-build.log deepseek-build`, then check `/tmp/deepseek-build.log`.

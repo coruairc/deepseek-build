@@ -169,7 +169,7 @@ async fn ext_call<T: serde::de::DeserializeOwned>(
         .result
         .ok_or_else(|| anyhow::anyhow!("ACP response missing result field"))
 }
-/// Stdout carries only the session directory, so `cd "$(grok worktree create)"` works.
+/// Stdout carries only the session directory, so `cd "$(deepseek-build worktree create)"` works.
 async fn cmd_create(
     tx: &xai_acp_lib::AcpAgentTx,
     source_cwd: &Path,

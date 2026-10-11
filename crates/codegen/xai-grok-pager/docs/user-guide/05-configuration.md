@@ -1,6 +1,6 @@
 # Configuration
 
-Grok reads settings from config files, environment variables, and CLI flags. This page covers the common options. The field list for `config.toml`, `managed_config.toml`, and `requirements.toml` is [26-config-reference.md](26-config-reference.md) (extracted to `~/.deepseek-build/docs/user-guide/` on launch).
+deepseek-build reads settings from config files, environment variables, and CLI flags. This page covers the common options. The field list for `config.toml`, `managed_config.toml`, and `requirements.toml` is [26-config-reference.md](26-config-reference.md) (extracted to `~/.deepseek-build/docs/user-guide/` on launch).
 
 ---
 
@@ -9,7 +9,7 @@ Grok reads settings from config files, environment variables, and CLI flags. Thi
 Settings resolve highest-priority first:
 
 1. **CLI flags** (e.g. `--yolo`, `--model`, `--sandbox`)
-2. **Environment variables** (e.g. `XAI_API_KEY`, `GROK_MEMORY`)
+2. **Environment variables** (e.g. `DEEPSEEK_API_KEY`, `GROK_MEMORY`)
 3. **`requirements.toml` / MDM** (org-enforced; clamps every config layer below, including the overlay)
 4. **`GROK_CONFIG` / `GROK_CONFIG_PATH` overlay** (above `config.toml` and managed, below `requirements.toml` / MDM)
 5. **config.toml** (`~/.deepseek-build/config.toml`)
@@ -18,26 +18,26 @@ Settings resolve highest-priority first:
 
 Within the config-file tier, the layers merge lowest-to-highest: `managed_config.toml` → `config.toml` → `GROK_CONFIG` overlay → `requirements.toml` / MDM. So `requirements.toml` and MDM clamp **both** your `config.toml` and the overlay.
 
-`GROK_CONFIG` / `GROK_CONFIG_PATH` (tier 4) are config **overlays**: a merged config layer, not direct-setting environment variables like `XAI_API_KEY` (tier 2). They set config keys (subject to the allowlist below), so read them as part of the config-file tier rather than the env-var tier.
+`GROK_CONFIG` / `GROK_CONFIG_PATH` (tier 4) are config **overlays**: a merged config layer, not direct-setting environment variables like `DEEPSEEK_API_KEY` (tier 2). They set config keys (subject to the allowlist below), so read them as part of the config-file tier rather than the env-var tier.
 
 ### Injecting config with `GROK_CONFIG`
 
-A harness or ACP client that launches `grok agent stdio` can inject settings without writing a `config.toml` or relocating `$GROK_HOME`:
+A harness or ACP client that launches `deepseek-build agent stdio` can inject settings without writing a `config.toml` or relocating `$GROK_HOME`:
 
 - **`GROK_CONFIG`**: an inline JSON object overlay.
 - **`GROK_CONFIG_PATH`**: an *additional* file overlay (not a replacement for `config.toml`), a JSON or TOML file read by its extension (`.json` → JSON, else TOML). `GROK_CONFIG` wins if both are set. An empty `GROK_CONFIG` is treated as unset, and a malformed one logs a warning and falls through to `GROK_CONFIG_PATH`.
 
-The overlay is **deep-merged** on top of your `config.toml` (it overrides only the keys it sets), placed above the user/managed layers but **below** `requirements.toml` / MDM so an enterprise pin still wins. A malformed blob is ignored with a warning. This mirrors `CODEX_CONFIG` from the `codex-acp` adapter (a JSON object merged into the session config); Grok is ACP-native, so the overlay lives in the agent itself. It only affects settings read from the merged config, and it is **not** a permission-escalation path. The overlay is confined, fail-closed, to an **allowlist** of soft settings (`models`, `features`, a narrowed `toolset`, and a `shell_environment_policy` limited to its filter fields, which select among env names the launcher already controls and cannot inject an env value into tool subprocesses); every other table is dropped at the choke point, so the overlay cannot spawn commands, set auth policy, redirect network traffic, elevate trust, or add a discovery source. Even on the allowlisted settings, a specific set of security gates read the raw disk layers rather than the overlay. The `ConfigLayers::env_overlay` rustdoc is the canonical list of what the overlay can and cannot reach and which gates read it overlay-free; see also the [internal environment-variables reference](../internal/22-environment-variables.md). Use `GROK_DEFAULT_SELECTED_PERMISSION` for headless permission control. For example, to set the default reasoning effort:
+The overlay is **deep-merged** on top of your `config.toml` (it overrides only the keys it sets), placed above the user/managed layers but **below** `requirements.toml` / MDM so an enterprise pin still wins. A malformed blob is ignored with a warning. This mirrors `CODEX_CONFIG` from the `codex-acp` adapter (a JSON object merged into the session config); deepseek-build is ACP-native, so the overlay lives in the agent itself. It only affects settings read from the merged config, and it is **not** a permission-escalation path. The overlay is confined, fail-closed, to an **allowlist** of soft settings (`models`, `features`, a narrowed `toolset`, and a `shell_environment_policy` limited to its filter fields, which select among env names the launcher already controls and cannot inject an env value into tool subprocesses); every other table is dropped at the choke point, so the overlay cannot spawn commands, set auth policy, redirect network traffic, elevate trust, or add a discovery source. Even on the allowlisted settings, a specific set of security gates read the raw disk layers rather than the overlay. The `ConfigLayers::env_overlay` rustdoc is the canonical list of what the overlay can and cannot reach and which gates read it overlay-free; see also the [internal environment-variables reference](../internal/22-environment-variables.md). Use `GROK_DEFAULT_SELECTED_PERMISSION` for headless permission control. For example, to set the default reasoning effort:
 
 ```bash
-GROK_CONFIG='{"models": {"default_reasoning_effort": "high"}}' grok agent stdio
+GROK_CONFIG='{"models": {"default_reasoning_effort": "high"}}' deepseek-build agent stdio
 ```
 
 ---
 
 ## config.toml (main configuration)
 
-Location: `~/.deepseek-build/config.toml`. If the file is missing, Grok uses its built-in defaults, so you only need to set the values you want to override.
+Location: `~/.deepseek-build/config.toml`. If the file is missing, deepseek-build uses its built-in defaults, so you only need to set the values you want to override.
 
 ### General settings
 
@@ -46,15 +46,15 @@ Location: `~/.deepseek-build/config.toml`. If the file is missing, Grok uses its
 auto_update = true                     # check for updates on launch
 
 [agent]
-# name = "grok-build"                  # default agent on interactive `grok` (no --plan / --agent-profile)
+# name = "grok-build"                  # default agent on interactive `deepseek-build` (no --plan / --agent-profile)
 # definition = "/path/to/agent.md"     # path wins over name if both are set
 
 [models]
-default = "grok-4.5"                   # model used for new sessions
-web_search = "grok-4.5"                # model used by the web_search tool
+default = "deepseek-v4-pro"                   # model used for new sessions
+web_search = "deepseek-v4-pro"                # model used by the web_search tool
 # Optional picker allowlist (globs on catalog key or model id). Empty = unrestricted.
 # A signed policy pin replaces this list (model id only) and cannot be widened from here.
-# allowed_models = ["grok-4.5", "grok-4*"]
+# allowed_models = ["deepseek-v4-pro", "deepseek-*"]
 
 # Defaults applied to every model; a per-model [model.<id>] value always wins.
 # See "Custom Models" for the per-model overrides and full details.
@@ -119,7 +119,7 @@ respect_gitignore = false              # default: false; set true to make every 
 
 ### Default agent
 
-Interactive `grok` uses `[agent]` in `config.toml` when you do not pass `--plan`, `--ask-user`, or `--agent-profile`:
+Interactive `deepseek-build` uses `[agent]` in `config.toml` when you do not pass `--plan`, `--ask-user`, or `--agent-profile`:
 
 ```toml
 [agent]
@@ -127,7 +127,7 @@ name = "my-custom-agent"
 # definition = "/path/to/agent.md"   # path wins over name
 ```
 
-`definition` is a markdown file with YAML frontmatter. `name` is a built-in or discovered agent (`~/.deepseek-build/agents/`, `.grok/agents/`). If the named agent is missing, Grok uses `GROK_AGENT`, then the built-in default. `--agent-profile`, `--plan`, and `--ask-user` still override that session. Field list: [26-config-reference.md](26-config-reference.md).
+`definition` is a markdown file with YAML frontmatter. `name` is a built-in or discovered agent (`~/.deepseek-build/agents/`, `.grok/agents/`). If the named agent is missing, deepseek-build uses `GROK_AGENT`, then the built-in default. `--agent-profile`, `--plan`, and `--ask-user` still override that session. Field list: [26-config-reference.md](26-config-reference.md).
 
 #### Input mode
 
@@ -145,7 +145,7 @@ To switch the prompt to vim-style editing:
 simple_mode = false
 ```
 
-You can also flip it from the settings pane (`/settings` → **Disable vim input mode**); Grok writes your choice to `[ui] simple_mode`. `simple_mode` and `vim_mode` are independent — one governs the prompt editor, the other governs scrollback navigation. See [Keyboard Shortcuts](03-keyboard-shortcuts.md) for the full binding reference.
+You can also flip it from the settings pane (`/settings` → **Disable vim input mode**); deepseek-build writes your choice to `[ui] simple_mode`. `simple_mode` and `vim_mode` are independent — one governs the prompt editor, the other governs scrollback navigation. See [Keyboard Shortcuts](03-keyboard-shortcuts.md) for the full binding reference.
 
 #### Default selected permission
 
@@ -178,11 +178,11 @@ You can also override this with `GROK_DEFAULT_SELECTED_PERMISSION`, which is han
 | `false` (default) | Bare-letter and `Shift+letter` keys (`j`/`k`, `h`/`l`, `g`/`G`, `y`/`Y`, `o`/`O`, `r`, `x`, `e`/`E`, `H`/`L`, plus `i`) are suppressed in the scrollback: pressing one focuses the prompt and types the character. Arrows, `Tab`, `Space`, `PageUp`/`PageDown`, and every `Ctrl+letter` shortcut still navigate. `Esc` is **not** a scrollback key — it never cancels a running turn (`Ctrl+C` does), and while idle follows the clear / rewind policy (see [Keyboard Shortcuts](03-keyboard-shortcuts.md#escape)). |
 | `true` | All vim-style scrollback bindings are active, exactly as listed in [Keyboard Shortcuts](03-keyboard-shortcuts.md). Esc behavior is the same in both settings. |
 
-Toggle it at runtime with `/vim-mode`, or from `/settings` → **Vim scrollback navigation**. Grok writes the change to `[ui] vim_mode` immediately and applies it to every future pager session, including new agents and subagents in the same process. There's no per-session override — `config.toml` is the source of truth on next launch. `vim_mode` is independent of `simple_mode`.
+Toggle it at runtime with `/vim-mode`, or from `/settings` → **Vim scrollback navigation**. deepseek-build writes the change to `[ui] vim_mode` immediately and applies it to every future pager session, including new agents and subagents in the same process. There's no per-session override — `config.toml` is the source of truth on next launch. `vim_mode` is independent of `simple_mode`.
 
 #### Screen mode
 
-`[ui] screen_mode` is the **default render mode** for plain `grok` launches. Set it from `/settings` → **Default screen mode** (restart required) or edit `config.toml` by hand — both write the file. CLI flags (`--minimal` / `--fullscreen`) and slash commands (`/minimal` / `/fullscreen`) are session-scoped and do **not** write this key; after a slash switch, the reverse command returns you for that session only.
+`[ui] screen_mode` is the **default render mode** for plain `deepseek-build` launches. Set it from `/settings` → **Default screen mode** (restart required) or edit `config.toml` by hand — both write the file. CLI flags (`--minimal` / `--fullscreen`) and slash commands (`/minimal` / `/fullscreen`) are session-scoped and do **not** write this key; after a slash switch, the reverse command returns you for that session only.
 
 | Value | Behavior |
 |-------|----------|
@@ -231,12 +231,12 @@ timeout_secs = 1800                    # seconds to wait when enabled (default: 
 
 [toolset.web_fetch]
 proxy_endpoint = "https://proxy.example.com"   # egress proxy URL
-allowed_domains = ["docs.rs", "x.ai"]          # override the built-in allowlist
+allowed_domains = ["docs.rs", "deepseek.com"]          # override the built-in allowlist
 allow_local = false                            # true = allow localhost / 127.0.0.0/8 / ::1 only
 
 [toolset.web_search]
 # Restrict web_search to these domains (max 5). Mutually exclusive with excluded_domains.
-allowed_domains = ["docs.x.ai", "arxiv.org"]
+allowed_domains = ["platform.deepseek.com", "arxiv.org"]
 # ...or block these domains instead (leave allowed_domains unset):
 # excluded_domains = ["reddit.com", "pinterest.com"]
 ```
@@ -275,7 +275,7 @@ base_url = "https://api.example.com/v1"  # OpenAI-compatible endpoint
 name = "Display Name"                 # shown in model picker
 description = "Model description"      # optional
 api_key = "sk-..."                    # API key for this provider
-env_key = "XAI_API_KEY"               # env var(s) holding the API key; string or array (first set, non-empty wins)
+env_key = "DEEPSEEK_API_KEY"               # env var(s) holding the API key; string or array (first set, non-empty wins)
 temperature = 0.7                     # sampling temperature (0.0-2.0)
 top_p = 0.95                          # nucleus sampling parameter
 max_completion_tokens = 8192          # max tokens per response
@@ -284,12 +284,12 @@ query_params = { api-version = "2026-07-22" } # query params appended to every r
 env_http_headers = { "X-Tenant" = "TENANT_TOKEN" }    # request headers from env vars, resolved at client build
 ```
 
-Credential resolution: `api_key` > `env_key` > signed-in session token > `XAI_API_KEY`. See [Custom Models](11-custom-models.md#request-query-parameters) for `query_params` and `env_http_headers`, and [Sandbox Mode](18-sandbox.md#shell-environment-policy) for `[shell_environment_policy]`, which restricts the environment variables tool subprocesses inherit.
+Credential resolution: `api_key` > `env_key` > signed-in session token > `DEEPSEEK_API_KEY`. See [Custom Models](11-custom-models.md#request-query-parameters) for `query_params` and `env_http_headers`, and [Sandbox Mode](18-sandbox.md#shell-environment-policy) for `[shell_environment_policy]`, which restricts the environment variables tool subprocesses inherit.
 
 To override a built-in model, use its name as the section key and set only the fields you need:
 
 ```toml
-[model.grok-4.6]
+[model.deepseek-v4-pro]
 api_key = "my-api-key"
 ```
 
@@ -366,7 +366,7 @@ explore = true                        # enable/disable specific types
 plan = false
 
 [subagents.models]
-explore = "grok-4.6"               # route to different models
+explore = "deepseek-v4-pro"               # route to different models
 ```
 
 To pin the model a subagent uses, set its entry under `[subagents.models]`.
@@ -426,7 +426,7 @@ For Claude and Cursor, `rules` and `agents` are independent: turning off named i
 
 Each cell can be set via environment variable or `config.toml`; see the environment-variables reference for the names. Resolution: env var > config.toml > default (on).
 
-`grok inspect` reports cells that still need session-start resolution as `?` until a value is available; cells with an explicit env or TOML value use that value. Affected discovery entries report `compatibilityStatus: "unresolved"` in JSON and `[compat unresolved]` in human output.
+`deepseek-build inspect` reports cells that still need session-start resolution as `?` until a value is available; cells with an explicit env or TOML value use that value. Affected discovery entries report `compatibilityStatus: "unresolved"` in JSON and `[compat unresolved]` in human output.
 
 ### Plugins
 
@@ -438,7 +438,7 @@ disabled = ["user/a1b2c3d4/noisy-plugin"]
 
 ### Hints
 
-`[hints]` holds small persisted UI preferences: remembered answers and modal layout. Grok writes these for you as you use the TUI, but you can edit or delete them by hand; removing a key restores the default.
+`[hints]` holds small persisted UI preferences: remembered answers and modal layout. deepseek-build writes these for you as you use the TUI, but you can edit or delete them by hand; removing a key restores the default.
 
 `[hints]` is read from the **effective config merge**, with the usual precedence: system managed → user `managed_config.toml` → user `config.toml` → user `requirements.toml` → system `requirements.toml`, higher layers winning. The TUI only ever **writes** these to your user `~/.deepseek-build/config.toml`.
 
@@ -470,7 +470,7 @@ progress_bar = true       # show tab progress bar (OSC 9;4)
 
 [ui.notifications.title]
 enabled = true
-items = ["action-required", "spinner", "activity", "session-name", "grok"]
+items = ["action-required", "spinner", "activity", "session-name", "deepseek-build"]
 ```
 
 | Option | Type | Default | Description |
@@ -482,7 +482,7 @@ items = ["action-required", "spinner", "activity", "session-name", "grok"]
 | `sleep_prevention` | bool | `true` | Keep the display awake while the agent works (macOS/Linux). |
 | `progress_bar` | bool | `true` | Show a progress indicator in the terminal tab (OSC 9;4). |
 | `title.enabled` | bool | `true` | Set the terminal title to reflect agent state. |
-| `title.items` | array | (see above) | Items shown in the title bar. Options: `action-required`, `spinner`, `activity`, `session-name`, `cwd`, `model`, `turn-timer`, `grok`. |
+| `title.items` | array | (see above) | Items shown in the title bar. Options: `action-required`, `spinner`, `activity`, `session-name`, `cwd`, `model`, `turn-timer`, `deepseek-build`. |
 
 #### Terminal support matrix
 
@@ -497,10 +497,10 @@ items = ["action-required", "spinner", "activity", "session-name", "grok"]
 | VS Code | BEL | Yes | No |
 | Apple Terminal | BEL | No | No |
 | VTE (GNOME Terminal) | OSC 777 | Yes | No |
-| Grok Desktop | None (native) | N/A | N/A |
+| deepseek-build Desktop | None (native) | N/A | N/A |
 | Unknown | BEL | No | No |
 
-With `method = "auto"`, Grok detects the terminal brand and picks the best protocol. Set `method` explicitly to override that.
+With `method = "auto"`, deepseek-build detects the terminal brand and picks the best protocol. Set `method` explicitly to override that.
 
 #### Notification hooks
 
@@ -509,14 +509,14 @@ Run your own commands when events fire. Hooks receive `$GROK_EVENT`, `$GROK_MESS
 ```toml
 # macOS native notification
 [[ui.notifications.hooks]]
-command = "terminal-notifier -title 'Grok' -message '$GROK_MESSAGE'"
+command = "terminal-notifier -title 'deepseek-build' -message '$GROK_MESSAGE'"
 events = ["turn_complete", "approval_required"]
 only_unfocused = true
 timeout_secs = 10
 
 # Push to ntfy server
 [[ui.notifications.hooks]]
-command = "curl -s -d '$GROK_MESSAGE' ntfy.sh/my-grok-alerts"
+command = "curl -s -d '$GROK_MESSAGE' ntfy.sh/my-deepseek-build-alerts"
 events = ["turn_complete"]
 only_unfocused = true
 timeout_secs = 10
@@ -577,7 +577,7 @@ mixpanel_enabled = false                                  # disable Mixpanel pro
 trace_upload = false                                      # disable session/trace uploads (inherits the telemetry toggle when unset)
 ```
 
-Set these only to point telemetry at your own infrastructure or to switch parts off. The built-in endpoint and credentials are managed by Grok — leave them unset to use the defaults.
+Set these only to point telemetry at your own infrastructure or to switch parts off. The built-in endpoint and credentials are managed by deepseek-build — leave them unset to use the defaults.
 
 The same `[telemetry]` table also configures the **external OpenTelemetry stream**, an independent opt-in (it doesn't require the telemetry toggle above) that ships a curated, content-free usage schema to your *own* OTLP collector. Collector auth comes from `OTEL_EXPORTER_OTLP_HEADERS` and is never stored on disk. See [Monitoring & Usage](24-monitoring-usage.md) for the full schema, env vars, and privacy model.
 
@@ -628,13 +628,13 @@ required_maximum_version = "0.2.200" # refuse to start above this
 - `required_minimum_version` (`GROK_REQUIRED_MINIMUM_VERSION`) and
   `required_maximum_version` (`GROK_REQUIRED_MAXIMUM_VERSION`) are hard bounds. If
   the running version is outside the range, the CLI exits at startup and instructs
-  the user to install an approved version. `grok update` and `grok --version` keep
+  the user to install an approved version. `deepseek-build update` and `deepseek-build --version` keep
   working so an out-of-range install can recover.
 - Bounds resolve across config layers by tightening only: a floor takes the
   highest value and a ceiling the lowest, so a managed bound can't be loosened,
   and a user or environment bound can't cancel a managed hard bound. An invalid
   value is ignored so a bad policy can't block startup.
-- An explicit `grok update --version X` is allowed above the ceiling, to recover
+- An explicit `deepseek-build update --version X` is allowed above the ceiling, to recover
   from a too-new install, and rejected below the hard floor.
 
 ### Enterprise deployment
@@ -651,12 +651,12 @@ auth_provider_label = "Acme Corp"
 auth_token_ttl = 3600
 
 [models]
-default = "company-grok"
+default = "company-deepseek-build"
 
-[model.company-grok]
-model = "grok-4.6"
-base_url = "https://grok-proxy.acme.com/"
-name = "Grok 4.6 (Proxy)"
+[model.company-deepseek-build]
+model = "deepseek-v4-pro"
+base_url = "https://model-proxy.acme.com/"
+name = "deepseek-build 4.6 (Proxy)"
 context_window = 128000
 
 [features]
@@ -776,7 +776,7 @@ The key ones. See the README for the complete list.
 
 | Variable | Description |
 |----------|-------------|
-| `XAI_API_KEY` | API key from console.x.ai |
+| `DEEPSEEK_API_KEY` | API key from platform.deepseek.com |
 | `GROK_AUTH_PROVIDER_COMMAND` | External auth binary path |
 | `GROK_AUTH_PROVIDER_LABEL` | Display name on TUI login screen |
 | `GROK_AUTH_TOKEN_TTL` | Token lifetime in seconds |
@@ -851,7 +851,7 @@ The key ones. See the README for the complete list.
 | `.grok/hooks/` | Project-scoped hooks |
 | `.grok/lsp.json` | LSP server configuration |
 
-### How Grok saves `config.toml`
+### How deepseek-build saves `config.toml`
 
 Writes to **`~/.deepseek-build/config.toml`** (`/settings`, `/vim-mode`, and other user-config saves) follow a leaf symlink. The atomic rename writes the referent (a file in your dotfiles repo). The link stays a link. If the link is dangling, the write creates the referent as a regular file.
 

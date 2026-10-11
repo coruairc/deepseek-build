@@ -1110,9 +1110,14 @@ fn print_exit_resume_hint(info: &ExitInfo, max_width: usize, w: &mut impl Write)
     }
     let _ = writeln!(w, "Resume this session with:");
     if info.minimal {
-        let _ = writeln!(w, "  grok --minimal --resume {}", info.session_id);
+        let _ = writeln!(
+            w,
+            "  {} --minimal --resume {}",
+            xai_grok_brand::NAME,
+            info.session_id
+        );
     } else {
-        let _ = writeln!(w, "  grok --resume {}", info.session_id);
+        let _ = writeln!(w, "  {} --resume {}", xai_grok_brand::NAME, info.session_id);
     }
 }
 /// Screen-mode relaunch failure fallback (same quit tail as plain resume).
@@ -2167,7 +2172,10 @@ mod tests {
         print_exit_resume_hint(&bare_exit_info("sess-abc", false), 80, &mut buf);
         assert_eq!(
             String::from_utf8(buf).unwrap(),
-            "\nResume this session with:\n  grok --resume sess-abc\n"
+            format!(
+                "\nResume this session with:\n  {} --resume sess-abc\n",
+                xai_grok_brand::NAME
+            )
         );
     }
     #[test]
@@ -2176,8 +2184,29 @@ mod tests {
         print_exit_resume_hint(&bare_exit_info("sess-abc", true), 80, &mut buf);
         assert_eq!(
             String::from_utf8(buf).unwrap(),
-            "\nResume this session with:\n  grok --minimal --resume sess-abc\n"
+            format!(
+                "\nResume this session with:\n  {} --minimal --resume sess-abc\n",
+                xai_grok_brand::NAME
+            )
         );
+    }
+    /// The resume hint must name the installed binary, derived from the
+    /// centralized brand constant — never a hard-coded legacy name.
+    #[test]
+    fn print_exit_resume_hint_uses_branded_binary_name() {
+        for minimal in [false, true] {
+            let mut buf = Vec::new();
+            print_exit_resume_hint(&bare_exit_info("sess-abc", minimal), 80, &mut buf);
+            let out = String::from_utf8(buf).unwrap();
+            assert!(
+                out.contains(xai_grok_brand::NAME),
+                "hint must name the branded binary: {out}"
+            );
+            assert!(
+                !out.contains("grok"),
+                "hint must not print the old name: {out}"
+            );
+        }
     }
     #[test]
     fn print_exit_resume_hint_includes_session_summary() {
@@ -2201,7 +2230,7 @@ mod tests {
                 "  Pinned the seed; 200 consecutive green runs.\n",
                 "\n",
                 "Resume this session with:\n",
-                "  grok --resume sess-abc\n",
+                "  deepseek-build --resume sess-abc\n",
             )
         );
     }
@@ -2222,7 +2251,7 @@ mod tests {
         assert!(out.contains(&format!("\n{}…\n", "t".repeat(19))));
         assert!(out.contains(&format!("\n> {}…\n", "p".repeat(17))));
         assert!(out.contains(&format!("\n  {}…\n", "r".repeat(17))));
-        assert!(out.contains("  grok --resume sess-abc\n"));
+        assert!(out.contains("  deepseek-build --resume sess-abc\n"));
     }
     #[test]
     fn print_relaunch_failure_hint_writes_expected_lines() {

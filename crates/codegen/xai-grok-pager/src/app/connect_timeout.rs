@@ -4,13 +4,16 @@ use std::time::Duration;
 
 macro_rules! connect_ui_timeout_env {
     () => {
-        "GROK_CONNECT_UI_TIMEOUT_SECS"
+        "DEEPSEEK_BUILD_CONNECT_UI_TIMEOUT_SECS"
     };
 }
 
 pub(super) const CONNECT_UI_TIMEOUT_ENV: &str = connect_ui_timeout_env!();
-pub(super) const CONNECT_UI_TIMEOUT_TRY_COMMAND: &str =
-    concat!(connect_ui_timeout_env!(), "=60 grok");
+/// Pasteable command that raises the startup connect budget. Built at runtime
+/// so the printed binary name comes from the centralized brand constant.
+pub(super) fn connect_ui_timeout_try_command() -> String {
+    format!("{CONNECT_UI_TIMEOUT_ENV}=60 {}", xai_grok_brand::NAME)
+}
 pub(super) const DEFAULT_CONNECT_UI_TIMEOUT: Duration = Duration::from_secs(30);
 const MIN_CONNECT_UI_TIMEOUT_SECS: u64 = 6;
 const PERSONAL_CONNECT_UI_SLACK: Duration = Duration::from_secs(2);

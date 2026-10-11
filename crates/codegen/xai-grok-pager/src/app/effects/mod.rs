@@ -4743,7 +4743,7 @@ fn format_session_info(
 fn format_auth_lines(is_api_key_auth: bool, api_key_env_set: bool) -> String {
     if is_api_key_auth {
         let method = if api_key_env_set {
-            "  Auth method: API key (XAI_API_KEY)\n"
+            "  Auth method: API key (DEEPSEEK_API_KEY)\n"
         } else {
             "  Auth method: API key\n"
         };

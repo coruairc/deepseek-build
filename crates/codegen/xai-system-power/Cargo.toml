@@ -6,6 +6,7 @@ license = "Apache-2.0"
 description = "Cross-platform system sleep/wake (suspend) notifications — used to defer work across a suspend boundary"
 
 [dependencies]
+xai-grok-brand = { workspace = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus = { workspace = true }

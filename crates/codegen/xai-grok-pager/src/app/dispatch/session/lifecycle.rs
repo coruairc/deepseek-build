@@ -679,9 +679,10 @@ pub(in crate::app::dispatch) fn dispatch_trust_folder(app: &mut AppView) -> Vec<
     match trust_gate_outcome(outcome.resolution(), agent_location(app)) {
         TrustGateOutcome::Finish => finish_trust(app),
         TrustGateOutcome::FinishSessionLocal => {
-            app.show_toast(
-                "Folder trusted for this session only. Run `grok --trust` here to save it for next time.",
-            );
+            app.show_toast(&format!(
+                "Folder trusted for this session only. Run `{} --trust` here to save it for next time.",
+                xai_grok_brand::NAME
+            ));
             finish_trust(app)
         }
         TrustGateOutcome::Quit => {

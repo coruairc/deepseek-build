@@ -1,17 +1,17 @@
 # Custom Models
 
-Grok connects to custom model endpoints for alternative providers, self-hosted models, and overriding built-in settings. This guide explains how to select models, configure endpoints, and integrate third-party providers.
+deepseek-build connects to custom model endpoints for alternative providers, self-hosted models, and overriding built-in settings. This guide explains how to select models, configure endpoints, and integrate third-party providers.
 
 ---
 
 ## Default Models
 
-By default, Grok uses models hosted by SpaceXAI, and new sessions start with `grok-4.5`. Default models require no configuration. Authenticate with `grok login` or an API key, then start a session.
+By default, deepseek-build uses models hosted by DeepSeek, and new sessions start with `deepseek-v4-pro`. Default models require no configuration. Authenticate with `deepseek-build login` or an API key, then start a session.
 
 List all available models:
 
 ```bash
-grok models
+deepseek-build models
 ```
 
 ---
@@ -21,7 +21,7 @@ grok models
 ### CLI Flag
 
 ```bash
-grok -p "Hello" -m grok-4.6
+deepseek-build -p "Hello" -m deepseek-v4-pro
 ```
 
 ### Slash Command
@@ -29,13 +29,13 @@ grok -p "Hello" -m grok-4.6
 In the TUI, switch models during a session:
 
 ```
-/model grok-4.6
+/model deepseek-v4-pro
 ```
 
 Or use the alias:
 
 ```
-/m grok-4.6
+/m deepseek-v4-pro
 ```
 
 ### Model Picker (Ctrl+M)
@@ -48,8 +48,8 @@ Enterprise hosts can pin the **selectable** set — not only the default — in 
 
 ```toml
 [models]
-default = "grok-4.5"
-allowed_models = ["grok-4.5", "grok-4*"]
+default = "deepseek-v4-pro"
+allowed_models = ["deepseek-v4-pro", "deepseek-*"]
 ```
 
 A fleet pin matches the **model id** (not a user-chosen catalog key), so a local `[model.<name>]` entry cannot widen the set. User-config `allowed_models` still matches catalog key or model id. Omit the key to leave user config standing. An empty array is unrestricted. A present-but-unreadable pin fail-closes (nothing selectable). A default or `-m` value outside the pinned set is rejected once the model catalog is fetched — contact your administrator; the list is not user-editable.
@@ -60,14 +60,14 @@ Set a persistent default in `~/.deepseek-build/config.toml`:
 
 ```toml
 [models]
-default = "grok-4.5"
+default = "deepseek-v4-pro"
 ```
 
 ---
 
 ## Supported API Backends
 
-Grok supports three API backends. Set `api_backend` in your `[model.*]` config to choose which protocol the model uses:
+deepseek-build supports three API backends. Set `api_backend` in your `[model.*]` config to choose which protocol the model uses:
 
 | Value | API | Default |
 |-------|-----|---------|
@@ -75,9 +75,9 @@ Grok supports three API backends. Set `api_backend` in your `[model.*]` config t
 | `"responses"` | OpenAI Responses (`/v1/responses`) | |
 | `"messages"` | Anthropic Messages (`/v1/messages`) | |
 
-When you omit `api_backend`, Grok uses `chat_completions`.
+When you omit `api_backend`, deepseek-build uses `chat_completions`.
 
-To send provider-specific authentication or version headers -- for example, Anthropic's `x-api-key` -- use the `extra_headers` field described below. Grok sends those headers verbatim with every request to the endpoint.
+To send provider-specific authentication or version headers -- for example, Anthropic's `x-api-key` -- use the `extra_headers` field described below. deepseek-build sends those headers verbatim with every request to the endpoint.
 
 ---
 
@@ -92,7 +92,7 @@ base_url = "https://api.example.com/v1"   # OpenAI-compatible endpoint
 name = "Display Name"                     # Shown in the model picker
 description = "Model description"          # Optional description
 api_key = "sk-..."                        # API key for this provider (optional)
-env_key = "XAI_API_KEY"                   # Env var holding the API key (optional; string or array)
+env_key = "DEEPSEEK_API_KEY"                   # Env var holding the API key (optional; string or array)
 api_backend = "chat_completions"          # "chat_completions", "responses", or "messages"
 reasoning_summary = "concise"             # Responses API only: "none", "auto", "concise", or "detailed"
 temperature = 0.7                         # Sampling temperature
@@ -106,20 +106,20 @@ env_http_headers = { "X-Tenant" = "TENANT_TOKEN" }    # Headers from env vars, r
 
 ### Credential Resolution
 
-Grok resolves the API key in this order:
+deepseek-build resolves the API key in this order:
 
 1. The `api_key` field in the model config
 2. The environment variable(s) named by `env_key` — a single string or an array of names. The first set, non-empty value wins (for example `env_key = ["ANTHROPIC_AUTH_TOKEN", "LC_ANTHROPIC_AUTH_TOKEN"]` for SSH `LC_*` forwarding)
-3. Your signed-in session token (from `grok login`), for a model with no `api_key`/`env_key` of its own
-4. The `XAI_API_KEY` environment variable (global fallback; Grok also accepts `GROK_CODE_XAI_API_KEY` for backward compatibility)
+3. Your signed-in session token (from `deepseek-build login`), for a model with no `api_key`/`env_key` of its own
+4. The `DEEPSEEK_API_KEY` environment variable (global fallback; deepseek-build also accepts `GROK_CODE_XAI_API_KEY` for backward compatibility)
 
 ### Context Window
 
-The `context_window` value tells Grok when to trigger auto-compaction. When you override a known model, Grok inherits that model's context window. When you define a new model and omit `context_window`, Grok defaults to 200,000 tokens, so set it explicitly to match your provider.
+The `context_window` value tells deepseek-build when to trigger auto-compaction. When you override a known model, deepseek-build inherits that model's context window. When you define a new model and omit `context_window`, deepseek-build defaults to 200,000 tokens, so set it explicitly to match your provider.
 
 ### Request Size Limit
 
-`max_request_bytes` is the largest request body your endpoint accepts. Grok evicts older inline images from the conversation to stay under it, so a session with many screenshots keeps working instead of being rejected. When you omit it, Grok picks the default for the `api_backend`: 30 MB for `messages`, and 50 MiB for `chat_completions` and `responses`. Set it only when your host enforces a different cap.
+`max_request_bytes` is the largest request body your endpoint accepts. deepseek-build evicts older inline images from the conversation to stay under it, so a session with many screenshots keeps working instead of being rejected. When you omit it, deepseek-build picks the default for the `api_backend`: 30 MB for `messages`, and 50 MiB for `chat_completions` and `responses`. Set it only when your host enforces a different cap.
 
 The cap is a property of the endpoint, so it also works on a shared `[model_providers.<id>]` block, where every model pointing at that provider inherits it; a `max_request_bytes` on the model itself overrides the provider's value.
 
@@ -174,7 +174,7 @@ This is a small, fixed set of environment-wide knobs. Settings that identify a s
 
 ### Request Query Parameters
 
-Some gateways route or version on the query string. `query_params` appends percent-encoded query parameters to every request Grok makes for a model. For example, a gateway that selects an API version this way:
+Some gateways route or version on the query string. `query_params` appends percent-encoded query parameters to every request deepseek-build makes for a model. For example, a gateway that selects an API version this way:
 
 ```toml
 [model.my-gateway]
@@ -198,7 +198,7 @@ base_url = "https://gateway.example/v1"
 env_http_headers = { "X-Tenant-Token" = "GATEWAY_TENANT_TOKEN" }
 ```
 
-Grok reads each variable when it builds the client for a session and places the value in the request headers only, never on disk. A header is skipped when its variable is unset or blank, and a resolved value overrides an `extra_headers` entry of the same name. Use `extra_headers` for a static value and `env_http_headers` for one that comes from the environment.
+deepseek-build reads each variable when it builds the client for a session and places the value in the request headers only, never on disk. A header is skipped when its variable is unset or blank, and a resolved value overrides an `extra_headers` entry of the same name. Use `extra_headers` for a static value and `env_http_headers` for one that comes from the environment.
 
 Both fields also work on a shared `[model_providers.<id>]` block. A model that points at a provider with `model_provider = "<id>"` inherits the provider's `query_params` and `env_http_headers` when it sets none of its own, matching how `extra_headers` is inherited.
 
@@ -210,7 +210,7 @@ Both fields also work on a shared `[model_providers.<id>]` block. A model that p
 [model.legacy]
 model = "legacy-model"
 base_url = "https://gateway.example/v1"
-notice = { severity = "warning", text = "This model is deprecated on Oct 15. Switch to grok-4.6.", label = "deprecated" }
+notice = { severity = "warning", text = "This model is deprecated on Oct 15. Switch to deepseek-v4-pro.", label = "deprecated" }
 ```
 
 `severity` sets the banner color and is `info`, `warning`, or `critical`. It defaults to `info`. `text` is required, and long text wraps. `label` is an optional short tag shown before the text. A custom models endpoint can send the same object as `notice` or `_meta.notice` on a model entry. To remove a notice a built-in or remote model carries, set `notice = { text = "" }`.
@@ -223,16 +223,16 @@ You can override specific fields of built-in models without redefining everythin
 
 ```toml
 # Override only the API key for a default model
-[model.grok-4.6]
+[model.deepseek-v4-pro]
 api_key = "my-api-key"
 
 # Override temperature and add a custom API key
-[model.grok-4.6]
+[model.deepseek-v4-pro]
 temperature = 0.5
 api_key = "sk-custom"
 ```
 
-When you override a built-in model, Grok starts with the default configuration (including the correct `base_url`), then applies only the fields you specify. Unspecified fields inherit from the default.
+When you override a built-in model, deepseek-build starts with the default configuration (including the correct `base_url`), then applies only the fields you specify. Unspecified fields inherit from the default.
 
 ### Priority Order
 
@@ -258,7 +258,7 @@ context_window = 200000
 extra_headers = { "x-api-key" = "sk-ant-...", "anthropic-version" = "2023-06-01" }
 ```
 
-The `messages` backend uses the Anthropic Messages protocol. Anthropic authenticates with an `x-api-key` header rather than `Authorization: Bearer`, so pass your key through `extra_headers`, which Grok sends verbatim.
+The `messages` backend uses the Anthropic Messages protocol. Anthropic authenticates with an `x-api-key` header rather than `Authorization: Bearer`, so pass your key through `extra_headers`, which deepseek-build sends verbatim.
 
 ### OpenAI (Chat Completions)
 
@@ -285,7 +285,7 @@ api_backend = "responses"
 env_key = "OPENAI_API_KEY"
 ```
 
-On the Responses API, Grok asks for a `concise` reasoning summary by default; that is what the reasoning text shown in the UI comes from. `reasoning_summary` changes the request: `detailed` or `auto` for a fuller summary, or `none` to omit the field for gateways that reject it.
+On the Responses API, deepseek-build asks for a `concise` reasoning summary by default; that is what the reasoning text shown in the UI comes from. `reasoning_summary` changes the request: `detailed` or `auto` for a fuller summary, or `none` to omit the field for gateways that reject it.
 
 ### AWS Bedrock (Mantle)
 
@@ -296,10 +296,10 @@ Bedrock's OpenAI-compatible gateway rejects `reasoning.summary`, so set `reasoni
 command = "aws-bedrock-token"   # prints a Bedrock API key on stdout (e.g. via aws-bedrock-token-generator)
 token_ttl_secs = 3600
 
-[model."bedrock-grok-4.6"]
-model = "xai.grok-4.6"
+[model."bedrock-deepseek-v4-pro"]
+model = "deepseek-v4-pro"
 base_url = "https://bedrock-mantle.us-west-2.api.aws/openai/v1"
-name = "Grok 4.6 (Bedrock)"
+name = "deepseek-build 4.6 (Bedrock)"
 api_backend = "responses"
 reasoning_summary = "none"
 auth_provider = "bedrock"
@@ -345,22 +345,22 @@ temperature = 0.8
 
 ## Custom Models Endpoint
 
-Point Grok at a custom OpenAI-compatible `/v1/models` endpoint instead of the default. Use this when your models sit behind a corporate gateway or a self-hosted inference service.
+Point deepseek-build at a custom OpenAI-compatible `/v1/models` endpoint instead of the default. Use this when your models sit behind a corporate gateway or a self-hosted inference service.
 
 ### Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GROK_MODELS_BASE_URL` | Yes | Base URL for inference. Grok fetches the model list from `{base_url}/models`. |
-| `XAI_API_KEY` | Yes | API key sent as `Authorization: Bearer`. Grok also accepts `GROK_CODE_XAI_API_KEY`. |
+| `GROK_MODELS_BASE_URL` | Yes | Base URL for inference. deepseek-build fetches the model list from `{base_url}/models`. |
+| `DEEPSEEK_API_KEY` | Yes | API key sent as `Authorization: Bearer`. deepseek-build also accepts `GROK_CODE_XAI_API_KEY`. |
 | `GROK_MODELS_LIST_URL` | No | Override the model-list URL when it differs from `{base_url}/models`. |
 
 ### Setup
 
 ```bash
 export GROK_MODELS_BASE_URL="https://api.acme.com/v1"
-export XAI_API_KEY="xai-..."
-grok
+export DEEPSEEK_API_KEY="sk-..."
+deepseek-build
 ```
 
 ### Config File Alternative
@@ -370,15 +370,15 @@ grok
 models_base_url = "https://api.acme.com/v1"
 
 # Override only the API key for a specific model
-[model.grok-4.6]
+[model.deepseek-v4-pro]
 api_key = "my-api-key"
 ```
 
-When you use `[endpoints]` with partial model overrides, Grok inherits the `base_url` from the endpoints config. You do not need to specify it in each `[model.*]` section. `XAI_API_KEY` is still required. A per-model `api_key` or `env_key` authenticates inference requests for that model. The startup model-list fetch always uses `XAI_API_KEY`.
+When you use `[endpoints]` with partial model overrides, deepseek-build inherits the `base_url` from the endpoints config. You do not need to specify it in each `[model.*]` section. `DEEPSEEK_API_KEY` is still required. A per-model `api_key` or `env_key` authenticates inference requests for that model. The startup model-list fetch always uses `DEEPSEEK_API_KEY`.
 
 ### Auth Behavior
 
-When you set `models_base_url`, Grok authenticates the model-list request with `XAI_API_KEY` only (`Authorization: Bearer`). That request never uses your `grok login` session. With an external auth provider (`auth_provider_command`) and no `XAI_API_KEY`, it sends the provider's token instead. Otherwise, if `XAI_API_KEY` is unset, the fetch fails with an error asking you to set it. Inference requests to the custom host authenticate separately. An `api_key` or `env_key` on each model makes those requests use an API key too.
+When you set `models_base_url`, deepseek-build authenticates the model-list request with `DEEPSEEK_API_KEY` only (`Authorization: Bearer`). That request never uses your `deepseek-build login` session. With an external auth provider (`auth_provider_command`) and no `DEEPSEEK_API_KEY`, it sends the provider's token instead. Otherwise, if `DEEPSEEK_API_KEY` is unset, the fetch fails with an error asking you to set it. Inference requests to the custom host authenticate separately. An `api_key` or `env_key` on each model makes those requests use an API key too.
 
 ---
 
@@ -388,16 +388,16 @@ The `web_search` tool uses a separate model. Configure it with:
 
 ```toml
 [models]
-web_search = "grok-4.5"
+web_search = "deepseek-v4-pro"
 ```
 
 Or via environment variable:
 
 ```bash
-export GROK_WEB_SEARCH_MODEL="grok-4.5"
+export GROK_WEB_SEARCH_MODEL="deepseek-v4-pro"
 ```
 
-If you point web search at a custom model, you also need a `[model.*]` entry so Grok can reach it. Server-side ("backend") web search runs only when the model sets `supports_backend_search = true` (and the build enables backend search); it does not depend on `api_backend`:
+If you point web search at a custom model, you also need a `[model.*]` entry so deepseek-build can reach it. Server-side ("backend") web search runs only when the model sets `supports_backend_search = true` (and the build enables backend search); it does not depend on `api_backend`:
 
 ```toml
 [models]
@@ -414,13 +414,13 @@ supports_backend_search = true
 
 ```bash
 # List available models (including custom)
-grok models
+deepseek-build models
 
 # Use in the TUI via slash command
 /model my-model
 
 # Use in headless mode
-grok -p "Hello" -m my-model
+deepseek-build -p "Hello" -m my-model
 
 # Set as default in config.toml:
 [models]
@@ -443,12 +443,12 @@ auth_provider_label = "Acme Corp"
 auth_token_ttl = 3600
 
 [models]
-default = "company-grok"
+default = "company-deepseek-build"
 
-[model.company-grok]
-model = "grok-4.6"
-base_url = "https://grok-proxy.acme.com/"
-name = "Grok 4.6 (Proxy)"
+[model.company-deepseek-build]
+model = "deepseek-v4-pro"
+base_url = "https://model-proxy.acme.com/"
+name = "deepseek-build 4.6 (Proxy)"
 context_window = 128000
 
 [features]
@@ -463,7 +463,7 @@ telemetry = false
 
 ```bash
 # List available models
-grok models
+deepseek-build models
 
 # Check config.toml for typos in [model.*] sections
 ```
@@ -474,14 +474,14 @@ Verify the endpoint is reachable:
 
 ```bash
 curl -s https://api.example.com/v1/models \
-  -H "Authorization: Bearer $XAI_API_KEY"
+  -H "Authorization: Bearer $DEEPSEEK_API_KEY"
 ```
 
 ### Debug Logging
 
 ```bash
-RUST_LOG=debug GROK_LOG_FILE=/tmp/grok.log grok
-tail -f /tmp/grok.log
+RUST_LOG=debug GROK_LOG_FILE=/tmp/deepseek-build.log deepseek-build
+tail -f /tmp/deepseek-build.log
 ```
 
 Look for log entries containing `model` or `sampling` to trace model selection and API calls.

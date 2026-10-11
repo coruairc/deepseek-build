@@ -4,32 +4,32 @@ This file ships with the CLI and is extracted to `~/.deepseek-build/docs/user-gu
 
 ## How to configure
 
-Three files configure Grok Build, and they are written by different people.
+Three files configure deepseek-build, and they are written by different people.
 
 | File | Who writes it | Where it lives | Use it to |
 | --- | --- | --- | --- |
 | `config.toml` | The developer | `~/.deepseek-build/config.toml`, and `.grok/config.toml` in a project | Set personal defaults. Anything here can be changed by the person using the machine. |
-| `managed_config.toml` | You, through the console or a deployment tool | `/etc/grok/managed_config.toml`, or `$GROK_HOME/managed_config.toml` | Ship a starting point to a fleet. A developer's own file overrides it. |
-| `requirements.toml` | You, signed | `/etc/grok/requirements.toml`, macOS device management, or `$GROK_HOME/requirements.toml` | Set values a developer cannot change. Keys marked `pin` below hold against every other file, the environment, and the command line. |
+| `managed_config.toml` | You, through the console or a deployment tool | `/etc/deepseek-build/managed_config.toml`, or `$GROK_HOME/managed_config.toml` | Ship a starting point to a fleet. A developer's own file overrides it. |
+| `requirements.toml` | You, signed | `/etc/deepseek-build/requirements.toml`, macOS device management, or `$GROK_HOME/requirements.toml` | Set values a developer cannot change. Keys marked `pin` below hold against every other file, the environment, and the command line. |
 
 Choose `managed_config.toml` for defaults you want people to be able to adjust, and `requirements.toml` for the ones you do not.
 
-Grok Build also reads these layers, later rows winning except where a requirements pin or the Managed column says otherwise.
+deepseek-build also reads these layers, later rows winning except where a requirements pin or the Managed column says otherwise.
 
 1. Compiled defaults.
-2. `/etc/grok/managed_config.toml`, then `$GROK_HOME/managed_config.toml` (fleet defaults; console-synced).
+2. `/etc/deepseek-build/managed_config.toml`, then `$GROK_HOME/managed_config.toml` (fleet defaults; console-synced).
 3. `$GROK_HOME/config.toml` (your settings; `/settings` writes here). Default `$GROK_HOME` is `~/.deepseek-build`.
 4. Project `.grok/config.toml`: only `[mcp_servers]`, `[plugins]`, `[permission]`, and `[mcp] max_output_bytes`.
 5. `GROK_CONFIG` (inline JSON) or `GROK_CONFIG_PATH` (JSON or TOML file). Allowlisted keys only.
-6. `$GROK_HOME/requirements.toml`, then `/etc/grok/requirements.toml`, then macOS MDM `ai.x.grok`. Admin layer. Keys marked `pin` in the table cannot be overridden; keys marked `yes` are also valid in this file.
+6. `$GROK_HOME/requirements.toml`, then `/etc/deepseek-build/requirements.toml`, then macOS MDM `ai.x.deepseek-build`. Admin layer. Keys marked `pin` in the table cannot be overridden; keys marked `yes` are also valid in this file.
 7. `GROK_*` environment variables.
 8. CLI flags such as `--model`, `--sandbox`, `--yolo`.
 
-Run `grok inspect` or `grok inspect --json` to see which files and values won.
+Run `deepseek-build inspect` or `deepseek-build inspect --json` to see which files and values won.
 
 ## config.toml
 
-User-level configuration lives in `$GROK_HOME/config.toml` (default `~/.deepseek-build/config.toml`; Windows `%USERPROFILE%\.grok\config.toml`). Project-scoped overrides live in `.grok/config.toml` and only contribute `[mcp_servers]`, `[plugins]`, `[permission]`, and `[mcp] max_output_bytes`.
+User-level configuration lives in `$GROK_HOME/config.toml` (default `~/.deepseek-build/config.toml`; Windows `%USERPROFILE%\.deepseek-build\config.toml`). Project-scoped overrides live in `.grok/config.toml` and only contribute `[mcp_servers]`, `[plugins]`, `[permission]`, and `[mcp] max_output_bytes`.
 
 **Requirements** marks whether the same key can be set in `requirements.toml`: `pin` cannot be overridden (including env and CLI where the resolver honors the pin); `yes` is accepted in that file; `—` is not read from `requirements.toml`. **Managed** marks whether a fleet `managed_config.toml` value stands (`fleet`) or the user's file wins (`user`).
 
@@ -57,7 +57,7 @@ User-level configuration lives in `$GROK_HOME/config.toml` (default `~/.deepseek
 | `auth.auth_token_ttl` | `number` | `yes` | `user` | Token TTL in seconds for providers that return a bare token. Also GROK_AUTH_TOKEN_TTL; also valid as `grok_com_config.auth_token_ttl`. |
 | `auth.disable_api_key_auth` | `boolean` | `pin` | `user` | Refuse API-key auth so only the deployment IdP can log in. Also GROK_DISABLE_API_KEY_AUTH; also valid as `grok_com_config.disable_api_key_auth`. |
 | `auth.force_login_team_uuid` | `string / string[]` | `pin` | `user` | Require login to this team UUID, or any of an array; empty array fails closed. Also GROK_FORCE_LOGIN_TEAM_ID; also valid as `grok_com_config.force_login_team_uuid`. |
-| `auth.grok_ws_origin` | `string` | `yes` | `user` | Websocket origin for grok.com. Also GROK_WS_ORIGIN; also valid as `grok_com_config.grok_ws_origin`. |
+| `auth.grok_ws_origin` | `string` | `yes` | `user` | Websocket origin for DeepSeek. Also GROK_WS_ORIGIN; also valid as `grok_com_config.grok_ws_origin`. |
 | `auth.grok_ws_url` | `string` | `yes` | `user` | Relay websocket URL. Also GROK_WS_URL; also valid as `grok_com_config.grok_ws_url`. |
 | `auth.oauth2` | `table` | `yes` | `user` | OAuth2 provider used when enterprise OIDC is unset; also valid as `grok_com_config.oauth2`. |
 | `auth.oauth2.client_id` | `string` | `yes` | `user` | OAuth2 client id. Also GROK_OAUTH2_CLIENT_ID; also valid as `grok_com_config.oauth2.client_id`. |
@@ -98,8 +98,8 @@ User-level configuration lives in `$GROK_HOME/config.toml` (default `~/.deepseek
 | --- | --- | --- | --- | --- |
 | `cli.auto_update` | `boolean` | `pin` | `user` | Check for CLI updates on launch. Also GROK_DISABLE_AUTOUPDATER to suppress. |
 | `cli.channel` | `stable / alpha` | `pin` | `user` | Release channel preference. |
-| `cli.grove` | `boolean` or `grove` / `grove-fuse` / `grove-nfs` / `nfs` / `all` / `copy` / `true` / `false` / `1` / `0` / `on` / `off` | `yes` | `user` | Convenience that turns **both** `grok clone` and session / `-w` Grove on when the specific knobs are unset. Also `GROK_GROVE`. `false` / `copy` / `off` means enable-all is off (fall through); it does not force both surfaces off. `[cli] grove_worktree` and `GROK_WORKTREE_TYPE` still win for worktrees; `GROK_CLONE` still wins for clone. Remote `grove_worktree = false` still kills worktrees only. |
-| `cli.grove_worktree` | `boolean` or `grove` / `grove-fuse` / `grove-nfs` / `nfs` / `copy` / `true` / `false` / `1` / `0` / `on` / `off` | `yes` | `user` | Session / `-w` Grove vs copy. Default copy. Distinct from creation-mode `cli.worktree_type`. Also `GROK_WORKTREE_TYPE`. Layer order: request → env → local → enable-all (`GROK_GROVE` / `[cli] grove`) → remote-true; then kill last: remote `grove_worktree = false` → copy (`remote_kill`). Missing remote settings are not a kill: local/env/request/enable-all still apply. Does not enable `grok clone`. |
+| `cli.grove` | `boolean` or `grove` / `grove-fuse` / `grove-nfs` / `nfs` / `all` / `copy` / `true` / `false` / `1` / `0` / `on` / `off` | `yes` | `user` | Convenience that turns **both** `deepseek-build clone` and session / `-w` Grove on when the specific knobs are unset. Also `GROK_GROVE`. `false` / `copy` / `off` means enable-all is off (fall through); it does not force both surfaces off. `[cli] grove_worktree` and `GROK_WORKTREE_TYPE` still win for worktrees; `GROK_CLONE` still wins for clone. Remote `grove_worktree = false` still kills worktrees only. |
+| `cli.grove_worktree` | `boolean` or `grove` / `grove-fuse` / `grove-nfs` / `nfs` / `copy` / `true` / `false` / `1` / `0` / `on` / `off` | `yes` | `user` | Session / `-w` Grove vs copy. Default copy. Distinct from creation-mode `cli.worktree_type`. Also `GROK_WORKTREE_TYPE`. Layer order: request → env → local → enable-all (`GROK_GROVE` / `[cli] grove`) → remote-true; then kill last: remote `grove_worktree = false` → copy (`remote_kill`). Missing remote settings are not a kill: local/env/request/enable-all still apply. Does not enable `deepseek-build clone`. |
 | `cli.installer` | `string` | `—` | `user` | Which installer last set up this CLI, used to pick the update path. |
 | `cli.maximum_version` | `string` | `pin` | `user` | Highest CLI version that still runs without a hard block. Also GROK_MAXIMUM_VERSION. |
 | `cli.minimum_version` | `string` | `pin` | `user` | Lowest CLI version that still runs without a hard block. Also GROK_MINIMUM_VERSION. |
@@ -188,7 +188,7 @@ User-level configuration lives in `$GROK_HOME/config.toml` (default `~/.deepseek
 | `endpoints.trace_upload_endpoint_url` | `string` | `yes` | `user` | Custom S3-compatible endpoint for s3:// bucket uploads. Also GROK_TRACE_UPLOAD_ENDPOINT_URL. |
 | `endpoints.trace_upload_region` | `string` | `yes` | `user` | AWS region for s3:// bucket uploads; default us-east-1. Also GROK_TRACE_UPLOAD_REGION. |
 | `endpoints.trace_upload_url` | `string` | `pin` | `user` | Proxy destination for traces when no direct bucket is set. Also GROK_TRACE_UPLOAD_URL. |
-| `endpoints.xai_api_base_url` | `string` | `pin` | `user` | Public xAI API base. Also GROK_XAI_API_BASE_URL. |
+| `endpoints.xai_api_base_url` | `string` | `pin` | `user` | Public DeepSeek API base. Also GROK_XAI_API_BASE_URL. |
 
 ### `features`
 
@@ -218,12 +218,12 @@ User-level configuration lives in `$GROK_HOME/config.toml` (default `~/.deepseek
 | `features.mcp_liveness_watchers` | `boolean` | `yes` | `user` | Poll MCP transports and push server_status updates. Emergency kill switch when false. |
 | `features.mcp_push_server_status` | `boolean` | `yes` | `user` | Pager subscribes to MCP server_status push. Process env GROK_MCP_PUSH_SERVER_STATUS wins at launch. |
 | `features.mcp_recursive_config_watch` | `boolean` | `yes` | `user` | Watch `<cwd>/` and `<cwd>/.grok/` for project MCP config edits. Name is a misnomer; watches are non-recursive. |
-| `features.non_git_warning` | `boolean` | `yes` | `user` | Show a blocking warning when Grok starts outside a Git repository. |
+| `features.non_git_warning` | `boolean` | `yes` | `user` | Show a blocking warning when deepseek-build starts outside a Git repository. |
 | `features.remember_mode` | `boolean` | `—` | `—` | Remember the last permission mode across sessions. Read from user `config.toml` only. |
 | `features.remote_fetch` | `boolean` | `pin` | `fleet` | Pin remote model-catalog and asset fetch. Managed wins over the user file when both set. |
 | `features.session_recap` | `boolean` | `pin` | `user` | Enable or disable `session_recap`. Default true. Also `GROK_SESSION_RECAP`. |
 | `features.session_search` | `boolean` | `pin` | `user` | Enable or disable `session_search`. Default true. Also `GROK_SESSION_SEARCH`. |
-| `features.subagent_model_inheritance` | `boolean` | `pin` | `user` | Hide the subagent `model` argument when every model you can pick is an xAI model, so subagents inherit the parent's model. Default false. Also `GROK_SUBAGENT_MODEL_INHERITANCE`. Read when a session starts; changing it requires a restart. |
+| `features.subagent_model_inheritance` | `boolean` | `pin` | `user` | Hide the subagent `model` argument when every model you can pick is an DeepSeek model, so subagents inherit the parent's model. Default false. Also `GROK_SUBAGENT_MODEL_INHERITANCE`. Read when a session starts; changing it requires a restart. |
 | `features.subagent_worktree_snapshot` | `boolean` | `pin` | `user` | Enable or disable `subagent_worktree_snapshot`. Default false. Also `GROK_SUBAGENT_WORKTREE_SNAPSHOT`. |
 | `features.support_permission` | `boolean` | `yes` | `user` | Allow the agent to ask permission for tool executions. |
 | `features.telemetry` | `boolean / session_metrics / off` | `pin` | `user` | Product telemetry mode. Enterprise default is off. |
@@ -261,13 +261,13 @@ User-level configuration lives in `$GROK_HOME/config.toml` (default `~/.deepseek
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `grok_com_config` | `table` | `yes` | `user` | Grok.com websocket and OAuth/OIDC settings. `[auth]` is an alias. |
+| `grok_com_config` | `table` | `yes` | `user` | deepseek-build.com websocket and OAuth/OIDC settings. `[auth]` is an alias. |
 | `grok_com_config.auth_provider_command` | `string` | `yes` | `user` | External auth binary; stdout is the token. With `endpoints.models_base_url` or `models_list_url` set, that endpoint's list decides which models are offered. Also GROK_AUTH_PROVIDER_COMMAND. |
 | `grok_com_config.auth_provider_label` | `string` | `yes` | `user` | Login button label for an external auth provider. Also GROK_AUTH_PROVIDER_LABEL. |
 | `grok_com_config.auth_token_ttl` | `number` | `yes` | `user` | Token TTL in seconds for providers that return a bare token. Also GROK_AUTH_TOKEN_TTL. |
 | `grok_com_config.disable_api_key_auth` | `boolean` | `pin` | `user` | Refuse API-key auth so only the deployment IdP can log in. Also GROK_DISABLE_API_KEY_AUTH. |
 | `grok_com_config.force_login_team_uuid` | `string / string[]` | `pin` | `user` | Require login to this team UUID, or any of an array; empty array fails closed. Also GROK_FORCE_LOGIN_TEAM_ID. |
-| `grok_com_config.grok_ws_origin` | `string` | `yes` | `user` | Websocket origin for grok.com. Also GROK_WS_ORIGIN. |
+| `grok_com_config.grok_ws_origin` | `string` | `yes` | `user` | Websocket origin for DeepSeek. Also GROK_WS_ORIGIN. |
 | `grok_com_config.grok_ws_url` | `string` | `yes` | `user` | Relay websocket URL. Also GROK_WS_URL. |
 | `grok_com_config.oauth2` | `table` | `yes` | `user` | OAuth2 provider used when enterprise OIDC is unset. |
 | `grok_com_config.oauth2.client_id` | `string` | `yes` | `user` | OAuth2 client id. Also GROK_OAUTH2_CLIENT_ID. |
@@ -386,7 +386,7 @@ User-level configuration lives in `$GROK_HOME/config.toml` (default `~/.deepseek
 | `model.<id>` | `table` | `yes` | `user` | Per-model override or BYOK definition. Prefer `env_key` over inline `api_key`. |
 | `model.<id>.agent_type` | `string` | `yes` | `user` | Agent definition type associated with this model. |
 | `model.<id>.api_backend` | `chat_completions / responses / messages` | `yes` | `user` | Wire protocol for this model. |
-| `model.<id>.api_base_url` | `string` | `yes` | `user` | Alternate API base used with XAI_API_KEY resolution. |
+| `model.<id>.api_base_url` | `string` | `yes` | `user` | Alternate API base used with DEEPSEEK_API_KEY resolution. |
 | `model.<id>.api_key` | `string` | `yes` | `user` | Inline API key. Prefer `env_key`. Not a secret to put in a shared repo. |
 | `model.<id>.auth_provider` | `string` | `yes` | `user` | Name of a `[auth_provider.<name>]` helper that mints this model's bearer token. |
 | `model.<id>.auto_compact_threshold_percent` | `integer` | `yes` | `user` | Per-model auto-compact threshold (0-100). |
@@ -418,7 +418,7 @@ User-level configuration lives in `$GROK_HOME/config.toml` (default `~/.deepseek
 | `model.<id>.stream_tool_calls` | `boolean` | `yes` | `user` | Per-model tool-call streaming request shape. |
 | `model.<id>.subagent_rate_limit_max_attempts` | `number` | `yes` | `user` | Maximum subagent 429 wait-loop attempts when `rate_limit_retry_threshold` is unset; default 8, maximum 32, and `0` disables the wait loop. |
 | `model.<id>.supported_in_api` | `boolean` | `yes` | `user` | Whether this catalog entry is offered as a public API model. |
-| `model.<id>.supports_backend_search` | `boolean` | `yes` | `user` | Whether the endpoint supports Grok-hosted server-side search tools. |
+| `model.<id>.supports_backend_search` | `boolean` | `yes` | `user` | Whether the endpoint supports deepseek-build-hosted server-side search tools. |
 | `model.<id>.supports_reasoning_effort` | `boolean` | `yes` | `user` | Deprecated; prefer `reasoning_efforts`. An explicit `false` keeps the model out of any menu it would otherwise inherit from the endpoint or from a same-model catalog entry. |
 | `model.<id>.system_prompt_label` | `string` | `yes` | `user` | Per-model system-prompt identity label. |
 | `model.<id>.temperature` | `number` | `yes` | `user` | Per-model sampling temperature. |
@@ -580,7 +580,7 @@ User-level configuration lives in `$GROK_HOME/config.toml` (default `~/.deepseek
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `tools.disable_zdr_incompatible_tools` | `boolean` | `yes` | `user` | Restrict tools that need xAI-hosted output under ZDR. Also GROK_DISABLE_ZDR_INCOMPATIBLE_TOOLS. |
+| `tools.disable_zdr_incompatible_tools` | `boolean` | `yes` | `user` | Restrict tools that need DeepSeek-hosted output under ZDR. Also GROK_DISABLE_ZDR_INCOMPATIBLE_TOOLS. |
 | `tools.media_gen.max_parallel_image_gen_calls` | `integer` | `yes` | `user` | Cap parallel image_gen/image_edit calls in one model step. Also GROK_MAX_PARALLEL_IMAGE_GEN_CALLS. |
 | `tools.media_gen.max_parallel_video_gen_calls` | `integer` | `yes` | `user` | Cap parallel video_gen calls in one model step. Also GROK_MAX_PARALLEL_VIDEO_GEN_CALLS. |
 | `tools.respect_gitignore` | `boolean` | `pin` | `user` | When true, search and read tools skip gitignored files. Also GROK_RESPECT_GITIGNORE. |
@@ -619,7 +619,7 @@ User-level configuration lives in `$GROK_HOME/config.toml` (default `~/.deepseek
 | `ui.contextual_hints.plan_mode` | `boolean` | `yes` | `user` | Suggest plan mode (Shift+Tab) for planning-style prompts. |
 | `ui.contextual_hints.send_now` | `boolean` | `yes` | `user` | After queuing a mid-turn follow-up, Enter on an empty prompt sends now. |
 | `ui.contextual_hints.small_screen` | `boolean` | `yes` | `user` | Suggest `/compact-mode` on short terminals. |
-| `ui.contextual_hints.ssh_wrap` | `boolean` | `yes` | `user` | Recommend `grok wrap` when SSH lacks a clipboard sink. |
+| `ui.contextual_hints.ssh_wrap` | `boolean` | `yes` | `user` | Recommend `deepseek-build wrap` when SSH lacks a clipboard sink. |
 | `ui.contextual_hints.undo` | `boolean` | `yes` | `user` | Ctrl+Z restores a wiped prompt draft tip. |
 | `ui.contextual_hints.word_select` | `boolean` | `yes` | `user` | After double-click with fold/nav selection, point at Word select in settings. |
 | `ui.cursor_blink` | `boolean` | `yes` | `user` | Force blinking (true) or steady (false) block cursor. Unset inherits the terminal. |
@@ -641,7 +641,7 @@ User-level configuration lives in `$GROK_HOME/config.toml` (default `~/.deepseek
 | `prompt_suggestions.reasoning_effort` | `none / minimal / low / medium / high` | `yes` | `user` | Reasoning effort for the suggestion call; default and `none` disable reasoning, while other values use a supported model effort. Remote-overridable. |
 | `ui.remember_tool_approvals` | `boolean` | `yes` | `user` | Show per-tool Always allow options. Also GROK_REMEMBER_TOOL_APPROVALS. |
 | `ui.render_mermaid` | `auto / on / off` | `yes` | `user` | How mermaid fences render: clickable open row or raw source. |
-| `ui.screen_mode` | `fullscreen / minimal` | `yes` | `user` | Default render mode for plain `grok`. Restart required. |
+| `ui.screen_mode` | `fullscreen / minimal` | `yes` | `user` | Default render mode for plain `deepseek-build`. Restart required. |
 | `ui.scroll_lines` | `integer` | `yes` | `user` | Lines per scroll tick (1–10). Also GROK_SCROLL_LINES. |
 | `ui.scroll_mode` | `auto / wheel / trackpad` | `yes` | `user` | Scroll input classification. Also GROK_SCROLL_MODE. |
 | `ui.scroll_speed` | `integer` | `yes` | `user` | Mouse/trackpad scroll speed multiplier (1–100). Also GROK_SCROLL_SPEED. |
@@ -695,13 +695,13 @@ One exception to that rule:
 | --- | --- |
 | `features.remote_fetch` | The managed value wins over the developer's. |
 
-Grok Build reads `/etc/grok/managed_config.toml` first, then `$GROK_HOME/managed_config.toml`, which the console keeps in sync. Values in the second replace values in the first.
+deepseek-build reads `/etc/deepseek-build/managed_config.toml` first, then `$GROK_HOME/managed_config.toml`, which the console keeps in sync. Values in the second replace values in the first.
 
 The **Managed** column on the tables above is the per-key answer: `fleet` means the fleet value stands, `user` means the user's file wins, `—` means this file is ignored.
 
 ## requirements.toml
 
-`requirements.toml` is an admin-enforced file. Locations: `$GROK_HOME/requirements.toml` (signed cache) then `/etc/grok/requirements.toml`, then macOS MDM `ai.x.grok`. The **Requirements** column on the `config.toml` tables lists every `config.toml` key this file accepts (`pin` or `yes`). Omitted keys stay unconstrained.
+`requirements.toml` is an admin-enforced file. Locations: `$GROK_HOME/requirements.toml` (signed cache) then `/etc/deepseek-build/requirements.toml`, then macOS MDM `ai.x.deepseek-build`. The **Requirements** column on the `config.toml` tables lists every `config.toml` key this file accepts (`pin` or `yes`). Omitted keys stay unconstrained.
 
 These keys exist only in `requirements.toml`:
 
@@ -713,17 +713,17 @@ These keys exist only in `requirements.toml`:
 
 Policy pins such as `allow_managed_hooks_only` (see [Hooks](10-hooks.md#allow-only-managed-hooks)) and the MCP and marketplace lists (see [Plugins](09-plugins.md#restrict-which-mcp-servers-can-run)) are accepted in `requirements.toml` and `managed_config.toml` alike and only ever tighten.
 
-`[[hooks.<Event>]]` tables are accepted in every config file. Hooks from the signed requirements cache and the root-owned `/etc/grok` files are enforced; see [Hooks](10-hooks.md#enforced-hooks).
+`[[hooks.<Event>]]` tables are accepted in every config file. Hooks from the signed requirements cache and the root-owned `/etc/deepseek-build` files are enforced; see [Hooks](10-hooks.md#enforced-hooks).
 
 ## What happens when a setting is refused
 
-| Situation | What Grok Build does |
+| Situation | What deepseek-build does |
 | --- | --- |
-| A developer sets a key you pinned | The pinned value applies. `grok inspect` lists the requirements file that contributed. |
+| A developer sets a key you pinned | The pinned value applies. `deepseek-build inspect` lists the requirements file that contributed. |
 | A developer sets a key you shipped in `managed_config.toml` | Their value applies, except `features.remote_fetch`. Pin the key instead if it must hold. |
-| `requirements.toml` is missing or its signature does not verify | The pins do not apply, and Grok Build starts without them. Set `fail_closed = true` to refuse to start instead. |
+| `requirements.toml` is missing or its signature does not verify | The pins do not apply, and deepseek-build starts without them. Set `fail_closed = true` to refuse to start instead. |
 | A pinned key names a value this version does not recognise | The key is ignored and the rest of the file still applies. |
 
 ## Check what is in effect
 
-Run `grok inspect` on the developer's machine. It lists every config file that contributed, including requirements and managed layers, so a policy that is not applying is visible in one command.
+Run `deepseek-build inspect` on the developer's machine. It lists every config file that contributed, including requirements and managed layers, so a policy that is not applying is visible in one command.

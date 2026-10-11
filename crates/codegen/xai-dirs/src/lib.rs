@@ -88,7 +88,7 @@ pub fn grok_home() -> PathBuf {
         .get_or_init(|| {
             let home = resolve_grok_home().unwrap_or_else(default_grok_home);
             if let Err(err) = std::fs::create_dir_all(&home) {
-                tracing::warn!(path = %home.display(), %err, "failed to create grok home");
+                tracing::warn!(path = %home.display(), %err, "failed to create the deepseek-build home directory");
             }
             home
         })
