@@ -1467,7 +1467,7 @@ fn raise_fd_limit() {
 #[cfg(not(unix))]
 fn raise_fd_limit() {}
 /// Clears `args.command` so the regular subcommand match doesn't try to handle it. The only gate is the feature
-/// flag: a disabled dashboard (`[dashboard].enabled = false` / `GROK_AGENT_DASHBOARD=0`) is a CLI error. It fires
+/// flag: a disabled dashboard (`[dashboard].enabled = false` / `DEEPSEEK_BUILD_AGENT_DASHBOARD=0`) is a CLI error. It fires
 /// here, before the TUI starts, because the welcome view silently drops the equivalent runtime toast.
 fn flag_dashboard_at_startup_if_requested(args: &mut PagerArgs) -> Result<()> {
     if !matches!(args.command, Some(Command::Dashboard)) {
@@ -1477,7 +1477,7 @@ fn flag_dashboard_at_startup_if_requested(args: &mut PagerArgs) -> Result<()> {
         anyhow::bail!(
             "the Agent Dashboard is disabled. Enable it by removing \
              `[dashboard] enabled = false` from ~/.deepseek-build/config.toml and \
-             unsetting DEEPSEEK_BUILD_AGENT_DASHBOARD=0 (legacy GROK_AGENT_DASHBOARD=0)."
+             unsetting DEEPSEEK_BUILD_AGENT_DASHBOARD=0."
         );
     }
     args.command = None;
@@ -2388,7 +2388,7 @@ mod tests {
     use clap::Parser as _;
     /// `grok dashboard` flags the startup hook without forcing leader mode.
     /// The dashboard is independent of leader mode, so the launch keeps whatever leader setting the user (or config) chose.
-    #[serial_test::serial(GROK_AGENT_DASHBOARD)]
+    #[serial_test::serial(DEEPSEEK_BUILD_AGENT_DASHBOARD)]
     #[test]
     fn dashboard_subcommand_flags_startup_without_forcing_leader() {
         let mut args = PagerArgs::try_parse_from(["grok", "dashboard"]).unwrap();
@@ -2408,7 +2408,7 @@ mod tests {
     }
     /// `grok dashboard --no-leader` is allowed.
     /// The dashboard does not require a leader, so the combination launches into the dashboard in non-leader mode.
-    #[serial_test::serial(GROK_AGENT_DASHBOARD)]
+    #[serial_test::serial(DEEPSEEK_BUILD_AGENT_DASHBOARD)]
     #[test]
     fn dashboard_subcommand_allows_no_leader() {
         let mut args = PagerArgs::try_parse_from(["grok", "--no-leader", "dashboard"]).unwrap();
@@ -2427,14 +2427,14 @@ mod tests {
         );
         unsafe { std::env::remove_var("GROK_OPEN_DASHBOARD_AT_STARTUP") };
     }
-    /// `GROK_AGENT_DASHBOARD=0` disables the feature; the subcommand must error visibly before the TUI starts.
-    #[serial_test::serial(GROK_AGENT_DASHBOARD)]
+    /// `DEEPSEEK_BUILD_AGENT_DASHBOARD=0` disables the feature; the subcommand must error visibly before the TUI starts.
+    #[serial_test::serial(DEEPSEEK_BUILD_AGENT_DASHBOARD)]
     #[test]
     fn dashboard_subcommand_errors_when_disabled() {
-        unsafe { std::env::set_var("GROK_AGENT_DASHBOARD", "0") };
+        unsafe { std::env::set_var("DEEPSEEK_BUILD_AGENT_DASHBOARD", "0") };
         let mut args = PagerArgs::try_parse_from(["grok", "dashboard"]).unwrap();
         let result = flag_dashboard_at_startup_if_requested(&mut args);
-        unsafe { std::env::remove_var("GROK_AGENT_DASHBOARD") };
+        unsafe { std::env::remove_var("DEEPSEEK_BUILD_AGENT_DASHBOARD") };
         let err = result.expect_err("disabled dashboard must error");
         assert!(err.to_string().contains("disabled"), "got: {err}");
         assert!(

@@ -3156,7 +3156,6 @@ fn login_env_var_excluded(key: &str) -> bool {
             | "WAYLAND_DISPLAY"
             | "GPG_TTY"
     ) || key.to_ascii_lowercase().ends_with("_proxy")
-        || key.starts_with("GROK_SANDBOX")
         || key.starts_with("DEEPSEEK_BUILD_SANDBOX")
 }
 

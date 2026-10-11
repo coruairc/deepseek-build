@@ -821,8 +821,10 @@ mod apply_tests {
         let _ack = xai_grok_test_support::EnvGuard::unset(GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV);
         // Isolate the ack file from the developer machine
         let home = tempfile::tempdir().unwrap();
-        let _home =
-            xai_grok_test_support::EnvGuard::set("GROK_HOME", home.path().to_str().unwrap());
+        let _home = xai_grok_test_support::EnvGuard::set(
+            "DEEPSEEK_BUILD_HOME",
+            home.path().to_str().unwrap(),
+        );
         set_active_local_workspace(None).unwrap();
         let tmp = tempfile::tempdir().unwrap();
         let out = prepare_welcome_workspace_for_new_session(

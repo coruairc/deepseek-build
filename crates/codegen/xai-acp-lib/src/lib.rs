@@ -12,7 +12,7 @@ pub use self::{
     channel::{AcpAgentChannel, AcpChannel, AcpClientChannel, acp_channels, acp_send},
     common::{
         AcpAgentRx, AcpAgentTx, AcpChannelFailure, AcpClientRx, AcpClientTx, AcpResult, AcpRxo,
-        AcpTxo, acp_channel_failure, acp_internal_error,
+        AcpTxo, SHELL_META_KEY, acp_channel_failure, acp_internal_error,
     },
     gateway::{
         AcpAgentGatewayReceiver, AcpAgentGatewaySender, AcpClientGatewayReceiver,

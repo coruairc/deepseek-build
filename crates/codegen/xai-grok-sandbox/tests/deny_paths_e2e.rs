@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 const SCENARIO_ENV: &str = "SANDBOX_E2E_SCENARIO";
 const WORKSPACE_ENV: &str = "SANDBOX_E2E_WORKSPACE";
-const GROK_HOME_ENV: &str = "SANDBOX_E2E_GROK_HOME";
+const DEEPSEEK_BUILD_HOME_ENV: &str = "SANDBOX_E2E_DEEPSEEK_BUILD_HOME";
 const HOME_ENV: &str = "SANDBOX_E2E_HOME";
 const PROFILE_ENV: &str = "SANDBOX_E2E_PROFILE";
 const TARGETS_ENV: &str = "SANDBOX_E2E_TARGETS";
@@ -21,9 +21,9 @@ const REQUIRE_ENV: &str = "SANDBOX_E2E_REQUIRE_ENFORCEMENT";
 fn apply_fixture_env(cmd: &mut Command, home: &Path, grok_home: &Path, workspace: &Path) {
     cmd.env(WORKSPACE_ENV, workspace.as_os_str())
         .env(HOME_ENV, home.as_os_str())
-        .env(GROK_HOME_ENV, grok_home.as_os_str())
+        .env(DEEPSEEK_BUILD_HOME_ENV, grok_home.as_os_str())
         .env("HOME", home.as_os_str())
-        .env("GROK_HOME", grok_home.as_os_str());
+        .env("DEEPSEEK_BUILD_HOME", grok_home.as_os_str());
 }
 /// Re-invoke this test binary as a subprocess driving `profile` over `targets` (denied) and `controls` (must stay readable).
 /// `postlaunch` paths are created AFTER apply to exercise the macOS runtime-regex (post-launch) coverage.
@@ -227,10 +227,11 @@ fn subprocess_entry() {
     let workspace = dunce::canonicalize(&workspace).expect("canonicalize workspace");
     let workspace = workspace.as_path();
     let home = PathBuf::from(std::env::var(HOME_ENV).expect(HOME_ENV));
-    let grok_home = PathBuf::from(std::env::var(GROK_HOME_ENV).expect(GROK_HOME_ENV));
+    let grok_home =
+        PathBuf::from(std::env::var(DEEPSEEK_BUILD_HOME_ENV).expect(DEEPSEEK_BUILD_HOME_ENV));
     unsafe {
         std::env::set_var("HOME", &home);
-        std::env::set_var("GROK_HOME", &grok_home);
+        std::env::set_var("DEEPSEEK_BUILD_HOME", &grok_home);
     }
     match scenario.as_str() {
         "block_deny" => subprocess_block_deny(workspace),
@@ -635,7 +636,8 @@ fn subprocess_devbox_genuine(workspace: &Path) {
 }
 /// Workspace-profile Grok-owned hook write-deny probes (existing sources and first-run).
 fn subprocess_hook_write_deny(workspace: &Path, first_run: bool) {
-    let home = PathBuf::from(std::env::var(GROK_HOME_ENV).expect(GROK_HOME_ENV));
+    let home =
+        PathBuf::from(std::env::var(DEEPSEEK_BUILD_HOME_ENV).expect(DEEPSEEK_BUILD_HOME_ENV));
     let profile = xai_grok_sandbox::ProfileName::Workspace;
     subprocess_profile_and_bwrap_reexec(&profile, workspace);
     let mut sandbox = xai_grok_sandbox::SandboxManager::new(profile, workspace);
@@ -821,7 +823,7 @@ fn subprocess_hook_write_deny(workspace: &Path, first_run: bool) {
     eprintln!("OK: hook write-deny e2e passed");
     std::process::exit(0);
 }
-/// Create isolated HOME and GROK_HOME fixture dirs for a scenario.
+/// Create isolated HOME and DEEPSEEK_BUILD_HOME fixture dirs for a scenario.
 fn fixture_homes(
     tag: &str,
 ) -> (

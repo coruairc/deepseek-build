@@ -14,6 +14,11 @@ pub type AcpClientTx = mpsc::UnboundedSender<AcpClientMessage>;
 pub type AcpAgentRx = mpsc::UnboundedReceiver<AcpAgentMessage>;
 pub type AcpAgentTx = mpsc::UnboundedSender<AcpAgentMessage>;
 
+/// `InitializeResponse._meta` key marking this agent as the deepseek-build
+/// agent; the pager reads it to pick the matching client behavior. The key is
+/// the centralized product name, so a rename is a one-line brand change.
+pub const SHELL_META_KEY: &str = xai_grok_brand::NAME;
+
 pub fn acp_internal_error(message: impl Into<String>) -> acp::Error {
     acp::Error::new(acp::ErrorCode::InternalError.into(), message)
 }

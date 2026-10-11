@@ -4112,7 +4112,7 @@ impl McpClient {
         ClientConfig::new(
             capabilities,
             Implementation::new(
-                format!("grok-shell-{server_name}"),
+                format!("{}-{server_name}", xai_grok_brand::NAME),
                 xai_grok_version::VERSION.to_string(),
             ),
         )
@@ -4710,14 +4710,14 @@ fn ensure_figma_user_agent(headers: &mut reqwest::header::HeaderMap, server_name
     }
     headers.insert(
         reqwest::header::USER_AGENT,
-        reqwest::header::HeaderValue::from_static("grok-cli"),
+        reqwest::header::HeaderValue::from_static(xai_grok_brand::NAME),
     );
 }
 
 static DEFAULT_USER_AGENT: LazyLock<reqwest::header::HeaderValue> = LazyLock::new(|| {
-    format!("grok-cli/{}", xai_grok_version::VERSION)
+    format!("{}/{}", xai_grok_brand::NAME, xai_grok_version::VERSION)
         .parse()
-        .unwrap_or_else(|_| reqwest::header::HeaderValue::from_static("grok-cli"))
+        .unwrap_or_else(|_| reqwest::header::HeaderValue::from_static(xai_grok_brand::NAME))
 });
 
 fn ensure_default_user_agent(headers: &mut reqwest::header::HeaderMap) {
@@ -4727,7 +4727,7 @@ fn ensure_default_user_agent(headers: &mut reqwest::header::HeaderMap) {
     headers.insert(reqwest::header::USER_AGENT, DEFAULT_USER_AGENT.clone());
 }
 
-/// Figma keeps its pinned bare `grok-cli` attribution token; every other server gets the versioned default.
+/// Figma keeps its pinned bare brand attribution token; every other server gets the versioned default.
 /// A `User-Agent` already in the map always wins.
 fn apply_user_agent_policy(headers: &mut reqwest::header::HeaderMap, server_name: &str, url: &str) {
     ensure_figma_user_agent(headers, server_name, url);

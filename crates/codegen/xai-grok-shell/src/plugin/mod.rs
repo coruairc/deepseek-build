@@ -1377,7 +1377,7 @@ pub(crate) fn set_official_marketplace_auto_installed(config_path: &Path) -> std
 /// `~/.grok/` and `~/.claude/`. Returns `true` if removed from at least one file.
 pub fn try_remove_source_from_json_files(source_url_or_path: &str) -> bool {
     // Resolve user grok via user_grok_home() (None when no home resolves) and home separately
-    // Removal then still runs from $GROK_HOME when no home dir exists, and never touches a cwd-relative .grok
+    // Removal then still runs from $DEEPSEEK_BUILD_HOME when no home dir exists, and never touches a cwd-relative .grok
     let home = xai_dirs::home_dir();
     let grok = xai_grok_config::user_grok_home();
 

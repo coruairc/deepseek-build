@@ -175,7 +175,7 @@ fn is_gateway_owned_descriptor(path: &Path) -> bool {
         return false;
     };
     value
-        .get("x-grok-managed-gateway")
+        .get("x-deepseek-build-managed-gateway")
         .and_then(|v| v.as_bool())
         == Some(true)
 }
@@ -334,7 +334,7 @@ mod tests {
                 "name": "gateway_tool",
                 "description": "Gateway tool",
                 "inputSchema": {"type": "object"},
-                "x-grok-managed-gateway": true,
+                "x-deepseek-build-managed-gateway": true,
             }))
             .unwrap(),
         )

@@ -1,7 +1,7 @@
 use super::*;
 
 // Crate-shared lock serializing tests that mutate the global process environment so concurrent test threads can't race on shared env state
-// Shared so `GROK_HOME`/`HOME` mutations here also serialize against the other env-mutating test modules under single-process `cargo test --lib`
+// Shared so `DEEPSEEK_BUILD_HOME`/`HOME` mutations here also serialize against the other env-mutating test modules under single-process `cargo test --lib`
 use crate::ENV_TEST_LOCK as ENV_LOCK;
 
 // The crate-shared generic env-var guard, defined once in `lib.rs`
@@ -578,7 +578,7 @@ fn load_settings_no_env_field() {
 
 #[test]
 fn load_claude_env_merges_with_precedence() {
-    // Isolate GROK_HOME (claude-import marker) and HOME (global `~/.claude`); an imported dev machine would otherwise early-return an empty map
+    // Isolate DEEPSEEK_BUILD_HOME (claude-import marker) and HOME (global `~/.claude`); an imported dev machine would otherwise early-return an empty map
     let _home = isolated_home();
     let tmp = tempfile::tempdir().unwrap();
     let claude_dir = tmp.path().join(".claude");
@@ -606,7 +606,7 @@ fn load_claude_env_merges_with_precedence() {
 
 #[test]
 fn load_claude_env_empty_when_no_settings() {
-    // Isolate GROK_HOME (claude-import marker) and HOME (global `~/.claude`)
+    // Isolate DEEPSEEK_BUILD_HOME (claude-import marker) and HOME (global `~/.claude`)
     // Neither a dev machine's import marker nor its real `~/.claude` env can then trip the empty-map assertion
     let _home = isolated_home();
     let tmp = tempfile::tempdir().unwrap();
@@ -617,7 +617,7 @@ fn load_claude_env_empty_when_no_settings() {
 #[test]
 fn load_claude_env_with_project_drops_repo_env_when_untrusted() {
     // Repo-tree `.claude` env is injected into every subprocess, so an untrusted folder must drop it
-    // Isolate `GROK_HOME` and `HOME` so the import marker is clean and the unique key stays independent of the host `~/.claude`
+    // Isolate `DEEPSEEK_BUILD_HOME` and `HOME` so the import marker is clean and the unique key stays independent of the host `~/.claude`
     let _home = isolated_home();
     let tmp = tempfile::tempdir().unwrap();
     let claude_dir = tmp.path().join(".claude");
@@ -1222,7 +1222,7 @@ fn untrusted_project_claude_permissions_are_not_honored() {
 fn untrusted_project_config_toml_permissions_are_not_honored() {
     let home = isolated_home();
 
-    // Global allow (survives untrusted project when GROK_HOME resolves here).
+    // Global allow (survives untrusted project when DEEPSEEK_BUILD_HOME resolves here).
     std::fs::create_dir_all(home.path().join(".grok")).unwrap();
     std::fs::write(
         home.path().join(".grok/config.toml"),
@@ -1245,7 +1245,7 @@ allow = ["Bash(evil *)"]
     )
     .unwrap();
 
-    // Untrusted may be None when no global rules load (GROK_HOME OnceLock already pinned by another test); empty after dropping project is OK
+    // Untrusted may be None when no global rules load (DEEPSEEK_BUILD_HOME OnceLock already pinned by another test); empty after dropping project is OK
     let untrusted = block_on(resolve_permissions_with_provenance_inner(
         tmp.path(),
         inputs_trusted(None, false),
@@ -1278,7 +1278,7 @@ allow = ["Bash(evil *)"]
     let global_live = xai_grok_config::user_grok_home()
         .is_some_and(|g| g == home.path() || g.starts_with(home.path()));
     if global_live {
-        let untrusted = untrusted.expect("global rules present when GROK_HOME is live");
+        let untrusted = untrusted.expect("global rules present when DEEPSEEK_BUILD_HOME is live");
         assert!(
             untrusted
                 .config
@@ -1450,7 +1450,7 @@ fn inputs_with_managed<'a>(
     }
 }
 
-/// Holds `ENV_LOCK` and points `HOME`, `USERPROFILE`, and `GROK_HOME` at an empty temp home with the import-marker override unset
+/// Holds `ENV_LOCK` and points `HOME`, `USERPROFILE`, and `DEEPSEEK_BUILD_HOME` at an empty temp home with the import-marker override unset
 #[must_use]
 pub(crate) struct IsolatedHome {
     _env: [EnvVarGuard; 4],
@@ -1470,7 +1470,7 @@ pub(crate) fn isolated_home() -> IsolatedHome {
     let env = [
         EnvVarGuard::set("HOME", home.path()),
         EnvVarGuard::set("USERPROFILE", home.path()),
-        EnvVarGuard::set("GROK_HOME", &home.path().join(".grok")),
+        EnvVarGuard::set("DEEPSEEK_BUILD_HOME", &home.path().join(".grok")),
         EnvVarGuard::unset("_GROK_CLAUDE_MARKER_OVERRIDE"),
     ];
     IsolatedHome {
@@ -2968,7 +2968,7 @@ fn explicit_default_mode_blocks_permission_mode_hint() {
         std::fs::create_dir_all(&claude_dir).unwrap();
         std::fs::write(claude_dir.join("settings.json"), settings).unwrap();
         let _home = EnvVarGuard::set("HOME", tmp.path());
-        let _grok_home = EnvVarGuard::set("GROK_HOME", &tmp.path().join(".grok"));
+        let _grok_home = EnvVarGuard::set("DEEPSEEK_BUILD_HOME", &tmp.path().join(".grok"));
         let _marker = EnvVarGuard::unset("_GROK_CLAUDE_MARKER_OVERRIDE");
 
         let resolved = rt

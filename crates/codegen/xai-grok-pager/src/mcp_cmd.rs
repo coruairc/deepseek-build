@@ -1333,7 +1333,7 @@ mod tests {
 
     #[test]
     fn grok_com_known_only_with_toml_definition() {
-        // Unique name: `grok_home()` is process-wide OnceLock, so GROK_HOME. `grok_com_*` in the real ~/.grok disabled
+        // Unique name: `grok_home()` is process-wide OnceLock, so DEEPSEEK_BUILD_HOME. `grok_com_*` in the real ~/.grok disabled
         // list would fail an orphan assertion on a well-known name.
         let name = format!("grok_com_orphan_{}", uuid::Uuid::new_v4().as_simple());
 

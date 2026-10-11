@@ -2006,7 +2006,7 @@ fn build_rows_fallback_anchor_is_frozen_when_last_active_at_is_none() {
 /// While the turn is IDLE the scrollback scan gives the peek header label the TYPE of the most recent agent block (Response / Edit / Thought / …).
 /// The most recent block wins; a fresh user prompt is a turn boundary with no agent response after it yet, so the label is "Idle".
 /// (The RUNNING case follows live turn activity; see the `extract_response_type_*` tests.)
-#[serial_test::serial(GROK_AGENT_DASHBOARD)]
+#[serial_test::serial(DEEPSEEK_BUILD_AGENT_DASHBOARD)]
 #[test]
 fn peek_label_reflects_last_response_type() {
     use crate::scrollback::block::RenderBlock;
@@ -2079,7 +2079,7 @@ fn mouse_event(
     }
 }
 /// A single left-click on a row selects it and attaches the conversation immediately.
-#[serial_test::serial(GROK_AGENT_DASHBOARD)]
+#[serial_test::serial(DEEPSEEK_BUILD_AGENT_DASHBOARD)]
 #[test]
 fn mouse_left_click_attaches_immediately() {
     use crossterm::event::{Event, MouseButton, MouseEventKind};
@@ -2107,7 +2107,7 @@ fn mouse_left_click_attaches_immediately() {
 /// Every left-click attaches, including rapid repeated clicks.
 /// The previous design used a 500ms window to distinguish single (select) from double (attach) click.
 /// Now every click attaches, so the user's mental model "click = open" always holds.
-#[serial_test::serial(GROK_AGENT_DASHBOARD)]
+#[serial_test::serial(DEEPSEEK_BUILD_AGENT_DASHBOARD)]
 #[test]
 fn mouse_repeated_click_keeps_attaching() {
     use crossterm::event::{Event, MouseButton, MouseEventKind};
@@ -2141,7 +2141,7 @@ fn mouse_repeated_click_keeps_attaching() {
 }
 /// Clicks after the previous 500ms double-click window also attach.
 /// (The previous test asserted single-click behaviour for clicks more than 500ms apart; now every click attaches.)
-#[serial_test::serial(GROK_AGENT_DASHBOARD)]
+#[serial_test::serial(DEEPSEEK_BUILD_AGENT_DASHBOARD)]
 #[test]
 fn mouse_click_after_long_pause_still_attaches() {
     use crossterm::event::{Event, MouseButton, MouseEventKind};
@@ -2172,7 +2172,7 @@ fn mouse_click_after_long_pause_still_attaches() {
     }
 }
 /// Click on the peek close-button rect closes the peek.
-#[serial_test::serial(GROK_AGENT_DASHBOARD)]
+#[serial_test::serial(DEEPSEEK_BUILD_AGENT_DASHBOARD)]
 #[test]
 fn mouse_click_on_peek_close_rect_clears_peek() {
     use crossterm::event::{Event, MouseButton, MouseEventKind};

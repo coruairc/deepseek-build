@@ -74,12 +74,12 @@ pub fn spawn_probe_sse(probe: &SpawnProbe<'_>) -> ScriptedResponse {
     ])
 }
 
-/// Title and other side queries hit the same path without `x-grok-turn-idx`.
+/// Title and other side queries hit the same path without `x-deepseek-build-turn-idx`.
 pub fn is_foreground(entry: &LogEntry) -> bool {
     entry.method == "POST"
         && entry.path.contains("chat/completions")
         && entry
-            .header("x-grok-turn-idx")
+            .header("x-deepseek-build-turn-idx")
             .is_some_and(|v| !v.trim().is_empty())
 }
 
@@ -495,7 +495,7 @@ pub fn sweep_env_init() -> SweepEnv {
         .expect("mock runtime");
     let grok_home = TempDir::new().expect("grok home");
     unsafe {
-        std::env::set_var("GROK_HOME", grok_home.path());
+        std::env::set_var("DEEPSEEK_BUILD_HOME", grok_home.path());
         std::env::set_var("DEEPSEEK_API_KEY", "test-key-for-ci");
         std::env::set_var("GROK_TELEMETRY_ENABLED", "false");
         std::env::set_var("GROK_FEEDBACK_ENABLED", "false");

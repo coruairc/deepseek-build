@@ -81,13 +81,13 @@ pub fn load_config_file(path: &Path) -> std::io::Result<toml::Value> {
 }
 
 pub fn load_from_disk() -> std::io::Result<toml::Value> {
-    // Live `$GROK_HOME`: `user_grok_home()` / `grok_home()` are OnceLock and miss
+    // Live `$DEEPSEEK_BUILD_HOME`: `user_grok_home()` / `grok_home()` are OnceLock and miss
     // EnvGuard/tests (same reason user `config.toml` persist resolves live). A
     // stale cache would read a different file than the last settings write.
     load_user_config_layer(resolve_grok_home().as_deref(), USER_CONFIG_FILENAME)
 }
 
-/// User config filename (`$GROK_HOME/config.toml`), shared by the loaders here.
+/// User config filename (`$DEEPSEEK_BUILD_HOME/config.toml`), shared by the loaders here.
 pub const USER_CONFIG_FILENAME: &str = "config.toml";
 
 /// Managed config filename, shared by the loaders in this module.
@@ -96,17 +96,17 @@ pub const MANAGED_CONFIG_FILENAME: &str = "managed_config.toml";
 /// Requirements (cloud-cache) filename, synced from the server alongside the managed config.
 pub const REQUIREMENTS_FILENAME: &str = "requirements.toml";
 
-/// Unsigned folder-trust store (`$GROK_HOME/trusted_folders.toml`).
+/// Unsigned folder-trust store (`$DEEPSEEK_BUILD_HOME/trusted_folders.toml`).
 pub const TRUSTED_FOLDERS_FILENAME: &str = "trusted_folders.toml";
 
-/// User-global sandbox profile definitions (`$GROK_HOME/sandbox.toml`).
+/// User-global sandbox profile definitions (`$DEEPSEEK_BUILD_HOME/sandbox.toml`).
 pub const SANDBOX_CONFIG_FILENAME: &str = "sandbox.toml";
 
-/// Legacy project-hook trust list (`$GROK_HOME/trusted-hook-projects`).
+/// Legacy project-hook trust list (`$DEEPSEEK_BUILD_HOME/trusted-hook-projects`).
 /// Migrated into [`TRUSTED_FOLDERS_FILENAME`] on the next unsandboxed start.
 pub const TRUSTED_HOOK_PROJECTS_FILENAME: &str = "trusted-hook-projects";
 
-/// Plugin trust list (`$GROK_HOME/trusted-plugins`).
+/// Plugin trust list (`$DEEPSEEK_BUILD_HOME/trusted-plugins`).
 pub const TRUSTED_PLUGINS_FILENAME: &str = "trusted-plugins";
 
 pub fn load_managed_config() -> std::io::Result<toml::Value> {
@@ -194,15 +194,15 @@ pub fn managed_config_layers_at(
 pub enum HookProvenance {
     /// `/etc/grok/managed_config.toml` (root-owned).
     SystemManaged,
-    /// `$GROK_HOME/managed_config.toml` (server-synced, user-writable).
+    /// `$DEEPSEEK_BUILD_HOME/managed_config.toml` (server-synced, user-writable).
     Managed,
     /// System-tier `requirements.toml` (root-owned, e.g. `/etc/grok`).
     Requirements,
-    /// `$GROK_HOME/requirements.toml` while its bytes match the server-signed envelope (see [`crate::signed_policy::signed_requirements_attest`]).
+    /// `$DEEPSEEK_BUILD_HOME/requirements.toml` while its bytes match the server-signed envelope (see [`crate::signed_policy::signed_requirements_attest`]).
     SignedRequirements,
-    /// `$GROK_HOME/requirements.toml` without a signed attestation (user-writable).
+    /// `$DEEPSEEK_BUILD_HOME/requirements.toml` without a signed attestation (user-writable).
     UserRequirements,
-    /// `$GROK_HOME/config.toml`.
+    /// `$DEEPSEEK_BUILD_HOME/config.toml`.
     User,
     /// A JSON hook file (the hooks directory, a vendor settings file, or a configured hooks path).
     File,
@@ -226,7 +226,7 @@ impl HookProvenance {
     /// Every disable path must consult this predicate rather than re-derive the rule from names or paths.
     /// Root-owned tiers qualify by OS ownership, `SignedRequirements` by the server's signature over the exact bytes.
     /// `Managed` stays disableable even though the same envelope signs `managed_config.toml`: that file is distribution (defaults the user may override), requirements is enforcement.
-    /// The unsigned `$GROK_HOME` tiers never qualify, since the user owns that directory.
+    /// The unsigned `$DEEPSEEK_BUILD_HOME` tiers never qualify, since the user owns that directory.
     pub fn is_managed_policy(self) -> bool {
         matches!(
             self,
@@ -642,7 +642,7 @@ mod tests {
         assert_eq!(cmd, Some("${HOME}/u.sh"));
     }
 
-    /// The user-writable `$GROK_HOME/requirements.toml` stamps `UserRequirements`, never the exempt `Requirements`.
+    /// The user-writable `$DEEPSEEK_BUILD_HOME/requirements.toml` stamps `UserRequirements`, never the exempt `Requirements`.
     /// A file the user owns cannot grant itself the no-disable exemption.
     #[test]
     fn user_requirements_layer_is_not_managed_policy() {
@@ -662,7 +662,7 @@ mod tests {
         assert!(!layer.provenance().is_managed_policy());
     }
 
-    /// The same `$GROK_HOME/requirements.toml` stamps the exempt `SignedRequirements` while its bytes verify against the server's signature, and drops back to `UserRequirements` the moment they differ.
+    /// The same `$DEEPSEEK_BUILD_HOME/requirements.toml` stamps the exempt `SignedRequirements` while its bytes verify against the server's signature, and drops back to `UserRequirements` the moment they differ.
     #[test]
     fn signed_requirements_layer_is_managed_policy_until_edited() {
         use crate::signed_policy::tests::{payload, sign, test_keypair};

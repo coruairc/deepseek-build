@@ -397,7 +397,7 @@ mod tests {
 
     #[test]
     fn display_grok_home_prefix_default_install() {
-        if std::env::var("GROK_HOME").is_ok() {
+        if std::env::var("DEEPSEEK_BUILD_HOME").is_ok() {
             return;
         }
         assert_eq!(display_grok_home_prefix(), "~/.deepseek-build");

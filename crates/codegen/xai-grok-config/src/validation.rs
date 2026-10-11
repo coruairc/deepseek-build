@@ -54,7 +54,7 @@ pub struct RequirementsLayer {
     pub value: toml::Value,
     pub source: RequirementsSource,
     /// `true` means the root-owned system layer.
-    /// Security decisions must trust this flag, not re-derive it from the source, which is `GROK_HOME`-influenced and could carry `..`.
+    /// Security decisions must trust this flag, not re-derive it from the source, which is `DEEPSEEK_BUILD_HOME`-influenced and could carry `..`.
     pub is_system: bool,
 }
 

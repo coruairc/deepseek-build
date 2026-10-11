@@ -617,7 +617,6 @@ pub struct PagerArgs {
     )]
     pub background_wait_timeout_secs: u64,
     /// Sandbox profile for filesystem and network access.
-    /// The legacy `GROK_SANDBOX` name is still honored.
     #[arg(long, env = "DEEPSEEK_BUILD_SANDBOX", value_name = "PROFILE")]
     pub sandbox: Option<String>,
     /// Session storage mode: local or writeback.
@@ -848,7 +847,7 @@ impl PagerArgs {
     }
     /// Resolve the sandbox profile to apply at startup, accounting for the profile the resumed session was created with.
     /// `saved` is the resumed session's persisted profile (read once via [`Self::saved_resume_profile`]).
-    /// An explicit `--sandbox`/`DEEPSEEK_BUILD_SANDBOX` (legacy `GROK_SANDBOX`) that differs from the saved profile is refused: changing a session's sandbox on resume would be unsafe.
+    /// An explicit `--sandbox`/`DEEPSEEK_BUILD_SANDBOX` that differs from the saved profile is refused: changing a session's sandbox on resume would be unsafe.
     pub fn startup_sandbox_profile(&self, saved: Option<&str>) -> SandboxStartup {
         let explicit = self.sandbox.as_deref().filter(|s| !s.is_empty());
         Self::resolve_startup_sandbox(explicit, saved.map(String::from))

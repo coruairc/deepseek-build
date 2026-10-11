@@ -8,7 +8,7 @@ use reqwest::header::{ACCEPT, ACCEPT_LANGUAGE, CONTENT_TYPE, USER_AGENT};
 use url::Url;
 
 use super::cache::FetchCache;
-use super::config::{MAX_REDIRECTS, MAX_URL_LENGTH, USER_AGENT_STRING, WebFetchParams};
+use super::config::{MAX_REDIRECTS, MAX_URL_LENGTH, WebFetchParams};
 use super::error::WebFetchError;
 use super::http::HttpClient;
 use super::overflow::{OverflowHandler, RecoveryTools, inline_budget};
@@ -375,7 +375,10 @@ async fn fetch_url(
 
         let resp = client
             .get(current_url.as_str())
-            .header(USER_AGENT, USER_AGENT_STRING)
+            .header(
+                USER_AGENT,
+                format!("Mozilla/5.0 (compatible; {}/1.0)", xai_grok_brand::NAME),
+            )
             .header(
                 ACCEPT,
                 "text/markdown,text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",

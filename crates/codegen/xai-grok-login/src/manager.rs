@@ -329,7 +329,7 @@ impl AuthManager {
                 "scope": &scope,
                 "grok_home": grok_home.display().to_string(),
                 "HOME": std::env::var("HOME").unwrap_or_else(|_| "(unset)".into()),
-                "GROK_HOME": std::env::var("GROK_HOME").unwrap_or_else(|_| "(unset)".into()),
+                "DEEPSEEK_BUILD_HOME": std::env::var("DEEPSEEK_BUILD_HOME").unwrap_or_else(|_| "(unset)".into()),
                 "GROK_AUTH_PATH": std::env::var("GROK_AUTH_PATH").unwrap_or_else(|_| "(unset)".into()),
                 "GROK_AUTH": match std::env::var("GROK_AUTH") {
                     Err(_) => "(unset)",

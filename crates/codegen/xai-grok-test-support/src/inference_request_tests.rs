@@ -18,15 +18,21 @@ fn explicit_request_headers_override_the_tool_count_heuristic() {
     });
     let cases: [(&[(&str, &str)], InferenceRequestKind); 3] = [
         (
-            &[("x-grok-req-id", "title-request")],
+            &[("x-deepseek-build-req-id", "title-request")],
             InferenceRequestKind::Auxiliary,
         ),
         (
-            &[("x-grok-req-id", "title-request"), ("x-grok-turn-idx", "1")],
+            &[
+                ("x-deepseek-build-req-id", "title-request"),
+                ("x-deepseek-build-turn-idx", "1"),
+            ],
             InferenceRequestKind::Foreground,
         ),
         (
-            &[("x-grok-req-id", ""), ("x-grok-turn-idx", "")],
+            &[
+                ("x-deepseek-build-req-id", ""),
+                ("x-deepseek-build-turn-idx", ""),
+            ],
             InferenceRequestKind::Foreground,
         ),
     ];

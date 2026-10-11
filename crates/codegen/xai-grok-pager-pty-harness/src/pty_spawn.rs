@@ -25,10 +25,6 @@ const APPEARANCE_ENV_VARS: &[&str] = &[
     "LC_DEEPSEEK_BUILD_APPEARANCE",
     "DEEPSEEK_BUILD_THEME",
     "LC_DEEPSEEK_BUILD_THEME",
-    "GROK_APPEARANCE",
-    "LC_GROK_APPEARANCE",
-    "GROK_THEME",
-    "LC_GROK_THEME",
     "COLORFGBG",
 ];
 
@@ -338,7 +334,7 @@ mod tests {
             "hermetic baseline must remove unrelated inherited vars"
         );
         assert_eq!(
-            cmd.get_env("GROK_HOME").and_then(|v| v.to_str()),
+            cmd.get_env("DEEPSEEK_BUILD_HOME").and_then(|v| v.to_str()),
             sandbox.grok_home().to_str()
         );
     }
@@ -357,7 +353,7 @@ mod tests {
             sandbox.home().to_str()
         );
         assert_eq!(
-            cmd.get_env("GROK_HOME").and_then(|v| v.to_str()),
+            cmd.get_env("DEEPSEEK_BUILD_HOME").and_then(|v| v.to_str()),
             sandbox.grok_home().to_str()
         );
         assert_eq!(cmd.get_env("GROK_LEADER_SOCKET"), None);

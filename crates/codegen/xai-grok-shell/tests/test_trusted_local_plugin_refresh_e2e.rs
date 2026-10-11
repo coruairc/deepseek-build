@@ -2,7 +2,7 @@
 //! 1. Install a local plugin (full copy into `installed-plugins/`).
 //! 2. Add a new agent only on the **live** source tree.
 //! 3. Start a headless session: startup must re-copy trusted and user-home local installs.
-//! 4. After exit, check the session JSON under `$GROK_HOME/sessions/` parses.
+//! 4. After exit, check the session JSON under `$DEEPSEEK_BUILD_HOME/sessions/` parses.
 //!
 //! Requires a built `grok` binary (`GROK_BINARY` or cargo-built pager) for the ignored headless test.
 //!
@@ -105,7 +105,7 @@ fn trusted_local_refresh_surfaces_new_agent_via_discovery() {
     let home = dunce::canonicalize(home_tmp.path()).unwrap();
     let grok_home = home.join(".grok");
     let _home_guard = EnvVarGuard::set("HOME", &home);
-    let _grok_guard = EnvVarGuard::set("GROK_HOME", &grok_home);
+    let _grok_guard = EnvVarGuard::set("DEEPSEEK_BUILD_HOME", &grok_home);
 
     // Live source: a user-home local plugin (mirrors a `~/.claude` local tree).
     let source = home
@@ -157,7 +157,7 @@ fn trusted_local_refresh_surfaces_new_agent_via_discovery() {
     );
 
     // Session `_meta.pluginDirs` load
-    // This runs in the same test because grok_home() caches the first GROK_HOME per process
+    // This runs in the same test because grok_home() caches the first DEEPSEEK_BUILD_HOME per process
     // A separate test could seed the cache first and break the assertions above
     let plugin_dir = home.join("session-plugin");
     write_minimal_plugin(&plugin_dir, "session-plugin");
@@ -212,11 +212,11 @@ async fn headless_session_refreshes_trusted_local_plugin_and_writes_session_json
     write_minimal_plugin(&source, "demo-plugin");
     write_agent(&source, "old", "old-agent", "exists at install");
 
-    // The spawned binary gets HOME and GROK_HOME via `cmd.env` below
+    // The spawned binary gets HOME and DEEPSEEK_BUILD_HOME via `cmd.env` below
     // This global env only serves the discovery assertion run in-process after the binary exits; it resolves the registry via grok_home()
     // `#[serial]` keeps it from racing other tests
     let _home_guard = EnvVarGuard::set("HOME", &home);
-    let _grok_guard = EnvVarGuard::set("GROK_HOME", &grok_home);
+    let _grok_guard = EnvVarGuard::set("DEEPSEEK_BUILD_HOME", &grok_home);
 
     let mut registry = InstallRegistry::empty(grok_home.join("installed-plugins"));
     let installed = register_local_install(&mut registry, &source);
@@ -245,7 +245,7 @@ async fn headless_session_refreshes_trusted_local_plugin_and_writes_session_json
     sandbox
         .set_env("HOME", &home)
         .set_env("USERPROFILE", &home)
-        .set_env("GROK_HOME", &grok_home);
+        .set_env("DEEPSEEK_BUILD_HOME", &grok_home);
 
     let result = run_headless_in_sandbox(cmd, sandbox).await;
     assert_headless_success(
@@ -282,7 +282,7 @@ async fn headless_session_refreshes_trusted_local_plugin_and_writes_session_json
         "new agent must surface in /agents after the binary's session-start refresh"
     );
 
-    // Session storage under GROK_HOME/sessions must hold JSON files that parse
+    // Session storage under DEEPSEEK_BUILD_HOME/sessions must hold JSON files that parse
     let sessions_root = grok_home.join("sessions");
     assert!(
         sessions_root.is_dir(),

@@ -32,7 +32,7 @@ impl TrustStore {
     /// If the file cannot be read, logs a warning and returns an empty store.
     pub fn load() -> Self {
         // Gate on user_grok_home() so a project's `.grok/trusted-plugins` is never read as the user trust store
-        // That happens when neither GROK_HOME nor a home dir resolves
+        // That happens when neither DEEPSEEK_BUILD_HOME nor a home dir resolves
         let Some(grok) = xai_grok_config::user_grok_home() else {
             return Self {
                 trusted: HashSet::new(),

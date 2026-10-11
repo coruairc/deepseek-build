@@ -17,7 +17,7 @@ pub(crate) const CONTENT_FILTER_REPLY: &str = "MOCK-CONTENT-FILTER";
 /// The text of a reply from a model caught looping.
 pub const LOOPING_REPLY: &str = "MOCK-LOOP MOCK-LOOP MOCK-LOOP MOCK-LOOP";
 /// The header a client sends to opt into the inference API's loop detector.
-pub const DOOM_LOOP_CHECK_HEADER: &str = "x-grok-doom-loop-check";
+pub const DOOM_LOOP_CHECK_HEADER: &str = "x-deepseek-build-doom-loop-check";
 /// A single SSE data frame whose payload is not valid JSON, so the client's stream decoder fails to
 /// deserialize a chunk and surfaces a serialization error.
 pub(crate) const MALFORMED_SSE_BODY: &str = "data: {grok-mock malformed chunk\n\n";
@@ -68,7 +68,7 @@ impl StatusFailure {
         self
     }
 
-    /// Sent as `x-grok-context-window`, the header that reports the model's context window.
+    /// Sent as `x-deepseek-build-context-window`, the header that reports the model's context window.
     pub fn with_context_window(mut self, tokens: u64) -> Self {
         self.context_window = Some(tokens);
         self
@@ -92,9 +92,10 @@ impl StatusFailure {
                 .push(("retry-after".to_owned(), retry_after.as_secs().to_string()));
         }
         if let Some(tokens) = self.context_window {
-            response
-                .headers
-                .push(("x-grok-context-window".to_owned(), tokens.to_string()));
+            response.headers.push((
+                "x-deepseek-build-context-window".to_owned(),
+                tokens.to_string(),
+            ));
         }
         response
     }

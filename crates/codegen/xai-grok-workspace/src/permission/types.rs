@@ -78,7 +78,7 @@ pub enum ClientType {
 impl ClientType {
     pub fn user_agent_label(&self) -> &'static str {
         match self {
-            Self::Generic => "grok-shell",
+            Self::Generic => xai_grok_brand::NAME,
             Self::GrokTUI => "grok-tui",
             Self::GrokWeb => "grok-web",
             Self::Nebula => "nebula",

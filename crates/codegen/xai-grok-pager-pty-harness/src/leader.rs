@@ -1,7 +1,7 @@
 //! Multi-client leader cluster: one shared leader plus N pager clients.
 //!
 //! Every other leader test is single-client/single-leader; [`LeaderCluster`] covers "one leader, several pager clients sharing its session".
-//! One [`ContentController`] gives one shared `$HOME` (hence one elected leader) plus a fixed leader socket beneath its `GROK_HOME`.
+//! One [`ContentController`] gives one shared `$HOME` (hence one elected leader) plus a fixed leader socket beneath its `DEEPSEEK_BUILD_HOME`.
 //! Clients spawn with the `--leader`/`--leader-socket` flags so they all attach to the SAME leader.
 //! It also exposes the leader's durable `updates.jsonl` log so a reattach test can assert on the persisted, replayable turn-completion records.
 
@@ -23,12 +23,12 @@ pub struct LeaderCluster {
 }
 
 impl LeaderCluster {
-    /// Start the cluster: one [`ContentController`] (one shared `$HOME`, so one leader) and a fixed leader socket under its `GROK_HOME`.
+    /// Start the cluster: one [`ContentController`] (one shared `$HOME`, so one leader) and a fixed leader socket under its `DEEPSEEK_BUILD_HOME`.
     pub async fn start(rows: u16, cols: u16) -> Result<Self> {
         let content = ContentController::start()
             .await
             .context("start content controller")?;
-        // One shared GROK_HOME means one leader; the socket lives beneath it so every client (sharing the same env) elects/attaches to the same one
+        // One shared DEEPSEEK_BUILD_HOME means one leader; the socket lives beneath it so every client (sharing the same env) elects/attaches to the same one
         let grok_home = content.home().join(".grok");
         std::fs::create_dir_all(&grok_home).context("create grok home")?;
         let socket = grok_home.join("leader-e2e.sock");
@@ -68,7 +68,7 @@ impl LeaderCluster {
         &self.content
     }
 
-    /// The cluster's sessions root: `GROK_HOME/sessions` (layout below is `sessions/<encoded-cwd>/<session-id>/updates.jsonl`).
+    /// The cluster's sessions root: `DEEPSEEK_BUILD_HOME/sessions` (layout below is `sessions/<encoded-cwd>/<session-id>/updates.jsonl`).
     fn sessions_dir(&self) -> PathBuf {
         self.content.home().join(".grok").join("sessions")
     }

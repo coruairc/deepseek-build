@@ -134,19 +134,19 @@ fn is_figma_mcp_matches_name_and_host() {
 }
 
 #[test]
-fn ensure_figma_user_agent_sets_grok_cli_when_missing() {
+fn ensure_figma_user_agent_sets_brand_ua_when_missing() {
     let mut headers = reqwest::header::HeaderMap::new();
     ensure_figma_user_agent(&mut headers, "figma", "https://mcp.figma.com/mcp");
     assert_eq!(
         headers.get(reqwest::header::USER_AGENT).unwrap(),
-        "grok-cli"
+        xai_grok_brand::NAME
     );
 
     let mut host_only = reqwest::header::HeaderMap::new();
     ensure_figma_user_agent(&mut host_only, "other", "https://mcp.figma.com/mcp");
     assert_eq!(
         host_only.get(reqwest::header::USER_AGENT).unwrap(),
-        "grok-cli"
+        xai_grok_brand::NAME
     );
 }
 
@@ -189,10 +189,10 @@ fn parse_config_headers_skips_invalid_and_keeps_last_duplicate() {
 }
 
 #[test]
-fn apply_user_agent_policy_sets_versioned_grok_cli() {
+fn apply_user_agent_policy_sets_versioned_brand_ua() {
     let mut headers = reqwest::header::HeaderMap::new();
     apply_user_agent_policy(&mut headers, "linear", "https://mcp.linear.app/mcp");
-    let expected = format!("grok-cli/{}", xai_grok_version::VERSION);
+    let expected = format!("{}/{}", xai_grok_brand::NAME, xai_grok_version::VERSION);
     assert_eq!(
         headers.get(reqwest::header::USER_AGENT).unwrap(),
         expected.as_str()
@@ -219,7 +219,7 @@ fn apply_user_agent_policy_preserves_figma_attribution() {
     apply_user_agent_policy(&mut headers, "other", "https://mcp.figma.com/mcp");
     assert_eq!(
         headers.get(reqwest::header::USER_AGENT).unwrap(),
-        "grok-cli"
+        xai_grok_brand::NAME
     );
 }
 
@@ -2186,7 +2186,11 @@ async fn http_transport_sends_default_user_agent_on_initialize() {
     client.ensure_initialized().await.expect("handshake");
     assert_eq!(
         *handles.init_user_agents.lock(),
-        vec![format!("grok-cli/{}", xai_grok_version::VERSION)]
+        vec![format!(
+            "{}/{}",
+            xai_grok_brand::NAME,
+            xai_grok_version::VERSION
+        )]
     );
 }
 
@@ -4736,7 +4740,11 @@ async fn anonymous_access_probe_sends_default_user_agent() {
         .expect("probe POST must reach the fake server");
     assert_eq!(
         header_values(&captured, axum::http::header::USER_AGENT),
-        vec![format!("grok-cli/{}", xai_grok_version::VERSION)]
+        vec![format!(
+            "{}/{}",
+            xai_grok_brand::NAME,
+            xai_grok_version::VERSION
+        )]
     );
     assert_eq!(
         header_values(&captured, axum::http::header::CONTENT_TYPE),

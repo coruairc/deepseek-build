@@ -860,7 +860,11 @@ fn print_report_renders_registry_notices() {
             registry: RegistryState::Busy,
             rows: true,
             expected: &["in use by another process", "Retry in a moment."],
-            absent: &["db rebuild", "damaged", "Remove $GROK_HOME/worktrees.db"],
+            absent: &[
+                "db rebuild",
+                "damaged",
+                "Remove $DEEPSEEK_BUILD_HOME/worktrees.db",
+            ],
         },
         Case {
             name: "an unopenable registry names the file without proposing deletion",
@@ -871,7 +875,11 @@ fn print_report_renders_registry_notices() {
                 "worktrees.db",
                 "Check its permissions.",
             ],
-            absent: &["db rebuild", "damaged", "Remove $GROK_HOME/worktrees.db"],
+            absent: &[
+                "db rebuild",
+                "damaged",
+                "Remove $DEEPSEEK_BUILD_HOME/worktrees.db",
+            ],
         },
     ];
     for case in cases {
@@ -1012,7 +1020,7 @@ fn symlinked_worktrees_dir_is_surfaced_not_silently_dropped() {
 }
 #[cfg(unix)]
 #[test]
-#[serial_test::serial(GROK_HOME)]
+#[serial_test::serial(DEEPSEEK_BUILD_HOME)]
 #[serial_test::serial(HOME)]
 fn symlinked_default_home_keeps_home_label() {
     let tmp = tempfile::TempDir::new().unwrap();

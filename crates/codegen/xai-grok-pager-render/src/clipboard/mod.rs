@@ -2402,7 +2402,7 @@ mod tests {
             std::env::remove_var(GROK_COPY_FILE_ENV);
         }
         let path = default_copy_fallback_path();
-        // Test envs always resolve a home (or set GROK_HOME).
+        // Test envs always resolve a home (or set DEEPSEEK_BUILD_HOME).
         let expected = xai_grok_config::user_grok_home()
             .expect("home resolves in tests")
             .join("last-copy.txt");
@@ -2411,10 +2411,10 @@ mod tests {
 
     /// Toast paths collapse the home prefix to `~`.
     /// deepseek-build-home paths go through the shared `abbreviate_path` convention.
-    /// The `GROK_HOME`-override integration test in `xai-grok-pager` covers that further.
+    /// The `DEEPSEEK_BUILD_HOME`-override integration test in `xai-grok-pager` covers that further.
     #[test]
     fn display_copy_path_abbreviates_home() {
-        if std::env::var_os("GROK_HOME").is_none() {
+        if std::env::var_os("DEEPSEEK_BUILD_HOME").is_none() {
             let home = xai_dirs::home_dir().expect("home resolves in tests");
             assert_eq!(
                 display_copy_path(&home.join(".grok").join("last-copy.txt")),

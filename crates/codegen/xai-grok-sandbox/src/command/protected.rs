@@ -187,7 +187,7 @@ pub const DAEMON_SETTINGS_FILENAME: &str = "workspaced.toml";
 /// guide the model reads, the MCP and LSP server configs the daemon starts what they name from,
 /// extensions, and the CLI's own settings. The whole grok home is a floor tree too; a workspace
 /// served from inside it (a grok-managed worktree) is the one thing there a command may write.
-pub const GROK_HOME_PROTECTED_NAMES: &[&str] = &[
+pub const DEEPSEEK_BUILD_HOME_PROTECTED_NAMES: &[&str] = &[
     "hooks",
     "hooks-paths",
     GLOBAL_GRANTS_FILENAME,
@@ -357,7 +357,7 @@ pub const SECRET_READ_DENY_FILES: &[&str] = &[
 ];
 
 /// deepseek-build-home glob prefixes denied for read: the auth material.
-pub const GROK_HOME_SECRET_GLOBS: &[&str] = &["auth*", "credentials*"];
+pub const DEEPSEEK_BUILD_HOME_SECRET_GLOBS: &[&str] = &["auth*", "credentials*"];
 
 /// The temporary directories a command may write by default: `$TMPDIR` (or the platform default)
 /// plus the platform's shared temp roots. Every entry is absolute; a relative `$TMPDIR` is ignored.
@@ -1039,7 +1039,7 @@ pub fn floor_with_unread(inputs: &ProtectedInputs<'_>) -> Floor {
     out.extend(
         TRUST_BOUNDARY_FILENAMES
             .iter()
-            .chain(GROK_HOME_PROTECTED_NAMES)
+            .chain(DEEPSEEK_BUILD_HOME_PROTECTED_NAMES)
             .map(|name| path(grok_home.join(name))),
     );
     if let Some(home) = &home {

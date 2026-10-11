@@ -40,15 +40,15 @@ account = "other@example.com"
 }
 
 #[tokio::test]
-#[serial_test::serial(GROK_HOME)]
+#[serial_test::serial(DEEPSEEK_BUILD_HOME)]
 async fn set_consent_answer_is_monotonic_per_account() {
     let home = tempfile::tempdir().expect("home");
-    let _guard = xai_grok_test_support::env::EnvGuard::set("GROK_HOME", home.path());
+    let _guard = xai_grok_test_support::env::EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
 
     let answers = || {
-        // Persist writes live `$GROK_HOME`. Read that dest directly (rather than
+        // Persist writes live `$DEEPSEEK_BUILD_HOME`. Read that dest directly (rather than
         // `load_from_disk`, whose layered resolution reads the process-wide home and
-        // races other tests that mutate `GROK_HOME` in parallel).
+        // races other tests that mutate `DEEPSEEK_BUILD_HOME` in parallel).
         let path = super::super::user_config_path();
         let (dest, _) = super::super::read_follow_bound(&path).expect("bind persist dest");
         let persist_root =

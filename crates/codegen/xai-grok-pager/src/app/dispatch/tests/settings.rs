@@ -135,7 +135,7 @@ fn toggle_vim_mode_propagates_to_open_subagent_views() {
 /// `/vim-mode` must toggle vim from the DASHBOARD too, not just an agent view.
 /// It used to early-return unless an agent was active, a silent no-op that left the overview's j/k off.
 /// Turning vim ON also focuses the overview so j/k navigate immediately; turning it OFF returns focus to the input.
-#[serial_test::serial(GROK_AGENT_DASHBOARD)]
+#[serial_test::serial(DEEPSEEK_BUILD_AGENT_DASHBOARD)]
 #[test]
 fn toggle_vim_mode_works_on_dashboard_and_focuses_overview() {
     crate::appearance::cache::set_vim_mode(false);

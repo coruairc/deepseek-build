@@ -42,13 +42,6 @@ fn bin() -> std::path::PathBuf {
     );
 }
 
-/// Deliberately kept legacy mentions. Each entry is a full phrase, not a bare
-/// word, so an unrelated new occurrence cannot hide behind it:
-/// - the `--sandbox` help documents that the legacy env-var name is honored;
-///   the variable really is still read (see `resolve_string_flag_legacy`), and
-///   naming it is the only way an existing install discovers it still works.
-const ALLOWED_LEGACY_PHRASES: &[&str] = &["The legacy `GROK_SANDBOX` name is still honored"];
-
 /// Case-insensitive legacy branding tokens that must not reach users.
 const LEGACY_TOKENS: &[&str] = &["grok", "xai", "x.ai"];
 
@@ -117,19 +110,15 @@ fn run_child(mut cmd: Command) -> RunResult {
     }
 }
 
-/// Legacy tokens found in `text` after removing the allowlisted phrases,
-/// reported as `token: line` pairs for the failure message.
+/// Legacy tokens found in `text`, reported as `token: line` pairs for the
+/// failure message.
 fn legacy_hits(text: &str) -> Vec<String> {
-    let mut scrubbed = text.to_string();
-    for allowed in ALLOWED_LEGACY_PHRASES {
-        scrubbed = scrubbed.replace(allowed, "");
-    }
-    let lowered = scrubbed.to_lowercase();
+    let lowered = text.to_lowercase();
     let mut hits = Vec::new();
     for token in LEGACY_TOKENS {
         if let Some(pos) = lowered.find(token) {
             let line = lowered[..pos].matches('\n').count() + 1;
-            let snippet = scrubbed.lines().nth(line - 1).unwrap_or("");
+            let snippet = text.lines().nth(line - 1).unwrap_or("");
             hits.push(format!("{token:?} at line {line}: {snippet}"));
         }
     }

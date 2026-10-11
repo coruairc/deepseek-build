@@ -1592,11 +1592,11 @@ fn patch_initialize_response_patches_current_model_id() {
 #[test]
 fn patch_initialize_response_preserves_other_fields() {
     let mut json = pv(
-        r#"{"jsonrpc":"2.0","id":1,"result":{"meta":{"grokShell":true,"modelState":{"currentModelId":"deepseek-3","availableModels":[{"modelId":"deepseek-3"},{"modelId":"deepseek-3-fast"}]}}}}"#,
+        r#"{"jsonrpc":"2.0","id":1,"result":{"meta":{"deepseek-build":true,"modelState":{"currentModelId":"deepseek-3","availableModels":[{"modelId":"deepseek-3"},{"modelId":"deepseek-3-fast"}]}}}}"#,
     );
     let default_model = Some("deepseek-3-fast".to_string());
     assert!(patch_initialize_response_model(&mut json, &default_model));
-    assert_eq!(j(&json, "/result/meta/grokShell"), true);
+    assert_eq!(j(&json, "/result/meta/deepseek-build"), true);
     assert_eq!(
         j(&json, "/result/meta/modelState/currentModelId"),
         "deepseek-3-fast"

@@ -1335,7 +1335,7 @@ mod tests {
         assert!(git2::Repository::discover(&dir).is_err());
         assert!(parent_session_is_worktree("any-sid", &dir));
     }
-    #[serial_test::serial(GROK_HOME)]
+    #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
     #[test]
     fn parent_session_is_worktree_summary_session_kind() {
         let mut fx = crate::test_util::GrokHomeFixture::new();
@@ -1348,7 +1348,7 @@ mod tests {
         );
         assert!(parent_session_is_worktree("sid-kind", &repo.path));
     }
-    #[serial_test::serial(GROK_HOME)]
+    #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
     #[test]
     fn parent_session_is_worktree_summary_source_workspace_dir() {
         let mut fx = crate::test_util::GrokHomeFixture::new();
@@ -1367,7 +1367,7 @@ mod tests {
         );
         assert!(!parent_session_is_worktree("sid-src-empty", &repo.path));
     }
-    #[serial_test::serial(GROK_HOME)]
+    #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
     #[test]
     fn parent_session_is_worktree_summary_worktree_label() {
         let mut fx = crate::test_util::GrokHomeFixture::new();
@@ -1675,7 +1675,7 @@ mod tests {
             RecentSessionSelection::Any,
         );
     }
-    #[serial_test::serial(GROK_HOME)]
+    #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
     #[tokio::test]
     async fn continue_skips_empty_worktree_stamped_husk() {
         let mut fx = crate::test_util::GrokHomeFixture::new();
@@ -1717,7 +1717,7 @@ mod tests {
             other => panic!("expected Resume of the prior session, got {other:?}"),
         }
     }
-    #[serial_test::serial(GROK_HOME)]
+    #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
     #[tokio::test]
     async fn continue_keeps_empty_worktree_fork() {
         let mut fx = crate::test_util::GrokHomeFixture::new();
@@ -1761,7 +1761,7 @@ mod tests {
             other => panic!("expected Resume of the empty worktree fork, got {other:?}"),
         }
     }
-    #[serial_test::serial(GROK_HOME)]
+    #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
     #[tokio::test]
     async fn most_recent_fork_selection_follows_surface() {
         let mut fx = crate::test_util::GrokHomeFixture::new();
@@ -1985,7 +1985,7 @@ mod tests {
         assert!(WORKTREE_NO_RESTORE_CODE_NOTICE.contains("--restore-code"));
     }
     /// `--restore-code` without `--worktree` must fail before any in-place checkout.
-    #[serial_test::serial(GROK_HOME)]
+    #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
     #[tokio::test]
     async fn remote_miss_restore_code_without_worktree_errors() {
         let _fx = crate::test_util::GrokHomeFixture::new();
@@ -2021,7 +2021,7 @@ mod tests {
         );
     }
     /// `--restore-code --worktree` stays on the existing defer path.
-    #[serial_test::serial(GROK_HOME)]
+    #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
     #[tokio::test]
     async fn remote_miss_restore_code_with_worktree_defers() {
         let _fx = crate::test_util::GrokHomeFixture::new();
@@ -2053,7 +2053,7 @@ mod tests {
             other => panic!("expected Resume, got {other:?}"),
         }
     }
-    #[serial_test::serial(GROK_HOME)]
+    #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
     #[tokio::test]
     async fn remote_miss_worktree_without_restore_code_suppresses_snapshot() {
         let _fx = crate::test_util::GrokHomeFixture::new();
@@ -2200,11 +2200,11 @@ mod tests {
         }
     }
     /// The chat passthrough does not bypass the cwd-collision refusal that `app/mod.rs` runs on the materialized id.
-    #[serial_test::serial(GROK_HOME)]
+    #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
     #[tokio::test]
     async fn chat_resume_passthrough_keeps_cwd_collision_refusal() {
         let home = tempfile::tempdir().expect("home tempdir");
-        unsafe { std::env::set_var("GROK_HOME", home.path()) };
+        unsafe { std::env::set_var("DEEPSEEK_BUILD_HOME", home.path()) };
         let cwd = tempfile::tempdir().expect("cwd tempdir");
         let cwd_str = cwd.path().to_string_lossy().to_string();
         let id = uuid::Uuid::new_v4().to_string();
@@ -2279,7 +2279,7 @@ mod tests {
         async fn resume(arg: &str, cwd: &str) -> anyhow::Result<MaterializedStartup> {
             resume_with(arg, cwd, RecentSessionSelection::Interactive).await
         }
-        #[serial_test::serial(GROK_HOME)]
+        #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
         #[tokio::test]
         async fn title_fallback_ignores_headless_matches() {
             let mut fx = GrokHomeFixture::new();
@@ -2297,7 +2297,7 @@ mod tests {
                 .expect_err("headless title must not resolve interactively");
             assert!(error.to_string().contains("does not exist"));
         }
-        #[serial_test::serial(GROK_HOME)]
+        #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
         #[tokio::test]
         async fn headless_title_resume_keeps_headless_matches() {
             let mut fx = GrokHomeFixture::new();
@@ -2322,7 +2322,7 @@ mod tests {
             }
         }
         /// Also covers letter-case insensitivity: the query case differs from the stored title.
-        #[serial_test::serial(GROK_HOME)]
+        #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
         #[tokio::test]
         async fn title_fallback_resumes_single_match_case_insensitively() {
             let mut fx = GrokHomeFixture::new();
@@ -2354,7 +2354,7 @@ mod tests {
         }
         /// Id resolution stays authoritative: when the arg is an on-disk session id, the title fallback is never consulted.
         /// That holds even though another session carries that exact title.
-        #[serial_test::serial(GROK_HOME)]
+        #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
         #[tokio::test]
         async fn id_hit_beats_title_fallback() {
             let mut fx = GrokHomeFixture::new();
@@ -2381,7 +2381,7 @@ mod tests {
         }
         /// Provenance for the worktree failure hint: only the defer arm (a local id and title miss under `--worktree`) flags the target.
         /// A resolved local id, even a legacy non-UUID one, never does.
-        #[serial_test::serial(GROK_HOME)]
+        #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
         #[tokio::test]
         async fn worktree_defer_flags_local_miss_and_local_hit_does_not() {
             let mut fx = GrokHomeFixture::new();
@@ -2619,13 +2619,15 @@ mod tests {
     }
     #[cfg(feature = "local-workspace")]
     #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ACK)]
-    #[serial_test::serial(GROK_HOME)]
+    #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
     #[test]
     fn local_workspace_non_tty_requires_ack() {
         let _ack = xai_grok_test_support::EnvGuard::unset(GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV);
         let home = tempfile::tempdir().unwrap();
-        let _home =
-            xai_grok_test_support::EnvGuard::set("GROK_HOME", home.path().to_str().unwrap());
+        let _home = xai_grok_test_support::EnvGuard::set(
+            "DEEPSEEK_BUILD_HOME",
+            home.path().to_str().unwrap(),
+        );
         let cfg = LocalWorkspaceConfig {
             mode: LocalWorkspaceMode::Attach,
             cwd: Some(std::path::PathBuf::from("/tmp/repo")),

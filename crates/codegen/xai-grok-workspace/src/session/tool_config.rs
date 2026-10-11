@@ -496,12 +496,15 @@ fn build_proxy_headers(base_url: &str) -> indexmap::IndexMap<String, String> {
     let version = xai_grok_version::VERSION;
     headers.insert(
         "user-agent".to_string(),
-        format!("xai-grok-workspace/{version}"),
+        format!("{}/{version}", xai_grok_brand::NAME),
     );
-    headers.insert("x-grok-client-version".to_string(), version.to_string());
     headers.insert(
-        "x-grok-client-identifier".to_string(),
-        std::env::var("GROK_CLIENT_NAME").unwrap_or_else(|_| "grok-shell".to_string()),
+        "x-deepseek-build-client-version".to_string(),
+        version.to_string(),
+    );
+    headers.insert(
+        "x-deepseek-build-client-identifier".to_string(),
+        std::env::var("GROK_CLIENT_NAME").unwrap_or_else(|_| xai_grok_brand::NAME.to_string()),
     );
     let _ = base_url;
     headers

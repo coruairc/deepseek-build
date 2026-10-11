@@ -3012,12 +3012,12 @@ pub fn worktree_auto_gc_layer_from_settings(
     }
 }
 
-/// Load `$GROK_HOME/config.toml` through the shell's config pipeline and pull out `[worktree.auto_gc]`.
+/// Load `$DEEPSEEK_BUILD_HOME/config.toml` through the shell's config pipeline and pull out `[worktree.auto_gc]`.
 ///
 /// `xai_grok_config::load_config_file` is the same reader the shell uses (`$VAR` expansion, `[[version_overrides]]`,
 /// redacted parse-error logging), so a table that the shell honors is honored here too.
 /// Returns `None` when the file is unreadable or malformed, or the table is absent or fails to deserialize.
-/// Takes `home` so the document-to-settings path is testable without touching `$GROK_HOME`.
+/// Takes `home` so the document-to-settings path is testable without touching `$DEEPSEEK_BUILD_HOME`.
 fn load_local_worktree_auto_gc_settings(
     home: &Path,
 ) -> Option<xai_grok_config_types::WorktreeAutoGcSettings> {
@@ -3048,7 +3048,7 @@ fn worktree_auto_gc_settings_from_config(
         .ok()
 }
 
-/// Remote-blind (env and `$GROK_HOME/config.toml` only): opts in only when local `[worktree.auto_gc] enabled = true`, else returns `None`.
+/// Remote-blind (env and `$DEEPSEEK_BUILD_HOME/config.toml` only): opts in only when local `[worktree.auto_gc] enabled = true`, else returns `None`.
 /// A forced dry-run would stamp the shared throttle and block the shell agent's remote-aware pass over the same DB, so skip instead.
 ///
 /// An explicit local opt-in makes the local layer (over built-in defaults) win for this pass: remote `worktree_auto_gc`
@@ -3062,7 +3062,7 @@ fn resolve_worktree_auto_gc_local_in(
 }
 
 /// Pure opt-in decision (no IO): `None` unless local config explicitly enables the pass.
-/// Split out of `resolve_worktree_auto_gc_local_in` so the fail-safe is testable without touching `$GROK_HOME`.
+/// Split out of `resolve_worktree_auto_gc_local_in` so the fail-safe is testable without touching `$DEEPSEEK_BUILD_HOME`.
 fn local_auto_gc_policy(
     local: Option<&xai_grok_config_types::WorktreeAutoGcSettings>,
 ) -> Option<xai_fast_worktree::ResolvedWorktreeAutoGc> {
@@ -3478,7 +3478,7 @@ mod tests {
     // Struct field order (see lib.rs) restores the env before the lock releases, regardless of how the caller binds the fixture's return
     use crate::LockedTestEnv;
 
-    /// Point `GROK_HOME` at an isolated tempdir (`resolve_grok_home` re-reads the env per call by design). Register one worktree record at `<home>/worktrees/repo/wt` with no `last_accessed_at`.
+    /// Point `DEEPSEEK_BUILD_HOME` at an isolated tempdir (`resolve_grok_home` re-reads the env per call by design). Register one worktree record at `<home>/worktrees/repo/wt` with no `last_accessed_at`.
     /// Returns `(env, home, worktree dir)`.
     fn worktree_db_fixture(
         temp: &tempfile::TempDir,
@@ -3489,7 +3489,7 @@ mod tests {
         let wt = home.join("worktrees").join("repo").join("wt");
         std::fs::create_dir_all(&wt).unwrap();
         // Acquire the lock, then set the env under it (LockedTestEnv restores the env before releasing the lock on drop)
-        let env = LockedTestEnv::lock().set("GROK_HOME", &home);
+        let env = LockedTestEnv::lock().set("DEEPSEEK_BUILD_HOME", &home);
 
         let db = WorktreeDb::open(&home).unwrap();
         let record = WorktreeRecord {

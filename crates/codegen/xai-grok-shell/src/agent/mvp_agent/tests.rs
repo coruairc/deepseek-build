@@ -2136,7 +2136,7 @@ async fn ensure_plugin_registry_lazily_populates_snapshot() {
     use xai_grok_login::{AuthManager, GrokComConfig};
     use xai_grok_test_support::EnvGuard;
     let grok_home = tempfile::tempdir().unwrap();
-    let _env = EnvGuard::set("GROK_HOME", grok_home.path());
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", grok_home.path());
     let plugin_dir = tempfile::tempdir().unwrap();
     std::fs::write(
         plugin_dir.path().join("plugin.json"),
@@ -2255,7 +2255,7 @@ async fn shared_plugin_registry_snapshot_reads_plugins_config_from_disk() {
         "rebuild must take `disabled` from config on disk, not the boot-time config"
     );
 }
-/// Scaffolding for the session-less `deepseek-build/plugins/reload` regressions: a hermetic GROK_HOME, the
+/// Scaffolding for the session-less `deepseek-build/plugins/reload` regressions: a hermetic DEEPSEEK_BUILD_HOME, the
 /// folder-trust feature in its release-build default (`GROK_FOLDER_TRUST` unset), and an agent whose
 /// launch dir is `repo` (captured from the process cwd at construction, so callers hold `serial`).
 struct ReloadHarness {
@@ -2271,7 +2271,7 @@ impl ReloadHarness {
         use xai_grok_test_support::EnvGuard;
         let home = tempfile::tempdir().unwrap();
         let env = vec![
-            EnvGuard::set("GROK_HOME", home.path()),
+            EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path()),
             EnvGuard::unset("GROK_FOLDER_TRUST"),
             EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0.0-sim"),
         ];
@@ -3260,7 +3260,7 @@ fn search_index_env() -> (tempfile::TempDir, [xai_grok_test_support::EnvGuard; 2
     use xai_grok_test_support::EnvGuard;
     let home = tempfile::tempdir().unwrap();
     let guards = [
-        EnvGuard::set("GROK_HOME", home.path()),
+        EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path()),
         EnvGuard::unset("GROK_SESSION_SEARCH"),
     ];
     (home, guards)
@@ -5792,7 +5792,7 @@ fn supervisor_reaps_panicked_resident_actor() {
 }
 /// The tier re-check work is single-flight across every caller: back-to-back gated initializes run at most one live check.
 /// An awaited authenticate-path check skips (rather than doubles or waits out) a check already wedged on a stalled subscription endpoint. Drives the exact block `initialize` runs when `tier_allowed` is false.
-/// The full `initialize` fires once-per-process GROK_HOME cleanup work that a unit test must not run against the developer's real home.
+/// The full `initialize` fires once-per-process DEEPSEEK_BUILD_HOME cleanup work that a unit test must not run against the developer's real home.
 pub(super) fn build_agent_with_auth_and_proxy(
     auth: xai_grok_login::GrokAuth,
     proxy_url: String,
@@ -5979,7 +5979,7 @@ fn subagent_spawn_context_reloads_project_definitions_after_trust_changes() {
 fn project_roles_personas_gated_via_resolve_and_record_chain() {
     use xai_grok_test_support::EnvGuard;
     let home = tempfile::tempdir().unwrap();
-    let _env = EnvGuard::set("GROK_HOME", home.path());
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
     let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
     let repo = tempfile::tempdir().unwrap();
@@ -6064,7 +6064,7 @@ fn interactive_trust_prompt_grant_reloads_project_mcp() {
     use xai_grok_test_support::EnvGuard;
     use xai_grok_workspace::trust::{TrustStore, workspace_key};
     let home = tempfile::tempdir().unwrap();
-    let _env = EnvGuard::set("GROK_HOME", home.path());
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
     let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
@@ -6145,7 +6145,7 @@ fn interactive_trust_prompt_reject_keeps_gated() {
     use xai_grok_test_support::EnvGuard;
     use xai_grok_workspace::trust::{TrustStore, workspace_key};
     let home = tempfile::tempdir().unwrap();
-    let _env = EnvGuard::set("GROK_HOME", home.path());
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
     let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
@@ -6182,7 +6182,7 @@ fn interactive_trust_prompt_reject_keeps_gated() {
 fn interactive_trust_prompt_dormant_when_feature_off() {
     use xai_grok_test_support::EnvGuard;
     let home = tempfile::tempdir().unwrap();
-    let _env = EnvGuard::set("GROK_HOME", home.path());
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
     let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
@@ -6212,7 +6212,7 @@ fn interactive_trust_prompt_dormant_when_feature_off() {
 fn interactive_trust_prompt_no_request_without_capability() {
     use xai_grok_test_support::EnvGuard;
     let home = tempfile::tempdir().unwrap();
-    let _env = EnvGuard::set("GROK_HOME", home.path());
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
     let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
@@ -6240,7 +6240,7 @@ fn interactive_trust_prompt_client_error_fails_closed() {
     use xai_grok_test_support::EnvGuard;
     use xai_grok_workspace::trust::{TrustStore, workspace_key};
     let home = tempfile::tempdir().unwrap();
-    let _env = EnvGuard::set("GROK_HOME", home.path());
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
     let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
@@ -6281,7 +6281,7 @@ fn interactive_trust_prompt_client_error_fails_closed() {
 fn interactive_trust_prompt_dedups_same_workspace() {
     use xai_grok_test_support::EnvGuard;
     let home = tempfile::tempdir().unwrap();
-    let _env = EnvGuard::set("GROK_HOME", home.path());
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
     let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
@@ -6355,7 +6355,7 @@ async fn drain_reload_commands(
 fn interactive_trust_prompt_reloads_all_same_workspace_sessions() {
     use xai_grok_test_support::EnvGuard;
     let home = tempfile::tempdir().unwrap();
-    let _env = EnvGuard::set("GROK_HOME", home.path());
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
     let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
@@ -6417,7 +6417,7 @@ fn interactive_trust_prompt_reprompts_after_untrust() {
     use xai_grok_test_support::EnvGuard;
     use xai_hooks_plugins_types::HooksAction;
     let home = tempfile::tempdir().unwrap();
-    let _env = EnvGuard::set("GROK_HOME", home.path());
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
     let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();

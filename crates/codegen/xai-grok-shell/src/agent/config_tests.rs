@@ -5708,7 +5708,7 @@ fn is_telemetry_explicitly_disabled_sync_env_signals() {
 #[serial]
 fn resolve_telemetry_mode_disable_env_beats_opt_in_but_not_requirements_pin() {
     let home = tempfile::tempdir().unwrap();
-    let _home = EnvGuard::set("GROK_HOME", home.path());
+    let _home = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _enable = EnvGuard::set("GROK_TELEMETRY_ENABLED", "true");
     let mut cfg = Config::default();
     cfg.features.telemetry = Some(TelemetryMode::Enabled);
@@ -7232,4 +7232,21 @@ fn test_model_entry(
         auth_provider: None,
         api_base_url: api_base_url.map(|s| s.to_string()),
     }
+}
+
+/// Only the branded `DEEPSEEK_BUILD_SANDBOX` variable selects the startup
+/// profile; the pre-rebrand `GROK_SANDBOX` name is ignored.
+#[test]
+#[serial(sandbox_profile_env)]
+fn sandbox_profile_env_is_branded_only_and_legacy_ignored() {
+    let config = SandboxSettingsConfig::default();
+    // Legacy name alone: resolution falls through to the default.
+    let legacy = EnvGuard::set("GROK_SANDBOX", "strict");
+    let branded_absent = EnvGuard::unset("DEEPSEEK_BUILD_SANDBOX");
+    assert_eq!(config.resolve_profile(None, None).value, "off");
+    drop(legacy);
+    drop(branded_absent);
+    // Branded name: honored.
+    let _branded = EnvGuard::set("DEEPSEEK_BUILD_SANDBOX", "strict");
+    assert_eq!(config.resolve_profile(None, None).value, "strict");
 }

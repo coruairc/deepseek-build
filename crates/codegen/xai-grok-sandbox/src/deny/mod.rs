@@ -344,11 +344,11 @@ mod tests {
         let pin = ancestors_within_writable_roots(&leaf, &roots);
         assert!(
             pin.iter().any(|p| p == &sessions),
-            "must pin sessions under GROK_HOME: {pin:?}"
+            "must pin sessions under DEEPSEEK_BUILD_HOME: {pin:?}"
         );
         assert!(
             pin.iter().any(|p| p == &grok),
-            "must pin GROK_HOME grant root: {pin:?}"
+            "must pin DEEPSEEK_BUILD_HOME grant root: {pin:?}"
         );
         assert!(
             !pin.iter().any(|p| p == &tmp),

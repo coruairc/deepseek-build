@@ -1,6 +1,6 @@
 //! Changelog loading from the local disk cache.
 //!
-//! Both markdown (`*.external.md`) and JSON (`*.external.json`) changelogs are read from `$GROK_HOME`.
+//! Both markdown (`*.external.md`) and JSON (`*.external.json`) changelogs are read from `$DEEPSEEK_BUILD_HOME`.
 //! Remote CDN fetching was removed from this build; the manager only reads the on-disk copies.
 //!
 //! `ChangelogManager::fetch()` returns a `Changelog` with optional markdown and structured entries.
@@ -53,15 +53,15 @@ impl Default for ChangelogManager {
 
 impl ChangelogManager {
     pub fn new() -> Self {
-        // Prefer the live `$GROK_HOME` over the `grok_home()` OnceLock
+        // Prefer the live `$DEEPSEEK_BUILD_HOME` over the `grok_home()` OnceLock
         // A home injected by the PTY e2e harness must beat a path some earlier init cached in the same process
         Self::from_env_home()
     }
 
     /// Resolve cache paths from the live process environment (not the `grok_home()` OnceLock).
-    /// A seeded `$GROK_HOME` set on the pager process is always honoured even if some earlier init path cached a different home.
+    /// A seeded `$DEEPSEEK_BUILD_HOME` set on the pager process is always honoured even if some earlier init path cached a different home.
     fn from_env_home() -> Self {
-        let home = std::env::var_os("GROK_HOME")
+        let home = std::env::var_os("DEEPSEEK_BUILD_HOME")
             .map(std::path::PathBuf::from)
             .filter(|p| !p.as_os_str().is_empty())
             .unwrap_or_else(crate::util::grok_home::grok_home);
@@ -131,7 +131,7 @@ pub fn bullets_from_entries(entries: &[ChangelogEntry], max: usize) -> Vec<Strin
 mod tests {
     use super::*;
 
-    /// Build a manager pointing at `home` directly, bypassing the global `$GROK_HOME` env so tests never race the parallel harness.
+    /// Build a manager pointing at `home` directly, bypassing the global `$DEEPSEEK_BUILD_HOME` env so tests never race the parallel harness.
     fn manager_for(home: &std::path::Path) -> ChangelogManager {
         ChangelogManager {
             md_cache: home.join("CHANGELOG.md"),

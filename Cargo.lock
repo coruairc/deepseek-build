@@ -11953,6 +11953,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
+ "xai-grok-brand",
 ]
 
 [[package]]
@@ -12419,6 +12420,7 @@ dependencies = [
  "tokio",
  "tracing",
  "xai-grok-auth",
+ "xai-grok-brand",
  "xai-grok-extra-ca",
  "xai-grok-sampler",
  "xai-grok-telemetry",
@@ -12578,6 +12580,7 @@ dependencies = [
  "url",
  "webbrowser",
  "which",
+ "xai-grok-brand",
  "xai-grok-config",
  "xai-grok-extra-ca",
  "xai-grok-sandbox",
@@ -13007,6 +13010,7 @@ dependencies = [
  "uuid",
  "wiremock",
  "xai-grok-auth",
+ "xai-grok-brand",
  "xai-grok-extra-ca",
  "xai-grok-sampling-types",
  "xai-grok-test-support",
@@ -13513,6 +13517,7 @@ dependencies = [
  "wiremock",
  "xai-dirs",
  "xai-grok-auth",
+ "xai-grok-brand",
  "xai-grok-config",
  "xai-grok-env",
  "xai-grok-extra-ca",
@@ -13621,6 +13626,7 @@ dependencies = [
  "xai-fuzzy-file-search",
  "xai-grok-agent",
  "xai-grok-auth",
+ "xai-grok-brand",
  "xai-grok-config",
  "xai-grok-config-types",
  "xai-grok-diag-server",

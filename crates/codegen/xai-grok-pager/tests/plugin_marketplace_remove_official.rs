@@ -6,7 +6,7 @@ fn cli_remove_of_json_store_source_removes_it() {
     // One #[test] per binary: the env is process-global.
     let grok_home = tempfile::tempdir().expect("grok home");
     // SAFETY: no other threads are running yet.
-    unsafe { std::env::set_var("GROK_HOME", grok_home.path()) };
+    unsafe { std::env::set_var("DEEPSEEK_BUILD_HOME", grok_home.path()) };
 
     // The source is known ONLY via the JSON store.
     let plugins_dir = grok_home.path().join("plugins");

@@ -323,7 +323,7 @@ fn baseline_env_from_parent(
     for (key, value) in [
         ("HOME", home),
         ("USERPROFILE", home),
-        ("GROK_HOME", grok_home),
+        ("DEEPSEEK_BUILD_HOME", grok_home),
         ("TMPDIR", temp),
         ("TMP", temp),
         ("TEMP", temp),
@@ -346,7 +346,7 @@ fn baseline_env_from_parent(
         ("DISABLE_FEEDBACK_COMMAND", "1"),
         ("GROK_DISABLE_AUTOUPDATER", "1"),
         ("GROK_PROMPT_SUGGESTIONS", "false"),
-        // Every sandbox has an empty `GROK_HOME`, so without this the agent id is
+        // Every sandbox has an empty `DEEPSEEK_BUILD_HOME`, so without this the agent id is
         // recomputed per test; on Windows that is a ~30s `powershell Get-WmiObject`
         // run inside `initialize`, which blew the harness deadlines (GB-5593).
         ("GROK_AGENT_ID", "grok-e2e-sandbox"),
@@ -529,7 +529,13 @@ fn diagnostic_value_is_sensitive(key: &OsStr) -> bool {
         || is_endpoint_key(&key)
         || matches!(
             key.to_ascii_uppercase().as_str(),
-            "HOME" | "USERPROFILE" | "GROK_HOME" | "TMPDIR" | "TMP" | "TEMP" | "GIT_CONFIG_GLOBAL"
+            "HOME"
+                | "USERPROFILE"
+                | "DEEPSEEK_BUILD_HOME"
+                | "TMPDIR"
+                | "TMP"
+                | "TEMP"
+                | "GIT_CONFIG_GLOBAL"
         )
 }
 
@@ -778,7 +784,7 @@ mod tests {
             .build();
         assert_eq!(env_value(&sandbox, "HOME"), Some(sandbox.home().into()));
         assert_eq!(
-            env_value(&sandbox, "GROK_HOME"),
+            env_value(&sandbox, "DEEPSEEK_BUILD_HOME"),
             Some(sandbox.grok_home().into())
         );
         assert_eq!(
@@ -804,7 +810,7 @@ mod tests {
         assert_eq!(
             env_value(&sandbox, "GROK_AGENT_ID").as_deref(),
             Some(OsStr::new("grok-e2e-sandbox")),
-            "GROK_AGENT_ID must be pinned so a fresh GROK_HOME never computes a machine id (WMI on Windows)"
+            "GROK_AGENT_ID must be pinned so a fresh DEEPSEEK_BUILD_HOME never computes a machine id (WMI on Windows)"
         );
         for (sink, value) in [
             ("GROK_TELEMETRY_MIXPANEL_ENABLED", "false"),

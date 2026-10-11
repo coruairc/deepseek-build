@@ -16,7 +16,7 @@ fn user_config_writers_write_through_a_symlink() {
     // One #[test] per binary: the env is process-global and `grok_home()` is cached.
     let grok_home = tempfile::tempdir().expect("grok home");
     // SAFETY: no other threads are running yet.
-    unsafe { std::env::set_var("GROK_HOME", grok_home.path()) };
+    unsafe { std::env::set_var("DEEPSEEK_BUILD_HOME", grok_home.path()) };
 
     let dotfiles = tempfile::tempdir().expect("dotfiles");
     let target = dotfiles.path().join("config.toml");

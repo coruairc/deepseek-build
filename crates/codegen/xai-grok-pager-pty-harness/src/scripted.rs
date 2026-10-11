@@ -122,7 +122,7 @@ pub struct EnvironmentConfig {
     /// Extra CLI args passed to the pager binary.
     #[serde(default)]
     pub args: Vec<String>,
-    /// Optional `config.toml` written into the run's isolated `$GROK_HOME` before spawn.
+    /// Optional `config.toml` written into the run's isolated `$DEEPSEEK_BUILD_HOME` before spawn.
     /// For example, `[ui] keep_text_selection` keeps selection highlights alive long enough to assert on.
     #[serde(default)]
     pub config_toml: Option<String>,
@@ -511,8 +511,12 @@ impl ScriptedScenarioRunner {
 
         if let Some(config_toml) = &scenario.environment.config_toml {
             let grok_home = content.home().join(".grok");
-            fs::create_dir_all(&grok_home)
-                .with_context(|| format!("create scenario GROK_HOME {}", grok_home.display()))?;
+            fs::create_dir_all(&grok_home).with_context(|| {
+                format!(
+                    "create scenario DEEPSEEK_BUILD_HOME {}",
+                    grok_home.display()
+                )
+            })?;
             fs::write(grok_home.join("config.toml"), config_toml)
                 .context("write scenario config.toml")?;
         }

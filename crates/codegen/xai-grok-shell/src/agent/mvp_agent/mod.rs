@@ -1757,7 +1757,7 @@ impl MvpAgent {
             auto_gc_policy,
         ));
     }
-    /// The caller resolves the home: read here, $GROK_HOME would be read when the blocking thread starts.
+    /// The caller resolves the home: read here, $DEEPSEEK_BUILD_HOME would be read when the blocking thread starts.
     /// This deletes worktrees under what it finds.
     pub(super) fn reclaim_worktrees(
         grok_home: anyhow::Result<std::path::PathBuf>,

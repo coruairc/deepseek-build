@@ -397,7 +397,7 @@ impl MockInferenceServer {
         self.state.inference.set_foreground_hold();
     }
 
-    /// Park the next auxiliary whose `x-grok-req-id` starts with `prefix`.
+    /// Park the next auxiliary whose `x-deepseek-build-req-id` starts with `prefix`.
     /// An auxiliary with a different id leaves the hold armed.
     pub fn set_auxiliary_hold_matching(&self, prefix: impl Into<String>) {
         self.state.inference.set_auxiliary_hold_matching(prefix);

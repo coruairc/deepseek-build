@@ -37,13 +37,13 @@ use xai_grok_auth::bearer_suffix;
 
 pub use xai_grok_sampling_types::ApiBackend;
 
-/// Process-level fallback for the `x-grok-client-identifier` header.
-const DEFAULT_CLIENT_IDENTIFIER: &str = "grok-shell";
+/// Process-level fallback for the `x-deepseek-build-client-identifier` header.
+const DEFAULT_CLIENT_IDENTIFIER: &str = xai_grok_brand::NAME;
 
 /// Product identifier baked into User-Agent strings.
-const AGENT_PRODUCT: &str = "grok-shell";
+const AGENT_PRODUCT: &str = xai_grok_brand::NAME;
 
-/// Per-request `x-grok-*` headers. Optional fields are skipped when empty/`None`.
+/// Per-request `x-deepseek-build-*` headers. Optional fields are skipped when empty/`None`.
 struct GrokRequestHeaders<'a> {
     conv_id: &'a str,
     req_id: &'a str,
@@ -59,23 +59,26 @@ struct GrokRequestHeaders<'a> {
 
 impl GrokRequestHeaders<'_> {
     fn apply(&self, builder: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        // Header names come from the centralized brand prefix so a rename is a
+        // one-line change in `xai-grok-brand`.
+        let h = |suffix: &str| format!("{}-{suffix}", xai_grok_brand::HEADER_PREFIX);
         let mut b = builder
-            .header("x-grok-conv-id", self.conv_id)
-            .header("x-grok-req-id", self.req_id)
-            .header("x-grok-model-override", self.model_id)
-            .header("x-grok-session-id", self.session_id)
-            .header("x-grok-agent-id", self.agent_id);
+            .header(h("conv-id"), self.conv_id)
+            .header(h("req-id"), self.req_id)
+            .header(h("model-override"), self.model_id)
+            .header(h("session-id"), self.session_id)
+            .header(h("agent-id"), self.agent_id);
         if let Some(idx) = self.turn_idx {
-            b = b.header("x-grok-turn-idx", idx);
+            b = b.header(h("turn-idx"), idx);
         }
         if let Some(attempt) = self.transient_retry {
-            b = b.header("x-grok-transient-retry", attempt);
+            b = b.header(h("transient-retry"), attempt);
         }
         if let Some(id) = self.deployment_id.filter(|s| !s.is_empty()) {
-            b = b.header("x-grok-deployment-id", id);
+            b = b.header(h("deployment-id"), id);
         }
         if let Some(id) = self.user_id.filter(|s| !s.is_empty()) {
-            b = b.header("x-grok-user-id", id);
+            b = b.header(h("user-id"), id);
         }
         b
     }
@@ -107,12 +110,12 @@ fn extract_should_retry(headers: &reqwest::header::HeaderMap) -> Option<bool> {
 
 fn extract_model_metadata(headers: &reqwest::header::HeaderMap) -> Option<ResponseModelMetadata> {
     let context_window = headers
-        .get("x-grok-context-window")
+        .get("x-deepseek-build-context-window")
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.parse::<u64>().ok());
 
     let max_completion_tokens = headers
-        .get("x-grok-max-completion-tokens")
+        .get("x-deepseek-build-max-completion-tokens")
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.parse::<u32>().ok());
 
@@ -429,12 +432,12 @@ impl SamplingClient {
             &mut headers,
         );
 
-        // Add x-grok-client-version header for version gating at the proxy.
+        // Add x-deepseek-build-client-version header for version gating at the proxy.
         if let Some(client_version) = config.client_version.as_ref()
             && let Ok(header_value) = HeaderValue::from_str(client_version)
         {
             headers.insert(
-                HeaderName::from_static("x-grok-client-version"),
+                HeaderName::from_static("x-deepseek-build-client-version"),
                 header_value,
             );
         }
@@ -443,7 +446,7 @@ impl SamplingClient {
             && let Ok(header_value) = HeaderValue::from_str(deployment_id)
         {
             headers.insert(
-                HeaderName::from_static("x-grok-deployment-id"),
+                HeaderName::from_static("x-deepseek-build-deployment-id"),
                 header_value,
             );
         }
@@ -451,14 +454,17 @@ impl SamplingClient {
         if let Some(user_id) = config.user_id.as_ref()
             && let Ok(header_value) = HeaderValue::from_str(user_id)
         {
-            headers.insert(HeaderName::from_static("x-grok-user-id"), header_value);
+            headers.insert(
+                HeaderName::from_static("x-deepseek-build-user-id"),
+                header_value,
+            );
         }
 
         if let Some(conversation_group_id) = config.conversation_group_id.as_ref()
             && let Ok(header_value) = HeaderValue::from_str(conversation_group_id.as_ref())
         {
             headers.insert(
-                HeaderName::from_static("x-grok-conv-group-id"),
+                HeaderName::from_static("x-deepseek-build-conv-group-id"),
                 header_value,
             );
         }
@@ -470,7 +476,7 @@ impl SamplingClient {
                 .unwrap_or_else(|| DEFAULT_CLIENT_IDENTIFIER.to_string());
             if let Ok(header_value) = HeaderValue::from_str(&client_id) {
                 headers.insert(
-                    HeaderName::from_static("x-grok-client-identifier"),
+                    HeaderName::from_static("x-deepseek-build-client-identifier"),
                     header_value,
                 );
             }
@@ -1589,8 +1595,11 @@ mod tests {
             version: None,
         };
         let ua = user_agent_string_for(&origin);
-        // No slash between product and the grok-shell agent product.
-        assert!(ua.starts_with("my-client grok-shell/"));
+        // No slash between product and the deepseek-build agent product.
+        assert!(
+            ua.starts_with(&format!("my-client {}/", xai_grok_brand::NAME)),
+            "{ua}"
+        );
     }
 
     #[test]
@@ -1709,5 +1718,47 @@ mod tests {
             nth(&calls, 0).1.as_deref().map(str::len),
             Some(crate::attribution::BEARER_SUFFIX_LEN),
         );
+    }
+
+    /// Every outbound identity this client can put on the wire must carry the
+    /// centralized brand prefix, and the model-provider UA must be the brand
+    /// name. Drift here means a rename left stale identifiers on requests to
+    /// the provider.
+    #[test]
+    fn outbound_identity_carries_the_brand_prefix() {
+        let header_names = [
+            "x-deepseek-build-conv-id",
+            "x-deepseek-build-req-id",
+            "x-deepseek-build-model-override",
+            "x-deepseek-build-session-id",
+            "x-deepseek-build-agent-id",
+            "x-deepseek-build-turn-idx",
+            "x-deepseek-build-transient-retry",
+            "x-deepseek-build-deployment-id",
+            "x-deepseek-build-user-id",
+            "x-deepseek-build-client-version",
+            "x-deepseek-build-client-identifier",
+            "x-deepseek-build-conv-group-id",
+        ];
+        for name in header_names {
+            assert!(
+                name.starts_with(xai_grok_brand::HEADER_PREFIX),
+                "header {name} must start with {}",
+                xai_grok_brand::HEADER_PREFIX
+            );
+            assert!(!name.contains("grok"), "stale header name: {name}");
+        }
+        for name in [
+            xai_grok_sampling_types::DOOM_LOOP_CHECK_HEADER,
+            xai_grok_sampling_types::EXACT_REPETITION_CHECK_HEADER,
+        ] {
+            assert!(
+                name.starts_with(xai_grok_brand::HEADER_PREFIX),
+                "header {name} must start with {}",
+                xai_grok_brand::HEADER_PREFIX
+            );
+        }
+        assert_eq!(super::AGENT_PRODUCT, xai_grok_brand::NAME);
+        assert_eq!(super::DEFAULT_CLIENT_IDENTIFIER, xai_grok_brand::NAME);
     }
 }

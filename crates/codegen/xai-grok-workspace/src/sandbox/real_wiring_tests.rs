@@ -567,7 +567,7 @@ async fn off_starts_no_proxy_and_the_real_child_sees_no_sandbox() {
         "http_proxy=",
         "https_proxy=",
         "ALL_PROXY=",
-        "GROK_SANDBOX",
+        "DEEPSEEK_BUILD_SANDBOX",
     ] {
         assert!(
             !text.contains(var),

@@ -43,11 +43,11 @@ fn default_path_follows_live_grok_home_not_once_lock() {
         .lock()
         .unwrap_or_else(|e| e.into_inner());
     let pinned = tempfile::tempdir().unwrap();
-    let _pinned_env = crate::TestEnvGuard::set("GROK_HOME", pinned.path());
+    let _pinned_env = crate::TestEnvGuard::set("DEEPSEEK_BUILD_HOME", pinned.path());
     let _pin = xai_grok_config::grok_home();
     let home = tempfile::tempdir().unwrap();
-    let _env = crate::TestEnvGuard::set("GROK_HOME", home.path());
-    let fresh = TrustStore::default_path().expect("GROK_HOME set");
+    let _env = crate::TestEnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
+    let fresh = TrustStore::default_path().expect("DEEPSEEK_BUILD_HOME set");
     assert_eq!(fresh, home.path().join(TRUST_FILE_NAME));
 }
 

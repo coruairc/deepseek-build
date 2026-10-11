@@ -648,7 +648,8 @@ fn leave_home_into_local_workspace_ack_keeps_the_keystroke_as_a_draft() {
         crate::app::session_startup::GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV,
     );
     let home = tempfile::tempdir().unwrap();
-    let _home = xai_grok_test_support::EnvGuard::set("GROK_HOME", home.path().to_str().unwrap());
+    let _home =
+        xai_grok_test_support::EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path().to_str().unwrap());
     crate::app::session_startup::set_active_local_workspace(None).unwrap();
     let tmp = tempfile::tempdir().unwrap();
     let mut app = test_app();

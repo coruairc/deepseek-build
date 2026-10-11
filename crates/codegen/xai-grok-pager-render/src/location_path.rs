@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 /// Display-only middle-component shortener for already-abbreviated location paths.
 ///
-/// After a `~` / `$GROK_HOME` prefix (or a leading `/` / drive letter / UNC
+/// After a `~` / `$DEEPSEEK_BUILD_HOME` prefix (or a leading `/` / drive letter / UNC
 /// `\\server\share` / `//host/share` / `\\?\UNC\server\share`), the last two
 /// components stay full and earlier ones become one letter. Leading dots are
 /// kept plus the first non-dot character (`.grok` → `.g`, `..cache` → `..c`).
@@ -11,7 +11,7 @@ use std::borrow::Cow;
 /// after the prefix are unchanged.
 pub(crate) fn shorten_location_path(path: &str) -> Cow<'_, str> {
     const KEEP_FULL: usize = 2;
-    const GROK_HOME_PREFIX: &str = "$GROK_HOME";
+    const DEEPSEEK_BUILD_HOME_PREFIX: &str = "$DEEPSEEK_BUILD_HOME";
     const VERBATIM_UNC_PREFIX: &str = r"\\?\UNC\";
 
     let sep = if path.contains('\\') && !path.contains('/') {
@@ -37,14 +37,14 @@ pub(crate) fn shorten_location_path(path: &str) -> Cow<'_, str> {
     // `C:foo` is the current directory on that drive; `C:\foo` is rooted on it.
     let drive_relative = windows_drive && !after_drive.starts_with(['/', '\\']);
 
-    let (prefix, remainder, restore_root) = if path == GROK_HOME_PREFIX
+    let (prefix, remainder, restore_root) = if path == DEEPSEEK_BUILD_HOME_PREFIX
         || path
-            .strip_prefix(GROK_HOME_PREFIX)
+            .strip_prefix(DEEPSEEK_BUILD_HOME_PREFIX)
             .is_some_and(|rest| rest.starts_with(['/', '\\']))
     {
         (
-            Cow::Borrowed(GROK_HOME_PREFIX),
-            path.get(GROK_HOME_PREFIX.len()..)
+            Cow::Borrowed(DEEPSEEK_BUILD_HOME_PREFIX),
+            path.get(DEEPSEEK_BUILD_HOME_PREFIX.len()..)
                 .unwrap_or("")
                 .trim_start_matches(['/', '\\']),
             false,

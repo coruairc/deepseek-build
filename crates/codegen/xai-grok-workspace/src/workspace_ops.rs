@@ -259,12 +259,12 @@ fn session_tracker(
 /// Primary bounds are the sandbox root (`/workspace`) and the user-global grok home.
 const REPOS_MANIFEST_MAX_ANCESTOR_HOPS: usize = 16;
 /// Directories to probe for [`REPOS_MANIFEST_RELATIVE_PATH`], starting at `root_cwd` (the agent cwd after a single-repo rewrite) and walking up.
-/// Does not escape the sandbox workspace or load `~/.grok/repos.json` / `$GROK_HOME/repos.json` (user-global, not a provisioned workspace).
+/// Does not escape the sandbox workspace or load `~/.grok/repos.json` / `$DEEPSEEK_BUILD_HOME/repos.json` (user-global, not a provisioned workspace).
 fn repos_manifest_search_dirs(start: &std::path::Path) -> Vec<std::path::PathBuf> {
     let rel = xai_grok_workspace_types::rpc::repos::REPOS_MANIFEST_RELATIVE_PATH;
     let home = xai_dirs::home_dir();
     let mut global_manifests = Vec::with_capacity(2);
-    if let Some(v) = std::env::var_os("GROK_HOME")
+    if let Some(v) = std::env::var_os("DEEPSEEK_BUILD_HOME")
         && !v.is_empty()
     {
         global_manifests.push(std::path::PathBuf::from(v).join("repos.json"));
@@ -1948,7 +1948,7 @@ mod tests {
             .unwrap_or_else(|e| e.into_inner());
         let home = tempfile::tempdir().unwrap();
         let _home = crate::TestEnvGuard::set("HOME", home.path());
-        let _unset_grok = crate::TestEnvGuard::unset("GROK_HOME");
+        let _unset_grok = crate::TestEnvGuard::unset("DEEPSEEK_BUILD_HOME");
         let dirs = repos_manifest_search_dirs(std::path::Path::new("/workspace/app"));
         assert_eq!(
             dirs,
@@ -1964,7 +1964,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _home = crate::TestEnvGuard::unset("HOME");
-        let _unset_grok = crate::TestEnvGuard::unset("GROK_HOME");
+        let _unset_grok = crate::TestEnvGuard::unset("DEEPSEEK_BUILD_HOME");
         let dirs = repos_manifest_search_dirs(std::path::Path::new("/workspace/app"));
         assert!(
             dirs.contains(&std::path::PathBuf::from("/workspace/app")),
@@ -1982,7 +1982,7 @@ mod tests {
             .unwrap_or_else(|e| e.into_inner());
         let home = tempfile::tempdir().unwrap();
         let _home = crate::TestEnvGuard::set("HOME", home.path());
-        let _unset_grok = crate::TestEnvGuard::unset("GROK_HOME");
+        let _unset_grok = crate::TestEnvGuard::unset("DEEPSEEK_BUILD_HOME");
         let start = home.path().join("src").join("org").join("app");
         let dirs = repos_manifest_search_dirs(&start);
         assert!(dirs.contains(&start));
@@ -2001,7 +2001,7 @@ mod tests {
             .unwrap_or_else(|e| e.into_inner());
         let home = tempfile::tempdir().unwrap();
         let _home = crate::TestEnvGuard::set("HOME", home.path());
-        let _unset_grok = crate::TestEnvGuard::unset("GROK_HOME");
+        let _unset_grok = crate::TestEnvGuard::unset("DEEPSEEK_BUILD_HOME");
         let global = RepoManifest::new(vec![ProvisionedRepo {
             name: "global".into(),
             repository: "acme/global".into(),

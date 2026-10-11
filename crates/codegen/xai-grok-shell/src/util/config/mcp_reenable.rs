@@ -182,7 +182,7 @@ mod tests {
         tmp
     }
 
-    /// Isolate HOME/GROK_HOME so ambient user MCP config cannot pad discovery.
+    /// Isolate HOME/DEEPSEEK_BUILD_HOME so ambient user MCP config cannot pad discovery.
     fn isolated_home() -> (
         tempfile::TempDir,
         xai_grok_test_support::EnvGuard,
@@ -193,7 +193,7 @@ mod tests {
         std::fs::create_dir_all(&grok_home).unwrap();
         std::fs::write(grok_home.join("config.toml"), "").unwrap();
         let home_guard = xai_grok_test_support::EnvGuard::set("HOME", home.path());
-        let grok_guard = xai_grok_test_support::EnvGuard::set("GROK_HOME", &grok_home);
+        let grok_guard = xai_grok_test_support::EnvGuard::set("DEEPSEEK_BUILD_HOME", &grok_home);
         (home, home_guard, grok_guard)
     }
 

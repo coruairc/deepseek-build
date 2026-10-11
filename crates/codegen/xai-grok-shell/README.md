@@ -1784,7 +1784,7 @@ byte-identical copy in a lower layer cannot take over their provenance.
 - The **root-owned** system layers (`/etc/grok/requirements.toml`,
   `/etc/grok/managed_config.toml`). Enforcement relies on OS file ownership, so
   deploy these files root-owned (or via MDM).
-- The **signed** `$GROK_HOME/requirements.toml` the deployment sync writes.
+- The **signed** `$DEEPSEEK_BUILD_HOME/requirements.toml` the deployment sync writes.
   Its hooks are enforced while the file's bytes match the server-signed
   envelope (`requirements/signed:` names); an edited copy, or one whose
   signature file is missing or unreadable, is the user's own file again
@@ -1793,7 +1793,7 @@ byte-identical copy in a lower layer cannot take over their provenance.
   refuses the session on an edited copy or a missing signature (an unreadable
   file is a read error, not tampering, and still starts).
 
-Hooks in the other `$GROK_HOME` layers (`managed_config.toml`, `config.toml`)
+Hooks in the other `$DEEPSEEK_BUILD_HOME` layers (`managed_config.toml`, `config.toml`)
 remain convenience distribution, not an enforcement boundary: the user owns
 that directory and can edit or repoint it.
 
@@ -2509,7 +2509,7 @@ The agent persists all session updates automatically. Clients can reconnect and 
 | `GROK_AUTH_EARLY_INVALIDATION_SECS` | Seconds before `expires_at` to consider a token expired (default: `300`). See [Automatic Credential Refresh](#automatic-credential-refresh) |
 | `GROK_OIDC_ISSUER`              | OIDC issuer URL (alternative to config file). See [OIDC](#oidc-customer-sso)                             |
 | `GROK_OIDC_CLIENT_ID`           | OIDC client ID (alternative to config file). See [OIDC](#oidc-customer-sso)                              |
-| `GROK_HOME`                     | Override config directory (default: `~/.grok`)                                                           |
+| `DEEPSEEK_BUILD_HOME`           | Override config directory (default: `~/.deepseek-build`)                                                           |
 | `GROK_SUBAGENTS`                | Enable (`1`) or disable (`0`) subagent/task tool support                                                 |
 | `GROK_MEMORY`                   | Enable (`1`) or disable (`0`) cross-session memory                                                       |
 | `GROK_AGENT`                    | Custom agent definition path or name (see [Agent Profiles](#agent-profiles))                             |

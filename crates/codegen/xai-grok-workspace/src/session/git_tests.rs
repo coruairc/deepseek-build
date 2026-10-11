@@ -572,7 +572,7 @@ fn get_worktree_info_db_record_without_marker() {
     let tmp = tempfile::tempdir().unwrap();
     let home = dunce::canonicalize(tmp.path()).unwrap().join("grok-home");
     std::fs::create_dir_all(&home).unwrap();
-    let _env = crate::LockedTestEnv::lock().set("GROK_HOME", &home);
+    let _env = crate::LockedTestEnv::lock().set("DEEPSEEK_BUILD_HOME", &home);
 
     let wt = tmp.path().join("clone");
     init_repo_on_branch(&wt, "wt-branch");
@@ -592,7 +592,7 @@ fn get_worktree_info_nested_repo_does_not_inherit_db_record() {
     let tmp = tempfile::tempdir().unwrap();
     let home = dunce::canonicalize(tmp.path()).unwrap().join("grok-home");
     std::fs::create_dir_all(&home).unwrap();
-    let _env = crate::LockedTestEnv::lock().set("GROK_HOME", &home);
+    let _env = crate::LockedTestEnv::lock().set("DEEPSEEK_BUILD_HOME", &home);
 
     let wt = tmp.path().join("clone");
     init_repo_on_branch(&wt, "wt-branch");

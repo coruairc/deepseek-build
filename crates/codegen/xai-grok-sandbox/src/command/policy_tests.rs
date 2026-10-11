@@ -1455,7 +1455,7 @@ fn secret_read_probes(home: &Path, grok_home: &Path) -> Vec<PathBuf> {
         .map(|rel| home.join(rel).join("id_ed25519"))
         .chain(SECRET_READ_DENY_FILES.iter().map(|rel| home.join(rel)))
         .chain(
-            GROK_HOME_SECRET_GLOBS
+            DEEPSEEK_BUILD_HOME_SECRET_GLOBS
                 .iter()
                 .map(|glob| grok_home.join(glob.replace('*', ".json"))),
         )
@@ -1486,7 +1486,7 @@ fn secret_reads_stay_denied_in_every_read_mode_under_every_widening() {
             "{rel} left the table"
         );
     }
-    assert_eq!(GROK_HOME_SECRET_GLOBS, ["auth*", "credentials*"]);
+    assert_eq!(DEEPSEEK_BUILD_HOME_SECRET_GLOBS, ["auth*", "credentials*"]);
     let config = f.home.join(".config");
     let probes = secret_read_probes(&f.home, &f.grok_home);
     let mut cells = 0;

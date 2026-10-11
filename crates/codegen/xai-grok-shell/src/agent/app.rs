@@ -338,7 +338,7 @@ pub struct LeaderRunOptions {
 }
 /// Another process is wedged inside its own open+flock of the leader lock (stalled grok home). Only `tracing`
 /// here: a socket probe, pid read, or log open under the grok home could wedge this process too. Best effort: a
-/// client-spawned leader's stderr is `$GROK_HOME/leader.log`, so even this line can park in `write(2)` there.
+/// client-spawned leader's stderr is `$DEEPSEEK_BUILD_HOME/leader.log`, so even this line can park in `write(2)` there.
 fn refuse_in_flight_leader_lock(e: crate::leader::LockError) -> anyhow::Error {
     tracing::error!(
         error = %e,

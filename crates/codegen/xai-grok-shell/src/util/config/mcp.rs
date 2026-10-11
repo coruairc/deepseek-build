@@ -885,7 +885,7 @@ pub fn load_cli_plugin_registry(cwd: &std::path::Path) -> xai_grok_agent::plugin
 }
 
 fn config_path() -> PathBuf {
-    // Live `$GROK_HOME` first: `grok_home()` is OnceLock and misses EnvGuard/tests.
+    // Live `$DEEPSEEK_BUILD_HOME` first: `grok_home()` is OnceLock and misses EnvGuard/tests.
     xai_dirs::resolve_grok_home()
         .unwrap_or_else(crate::util::grok_home::grok_home)
         .join("config.toml")
@@ -960,7 +960,7 @@ mod tests {
     #[serial_test::serial]
     fn load_cli_plugin_registry_includes_project_config_path_plugins() {
         let home = tempfile::tempdir().unwrap();
-        let _env = xai_grok_test_support::EnvGuard::set("GROK_HOME", home.path());
+        let _env = xai_grok_test_support::EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
 
         let repo = tempfile::tempdir().unwrap();
         git2::Repository::init(repo.path()).unwrap();
@@ -1455,7 +1455,7 @@ enabled = false
     #[serial_test::serial]
     async fn persist_mcp_toml_follows_user_config_symlink() {
         let home = tempfile::tempdir().unwrap();
-        let _env = xai_grok_test_support::EnvGuard::set("GROK_HOME", home.path());
+        let _env = xai_grok_test_support::EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
         let outside = home.path().join("dotfiles").join("config.toml");
         std::fs::create_dir_all(outside.parent().unwrap()).unwrap();
         std::fs::write(&outside, "[mcp_servers.keep]\ncommand = \"true\"\n").unwrap();
@@ -1492,7 +1492,7 @@ enabled = false
     #[serial_test::serial]
     async fn save_mcp_server_config_at_refuses_unparseable() {
         let home = tempfile::tempdir().unwrap();
-        let _env = xai_grok_test_support::EnvGuard::set("GROK_HOME", home.path());
+        let _env = xai_grok_test_support::EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
         let slot = home.path().join("config.toml");
         std::fs::write(&slot, "not = [valid\n").unwrap();
         let err = save_mcp_server_config_at(&config_path(), "svc", &test_stdio_server())
@@ -1514,7 +1514,7 @@ enabled = false
     #[serial_test::serial]
     async fn save_mcp_server_config_at_follows_user_symlink() {
         let home = tempfile::tempdir().unwrap();
-        let _env = xai_grok_test_support::EnvGuard::set("GROK_HOME", home.path());
+        let _env = xai_grok_test_support::EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
         let outside = home.path().join("dotfiles").join("config.toml");
         std::fs::create_dir_all(outside.parent().unwrap()).unwrap();
         std::fs::write(&outside, "[mcp_servers.keep]\ncommand = \"true\"\n").unwrap();
@@ -1541,7 +1541,7 @@ enabled = false
     #[serial_test::serial]
     async fn save_mcp_disabled_tools_follows_user_symlink() {
         let home = tempfile::tempdir().unwrap();
-        let _env = xai_grok_test_support::EnvGuard::set("GROK_HOME", home.path());
+        let _env = xai_grok_test_support::EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
         let outside = home.path().join("dotfiles").join("config.toml");
         std::fs::create_dir_all(outside.parent().unwrap()).unwrap();
         std::fs::write(&outside, "[mcp_servers.keep]\ncommand = \"true\"\n").unwrap();
@@ -1569,7 +1569,7 @@ enabled = false
     #[serial_test::serial]
     async fn save_mcp_disabled_tools_refuses_unparseable() {
         let home = tempfile::tempdir().unwrap();
-        let _env = xai_grok_test_support::EnvGuard::set("GROK_HOME", home.path());
+        let _env = xai_grok_test_support::EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
         let slot = home.path().join("config.toml");
         std::fs::write(&slot, "not = [valid\n").unwrap();
         let err = save_mcp_disabled_tools("svc", &["tool_a".to_string()])
@@ -1587,7 +1587,7 @@ enabled = false
     #[serial_test::serial]
     async fn delete_mcp_server_config_at_follows_user_symlink() {
         let home = tempfile::tempdir().unwrap();
-        let _env = xai_grok_test_support::EnvGuard::set("GROK_HOME", home.path());
+        let _env = xai_grok_test_support::EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
         let outside = home.path().join("dotfiles").join("config.toml");
         std::fs::create_dir_all(outside.parent().unwrap()).unwrap();
         std::fs::write(
@@ -1620,7 +1620,7 @@ enabled = false
     #[serial_test::serial]
     async fn delete_mcp_server_config_at_refuses_unparseable() {
         let home = tempfile::tempdir().unwrap();
-        let _env = xai_grok_test_support::EnvGuard::set("GROK_HOME", home.path());
+        let _env = xai_grok_test_support::EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
         let slot = home.path().join("config.toml");
         std::fs::write(&slot, "not = [valid\n").unwrap();
         let err = delete_mcp_server_config_at(&config_path(), "svc")

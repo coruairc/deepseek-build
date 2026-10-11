@@ -571,7 +571,7 @@ async fn parked_turn_past_compact_threshold_does_not_auto_compact() {
                 .requests()
                 .into_iter()
                 .filter(|r| r.path.contains("/responses"))
-                .filter(|r| r.header("x-grok-turn-idx").is_none())
+                .filter(|r| r.header("x-deepseek-build-turn-idx").is_none())
                 .count();
             assert_eq!(
                 compact_sends, 0,

@@ -1570,15 +1570,15 @@ pub(super) fn run_subagent_lifecycle_via_method(
     let finish = snapshot_after_subagent_finish(&app, child_sid);
     (spawn, finish)
 }
-/// Shared temp `GROK_HOME` for disk-replay tests.
-/// `grok_home()` uses a process-wide `OnceLock`, so parallel tests must not each set `GROK_HOME` to a different tempdir.
+/// Shared temp `DEEPSEEK_BUILD_HOME` for disk-replay tests.
+/// `grok_home()` uses a process-wide `OnceLock`, so parallel tests must not each set `DEEPSEEK_BUILD_HOME` to a different tempdir.
 pub(super) fn replay_disk_test_home() -> &'static std::path::Path {
     use std::sync::OnceLock;
     static HOME: OnceLock<tempfile::TempDir> = OnceLock::new();
     HOME.get_or_init(|| {
             let tmp = tempfile::tempdir().expect("tempdir creation");
             unsafe {
-                std::env::set_var("GROK_HOME", tmp.path());
+                std::env::set_var("DEEPSEEK_BUILD_HOME", tmp.path());
             }
             tmp
         })

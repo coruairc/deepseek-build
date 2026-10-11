@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-/// deepseek-build state directory (`$GROK_HOME` or `~/.grok`).
+/// deepseek-build state directory (`$DEEPSEEK_BUILD_HOME` or `~/.grok`).
 pub(crate) fn grok_home() -> PathBuf {
     xai_grok_config::grok_home()
 }

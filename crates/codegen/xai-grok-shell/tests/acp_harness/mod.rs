@@ -350,7 +350,7 @@ impl Drop for RestoreProcessGlobals {
 fn set_test_env(grok_home: &std::path::Path, server_url: &str) {
     // SAFETY: the only live threads are the mock's HTTP workers, which never read env.
     unsafe {
-        std::env::set_var("GROK_HOME", grok_home);
+        std::env::set_var("DEEPSEEK_BUILD_HOME", grok_home);
         std::env::set_var("GROK_CLI_CHAT_PROXY_BASE_URL", server_url);
         std::env::set_var("GROK_XAI_API_BASE_URL", server_url);
         std::env::set_var("DEEPSEEK_API_KEY", "test-key-for-ci");
@@ -363,7 +363,7 @@ fn set_test_env(grok_home: &std::path::Path, server_url: &str) {
     }
 }
 
-/// Runs `body` against a mock inference server with `GROK_HOME` isolated to a
+/// Runs `body` against a mock inference server with `DEEPSEEK_BUILD_HOME` isolated to a
 /// temp dir. `body` gets the cwd and the mock, and opens its own connection,
 /// since each test wants a different `acp::Client`.
 pub fn run_agent_test<F, Fut>(body: F)
@@ -403,7 +403,7 @@ pub fn run_agent_test_with_models<F, Fut>(
     let grok_home = tempfile::TempDir::new().expect("grok home");
     let workdir = tempfile::TempDir::new().expect("workdir");
     set_test_env(grok_home.path(), &server.url());
-    // After GROK_HOME is the temp dir, so teardown cannot OnceLock ~/.grok.
+    // After DEEPSEEK_BUILD_HOME is the temp dir, so teardown cannot OnceLock ~/.grok.
     let _globals = RestoreProcessGlobals::enter();
 
     let agent_rt = tokio::runtime::Builder::new_current_thread()

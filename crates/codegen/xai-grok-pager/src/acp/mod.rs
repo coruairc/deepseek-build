@@ -505,7 +505,7 @@ async fn initialize(tx: &AcpAgentTx, flags: &ConnectFlags) -> Result<Initialized
     let is_grok_shell = resp
         .meta
         .as_ref()
-        .and_then(|m| m.get("grokShell"))
+        .and_then(|m| m.get(xai_acp_lib::SHELL_META_KEY))
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
     let models: ModelState = resp
@@ -797,7 +797,7 @@ mod tests {
     }
     #[test]
     fn parse_available_commands_missing_key_returns_empty() {
-        let meta = serde_json::json!({ "grokShell": true });
+        let meta = serde_json::json!({ (xai_acp_lib::SHELL_META_KEY): true });
         let cmds = parse_available_commands(meta.as_object());
         assert!(cmds.is_empty());
     }
@@ -826,7 +826,7 @@ mod tests {
     }
     #[test]
     fn parse_session_recap_available_defaults_off_when_missing() {
-        let meta = serde_json::json!({ "grokShell": true, "cancelRewind": true });
+        let meta = serde_json::json!({ (xai_acp_lib::SHELL_META_KEY): true, "cancelRewind": true });
         assert!(!parse_session_recap_available(meta.as_object()));
         assert!(!parse_session_recap_available(None));
     }

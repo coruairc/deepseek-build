@@ -185,7 +185,7 @@ pub fn process_user_agent_string() -> String {
 
     UserAgent {
         origin,
-        agent_product: "grok-shell",
+        agent_product: xai_grok_brand::NAME,
         agent_version,
         platform: PlatformInfo::current(),
     }
@@ -195,7 +195,7 @@ pub fn process_user_agent_string() -> String {
 pub fn session_user_agent_string(origin: &OriginClientInfo) -> String {
     UserAgent {
         origin: origin.clone(),
-        agent_product: "grok-shell",
+        agent_product: xai_grok_brand::NAME,
         agent_version: agent_version(),
         platform: PlatformInfo::current(),
     }
@@ -244,10 +244,12 @@ pub fn client_type_from_origin(origin: Option<&OriginClientInfo>) -> ClientType 
 }
 
 pub fn process_client_identifier() -> String {
-    std::env::var("GROK_CLIENT_NAME").unwrap_or_else(|_| "grok-shell".to_string())
+    // The primary env name stays `GROK_CLIENT_NAME` (a legacy-named knob, not a
+    // fallback); only the default identity is brand-derived.
+    std::env::var("GROK_CLIENT_NAME").unwrap_or_else(|_| xai_grok_brand::NAME.to_string())
 }
 
-pub const CLIENT_MODE_HEADER: &str = "x-grok-client-mode";
+pub const CLIENT_MODE_HEADER: &str = "x-deepseek-build-client-mode";
 
 static CLIENT_MODE: OnceLock<&'static str> = OnceLock::new();
 
@@ -747,14 +749,14 @@ mod tests {
             product: "grok-desktop".to_string(),
             version: Some("1.2.3".to_string()),
         });
-        assert!(with_version.starts_with("grok-desktop/1.2.3 grok-shell/"));
+        assert!(with_version.starts_with("grok-desktop/1.2.3 deepseek-build/"));
         assert!(with_version.contains(" ("));
 
         let without_version = session_user_agent_string(&OriginClientInfo {
             product: "grok-web".to_string(),
             version: None,
         });
-        assert!(without_version.starts_with("grok-web grok-shell/"));
+        assert!(without_version.starts_with("grok-web deepseek-build/"));
         assert!(!without_version.starts_with("grok-web/"));
     }
 
@@ -762,10 +764,10 @@ mod tests {
     fn user_agent_render_collapses_duplicate_origin_and_agent_identity() {
         let ua = UserAgent {
             origin: OriginClientInfo {
-                product: "grok-shell".to_string(),
+                product: xai_grok_brand::NAME.to_string(),
                 version: Some("0.1.171".to_string()),
             },
-            agent_product: "grok-shell",
+            agent_product: xai_grok_brand::NAME,
             agent_version: "0.1.171".to_string(),
             platform: PlatformInfo {
                 os: "macos".to_string(),
@@ -773,7 +775,20 @@ mod tests {
             },
         };
 
-        assert_eq!(ua.render(), "grok-shell/0.1.171 (macos; aarch64)");
+        assert_eq!(
+            ua.render(),
+            format!("{}/0.1.171 (macos; aarch64)", xai_grok_brand::NAME)
+        );
+    }
+
+    #[test]
+    fn client_mode_header_carries_the_brand_prefix() {
+        assert!(
+            CLIENT_MODE_HEADER.starts_with(xai_grok_brand::HEADER_PREFIX),
+            "{CLIENT_MODE_HEADER} must start with {}",
+            xai_grok_brand::HEADER_PREFIX
+        );
+        assert!(!CLIENT_MODE_HEADER.contains("grok"));
     }
 
     #[tokio::test]

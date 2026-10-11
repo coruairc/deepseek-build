@@ -1754,7 +1754,7 @@ mod tests {
     fn remove_with_delegate_deregisters_plain_worktree_without_calling_delegate() {
         xai_test_utils::require_git!();
         use xai_test_utils::git::{git_commit_all, init_git_repo};
-        // Isolate GROK_HOME so the post-removal unregister writes to a private DB.
+        // Isolate DEEPSEEK_BUILD_HOME so the post-removal unregister writes to a private DB.
         #[cfg(feature = "metadata")]
         let _fx = crate::db::GrokHomeFixture::new();
 

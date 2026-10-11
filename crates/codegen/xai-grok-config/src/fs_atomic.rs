@@ -1274,7 +1274,7 @@ pub fn write_atomically(
 }
 
 /// [`write_atomically`] for a file the user owns. `rename(2)` does not follow a symlink at the
-/// destination, so a dotfile-managed `config.toml` or a `GROK_HOME`-overlay `auth.json` would be
+/// destination, so a dotfile-managed `config.toml` or a `DEEPSEEK_BUILD_HOME`-overlay `auth.json` would be
 /// replaced by a private regular file; under the user's own grok home the link is followed and the
 /// write lands on its target. Elsewhere (a repository's `.grok/config.toml`) the link name is replaced.
 pub fn write_user_file_atomically(

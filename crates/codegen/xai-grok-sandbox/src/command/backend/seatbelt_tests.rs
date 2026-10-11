@@ -10,8 +10,8 @@ use crate::command::git_config::GitConfigEnv;
 use crate::command::grants::{Expiry, Grant, GrantDecision, GrantId, GrantScope, GrantSubject};
 use crate::command::mode::SandboxMode;
 use crate::command::policy::{
-    DenyEntry, EnvPolicy, GROK_HOME_SECRET_GLOBS, NetworkPolicy, PolicyInputs, ReadPolicy,
-    SECRET_READ_DENY_DIRS, SECRET_READ_DENY_FILES, SandboxPolicy,
+    DEEPSEEK_BUILD_HOME_SECRET_GLOBS, DenyEntry, EnvPolicy, NetworkPolicy, PolicyInputs,
+    ReadPolicy, SECRET_READ_DENY_DIRS, SECRET_READ_DENY_FILES, SandboxPolicy,
 };
 use crate::command::protected::{self, Protected, ProtectedInputs};
 
@@ -1639,7 +1639,7 @@ fn every_secret_read_deny_follows_every_read_allow_in_both_read_modes() {
                 .map(|(name, _)| format!("(literal (param \"{name}\"))"));
             filters.push(((*rel).to_owned(), filter));
         }
-        for glob in GROK_HOME_SECRET_GLOBS {
+        for glob in DEEPSEEK_BUILD_HOME_SECRET_GLOBS {
             for spelling in resolved_spellings(&grok_home) {
                 let regex = crate::deny::anchored_glob_regex(&spelling, glob).expect("utf-8");
                 let filter = crate::deny::seatbelt_regex_filter(&regex);

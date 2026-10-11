@@ -1,5 +1,5 @@
 //! Isolated binary so `grok_home()`'s process-wide OnceLock initializes from
-//! our `GROK_HOME`. A lib-test EnvGuard is a no-op if another test already
+//! our `DEEPSEEK_BUILD_HOME`. A lib-test EnvGuard is a no-op if another test already
 //! resolved it, and then doctor reads the real ~/.grok.
 
 use std::path::PathBuf;
@@ -16,7 +16,7 @@ fn isolate_home() -> &'static PathBuf {
         unsafe {
             std::env::set_var("HOME", &dir);
             std::env::set_var("USERPROFILE", &dir);
-            std::env::set_var("GROK_HOME", &grok);
+            std::env::set_var("DEEPSEEK_BUILD_HOME", &grok);
         }
         dir
     })

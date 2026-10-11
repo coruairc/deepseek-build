@@ -150,7 +150,7 @@ pub(crate) fn build_screen_mode_relaunch_args(
 
     out.push(OsString::from("--resume"));
     out.push(OsString::from(session_id));
-    // Keep a CLI mode flag for hand-pasted resume hints that omit GROK_SCREEN_MODE.
+    // Keep a CLI mode flag for hand-pasted resume hints that omit DEEPSEEK_BUILD_SCREEN_MODE.
     if want_minimal {
         out.push(OsString::from("--minimal"));
     } else {

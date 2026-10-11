@@ -122,7 +122,7 @@ impl fmt::Display for GrantRefuse {
             Self::NoHome => write!(
                 f,
                 "Couldn't save folder trust: no home directory for the trust store. \
-                 Set GROK_HOME to an absolute directory (or unset it), then start deepseek-build again."
+                 Set DEEPSEEK_BUILD_HOME to an absolute directory (or unset it), then start deepseek-build again."
             ),
             Self::Unreadable => write!(
                 f,
@@ -994,7 +994,7 @@ mod tests {
         );
     }
 
-    // Isolate `GROK_HOME`. No `serial_test` here; `ENV_LOCK` serializes in-process `cargo test` against other env-mutating modules
+    // Isolate `DEEPSEEK_BUILD_HOME`. No `serial_test` here; `ENV_LOCK` serializes in-process `cargo test` against other env-mutating modules
     // `EnvVarGuard` restores on drop so a panic cannot leak state
     use crate::ENV_TEST_LOCK as ENV_LOCK;
 
@@ -1010,10 +1010,10 @@ mod tests {
     #[test]
     fn store_io_is_noop_on_local_build() {
         // On a local/dev build the feature is inert. Guards use a unique per-repo key so they hold under single-process `cargo test`
-        // Assert only when compiled unstamped. `GROK_HOME` isolated and `ENV_LOCK` held so toggling `GROK_TEST_VERSION` is race-safe
+        // Assert only when compiled unstamped. `DEEPSEEK_BUILD_HOME` isolated and `ENV_LOCK` held so toggling `GROK_TEST_VERSION` is race-safe
         let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let home = tempfile::tempdir().unwrap();
-        let _home = EnvVarGuard::set("GROK_HOME", home.path());
+        let _home = EnvVarGuard::set("DEEPSEEK_BUILD_HOME", home.path());
         let _unset = EnvVarGuard::unset(xai_grok_version::TEST_VERSION_ENV);
         if option_env!("GROK_VERSION").is_some() {
             return; // a release-stamped test binary is not a local build
@@ -1056,10 +1056,10 @@ mod tests {
     fn revoke_folder_trust_store_persists_untrust_for_trusted_folder() {
         // This tests the store half of revoke directly (not just via the shell wrapper)
         // A previously-trusted folder reports was_trusted=true AND gets an explicit `set_untrusted` persisted, so it is untrusted on reload
-        // GROK_HOME is isolated so the seed/deny hit a temp store, not the real file
+        // DEEPSEEK_BUILD_HOME is isolated so the seed/deny hit a temp store, not the real file
         let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let home = tempfile::tempdir().unwrap();
-        let _env = EnvVarGuard::set("GROK_HOME", home.path());
+        let _env = EnvVarGuard::set("DEEPSEEK_BUILD_HOME", home.path());
         let _sim = simulate_release_build();
         let tmp = repo_tmp();
         let key = workspace_key(tmp.path());
@@ -1082,7 +1082,7 @@ mod tests {
     fn revoke_folder_trust_store_writes_no_deny_for_never_trusted_folder() {
         let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let home = tempfile::tempdir().unwrap();
-        let _env = EnvVarGuard::set("GROK_HOME", home.path());
+        let _env = EnvVarGuard::set("DEEPSEEK_BUILD_HOME", home.path());
         let _sim = simulate_release_build();
         let tmp = repo_tmp();
 
@@ -1101,10 +1101,10 @@ mod tests {
     #[test]
     fn grant_folder_trust_skips_rewrite_when_already_trusted_but_flips_untrust() {
         // Already-trusted grant must not rewrite the store; an explicit untrust record must still persist `--trust`
-        // GROK_HOME is isolated so the seed hits a temp store, not the real file
+        // DEEPSEEK_BUILD_HOME is isolated so the seed hits a temp store, not the real file
         let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let home = tempfile::tempdir().unwrap();
-        let _env = EnvVarGuard::set("GROK_HOME", home.path());
+        let _env = EnvVarGuard::set("DEEPSEEK_BUILD_HOME", home.path());
         let _sim = simulate_release_build();
         let tmp = repo_tmp();
         let key = workspace_key(tmp.path());
@@ -1115,7 +1115,7 @@ mod tests {
             "first grant must persist trust"
         );
 
-        let store_path = TrustStore::default_path().expect("isolated GROK_HOME");
+        let store_path = TrustStore::default_path().expect("isolated DEEPSEEK_BUILD_HOME");
         let after_grant = std::fs::read(&store_path).unwrap();
         // Marker a rewrite would drop.
         let mut marked = after_grant.clone();
@@ -1290,7 +1290,7 @@ mod tests {
             ),
             "publish failure after a missing store is process-local only"
         );
-        let _home = EnvVarGuard::set("GROK_HOME", &blocker);
+        let _home = EnvVarGuard::set("DEEPSEEK_BUILD_HOME", &blocker);
         assert!(
             !TrustStore::load().is_trusted(&key),
             "durable store must stay ungranted when persist is denied"
@@ -1360,7 +1360,7 @@ mod tests {
             }
         ));
         assert_eq!(std::fs::read(&store_path).unwrap(), before);
-        let _home = EnvVarGuard::set("GROK_HOME", &fixture);
+        let _home = EnvVarGuard::set("DEEPSEEK_BUILD_HOME", &fixture);
         assert!(
             !is_trusted_this_process(&key),
             "unread store must not become process-local trusted"

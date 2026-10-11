@@ -18,7 +18,7 @@ fn grok_command(home: &std::path::Path, args: &[&str]) -> Command {
     cmd.args(args)
         .env_clear()
         .env("HOME", home)
-        .env("GROK_HOME", home)
+        .env("DEEPSEEK_BUILD_HOME", home)
         .env("PATH", std::env::var("PATH").unwrap_or_default())
         .env("GROK_MANAGED_CONFIG", "0")
         .stdin(Stdio::null())

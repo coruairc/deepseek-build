@@ -1,14 +1,14 @@
-//! `GROK_HOME` override tests in an isolated binary so `grok_home()`'s process-wide `OnceLock` initializes from the overridden env var.
+//! `DEEPSEEK_BUILD_HOME` override tests in an isolated binary so `grok_home()`'s process-wide `OnceLock` initializes from the overridden env var.
 
 use std::path::PathBuf;
 
 #[test]
-#[serial_test::serial(GROK_HOME)]
+#[serial_test::serial(DEEPSEEK_BUILD_HOME)]
 fn grok_home_override_path_helpers() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let grok_home = tmp.path().to_path_buf();
     unsafe {
-        std::env::set_var("GROK_HOME", &grok_home);
+        std::env::set_var("DEEPSEEK_BUILD_HOME", &grok_home);
     }
 
     assert_eq!(
@@ -44,12 +44,12 @@ fn grok_home_override_path_helpers() {
 
 /// Isolated because `grok_home()`'s `OnceLock` is already initialized by the time the shared lib-test binary reaches a case like this.
 #[test]
-#[serial_test::serial(GROK_HOME)]
+#[serial_test::serial(DEEPSEEK_BUILD_HOME)]
 fn disk_usage_run_creates_no_grok_home() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let ghost = tmp.path().join("ghost-home");
     unsafe {
-        std::env::set_var("GROK_HOME", &ghost);
+        std::env::set_var("DEEPSEEK_BUILD_HOME", &ghost);
     }
 
     for json in [false, true] {

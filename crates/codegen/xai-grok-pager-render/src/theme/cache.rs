@@ -173,7 +173,7 @@ pub fn invalidate_auto_theme_config() {
 
 // -- Theme resolution --------------------------------------------------------
 
-/// Concrete kind, never `Auto`. Env (`DEEPSEEK_BUILD_THEME` / `LC_DEEPSEEK_BUILD_THEME`, with the legacy `GROK_THEME` names as a fallback), then `[ui].theme`, then `DeepSeekMonokai`.
+/// Concrete kind, never `Auto`. Env (`DEEPSEEK_BUILD_THEME` / `LC_DEEPSEEK_BUILD_THEME`), then `[ui].theme`, then `DeepSeekMonokai`.
 #[must_use]
 pub fn resolve_initial_theme() -> ThemeKind {
     resolve_initial_theme_from(env_theme_name().as_deref(), load_from_disk(), true)
@@ -190,12 +190,7 @@ fn env_theme_name() -> Option<String> {
 }
 
 fn env_theme_name_from(env: &HashMap<String, String>) -> Option<&str> {
-    for key in [
-        "DEEPSEEK_BUILD_THEME",
-        "LC_DEEPSEEK_BUILD_THEME",
-        "GROK_THEME",
-        "LC_GROK_THEME",
-    ] {
+    for key in ["DEEPSEEK_BUILD_THEME", "LC_DEEPSEEK_BUILD_THEME"] {
         let Some(raw) = env
             .get(key)
             .map(String::as_str)
@@ -765,11 +760,11 @@ mod tests {
     }
 
     #[test]
-    fn grok_theme_wins_over_lc_and_config() {
+    fn branded_theme_env_wins_over_lc_and_config() {
         with_test_env(|| {
             let env = theme_env(&[
-                ("GROK_THEME", "deepseek-day"),
-                ("LC_GROK_THEME", "tokyonight"),
+                ("DEEPSEEK_BUILD_THEME", "deepseek-day"),
+                ("LC_DEEPSEEK_BUILD_THEME", "tokyonight"),
             ]);
             assert_eq!(
                 resolve_initial_theme_from(
@@ -792,13 +787,13 @@ mod tests {
     }
 
     #[test]
-    fn empty_or_absent_grok_theme_falls_through_to_lc() {
+    fn empty_or_absent_branded_theme_falls_through_to_lc() {
         with_test_env(|| {
             assert_eq!(
                 resolve_initial_theme_from(
                     env_theme_name_from(&theme_env(&[
-                        ("GROK_THEME", ""),
-                        ("LC_GROK_THEME", "deepseek-day")
+                        ("DEEPSEEK_BUILD_THEME", ""),
+                        ("LC_DEEPSEEK_BUILD_THEME", "deepseek-day")
                     ])),
                     Some(ThemeKind::TokyoNight),
                     false,
@@ -807,7 +802,7 @@ mod tests {
             );
             assert_eq!(
                 resolve_initial_theme_from(
-                    env_theme_name_from(&theme_env(&[("LC_GROK_THEME", "deepseek-day")])),
+                    env_theme_name_from(&theme_env(&[("LC_DEEPSEEK_BUILD_THEME", "deepseek-day")])),
                     Some(ThemeKind::TokyoNight),
                     true,
                 ),
@@ -817,13 +812,13 @@ mod tests {
     }
 
     #[test]
-    fn unknown_grok_theme_falls_through_to_valid_lc() {
+    fn unknown_branded_theme_falls_through_to_valid_lc() {
         with_test_env(|| {
             assert_eq!(
                 resolve_initial_theme_from(
                     env_theme_name_from(&theme_env(&[
-                        ("GROK_THEME", "not-a-theme"),
-                        ("LC_GROK_THEME", "deepseek-day"),
+                        ("DEEPSEEK_BUILD_THEME", "not-a-theme"),
+                        ("LC_DEEPSEEK_BUILD_THEME", "deepseek-day"),
                     ])),
                     Some(ThemeKind::TokyoNight),
                     false,
@@ -840,8 +835,8 @@ mod tests {
             assert_eq!(
                 resolve_initial_theme_from(
                     env_theme_name_from(&theme_env(&[
-                        ("GROK_THEME", "not-a-theme"),
-                        ("LC_GROK_THEME", "")
+                        ("DEEPSEEK_BUILD_THEME", "not-a-theme"),
+                        ("LC_DEEPSEEK_BUILD_THEME", "")
                     ])),
                     Some(ThemeKind::DeepSeekDay),
                     false,
@@ -850,7 +845,10 @@ mod tests {
             );
             assert_eq!(
                 resolve_initial_theme_from(
-                    env_theme_name_from(&theme_env(&[("GROK_THEME", ""), ("LC_GROK_THEME", "")])),
+                    env_theme_name_from(&theme_env(&[
+                        ("DEEPSEEK_BUILD_THEME", ""),
+                        ("LC_DEEPSEEK_BUILD_THEME", "")
+                    ])),
                     Some(ThemeKind::DeepSeekDay),
                     true,
                 ),
@@ -873,7 +871,7 @@ mod tests {
             system_appearance::set_mock(Some(system_appearance::SystemAppearance::Light));
             assert_eq!(
                 resolve_initial_theme_from(
-                    env_theme_name_from(&theme_env(&[("GROK_THEME", "system")])),
+                    env_theme_name_from(&theme_env(&[("DEEPSEEK_BUILD_THEME", "system")])),
                     Some(ThemeKind::TokyoNight),
                     false,
                 ),
@@ -885,7 +883,7 @@ mod tests {
             system_appearance::set_mock(Some(system_appearance::SystemAppearance::Dark));
             assert_eq!(
                 resolve_initial_theme_from(
-                    env_theme_name_from(&theme_env(&[("LC_GROK_THEME", "auto")])),
+                    env_theme_name_from(&theme_env(&[("LC_DEEPSEEK_BUILD_THEME", "auto")])),
                     Some(ThemeKind::TokyoNight),
                     true,
                 ),

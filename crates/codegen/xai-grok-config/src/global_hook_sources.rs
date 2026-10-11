@@ -1,5 +1,5 @@
 //! deepseek-build-owned direct global hook paths shared by shell discovery and sandbox write-deny.
-//! These are `$GROK_HOME/hooks`, `hooks-paths`, and absolute registry targets.
+//! These are `$DEEPSEEK_BUILD_HOME/hooks`, `hooks-paths`, and absolute registry targets.
 //! Relative registry lines, project hooks, and vendor compat are out of scope.
 
 use std::io;
@@ -12,13 +12,13 @@ use crate::loader::{
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GlobalHookSourceKind {
-    /// `$GROK_HOME/hooks/` (discovered and protected).
+    /// `$DEEPSEEK_BUILD_HOME/hooks/` (discovered and protected).
     HookDirectory,
-    /// `$GROK_HOME/hooks-paths` (protected; never loaded as hook JSON).
+    /// `$DEEPSEEK_BUILD_HOME/hooks-paths` (protected; never loaded as hook JSON).
     RegistryFile,
     /// Absolute registry target (must exist before sandbox apply).
     ConfiguredSource,
-    /// `$GROK_HOME` trust-boundary file (protected; never hook JSON or a discovery source).
+    /// `$DEEPSEEK_BUILD_HOME` trust-boundary file (protected; never hook JSON or a discovery source).
     TrustBoundaryFile,
 }
 
@@ -60,7 +60,7 @@ pub enum GlobalHookSourceError {
         #[source]
         source: io::Error,
     },
-    #[error("symlinked GROK_HOME is not allowed under sandbox write-deny: {path}")]
+    #[error("symlinked DEEPSEEK_BUILD_HOME is not allowed under sandbox write-deny: {path}")]
     SymlinkedGrokHome { path: PathBuf },
     #[error("hook source path contains a symlink component (retargetable): {path}")]
     SymlinkedSource { path: PathBuf },
@@ -303,7 +303,7 @@ fn ensure_real_file_slot(path: &Path) -> Result<(), GlobalHookSourceError> {
     Ok(())
 }
 
-/// Ensure real `$GROK_HOME/hooks` dir and `hooks-paths` file (create if missing).
+/// Ensure real `$DEEPSEEK_BUILD_HOME/hooks` dir and `hooks-paths` file (create if missing).
 /// The create is race-resistant (`create_dir` / `create_new` with `O_NOFOLLOW`) and never truncates an existing registry.
 /// Symlinks and wrong types are rejected.
 pub fn ensure_grok_hook_slots(grok_home: &Path) -> Result<(), GlobalHookSourceError> {
@@ -372,7 +372,7 @@ pub fn ensure_grok_hook_slots(grok_home: &Path) -> Result<(), GlobalHookSourceEr
     Ok(())
 }
 
-/// `$GROK_HOME` files that are always-trusted or trust-granting if writable.
+/// `$DEEPSEEK_BUILD_HOME` files that are always-trusted or trust-granting if writable.
 pub const TRUST_BOUNDARY_FILENAMES: &[&str] = &[
     USER_CONFIG_FILENAME,
     TRUSTED_FOLDERS_FILENAME,
@@ -397,7 +397,7 @@ pub(crate) fn ensure_grok_trust_boundary_slots(
     Ok(())
 }
 
-/// Resolve `$GROK_HOME` trust-boundary files (symlink-rejected for sandbox).
+/// Resolve `$DEEPSEEK_BUILD_HOME` trust-boundary files (symlink-rejected for sandbox).
 pub fn resolve_trust_boundary_sources(
     grok_home: &Path,
 ) -> Result<Vec<GlobalHookSource>, GlobalHookSourceError> {

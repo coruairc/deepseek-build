@@ -2478,7 +2478,7 @@ pub fn derive_source_label(source_dir: &str) -> (String, bool) {
 fn classify_hook_source(source_dir: &str) -> HookSourceMeta {
     let grok = xai_grok_config::grok_home();
     let source_path = std::path::Path::new(source_dir);
-    // Plugin / installed-plugin dirs, under the user grok home (GROK_HOME-aware) or a project-scoped `{cwd}/.grok/<subdir>/`
+    // Plugin / installed-plugin dirs, under the user grok home (DEEPSEEK_BUILD_HOME-aware) or a project-scoped `{cwd}/.grok/<subdir>/`
     // Returns the first path component after the subdir (the plugin's install directory name)
     let plugin_name = |subdir: &str| -> Option<String> {
         let first_comp = |p: &std::path::Path| {
@@ -2487,7 +2487,7 @@ fn classify_hook_source(source_dir: &str) -> HookSourceMeta {
                 .map(|c| c.as_os_str().to_string_lossy().into_owned())
                 .filter(|s| !s.is_empty())
         };
-        // User grok home (GROK_HOME-aware).
+        // User grok home (DEEPSEEK_BUILD_HOME-aware).
         if let Ok(rest) = source_path.strip_prefix(grok.join(subdir))
             && let Some(name) = first_comp(rest)
         {
@@ -2512,7 +2512,7 @@ fn classify_hook_source(source_dir: &str) -> HookSourceMeta {
             kind: HookSourceKind::Plugin,
         };
     }
-    // Global hooks under $GROK_HOME/hooks
+    // Global hooks under $DEEPSEEK_BUILD_HOME/hooks
     let global_hooks = grok.join("hooks");
     let global_str = global_hooks.display().to_string();
     if source_dir == global_str || source_dir.starts_with(&format!("{global_str}/")) {
@@ -4304,7 +4304,7 @@ mod tests {
     #[test]
     fn derive_source_label_detects_project_scoped_plugins() {
         // Regression: project-scoped `{cwd}/.grok/plugins/<name>/` must label as a (non-removable) plugin, not a removable "Custom" source
-        // The user grok-home branch is GROK_HOME-aware; this covers the project fallback
+        // The user grok-home branch is DEEPSEEK_BUILD_HOME-aware; this covers the project fallback
         let (label, is_custom) = derive_source_label("/repo/work/.grok/plugins/my-plugin/hooks");
         assert_eq!(label, "Plugin: my-plugin");
         assert!(!is_custom);

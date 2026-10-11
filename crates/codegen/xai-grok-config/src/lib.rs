@@ -3,9 +3,9 @@
 //!
 //! Merge order (lowest to highest priority):
 //! 1. `/etc/grok/managed_config.toml`
-//! 2. `$GROK_HOME/managed_config.toml`
-//! 3. `$GROK_HOME/config.toml`
-//! 4. `$GROK_HOME/requirements.toml` (cloud cache; Ed25519-signed at rest once a key is embedded, see [`signed_policy`])
+//! 2. `$DEEPSEEK_BUILD_HOME/managed_config.toml`
+//! 3. `$DEEPSEEK_BUILD_HOME/config.toml`
+//! 4. `$DEEPSEEK_BUILD_HOME/requirements.toml` (cloud cache; Ed25519-signed at rest once a key is embedded, see [`signed_policy`])
 //! 5. `/etc/grok/requirements.toml`
 //! 6. macOS MDM managed preferences (`ai.x.grok`, admin-forced), macOS only
 //!
@@ -123,9 +123,7 @@ pub use remote_settings::{
     LongReasoningReminderSettings, RemoteRequestEncoding, RemoteSettings, WorktreeAutoGcSettings,
     WorktreeKindMaxAge, deserialize_tolerant,
 };
-pub use resolved::{
-    BoolFlag, ConfigSource, Resolved, resolve_string_flag, resolve_string_flag_legacy,
-};
+pub use resolved::{BoolFlag, ConfigSource, Resolved, resolve_string_flag};
 pub use validation::{
     RequirementsError, RequirementsLayer, RequirementsSource, load_merged_requirements,
     requirements_layers, validate_requirements,

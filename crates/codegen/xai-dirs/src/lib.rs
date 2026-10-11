@@ -1,7 +1,7 @@
 //! Home-directory resolution generally: USERPROFILE-first `home_dir`, plus
-//! grok-home (`$DEEPSEEK_BUILD_HOME`, falling back to the legacy `$GROK_HOME`,
-//! or `<home>/.deepseek-build`). Shared by `xai-grok-config` and
-//! `xai-fast-worktree`.
+//! grok-home (`$DEEPSEEK_BUILD_HOME` or `<home>/.deepseek-build`). Shared by
+//! `xai-grok-config` and `xai-fast-worktree`. Other home env names (the legacy
+//! `$DEEPSEEK_BUILD_HOME`, included) are ignored by design.
 //!
 //! Which function to call:
 //! - [`grok_home`]: the usual choice, a cached, created path to build on.
@@ -19,14 +19,14 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
-use xai_grok_brand::{CONFIG_DIR_NAME, HOME_ENV_VAR, LEGACY_HOME_ENV_VAR};
+use xai_grok_brand::{CONFIG_DIR_NAME, HOME_ENV_VAR};
 
 /// Where a resolved grok home came from, so "why did grok pick this
 /// directory?" is answerable in diagnostics without re-reading the
 /// environment at the asking site.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GrokHomeSource {
-    /// A non-empty `$DEEPSEEK_BUILD_HOME` (or legacy `$GROK_HOME`) override.
+    /// A non-empty `$DEEPSEEK_BUILD_HOME` override.
     EnvOverride,
     /// `<home>/.deepseek-build` derived from the home directory.
     HomeDefault,
@@ -67,11 +67,10 @@ pub fn resolve_grok_home() -> Option<PathBuf> {
 
 /// [`resolve_grok_home`] plus the [`GrokHomeSource`] the path came from.
 ///
-/// `$DEEPSEEK_BUILD_HOME` is the primary override; the legacy `$GROK_HOME` is
-/// still honored as a fallback so existing installs keep working.
+/// `$DEEPSEEK_BUILD_HOME` is the only environment override; other names are
+/// ignored by design (see the `legacy_home_env_is_ignored` test).
 pub fn resolve_grok_home_with_source() -> Option<(PathBuf, GrokHomeSource)> {
-    let env_override =
-        std::env::var_os(HOME_ENV_VAR).or_else(|| std::env::var_os(LEGACY_HOME_ENV_VAR));
+    let env_override = std::env::var_os(HOME_ENV_VAR);
     resolve_grok_home_from(env_override.as_deref(), home_dir().as_deref())
 }
 
@@ -81,10 +80,10 @@ pub fn default_grok_home() -> PathBuf {
 }
 
 /// The grok home, created if missing and cached for the process; falls back to
-/// [`default_grok_home`] when neither `$GROK_HOME` nor a home resolves.
+/// [`default_grok_home`] when neither `$DEEPSEEK_BUILD_HOME` nor a home resolves.
 pub fn grok_home() -> PathBuf {
-    static GROK_HOME: OnceLock<PathBuf> = OnceLock::new();
-    GROK_HOME
+    static DEEPSEEK_BUILD_HOME: OnceLock<PathBuf> = OnceLock::new();
+    DEEPSEEK_BUILD_HOME
         .get_or_init(|| {
             let home = resolve_grok_home().unwrap_or_else(default_grok_home);
             if let Err(err) = std::fs::create_dir_all(&home) {
@@ -165,6 +164,54 @@ mod tests {
         assert_eq!(
             resolve_grok_home_from(/* grok_home_env */ None, /* os_home */ None),
             None
+        );
+    }
+
+    /// Any older home env name — the pre-rebrand `GROK_HOME` above all — must be
+    /// ignored; only `$DEEPSEEK_BUILD_HOME` can force an override.
+    #[test]
+    fn legacy_home_env_is_ignored() {
+        static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let tmp = tempfile::tempdir().unwrap();
+        let legacy = tmp.path().join("legacy-home");
+        let primary = tmp.path().join("primary-home");
+        let prev_primary = std::env::var_os(HOME_ENV_VAR);
+        let prev_legacy = std::env::var_os("GROK_HOME");
+        // Only the legacy name set: resolution must not produce an env override.
+        unsafe {
+            std::env::remove_var(HOME_ENV_VAR);
+            std::env::set_var("GROK_HOME", &legacy);
+        }
+        let from_legacy = resolve_grok_home_with_source();
+        // The branded name still works.
+        unsafe { std::env::set_var(HOME_ENV_VAR, &primary) };
+        let from_primary = resolve_grok_home_with_source();
+        unsafe {
+            match prev_primary {
+                Some(v) => std::env::set_var(HOME_ENV_VAR, v),
+                None => std::env::remove_var(HOME_ENV_VAR),
+            }
+            match prev_legacy {
+                Some(v) => std::env::set_var("GROK_HOME", v),
+                None => std::env::remove_var("GROK_HOME"),
+            }
+        }
+        assert_ne!(
+            from_legacy.as_ref().map(|(p, _)| p),
+            Some(&legacy),
+            "the legacy name must not be read"
+        );
+        assert!(
+            from_legacy
+                .as_ref()
+                .is_none_or(|(_, src)| *src != GrokHomeSource::EnvOverride),
+            "the legacy name must never yield an env override"
+        );
+        assert_eq!(
+            from_primary,
+            Some((primary, GrokHomeSource::EnvOverride)),
+            "the branded name is the only override"
         );
     }
 }

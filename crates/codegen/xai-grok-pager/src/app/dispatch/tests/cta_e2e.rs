@@ -1436,7 +1436,7 @@ mod cta_e2e {
         HOME.get_or_init(|| {
             let tmp = tempfile::tempdir().expect("tempdir creation");
             unsafe {
-                std::env::set_var("GROK_HOME", tmp.path());
+                std::env::set_var("DEEPSEEK_BUILD_HOME", tmp.path());
             }
             tmp
         });

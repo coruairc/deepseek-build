@@ -21,13 +21,8 @@ pub const ENV_PREFIX: &str = "DEEPSEEK_BUILD";
 /// Primary environment variable that overrides the per-user home directory.
 pub const HOME_ENV_VAR: &str = "DEEPSEEK_BUILD_HOME";
 
-/// Legacy environment variable still honored as a fallback for
-/// [`HOME_ENV_VAR`] so existing installs keep resolving their config.
-pub const LEGACY_HOME_ENV_VAR: &str = "GROK_HOME";
-
-/// Legacy config-dir name honored as a fallback when [`CONFIG_DIR_NAME`] does
-/// not exist, so existing `~/.grok` installs are not stranded.
-pub const LEGACY_CONFIG_DIR_NAME: &str = ".grok";
+/// Prefix for the product's outbound HTTP request headers.
+pub const HEADER_PREFIX: &str = "x-deepseek-build";
 
 /// Build the canonical `DEEPSEEK_BUILD_<SUFFIX>` environment-variable name.
 ///
@@ -48,7 +43,7 @@ mod tests {
         assert_eq!(SYSTEM_CONFIG_DIR, "/etc/deepseek-build");
         assert_eq!(ENV_PREFIX, "DEEPSEEK_BUILD");
         assert_eq!(HOME_ENV_VAR, "DEEPSEEK_BUILD_HOME");
-        assert_eq!(LEGACY_HOME_ENV_VAR, "GROK_HOME");
+        assert_eq!(HEADER_PREFIX, "x-deepseek-build");
     }
 
     #[test]

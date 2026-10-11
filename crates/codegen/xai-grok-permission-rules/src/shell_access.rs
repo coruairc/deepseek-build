@@ -537,7 +537,7 @@ fn protected_edit_reason(path: &Path) -> Option<ProtectedEditReason> {
 }
 
 /// deepseek-build config files that alter permissions or sandbox restrictions; a silent edit would let the agent loosen its own guardrails.
-/// Matched directly inside any `.grok` dir (user-global default and workspace overlays) and directly under a custom `$GROK_HOME`.
+/// Matched directly inside any `.grok` dir (user-global default and workspace overlays) and directly under a custom `$DEEPSEEK_BUILD_HOME`.
 /// A custom home has no `.grok` component, so the component match alone cannot see it.
 fn protected_grok_config_file(path: &Path, components: &[&str]) -> Option<ProtectedEditReason> {
     protected_grok_config_file_with_home(
@@ -1679,7 +1679,7 @@ mod tests {
         }
     }
 
-    /// A custom `$GROK_HOME` has no `.grok` path component, so the live `config.toml` / `sandbox.toml` must be caught by the home-prefix branch.
+    /// A custom `$DEEPSEEK_BUILD_HOME` has no `.grok` path component, so the live `config.toml` / `sandbox.toml` must be caught by the home-prefix branch.
     #[test]
     fn grok_config_files_under_custom_grok_home_are_protected() {
         let home = tempfile::tempdir().unwrap();
@@ -1707,7 +1707,7 @@ mod tests {
             assert_eq!(
                 protected_grok_config_file_with_home(&path, &components, Some(home_path)),
                 Some(reason),
-                "{file} directly under $GROK_HOME must be protected"
+                "{file} directly under $DEEPSEEK_BUILD_HOME must be protected"
             );
         }
         let grant = home_path
@@ -1721,7 +1721,7 @@ mod tests {
                 Some(home_path)
             ),
             Some(ProtectedEditReason::GrokConfig),
-            "per-client grant store under $GROK_HOME/sessions must be protected"
+            "per-client grant store under $DEEPSEEK_BUILD_HOME/sessions must be protected"
         );
         // Same file names elsewhere (or with no resolvable home) stay ordinary.
         let elsewhere = home_path
@@ -1746,7 +1746,7 @@ mod tests {
     }
 
     /// The resolved-symlink arm of the grok-home match must decide.
-    /// `$GROK_HOME` points at a symlink while the edit targets the physical home directory, so the lexical parent-equality arm cannot fire.
+    /// `$DEEPSEEK_BUILD_HOME` points at a symlink while the edit targets the physical home directory, so the lexical parent-equality arm cannot fire.
     #[test]
     #[cfg(unix)]
     fn grok_config_under_symlinked_grok_home_is_protected() {
