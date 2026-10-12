@@ -38,7 +38,8 @@ COPY README.txt /usr/share/doc/deepseek-build/README.txt
 # Local test context must contain the binary as `deepseek-build` plus the
 # license files (see the usage note above).
 COPY deepseek-build /usr/local/bin/deepseek-build
-RUN chmod 755 /usr/local/bin/deepseek-build
+RUN chmod 755 /usr/local/bin/deepseek-build \
+    && ln -sf deepseek-build /usr/local/bin/dsb
 
 WORKDIR /work
 USER 1000:1000

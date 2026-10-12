@@ -46,7 +46,8 @@ COPY README.txt /usr/share/doc/deepseek-build/README.txt
 # TARGETARCH for each platform in a multi-platform build.
 ARG TARGETARCH
 COPY deepseek-build-${TARGETARCH} /usr/local/bin/deepseek-build
-RUN chmod 755 /usr/local/bin/deepseek-build
+RUN chmod 755 /usr/local/bin/deepseek-build \
+    && ln -sf deepseek-build /usr/local/bin/dsb
 
 WORKDIR /work
 USER 1000:1000

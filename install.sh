@@ -16,6 +16,9 @@
 #   sh install.sh --uninstall         remove the installed binary
 #   sh install.sh --help
 #
+# On install, a `dsb` symlink to `deepseek-build` is created in INSTALL_DIR so
+# the tool can be launched with the short name `dsb`.
+#
 # Testing hooks (do not set in production):
 #   DSB_INSTALL_BASE_URL     override the GitHub releases base URL (local HTTP
 #                            server for tests). Changes nothing else.
@@ -181,6 +184,10 @@ Environment:
                 (default: latest release)
   INSTALL_DIR   Target directory (default: \$HOME/.local/bin)
 
+The binary is installed as \`deepseek-build\`; a \`dsb\` symlink to it is created
+in the same directory so the tool can be launched with the short name \`dsb\`.
+An existing unrelated file or symlink named \`dsb\` is never replaced.
+
 Supported platforms:
   Linux x86_64 / arm64 (glibc), macOS x86_64 / arm64
 
@@ -207,6 +214,20 @@ if [ "$MODE" = "uninstall" ]; then
         log "Removed $TARGET_FILE"
     else
         log "Nothing to remove: $TARGET_FILE is absent"
+    fi
+    # Remove the `dsb` shortcut only if it is a symlink we own (points at
+    # deepseek-build, or is left dangling by the removal above). A user's real
+    # file or unrelated symlink named `dsb` is left untouched.
+    SHORTCUT="$INSTALL_DIR/dsb"
+    if [ -L "$SHORTCUT" ]; then
+        _dest=$(readlink "$SHORTCUT" 2>/dev/null || true)
+        case "$_dest" in
+            *deepseek-build|"")
+                rm -f "$SHORTCUT"
+                log "Removed $SHORTCUT"
+                ;;
+            *) : ;;
+        esac
     fi
     exit 0
 fi
@@ -298,6 +319,43 @@ fi
 chmod +x "$INSTALL_DIR/deepseek-build" 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
+# `dsb` shortcut
+# ---------------------------------------------------------------------------
+# The canonical binary name is `deepseek-build` (decision D1), but typing it is
+# long. Install a `dsb` symlink next to it so `dsb` launches the same binary.
+# Never clobber anything we do not own: a real file, or a symlink that points
+# somewhere other than this binary, is left in place with a warning.
+
+SHORTCUT="$INSTALL_DIR/dsb"
+SHORTCUT_STATUS=skipped
+if [ -e "$SHORTCUT" ] && [ ! -L "$SHORTCUT" ]; then
+    warn "$SHORTCUT already exists and is not a symlink; leaving it in place."
+    warn "Remove it to get the 'dsb' shortcut, or use a different INSTALL_DIR."
+elif [ -L "$SHORTCUT" ]; then
+    _dest=$(readlink "$SHORTCUT" 2>/dev/null || true)
+    case "$_dest" in
+        *deepseek-build|"")
+            if ln -sf deepseek-build "$SHORTCUT" 2>/dev/null; then
+                SHORTCUT_STATUS=ok
+            else
+                SHORTCUT_STATUS=failed
+            fi
+            ;;
+        *) warn "$SHORTCUT points to '${_dest:-nowhere}'; leaving it in place." ;;
+    esac
+elif ln -s deepseek-build "$SHORTCUT" 2>/dev/null; then
+    SHORTCUT_STATUS=ok
+else
+    SHORTCUT_STATUS=failed
+fi
+if [ "$SHORTCUT_STATUS" = ok ] && [ -L "$SHORTCUT" ]; then
+    log "Installed shortcut $SHORTCUT -> deepseek-build"
+elif [ "$SHORTCUT_STATUS" = failed ]; then
+    warn "Could not create the 'dsb' shortcut at $SHORTCUT."
+    warn "deepseek-build is installed and usable; create the shortcut manually if you want it."
+fi
+
+# ---------------------------------------------------------------------------
 # PATH hint
 # ---------------------------------------------------------------------------
 
@@ -315,6 +373,9 @@ esac
 # ---------------------------------------------------------------------------
 
 log "Installed $VERSION_TAG to $INSTALL_DIR/deepseek-build"
+if [ "$SHORTCUT_STATUS" = ok ] && [ -L "$SHORTCUT" ]; then
+    log "Run it as: dsb   (shortcut; full name: deepseek-build)"
+fi
 if "$INSTALL_DIR/deepseek-build" --version; then
     :
 else

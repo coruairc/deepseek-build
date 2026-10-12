@@ -3,12 +3,14 @@
 #
 # Builds a fake release tree (fake binary, tarballs, SHA256SUMS), serves it
 # over HTTP on 127.0.0.1, and runs install.sh through its paths:
-#   1. success (+ PATH hint on/off)
+#   1. success (+ PATH hint on/off, + dsb shortcut)
 #   2. checksum mismatch (must abort, install nothing)
 #   3. missing platform (unsupported OS; tarball 404)
-#   4. uninstall (present / absent)
-#   5. rerun-to-update
+#   4. uninstall (present / absent; removes dsb, preserves a foreign one)
+#   5. rerun-to-update (dsb survives)
 #   6. unwritable INSTALL_DIR (no sudo suggestion)
+#   7. pre-existing real file named `dsb` (never clobbered)
+#   8. pre-existing foreign `dsb` symlink (never clobbered)
 #
 # No network beyond 127.0.0.1. Cleans up via trap.
 # Run: sh scripts/test-install.sh
@@ -268,6 +270,14 @@ fi
 assert_contains "$OUT" "Independent project, not affiliated with DeepSeek." "success-install: non-affiliation line"
 assert_contains "$OUT" "deepseek-build $FAKE_VERSION" "success-install: version printed"
 assert_not_contains "$OUT" "not in your PATH" "success-install: no PATH hint when dir is on PATH"
+if [ -L "$SB_BIN/dsb" ]; then
+    pass "success-install: dsb shortcut created"
+else
+    fail "success-install: dsb shortcut created" "no symlink at $SB_BIN/dsb"
+fi
+assert_contains "$OUT" "Run it as: dsb" "success-install: shortcut mentioned in report"
+DSB_VER=$(HOME="$SB_HOME" "$SB_BIN/dsb" --version 2>&1) || true
+assert_contains "$DSB_VER" "deepseek-build $FAKE_VERSION" "success-install: dsb runs the binary"
 
 # PATH hint when INSTALL_DIR is not on PATH
 new_sandbox hint
@@ -290,6 +300,11 @@ fi
 assert_contains "$OUT" "Latest release: v$FAKE_VERSION_2" "latest-install: resolved newest tag"
 assert_contains "$OUT" "deepseek-build $FAKE_VERSION_2" "latest-install: newest version installed"
 assert_contains "$OUT" "Independent project, not affiliated with DeepSeek." "latest-install: non-affiliation line"
+if [ -L "$SB_BIN/dsb" ]; then
+    pass "latest-install: dsb shortcut created"
+else
+    fail "latest-install: dsb shortcut created" "no symlink at $SB_BIN/dsb"
+fi
 
 # ---------------------------------------------------------------------------
 # Case 2: checksum mismatch — abort, install nothing
@@ -359,11 +374,17 @@ new_sandbox uninstall
 HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" VERSION="$FAKE_VERSION" \
     DSB_INSTALL_BASE_URL="$BASE" sh "$INSTALL_SH" >/dev/null 2>&1 || true
 [ -x "$SB_BIN/deepseek-build" ] || fail "uninstall: setup" "binary missing before uninstall"
+[ -L "$SB_BIN/dsb" ] || fail "uninstall: setup" "dsb shortcut missing before uninstall"
 OUT=$(HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" DSB_INSTALL_BASE_URL="$BASE" sh "$INSTALL_SH" --uninstall 2>&1) && RC=0 || RC=$?
 if [ "$RC" -eq 0 ] && [ ! -e "$SB_BIN/deepseek-build" ]; then
     pass "uninstall: removes binary"
 else
     fail "uninstall: removes binary" "rc=$RC"
+fi
+if [ ! -e "$SB_BIN/dsb" ] && [ ! -L "$SB_BIN/dsb" ]; then
+    pass "uninstall: removes dsb shortcut"
+else
+    fail "uninstall: removes dsb shortcut" "dsb still present at $SB_BIN/dsb"
 fi
 assert_not_contains "$OUT" "http" "uninstall: no network (no URL in output)"
 OUT=$(HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" sh "$INSTALL_SH" --uninstall 2>&1) && RC=0 || RC=$?
@@ -371,6 +392,17 @@ if [ "$RC" -eq 0 ]; then
     pass "uninstall: idempotent when absent"
 else
     fail "uninstall: idempotent when absent" "rc=$RC"
+fi
+
+# A `dsb` symlink that we did not create (points elsewhere) is left alone.
+new_sandbox foreignlink
+mkdir -p "$SB_BIN"
+ln -s /bin/true "$SB_BIN/dsb"
+HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" sh "$INSTALL_SH" --uninstall >/dev/null 2>&1 || true
+if [ -L "$SB_BIN/dsb" ]; then
+    pass "uninstall: preserves a foreign dsb symlink"
+else
+    fail "uninstall: preserves a foreign dsb symlink" "an unrelated dsb symlink was removed"
 fi
 
 # ---------------------------------------------------------------------------
@@ -387,6 +419,15 @@ case "$V2" in
     *"$FAKE_VERSION_2"*) pass "rerun-update: binary replaced with new version" ;;
     *) fail "rerun-update" "expected $FAKE_VERSION_2 in $V2" ;;
 esac
+if [ -L "$SB_BIN/dsb" ]; then
+    DSB_V2=$(HOME="$SB_HOME" "$SB_BIN/dsb" --version)
+    case "$DSB_V2" in
+        *"$FAKE_VERSION_2"*) pass "rerun-update: dsb shortcut survives and updates" ;;
+        *) fail "rerun-update: dsb shortcut survives and updates" "got: $DSB_V2" ;;
+    esac
+else
+    fail "rerun-update: dsb shortcut survives and updates" "dsb symlink missing after update"
+fi
 
 # ---------------------------------------------------------------------------
 # Case 6: unwritable INSTALL_DIR — clear failure, no sudo suggestion
@@ -405,6 +446,48 @@ else
 fi
 assert_contains "$OUT" "not writable" "unwritable-dir: clear message"
 assert_not_contains "$OUT" "sudo" "unwritable-dir: no sudo suggestion"
+
+# ---------------------------------------------------------------------------
+# Case 7: a pre-existing real file named `dsb` is never clobbered
+# ---------------------------------------------------------------------------
+
+new_sandbox existingfile
+mkdir -p "$SB_BIN"
+printf '#!/bin/sh\necho user-owned\n' >"$SB_BIN/dsb"
+chmod +x "$SB_BIN/dsb"
+OUT=$(HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" VERSION="$FAKE_VERSION" \
+    PATH="$SB_BIN:/usr/bin:/bin" DSB_INSTALL_BASE_URL="$BASE" sh "$INSTALL_SH" 2>&1) || true
+assert_contains "$OUT" "not a symlink" "existing-dsb-file: warns and skips"
+assert_not_contains "$OUT" "Run it as: dsb" "existing-dsb-file: no shortcut claim"
+if [ -x "$SB_BIN/deepseek-build" ] && [ ! -L "$SB_BIN/dsb" ]; then
+    pass "existing-dsb-file: binary installed, user file preserved"
+else
+    fail "existing-dsb-file: binary installed, user file preserved" "dsb replaced or binary missing"
+fi
+HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" sh "$INSTALL_SH" --uninstall >/dev/null 2>&1 || true
+if [ -f "$SB_BIN/dsb" ] && [ ! -L "$SB_BIN/dsb" ]; then
+    pass "existing-dsb-file: user file untouched by uninstall"
+else
+    fail "existing-dsb-file: user file untouched by uninstall" "the user's dsb file was removed"
+fi
+
+# ---------------------------------------------------------------------------
+# Case 8: a pre-existing foreign `dsb` symlink is never clobbered
+# ---------------------------------------------------------------------------
+
+new_sandbox foreignsymlink
+mkdir -p "$SB_BIN"
+ln -s /bin/true "$SB_BIN/dsb"
+OUT=$(HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" VERSION="$FAKE_VERSION" \
+    PATH="$SB_BIN:/usr/bin:/bin" DSB_INSTALL_BASE_URL="$BASE" sh "$INSTALL_SH" 2>&1) || true
+assert_contains "$OUT" "points to" "existing-dsb-symlink: warns and skips"
+assert_not_contains "$OUT" "Run it as: dsb" "existing-dsb-symlink: no shortcut claim"
+if [ -x "$SB_BIN/deepseek-build" ] && [ -L "$SB_BIN/dsb" ] \
+    && [ "$(readlink "$SB_BIN/dsb")" = "/bin/true" ]; then
+    pass "existing-dsb-symlink: binary installed, foreign symlink preserved"
+else
+    fail "existing-dsb-symlink: binary installed, foreign symlink preserved" "dsb was replaced"
+fi
 
 # ---------------------------------------------------------------------------
 # Summary
