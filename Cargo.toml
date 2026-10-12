@@ -426,10 +426,17 @@ strip = true
 panic = "abort"
 split-debuginfo = "unpacked"
 codegen-units = 128
+# Keep dev/test artifacts small (disk, not debuggability): line tables only for
+# workspace crates; third-party crates get none via `profile.dev.package."*"`.
 debug = "line-tables-only"
 opt-level = 0
 lto = false
 incremental = true
+
+# Test builds inherit `dev`, but state it explicitly so the setting cannot
+# drift if `[profile.dev]` changes shape.
+[profile.test]
+debug = "line-tables-only"
 
 # Skip debug info for non-workspace dependencies; workspace crates keep line-tables-only.
 [profile.dev.package."*"]

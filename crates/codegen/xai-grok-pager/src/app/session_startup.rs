@@ -324,38 +324,38 @@ pub fn chat_mode_flag_conflict(
     None
 }
 /// Env: enable local workspace without CLI flags (`1`).
-/// Mode defaults to `own` unless `GROK_CHAT_LOCAL_WORKSPACE_MODE` or an attach server id is set.
+/// Mode defaults to `own` unless `DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_MODE` or an attach server id is set.
 #[cfg(feature = "local-workspace")]
 pub const GROK_CHAT_LOCAL_WORKSPACE_ENV: &str = "GROK_CHAT_LOCAL_WORKSPACE";
 #[cfg(feature = "local-workspace")]
 pub const GROK_CHAT_LOCAL_WORKSPACE_CWD_ENV: &str = "GROK_CHAT_LOCAL_WORKSPACE_CWD";
 #[cfg(feature = "local-workspace")]
-pub const GROK_CHAT_LOCAL_WORKSPACE_MODE_ENV: &str = "GROK_CHAT_LOCAL_WORKSPACE_MODE";
+pub const GROK_CHAT_LOCAL_WORKSPACE_MODE_ENV: &str = "DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_MODE";
 #[cfg(feature = "local-workspace")]
-pub const GROK_CHAT_LOCAL_WORKSPACE_SERVER_ID_ENV: &str = "GROK_CHAT_LOCAL_WORKSPACE_SERVER_ID";
+pub const GROK_CHAT_LOCAL_WORKSPACE_SERVER_ID_ENV: &str =
+    "DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_SERVER_ID";
 #[cfg(feature = "local-workspace")]
-pub const GROK_CHAT_LOCAL_WORKSPACE_ALLOW_HOME_ENV: &str = "GROK_CHAT_LOCAL_WORKSPACE_ALLOW_HOME";
+pub const GROK_CHAT_LOCAL_WORKSPACE_ALLOW_HOME_ENV: &str =
+    "DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ALLOW_HOME";
 /// Skip interactive first-run confirm (still prints the banner).
 #[cfg(feature = "local-workspace")]
-pub const GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV: &str = "GROK_CHAT_LOCAL_WORKSPACE_ACK";
+pub const GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV: &str = "DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ACK";
 /// Startup banner and first-run copy.
 #[cfg(feature = "local-workspace")]
 pub const LOCAL_WORKSPACE_BANNER: &str =
     "Local workspace runs tools on this machine (FS confined to <cwd>).";
 #[cfg(feature = "local-workspace")]
 pub const LOCAL_WORKSPACE_ATTACH_NEEDS_SERVER_ID: &str = "local-workspace attach requires --local-workspace-attach=<server_id> \
-     (or GROK_CHAT_LOCAL_WORKSPACE_SERVER_ID)";
+     (or DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_SERVER_ID)";
 #[cfg(feature = "local-workspace")]
 pub const LOCAL_WORKSPACE_REQUIRES_CHAT: &str = "local-workspace flags/env require --chat";
 #[cfg(feature = "local-workspace")]
-pub const LOCAL_WORKSPACE_HOME_DENIED: &str =
-    "local-workspace cwd may not be / or $HOME unless GROK_CHAT_LOCAL_WORKSPACE_ALLOW_HOME=1";
+pub const LOCAL_WORKSPACE_HOME_DENIED: &str = "local-workspace cwd may not be / or $HOME unless DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ALLOW_HOME=1";
 #[cfg(feature = "local-workspace")]
 pub const LOCAL_WORKSPACE_HITL_HINT: &str = "Permission prompts for local workspace tools apply to your machine. \
      Local workspace replaces the chat sandbox.";
 #[cfg(feature = "local-workspace")]
-pub const LOCAL_WORKSPACE_ACK_REQUIRED: &str =
-    "local-workspace requires interactive confirm, GROK_CHAT_LOCAL_WORKSPACE_ACK=1, or an ack file";
+pub const LOCAL_WORKSPACE_ACK_REQUIRED: &str = "local-workspace requires interactive confirm, DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ACK=1, or an ack file";
 /// Declared advertised tool ids for attach FS-only check (comma-separated).
 #[cfg(feature = "local-workspace")]
 pub const GROK_CHAT_LOCAL_WORKSPACE_ADVERTISED_TOOLS_ENV: &str =
@@ -541,7 +541,7 @@ pub fn validate_local_workspace_cwd(path: &std::path::Path) -> anyhow::Result<st
     Ok(canon)
 }
 /// Banner and first-run confirm for the local-workspace own and attach modes.
-/// Skip confirm only with `GROK_CHAT_LOCAL_WORKSPACE_ACK=1` or a prior ack file.
+/// Skip confirm only with `DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ACK=1` or a prior ack file.
 /// Non-TTY without ACK refuses (fail closed).
 #[cfg(feature = "local-workspace")]
 pub fn emit_local_workspace_startup_ux(cfg: &LocalWorkspaceConfig) -> anyhow::Result<()> {
@@ -2473,7 +2473,7 @@ mod tests {
     }
     #[cfg(feature = "local-workspace")]
     #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ADVERTISED_TOOLS)]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_SERVER_ID)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_SERVER_ID)]
     #[test]
     fn resolve_local_workspace_empty_cli_attach_falls_back_to_env() {
         let _env = advertised_tools_env();
@@ -2491,8 +2491,8 @@ mod tests {
     #[cfg(feature = "local-workspace")]
     #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_CWD)]
     #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE)]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_MODE)]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_SERVER_ID)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_MODE)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_SERVER_ID)]
     #[test]
     fn resolve_local_workspace_cwd_only_is_not_a_request() {
         let tmp = tempfile::tempdir().unwrap();
@@ -2560,7 +2560,7 @@ mod tests {
     }
     #[cfg(feature = "local-workspace")]
     #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ADVERTISED_TOOLS)]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ALLOW_HOME)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ALLOW_HOME)]
     #[serial_test::serial(HOME)]
     #[serial_test::serial(USERPROFILE)]
     #[test]
@@ -2618,7 +2618,7 @@ mod tests {
         assert!(LOCAL_WORKSPACE_HITL_HINT.contains("replaces the chat sandbox"));
     }
     #[cfg(feature = "local-workspace")]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ACK)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ACK)]
     #[serial_test::serial(DEEPSEEK_BUILD_HOME)]
     #[test]
     fn local_workspace_non_tty_requires_ack() {
@@ -2640,7 +2640,7 @@ mod tests {
         );
     }
     #[cfg(feature = "local-workspace")]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ALLOW_HOME)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ALLOW_HOME)]
     #[test]
     fn validate_local_workspace_cwd_denies_root() {
         let _allow =

@@ -56,7 +56,6 @@ pub enum PreferredAuthMethod {
 pub struct GrokComConfig {
     pub grok_ws_origin: String,
     pub grok_ws_url: String,
-    pub token_header: String,
     /// OIDC config for customer-provided IdPs. See [`OidcAuthConfig`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub oidc: Option<OidcAuthConfig>,
@@ -78,7 +77,7 @@ pub struct GrokComConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub disable_api_key_auth: Option<bool>,
     /// Restricts login to a specific team: the login token's team principal must equal this.
-    /// Also settable via `GROK_FORCE_LOGIN_TEAM_ID`; see `resolve_force_login_team` for how the tiers resolve.
+    /// Also settable via `DEEPSEEK_BUILD_FORCE_LOGIN_TEAM_ID`; see `resolve_force_login_team` for how the tiers resolve.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub force_login_team_uuid: Option<ForceLoginTeam>,
     /// See [`PreferredAuthMethod`].
@@ -133,7 +132,6 @@ pub const LEGACY_AUTH_SCOPE: &str = "legacy::sign-in";
 struct GrokComConfigSection {
     grok_ws_origin: Option<String>,
     grok_ws_url: Option<String>,
-    token_header: Option<String>,
     oidc: Option<toml::Value>,
     oauth2: Option<toml::Value>,
     auth_provider_command: Option<String>,
@@ -162,7 +160,6 @@ impl GrokComConfigSection {
         Ok(GrokComConfig {
             grok_ws_origin: self.grok_ws_origin.unwrap_or(base.grok_ws_origin),
             grok_ws_url: self.grok_ws_url.unwrap_or(base.grok_ws_url),
-            token_header: self.token_header.unwrap_or(base.token_header),
             oidc,
             oauth2,
             auth_provider_command: self.auth_provider_command.or(base.auth_provider_command),
@@ -344,7 +341,6 @@ impl Default for GrokComConfig {
                 .unwrap_or_else(|_| PROD_WS_ORIGIN.to_owned()),
             grok_ws_url: std::env::var("GROK_WS_URL")
                 .unwrap_or_else(|_| PROD_RELAY_WS_URL.to_owned()),
-            token_header: "xai-grok-cli".to_owned(),
             oidc,
             oauth2,
             auth_provider_command: std::env::var("GROK_AUTH_PROVIDER_COMMAND").ok(),
@@ -381,8 +377,8 @@ fn env_lockdown_forced() -> bool {
 /// Env var for the login-team pin.
 /// It is named `..._TEAM_ID` (the user-facing "team id") while the config key stays `force_login_team_uuid` for backward compatibility.
 /// The two intentionally differ, so do not rename either.
-const FORCE_LOGIN_TEAM_ID_ENV: &str = "GROK_FORCE_LOGIN_TEAM_ID";
-/// The `GROK_FORCE_LOGIN_TEAM_ID` env override; the env tier in [`resolve_force_login_team`].
+const FORCE_LOGIN_TEAM_ID_ENV: &str = "DEEPSEEK_BUILD_FORCE_LOGIN_TEAM_ID";
+/// The `DEEPSEEK_BUILD_FORCE_LOGIN_TEAM_ID` env override; the env tier in [`resolve_force_login_team`].
 pub fn force_login_team_from_env() -> Option<ForceLoginTeam> {
     let raw = std::env::var(FORCE_LOGIN_TEAM_ID_ENV).ok()?;
     parse_force_login_team(&raw)
@@ -439,7 +435,7 @@ pub fn expand_auth_alias(config: &toml::Value) -> toml::Value {
 }
 /// Resolves the effective login-team pin by tier: `requirements` beats `env` beats `config`.
 /// `requirements` is the non-overridable `requirements.toml` / MDM pin.
-/// `env` (`GROK_FORCE_LOGIN_TEAM_ID`) wins over the merged user/managed `config.toml`.
+/// `env` (`DEEPSEEK_BUILD_FORCE_LOGIN_TEAM_ID`) wins over the merged user/managed `config.toml`.
 pub fn resolve_force_login_team(
     requirements: Option<ForceLoginTeam>,
     env: Option<ForceLoginTeam>,
@@ -447,7 +443,7 @@ pub fn resolve_force_login_team(
 ) -> Option<ForceLoginTeam> {
     requirements.or(env).or(config)
 }
-/// Parses a `GROK_FORCE_LOGIN_TEAM_ID` value into a [`ForceLoginTeam`]. A bare value is a single team, a JSON array is an any-of set (each element trimmed), and an empty or whitespace-only value yields `None`.
+/// Parses a `DEEPSEEK_BUILD_FORCE_LOGIN_TEAM_ID` value into a [`ForceLoginTeam`]. A bare value is a single team, a JSON array is an any-of set (each element trimmed), and an empty or whitespace-only value yields `None`.
 /// A value that looks like a JSON array but does not parse fails closed (an empty any-of, which blocks login). A typo in the array therefore cannot silently drop the restriction.
 fn parse_force_login_team(raw: &str) -> Option<ForceLoginTeam> {
     let trimmed = raw.trim();
@@ -461,7 +457,7 @@ fn parse_force_login_team(raw: &str) -> Option<ForceLoginTeam> {
             )),
             Err(_) => {
                 tracing::warn!(
-                    "GROK_FORCE_LOGIN_TEAM_ID is not a valid JSON array; failing closed"
+                    "DEEPSEEK_BUILD_FORCE_LOGIN_TEAM_ID is not a valid JSON array; failing closed"
                 );
                 Some(ForceLoginTeam::AnyOf(vec![]))
             }
@@ -505,9 +501,9 @@ mod tests {
         let default_oauth2 = GrokComConfig::default().oauth2;
         let cases = [
             (
-                "[grok_com_config]\ntoken_header = \"custom\"\n",
+                "[grok_com_config]\ngrok_ws_url = \"wss://example.test/ws\"\n",
                 GrokComConfig {
-                    token_header: "custom".to_owned(),
+                    grok_ws_url: "wss://example.test/ws".to_owned(),
                     ..GrokComConfig::default()
                 },
             ),
@@ -606,7 +602,7 @@ mod tests {
         let cfg: GrokComConfig = toml::from_str("").expect("parse empty");
         assert_eq!(cfg.preferred_method, None);
     }
-    /// Every `GROK_FORCE_LOGIN_TEAM_ID` shape: bare value, arrays, empty-array, malformed, and empty/whitespace.
+    /// Every `DEEPSEEK_BUILD_FORCE_LOGIN_TEAM_ID` shape: bare value, arrays, empty-array, malformed, and empty/whitespace.
     #[test]
     fn parse_force_login_team_handles_all_shapes() {
         assert_eq!(

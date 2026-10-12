@@ -11,7 +11,7 @@ use xai_grok_auth::AuthCredentialProvider;
 /// Bootstrap the OTel credential provider both pager and TUI need at tracing init time.
 /// Binds the login factory to the shell deployment-id resolver; the provider starts disk-read-only.
 /// Call [`xai_grok_login::credential_provider::wire_otel_auth_manager`] after agent init to upgrade it.
-pub fn build_bootstrap_otel_credentials() -> (Arc<dyn AuthCredentialProvider>, String) {
+pub fn build_bootstrap_otel_credentials() -> Arc<dyn AuthCredentialProvider> {
     let proxy_base_url = crate::agent::config::EndpointsConfig::from_effective_config().proxy_url();
     xai_grok_login::credential_provider::install_bootstrap_otel_provider(
         proxy_base_url,

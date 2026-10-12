@@ -1,4 +1,4 @@
-//! Per-workspace resolution of the command-sandbox rollout mode: `GROK_SANDBOX_MODE`, then the
+//! Per-workspace resolution of the command-sandbox rollout mode: `DEEPSEEK_BUILD_SANDBOX_MODE`, then the
 //! fleet layer (`RemoteSettings.sandbox_mode`, else the host's `<grok_home>/managed_config.toml`),
 //! then `<grok_home>/workspaced.toml`, then the default (`off`); the workspace's
 //! `<workspace>/.grok/workspaced.toml` may only tighten the result. On a host with no sandbox
@@ -48,7 +48,7 @@ use xai_grok_sandbox::command::{SandboxMode, WritableLocations, canonical_path, 
 pub struct SandboxModeInputs<'a> {
     pub workspace_root: &'a Path,
     pub grok_home: &'a Path,
-    /// The already-read `GROK_SANDBOX_MODE` value.
+    /// The already-read `DEEPSEEK_BUILD_SANDBOX_MODE` value.
     pub env: Option<&'a str>,
     /// The fleet's remote settings, when the caller has them; `None` reads the host's managed
     /// config file for them ([`managed_mode_layer`]).

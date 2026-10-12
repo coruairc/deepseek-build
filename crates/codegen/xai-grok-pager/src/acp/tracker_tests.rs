@@ -1,7 +1,7 @@
 use super::*;
 use crate::scrollback::blocks::tool::VerbGroupKind;
 use std::sync::Arc;
-/// Default meta with no timestamps (simulates old grok-shell or tests that don't care about timing).
+/// Default meta with no timestamps (simulates old deepseek-build or tests that don't care about timing).
 fn meta() -> NotificationMeta {
     NotificationMeta::default()
 }
@@ -2118,7 +2118,7 @@ fn stream_start_breaks_agent_msg_to_agent_msg() {
         "stream A message should be finished"
     );
 }
-/// No stream_start_ms (old grok-shell) should not break anything.
+/// No stream_start_ms (old deepseek-build) should not break anything.
 #[test]
 fn no_stream_start_ms_preserves_existing_behavior() {
     let mut sb = ScrollbackState::new();

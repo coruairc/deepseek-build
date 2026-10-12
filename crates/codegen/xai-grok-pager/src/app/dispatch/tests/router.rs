@@ -2480,7 +2480,7 @@ fn toggle_scroll_log_flips_recorder_and_reports_path() {
         "disable must be confirmed, got {texts:?}"
     );
 }
-#[serial_test::serial(GROK_TEST_OPEN_URL_FILE)]
+#[serial_test::serial(DEEPSEEK_BUILD_TEST_OPEN_URL_FILE)]
 #[test]
 fn open_managed_connectors_starts_wait_when_modal_open() {
     use crate::views::extensions_modal::{ExtensionsModalState, ExtensionsTab};
@@ -2489,7 +2489,7 @@ fn open_managed_connectors_starts_wait_when_modal_open() {
         std::process::id()
     ));
     let _ = std::fs::remove_file(&url_file);
-    unsafe { std::env::set_var("GROK_TEST_OPEN_URL_FILE", &url_file) };
+    unsafe { std::env::set_var("DEEPSEEK_BUILD_TEST_OPEN_URL_FILE", &url_file) };
     let mut app = test_app_with_agent();
     let id = AgentId(0);
     app.agents.get_mut(&id).unwrap().extensions_modal =
@@ -2509,7 +2509,7 @@ fn open_managed_connectors_starts_wait_when_modal_open() {
             .any(|line| line == crate::views::mcps_modal::managed_connectors_url(None)),
         "opener seam must record the connectors URL; got {recorded:?}"
     );
-    unsafe { std::env::remove_var("GROK_TEST_OPEN_URL_FILE") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_TEST_OPEN_URL_FILE") };
     let _ = std::fs::remove_file(&url_file);
 }
 #[test]

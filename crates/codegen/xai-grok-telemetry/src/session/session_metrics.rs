@@ -281,7 +281,7 @@ mod tests {
         );
     }
 
-    /// The `grok-shell-doom_loop_recovery` Mixpanel event's name and property keys are dashboard contracts; pin them.
+    /// The `deepseek-build-doom_loop_recovery` Mixpanel event's name and property keys are dashboard contracts; pin them.
     #[test]
     fn doom_loop_recovery_event_shape_is_stable() {
         use crate::events::TelemetryEvent;
@@ -318,7 +318,7 @@ mod tests {
         assert!(no_trigger.get("top_trigger").is_none(), "None is omitted");
     }
 
-    /// The `grok-shell-long_reasoning_reminder` Mixpanel event's name and property keys are dashboard contracts; pin them.
+    /// The `deepseek-build-long_reasoning_reminder` Mixpanel event's name and property keys are dashboard contracts; pin them.
     #[test]
     fn long_reasoning_reminder_event_shape_is_stable() {
         use crate::events::TelemetryEvent;

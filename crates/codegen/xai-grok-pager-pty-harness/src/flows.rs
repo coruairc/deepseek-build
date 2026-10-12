@@ -174,8 +174,8 @@ fn seed_fake_oauth_raw(
 pub fn oauth_credential_ops() -> [crate::EnvOp<'static>; 3] {
     [
         crate::EnvOp::remove("DEEPSEEK_API_KEY"),
-        crate::EnvOp::remove("GROK_MODELS_BASE_URL"),
-        crate::EnvOp::remove("GROK_MODELS_LIST_URL"),
+        crate::EnvOp::remove("DEEPSEEK_BUILD_MODELS_BASE_URL"),
+        crate::EnvOp::remove("DEEPSEEK_BUILD_MODELS_LIST_URL"),
     ]
 }
 

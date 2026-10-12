@@ -59,19 +59,19 @@ pub struct PermissionResolution {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum ClientType {
     #[default]
-    #[serde(rename = "generic", alias = "grok-shell", alias = "grok_shell")]
+    #[serde(rename = "generic", alias = "deepseek-build")]
     Generic,
-    #[serde(rename = "grok-tui", alias = "grok_tui")]
+    #[serde(rename = "deepseek-build-tui")]
     GrokTUI,
-    #[serde(rename = "grok_web")]
+    #[serde(rename = "deepseek-build-web")]
     GrokWeb,
     #[serde(rename = "nebula")]
     Nebula,
     #[serde(rename = "extension")]
     Extension,
-    #[serde(rename = "grok-pager", alias = "grok_pager")]
+    #[serde(rename = "deepseek-build-pager")]
     GrokPager,
-    #[serde(rename = "grok_desktop")]
+    #[serde(rename = "deepseek-build-desktop")]
     Desktop,
 }
 
@@ -79,22 +79,22 @@ impl ClientType {
     pub fn user_agent_label(&self) -> &'static str {
         match self {
             Self::Generic => xai_grok_brand::NAME,
-            Self::GrokTUI => "grok-tui",
-            Self::GrokWeb => "grok-web",
+            Self::GrokTUI => "deepseek-build-tui",
+            Self::GrokWeb => "deepseek-build-web",
             Self::Nebula => "nebula",
-            Self::Extension => "grok-code-extension",
-            Self::GrokPager => "grok-pager",
-            Self::Desktop => "grok-desktop",
+            Self::Extension => "deepseek-build-extension",
+            Self::GrokPager => "deepseek-build-pager",
+            Self::Desktop => "deepseek-build-desktop",
         }
     }
 
     pub fn from_client_identifier(id: Option<&str>) -> Self {
         match id {
-            Some("grok-web") => Self::GrokWeb,
+            Some("deepseek-build-web") => Self::GrokWeb,
             Some("nebula") => Self::Nebula,
-            Some("grok-code-extension") => Self::Extension,
-            Some("grok-desktop") => Self::Desktop,
-            Some("grok-pager") => Self::GrokPager,
+            Some("deepseek-build-extension") => Self::Extension,
+            Some("deepseek-build-desktop") => Self::Desktop,
+            Some("deepseek-build-pager") => Self::GrokPager,
             _ => Self::Generic,
         }
     }
@@ -414,18 +414,66 @@ mod tests {
     }
 
     #[test]
-    fn client_type_deserializes_grok_shell_as_generic() {
+    fn client_type_deserializes_brand_alias_as_generic() {
         assert_eq!(
-            serde_json::from_value::<ClientType>("grok-shell".into()).unwrap(),
-            ClientType::Generic,
-        );
-        assert_eq!(
-            serde_json::from_value::<ClientType>("grok_shell".into()).unwrap(),
+            serde_json::from_value::<ClientType>("deepseek-build".into()).unwrap(),
             ClientType::Generic,
         );
         assert_eq!(
             serde_json::from_value::<ClientType>("generic".into()).unwrap(),
             ClientType::Generic,
         );
+    }
+
+    /// Guard: every outbound client-type label is brand-derived, no wire
+    /// spelling carries the pre-rebrand name, and the values we send parse back
+    /// to the variant they came from.
+    #[test]
+    fn client_type_labels_are_brand_derived_and_grok_free() {
+        for client in [
+            ClientType::Generic,
+            ClientType::GrokTUI,
+            ClientType::GrokWeb,
+            ClientType::Nebula,
+            ClientType::Extension,
+            ClientType::GrokPager,
+            ClientType::Desktop,
+        ] {
+            let label = client.user_agent_label();
+            assert!(!label.contains("grok"), "stale client label: {label}");
+            assert!(
+                label == "nebula" || label.starts_with(xai_grok_brand::NAME),
+                "client label must be brand-derived: {label}"
+            );
+        }
+        for (wire, expected) in [
+            ("deepseek-build-pager", ClientType::GrokPager),
+            ("deepseek-build-web", ClientType::GrokWeb),
+            ("deepseek-build-desktop", ClientType::Desktop),
+            ("extension", ClientType::Extension),
+            ("deepseek-build", ClientType::Generic),
+            ("generic", ClientType::Generic),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<ClientType>(wire.into()).unwrap(),
+                expected,
+                "serde wire value {wire}"
+            );
+        }
+        for (identifier, expected) in [
+            ("deepseek-build-pager", ClientType::GrokPager),
+            ("deepseek-build-web", ClientType::GrokWeb),
+            ("deepseek-build-desktop", ClientType::Desktop),
+            ("deepseek-build-extension", ClientType::Extension),
+            ("nebula", ClientType::Nebula),
+            ("deepseek-build", ClientType::Generic),
+            ("something-else", ClientType::Generic),
+        ] {
+            assert_eq!(
+                ClientType::from_client_identifier(Some(identifier)),
+                expected,
+                "client identifier {identifier}"
+            );
+        }
     }
 }

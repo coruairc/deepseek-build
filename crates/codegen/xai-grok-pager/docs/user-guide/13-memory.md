@@ -54,7 +54,7 @@ enabled = true
 ### Environment Variable
 
 ```bash
-export GROK_MEMORY=1
+export DEEPSEEK_BUILD_MEMORY=1
 deepseek-build
 ```
 
@@ -63,7 +63,7 @@ deepseek-build
 To disable memory for the process even when TOML enables it:
 
 ```bash
-export GROK_MEMORY=0
+export DEEPSEEK_BUILD_MEMORY=0
 ```
 
 ### Mid-Session Toggle
@@ -73,15 +73,15 @@ and press `t`.
 
 The toggle is session-scoped -- it does not persist to `config.toml`, and it works in both directions: a session that started with `[memory] enabled = true` can turn memory off, and a session that started with `[memory] enabled = false` can turn it on. New sessions follow `config.toml` again. Toggling off removes access to memory tools and the memory instructions in the system prompt but keeps existing files on disk. Toggling on re-initializes memory storage, registers the memory tools, restores the memory instructions, and injects the memory index on the next turn. Turning memory on waits for any turn in progress to finish.
 
-The toggle cannot override the process-wide force-disable (`--no-memory` or `GROK_MEMORY=0`); those hide `/memory` for the whole session.
+The toggle cannot override the process-wide force-disable (`--no-memory` or `DEEPSEEK_BUILD_MEMORY=0`); those hide `/memory` for the whole session.
 
 ### Priority Order
 
 1. A process-wide force-disable (`--no-memory` compatibility flag or
-   `GROK_MEMORY=0`) turns memory off.
+   `DEEPSEEK_BUILD_MEMORY=0`) turns memory off.
 2. An explicit `[memory] enabled = false` in effective TOML turns memory off.
    The `/memory` `t` toggle can still turn it on for the current session.
-3. Otherwise memory is enabled by `GROK_MEMORY=1` or `[memory] enabled = true`.
+3. Otherwise memory is enabled by `DEEPSEEK_BUILD_MEMORY=1` or `[memory] enabled = true`.
 
 Staged-rollout and kill-switch controls for operators are documented in the
 internal hardening notes, not here.
@@ -446,8 +446,8 @@ enabled = true    # default
 ### Memory Not Working
 
 1. Verify memory is enabled: check `deepseek-build inspect` output.
-2. Check `GROK_MEMORY` or `[memory] enabled` in effective TOML.
-3. Check for `GROK_MEMORY=0` or a deprecated compatibility flag overriding config.
+2. Check `DEEPSEEK_BUILD_MEMORY` or `[memory] enabled` in effective TOML.
+3. Check for `DEEPSEEK_BUILD_MEMORY=0` or a deprecated compatibility flag overriding config.
 
 ### Memory Not Appearing in Sessions
 
@@ -466,6 +466,6 @@ $EDITOR ~/.deepseek-build/memory/MEMORY.md
 ### Debug Logging
 
 ```bash
-RUST_LOG=debug GROK_LOG_FILE=/tmp/deepseek-build.log deepseek-build
+RUST_LOG=debug DEEPSEEK_BUILD_LOG_FILE=/tmp/deepseek-build.log deepseek-build
 grep "memory" /tmp/deepseek-build.log
 ```

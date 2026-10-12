@@ -358,18 +358,18 @@ pub struct CliConfig {
     pub show_tips: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub worktree_type: Option<String>,
-    /// Env `GROK_MINIMUM_VERSION`.
+    /// Env `DEEPSEEK_BUILD_MINIMUM_VERSION`.
     /// See [`crate::util::config::VersionPolicy`] for the version-policy knobs.
     /// (Unrelated to `version_overrides[].maximum_version`, which gates config patches.)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub minimum_version: Option<String>,
-    /// Env `GROK_MAXIMUM_VERSION`. See [`crate::util::config::VersionPolicy`].
+    /// Env `DEEPSEEK_BUILD_MAXIMUM_VERSION`. See [`crate::util::config::VersionPolicy`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub maximum_version: Option<String>,
-    /// Env `GROK_REQUIRED_MINIMUM_VERSION`. See [`crate::util::config::VersionPolicy`].
+    /// Env `DEEPSEEK_BUILD_REQUIRED_MINIMUM_VERSION`. See [`crate::util::config::VersionPolicy`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub required_minimum_version: Option<String>,
-    /// Env `GROK_REQUIRED_MAXIMUM_VERSION`. See [`crate::util::config::VersionPolicy`].
+    /// Env `DEEPSEEK_BUILD_REQUIRED_MAXIMUM_VERSION`. See [`crate::util::config::VersionPolicy`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub required_maximum_version: Option<String>,
     /// Group sessions by repo in the picker and CLI listings.
@@ -548,7 +548,7 @@ impl SandboxSettingsConfig {
     }
     /// Resolve auto_allow_bash: requirement > env > config > default (false).
     pub(crate) fn resolve_auto_allow_bash(&self, requirement: Option<bool>) -> Resolved<bool> {
-        BoolFlag::env("GROK_SANDBOX_AUTO_ALLOW_BASH")
+        BoolFlag::env("DEEPSEEK_BUILD_SANDBOX_AUTO_ALLOW_BASH")
             .requirement(requirement)
             .config(self.auto_allow_bash)
             .resolve()
@@ -731,7 +731,7 @@ pub struct Config {
     /// Typed as `GrokComConfig` (same schema) so sub-field typos are caught.
     #[serde(default, skip_serializing)]
     pub auth: Option<GrokComConfig>,
-    /// `[desktop]` section: owned by grok-desktop (Electron app), opaque to the CLI agent.
+    /// `[desktop]` section: owned by deepseek-build-desktop (Electron app), opaque to the CLI agent.
     #[serde(default, skip_serializing)]
     pub desktop: Option<toml::Value>,
     /// `[tips]` section: consumed by `merge_tips`.
@@ -803,7 +803,7 @@ pub struct Config {
     #[serde(skip)]
     pub cli_agent_overrides: CliAgentOverrides,
     /// Whether subagent (task tool) support is enabled.
-    /// Enabled by default; disabled only via `GROK_SUBAGENTS=0` or `[subagents] enabled = false`.
+    /// Enabled by default; disabled only via `DEEPSEEK_BUILD_SUBAGENTS=0` or `[subagents] enabled = false`.
     /// Not remotely gated.
     #[serde(skip)]
     pub subagents_enabled: bool,
@@ -949,7 +949,7 @@ pub use xai_grok_agent::config::Effort;
 pub use xai_grok_agent::config::PermissionMode;
 pub use xai_grok_shared::ui_config::{ContextualHints, UiConfig};
 /// Set in `config.toml` under `[agent]`: Priority (highest to lowest): ACP session-level `_meta.agentProfile`
-/// CLI `--agent-profile` flag `[agent]` config.toml section (this config) `GROK_AGENT` env var
+/// CLI `--agent-profile` flag `[agent]` config.toml section (this config) `DEEPSEEK_BUILD_AGENT` env var
 /// Default `grok-build` agent
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
@@ -1909,7 +1909,7 @@ impl Config {
     /// Unset it follows `turn_summary`; set it to decouple them.
     pub(crate) fn resolve_title_refresh(&self) -> Resolved<bool> {
         let ff = self.remote_settings.as_ref().and_then(|s| s.title_refresh);
-        BoolFlag::env("GROK_TITLE_REFRESH")
+        BoolFlag::env("DEEPSEEK_BUILD_TITLE_REFRESH")
             .requirement(self.requirements.title_refresh.pinned())
             .config(self.features.title_refresh)
             .feature_flag(ff)
@@ -1940,7 +1940,7 @@ impl Config {
         if ff == Some(false) {
             return Resolved::new(false, ConfigSource::Remote);
         }
-        BoolFlag::env("GROK_WORKFLOWS")
+        BoolFlag::env("DEEPSEEK_BUILD_WORKFLOWS")
             .config(self.workflows.enabled)
             .feature_flag(ff)
             .default(true)
@@ -2142,11 +2142,11 @@ impl Config {
             _ => Resolved::new(Vec::new(), ConfigSource::Default),
         }
     }
-    /// Resolve the mode: env `GROK_COMPACTION_MODE` > config > remote settings > default, with unrecognized values falling through.
+    /// Resolve the mode: env `DEEPSEEK_BUILD_COMPACTION_MODE` > config > remote settings > default, with unrecognized values falling through.
     /// For `Segments`, attach the separately-resolved detail level.
     pub(crate) fn resolve_compaction_mode(&self) -> xai_chat_state::CompactionMode {
         resolve_compaction_mode_from(
-            env_string("GROK_COMPACTION_MODE").as_deref(),
+            env_string("DEEPSEEK_BUILD_COMPACTION_MODE").as_deref(),
             self.features.compaction_mode.as_deref(),
             self.remote_settings
                 .as_ref()
@@ -2165,11 +2165,11 @@ impl Config {
                 .and_then(|r| r.compaction_tool_choice.as_deref()),
         )
     }
-    /// Precedence: env `GROK_COMPACTION_DETAIL` > config `features.compaction_detail` > remote `compaction_detail` > default (`verbose`).
+    /// Precedence: env `DEEPSEEK_BUILD_COMPACTION_DETAIL` > config `features.compaction_detail` > remote `compaction_detail` > default (`verbose`).
     /// Drives the `segments` verbatim detail level.
     fn resolve_compaction_detail(&self) -> xai_chat_state::CompactionDetail {
         resolve_compaction_detail_from(
-            env_string("GROK_COMPACTION_DETAIL").as_deref(),
+            env_string("DEEPSEEK_BUILD_COMPACTION_DETAIL").as_deref(),
             self.features.compaction_detail.as_deref(),
             self.remote_settings
                 .as_ref()
@@ -2205,9 +2205,9 @@ pub(crate) fn resolve_mcp_liveness_watchers(
         .default(true)
         .resolve()
 }
-/// Canonical resolver for `mcp.auto_restart`. Stacks the full 7-step `BoolFlag` precedence: `requirement > cli > env (GROK_MCP_AUTO_RESTART) > config > managed > feature_flag > default (true)`.
+/// Canonical resolver for `mcp.auto_restart`. Stacks the full 7-step `BoolFlag` precedence: `requirement > cli > env (DEEPSEEK_BUILD_MCP_AUTO_RESTART) > config > managed > feature_flag > default (true)`.
 /// Mirrors [`resolve_mcp_liveness_watchers`]. `util::config::resolve_mcp_auto_restart` delegates here so the precedence is single-sourced.
-/// Recovery is on by default; opt out via `GROK_MCP_AUTO_RESTART=false`, `[features] mcp_auto_restart`, or `requirements.toml`.
+/// Recovery is on by default; opt out via `DEEPSEEK_BUILD_MCP_AUTO_RESTART=false`, `[features] mcp_auto_restart`, or `requirements.toml`.
 pub(crate) fn resolve_mcp_auto_restart(
     requirement: Option<bool>,
     cli: Option<bool>,
@@ -2215,7 +2215,7 @@ pub(crate) fn resolve_mcp_auto_restart(
     managed: Option<bool>,
     feature_flag: Option<bool>,
 ) -> Resolved<bool> {
-    BoolFlag::env("GROK_MCP_AUTO_RESTART")
+    BoolFlag::env("DEEPSEEK_BUILD_MCP_AUTO_RESTART")
         .requirement(requirement)
         .cli(cli)
         .config(config)
@@ -2243,7 +2243,7 @@ pub(crate) fn resolve_turn_transient_retry(
         .resolve()
 }
 /// Canonical resolver for `mcp.push_server_status`.
-/// Stacks the same 7-step `BoolFlag` precedence as [`resolve_mcp_liveness_watchers`]: `requirement > cli > env (GROK_MCP_PUSH_SERVER_STATUS) > config > managed > feature_flag > default (true)`.
+/// Stacks the same 7-step `BoolFlag` precedence as [`resolve_mcp_liveness_watchers`]: `requirement > cli > env (DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS) > config > managed > feature_flag > default (true)`.
 /// `util::config::resolve_mcp_push_server_status` delegates here so the precedence is single-sourced. The default is `true`: the pager's subscription to `deepseek-build/mcp/server_status` is wired on by default. The flag exists primarily as a kill switch.
 pub fn resolve_mcp_push_server_status(
     requirement: Option<bool>,
@@ -2252,7 +2252,7 @@ pub fn resolve_mcp_push_server_status(
     managed: Option<bool>,
     feature_flag: Option<bool>,
 ) -> Resolved<bool> {
-    BoolFlag::env("GROK_MCP_PUSH_SERVER_STATUS")
+    BoolFlag::env("DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS")
         .requirement(requirement)
         .cli(cli)
         .config(config)
@@ -3839,12 +3839,12 @@ pub struct Features {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub image_edit_model_override: Option<String>,
     /// `summary` | `transcript` | `segments` (default).
-    /// `None` defers to CLI / env (`GROK_COMPACTION_MODE`).
+    /// `None` defers to CLI / env (`DEEPSEEK_BUILD_COMPACTION_MODE`).
     /// Parsed via `CompactionMode::parse`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub compaction_mode: Option<String>,
     /// `none` | `minimal` | `balanced` | `verbose` (default).
-    /// `None` defers to env (`GROK_COMPACTION_DETAIL`).
+    /// `None` defers to env (`DEEPSEEK_BUILD_COMPACTION_DETAIL`).
     /// The `segments` verbatim detail level.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub compaction_detail: Option<String>,
@@ -3866,7 +3866,7 @@ pub struct Features {
     pub turn_transient_retry: Option<bool>,
     /// Pager-side subscription to the `deepseek-build/mcp/server_status` push. Not read through this struct. The pager-side gate (`acp_handler::push_server_status_enabled`) uses an **env-only** OnceLock cache.
     /// The `[features]` key itself is honoured out-of-band, re-read from raw TOML in `util::config::resolve::mcp`. This field is declared so `serde_ignored` does not report the key as unrecognized.
-    /// Practical consequence: setting `[features] mcp_push_server_status = false` in `~/.grok/config.toml` will NOT disable the pager's subscription on a freshly-launched process. To disable the pager subscription, set `GROK_MCP_PUSH_SERVER_STATUS=0` in the env before launch.
+    /// Practical consequence: setting `[features] mcp_push_server_status = false` in `~/.grok/config.toml` will NOT disable the pager's subscription on a freshly-launched process. To disable the pager subscription, set `DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS=0` in the env before launch.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mcp_push_server_status: Option<bool>,
     /// Whether the leader's `ConfigFileWatcher` adds the two narrow non-recursive watches for `<cwd>/` and `<cwd>/.grok/`. The only way to pick up a project-config edit is then the user-triggered refresh button.
@@ -4381,22 +4381,17 @@ pub(crate) fn sampling_config_for_model(
         header_injector: None,
     }
 }
-/// Fold URL-derived headers into `extra_headers`. The sampler crate is intentionally URL-agnostic: it does not inspect `base_url` to decide which auth or staging headers to add.
-/// Replicate the URL-derived header logic at the shell boundary so callers downstream see a single homogenous header bag. model-proxy bases get `X-XAI-Token-Auth` and `x-authenticateresponse` headers.
-/// This mirrors the inline match in the legacy `sampling::Client::new` on `is_cli_chat_proxy_url`. Existing entries are never overwritten so callers can pre-set a value.
+/// Fold URL-derived headers into `extra_headers`.
+///
+/// The legacy model-proxy auth headers (`X-XAI-Token-Auth`, `x-authenticateresponse`)
+/// are deliberately not added: the xAI proxy middleware that required them no
+/// longer exists, and the default base URL is the DeepSeek API, which ignores
+/// them. Only the client-mode header remains.
 pub(crate) fn inject_url_derived_headers(
     headers: &mut IndexMap<String, String>,
     alpha_test_key: Option<&str>,
     base_url: &str,
 ) {
-    if crate::util::is_cli_chat_proxy_url(base_url) {
-        headers
-            .entry("X-XAI-Token-Auth".to_string())
-            .or_insert_with(|| "xai-grok-cli".to_string());
-        headers
-            .entry("x-authenticateresponse".to_string())
-            .or_insert_with(|| "authenticate-response".to_string());
-    }
     headers
         .entry(crate::http::CLIENT_MODE_HEADER.to_string())
         .or_insert_with(|| crate::http::process_client_mode().to_string());

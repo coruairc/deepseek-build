@@ -31,7 +31,7 @@ fn limits_accept_plain_positive_digits_and_ignore_everything_else() {
         SubagentLimits::from_lookup(|var| {
             match var {
                 "GROK_MAX_CONCURRENT_SUBAGENTS" => concurrent,
-                "GROK_SUBAGENT_LIMIT_BEHAVIOR" => behavior,
+                "DEEPSEEK_BUILD_SUBAGENT_LIMIT_BEHAVIOR" => behavior,
                 other => panic!("unexpected lookup: {other}"),
             }
             .map(str::to_owned)

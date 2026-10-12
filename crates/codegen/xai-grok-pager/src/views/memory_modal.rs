@@ -96,7 +96,7 @@ there (or remove the line) to keep memory on. Anything already remembered is kep
         Some(MemoryDisabledReason::ProcessDisabled) => {
             "\
 **Memory is off for this process.** Start a new session without `--no-memory` or \
-`GROK_MEMORY=0` to use it.
+`DEEPSEEK_BUILD_MEMORY=0` to use it.
 
 Memory was turned off when deepseek-build started, so it can't be turned on here. Anything already \
 remembered is kept on disk."

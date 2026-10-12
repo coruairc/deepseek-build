@@ -69,7 +69,7 @@ async fn team_member_with_unknown_capability_sees_no_banner_and_editable_row() {
 fn locked_row_env_ops() -> Vec<EnvOp<'static>> {
     let mut ops = vec![
         EnvOp::set("GROK_PRIVACY_NOTICE_ROLLOUT", "1"),
-        EnvOp::set("GROK_ZDR_ACCESS_ENABLED", "1"),
+        EnvOp::set("DEEPSEEK_BUILD_ZDR_ACCESS_ENABLED", "1"),
         EnvOp::set("GROK_MANAGED_CONFIG", "0"),
     ];
     ops.extend(oauth_credential_ops());

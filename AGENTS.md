@@ -164,9 +164,11 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
 
 1. ~~**Backend removal (D5)**~~ **DONE**: `ApiBackend` has only `ChatCompletions`.
 2. ~~**Rebrand (D1/D2) → SOFT gate zero**~~ **DONE** (`dsb/rebrand`, `8fcbff78`). Legacy
-   `GROK_*` fallbacks were removed 2026-10-12 (`255f17d0`). Remaining sub-item: rename the
-   ~480 primary `GROK_*` env vars to `DEEPSEEK_BUILD_*` (counted 2026-10-12,
-   `git grep -oE '\bGROK_[A-Z0-9_]+'`; not gated).
+   `GROK_*` fallbacks were removed 2026-10-12 (`255f17d0`), and every name that shipped
+   docs, `--help`, or product error text used was renamed to `DEEPSEEK_BUILD_*`
+   (2026-10-12). Remaining sub-item: the ~435 internal-only `GROK_*` names (1,529
+   occurrences across 284 files; listed in [`docs/INTERNAL-GROK-ENV-NAMES.md`](docs/INTERNAL-GROK-ENV-NAMES.md))
+   can be renamed in the open-build branch.
 3. **Finish real deletion of Phase-1 stubs** (see §5): shell `src/upload/*`,
    `session/repo_changes`, `feedback_manager`, feedback UI, `share`, vendored
    `shell/src/cloud_config/**`, `xai-computer-hub-{core,sdk,mcp-adapter}` and consumers,
@@ -239,6 +241,7 @@ add an outbound destination, or the live smoke test needs a key not provided.
 ```sh
 source "$HOME/.cargo/env"
 
+scripts/disk-guard.sh               # stop if <150 GB free (see §8)
 cargo check -p xai-grok-pager-bin --message-format=short
 cargo test  -p xai-grok-sampling-types --lib
 cargo test  -p xai-grok-sampler --lib stream::chat_completions
@@ -351,3 +354,17 @@ with the code, trust the code.
   deletions (C4). Update `KNOWN-ISSUES.md` when status changes and refresh this
   file's §0 snapshot at session end. `DECISIONS.md` wins on conflict; its
   execution rules list the stop-and-ask conditions.
+- **Disk budget:** `.cargo/config.toml` keeps dev/test lean (`[build] incremental =
+  false`; `[profile.dev]`/`[profile.test]` `debug = "line-tables-only"`, third-party
+  crates `debug = false`). Do not raise these without a disk plan — the old
+  settings accumulated 244 GB of `target/debug`; a fresh measured
+  `cargo build --workspace --tests` is now **~24 GB in ~7 min** (2026-10-12).
+  Use ONE shared cargo target dir across worktrees/sessions: point
+  `CARGO_TARGET_DIR` at the main checkout's `target/` (e.g. `export
+  CARGO_TARGET_DIR="$HOME/Projects/deepseek-build/target"`) and remove a
+  worktree's own `target/` if one exists. Run `scripts/disk-guard.sh` before any
+  workspace build and **stop if it fails** (<150 GB free). Routine: per-crate
+  `cargo test -p <crate>` during work, one `cargo test --workspace` at the final
+  gate, then reclaim with `cargo clean` (or `rm -rf target/debug`). Disk
+  emergency: check `ps aux | grep -E 'cargo|rustc'` for stray builds, remove stale
+  worktrees (`git worktree remove`), then `cargo clean`.

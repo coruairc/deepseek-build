@@ -79,7 +79,7 @@ static CLIENT_TYPE: OnceLock<ClientType> = OnceLock::new();
 pub use xai_grok_sampler::OriginClientInfo;
 
 pub fn origin_client_info_from_env() -> Option<OriginClientInfo> {
-    std::env::var("GROK_CLIENT_NAME")
+    std::env::var("DEEPSEEK_BUILD_CLIENT_NAME")
         .ok()
         .map(|product| OriginClientInfo {
             product,
@@ -244,9 +244,9 @@ pub fn client_type_from_origin(origin: Option<&OriginClientInfo>) -> ClientType 
 }
 
 pub fn process_client_identifier() -> String {
-    // The primary env name stays `GROK_CLIENT_NAME` (a legacy-named knob, not a
+    // The primary env name stays `DEEPSEEK_BUILD_CLIENT_NAME` (a legacy-named knob, not a
     // fallback); only the default identity is brand-derived.
-    std::env::var("GROK_CLIENT_NAME").unwrap_or_else(|_| xai_grok_brand::NAME.to_string())
+    std::env::var("DEEPSEEK_BUILD_CLIENT_NAME").unwrap_or_else(|_| xai_grok_brand::NAME.to_string())
 }
 
 pub const CLIENT_MODE_HEADER: &str = "x-deepseek-build-client-mode";
@@ -689,7 +689,7 @@ mod tests {
     #[test]
     fn origin_client_info_from_meta_extracts_identifier_and_version() {
         let meta = serde_json::json!({
-            "clientIdentifier": "grok-desktop",
+            "clientIdentifier": "deepseek-build-desktop",
             "clientVersion": "1.2.3",
         })
         .as_object()
@@ -698,7 +698,7 @@ mod tests {
         assert_eq!(
             origin_client_info_from_meta(Some(&meta)),
             Some(OriginClientInfo {
-                product: "grok-desktop".to_string(),
+                product: "deepseek-build-desktop".to_string(),
                 version: Some("1.2.3".to_string()),
             })
         );
@@ -707,7 +707,7 @@ mod tests {
     #[test]
     fn origin_client_info_from_meta_uses_client_type_when_identifier_absent() {
         let meta = serde_json::json!({
-            "clientType": "grok_pager",
+            "clientType": "deepseek-build-pager",
             "clientVersion": "0.1.2",
         })
         .as_object()
@@ -716,7 +716,7 @@ mod tests {
         assert_eq!(
             origin_client_info_from_meta(Some(&meta)),
             Some(OriginClientInfo {
-                product: "grok-pager".to_string(),
+                product: "deepseek-build-pager".to_string(),
                 version: Some("0.1.2".to_string()),
             })
         );
@@ -726,18 +726,18 @@ mod tests {
     fn merge_origin_client_info_preserves_primary_product_and_backfills_version() {
         let merged = merge_origin_client_info(
             Some(OriginClientInfo {
-                product: "grok-web".to_string(),
+                product: "deepseek-build-web".to_string(),
                 version: None,
             }),
             Some(OriginClientInfo {
-                product: "grok-desktop".to_string(),
+                product: "deepseek-build-desktop".to_string(),
                 version: Some("1.2.3".to_string()),
             }),
         );
         assert_eq!(
             merged,
             Some(OriginClientInfo {
-                product: "grok-web".to_string(),
+                product: "deepseek-build-web".to_string(),
                 version: Some("1.2.3".to_string()),
             })
         );
@@ -746,18 +746,18 @@ mod tests {
     #[test]
     fn session_user_agent_string_renders_expected_variants() {
         let with_version = session_user_agent_string(&OriginClientInfo {
-            product: "grok-desktop".to_string(),
+            product: "deepseek-build-desktop".to_string(),
             version: Some("1.2.3".to_string()),
         });
-        assert!(with_version.starts_with("grok-desktop/1.2.3 deepseek-build/"));
+        assert!(with_version.starts_with("deepseek-build-desktop/1.2.3 deepseek-build/"));
         assert!(with_version.contains(" ("));
 
         let without_version = session_user_agent_string(&OriginClientInfo {
-            product: "grok-web".to_string(),
+            product: "deepseek-build-web".to_string(),
             version: None,
         });
-        assert!(without_version.starts_with("grok-web deepseek-build/"));
-        assert!(!without_version.starts_with("grok-web/"));
+        assert!(without_version.starts_with("deepseek-build-web deepseek-build/"));
+        assert!(!without_version.starts_with("deepseek-build-web/"));
     }
 
     #[test]

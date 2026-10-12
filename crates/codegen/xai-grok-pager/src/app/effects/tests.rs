@@ -2297,15 +2297,15 @@ fn subagents_without_plan_produces_no_profile() {
     };
     assert_eq!(flags.agent_profile(), None);
 }
-/// Neutralize `GROK_AGENT` for the profile-matrix tests below.
+/// Neutralize `DEEPSEEK_BUILD_AGENT` for the profile-matrix tests below.
 /// The tests would then assert the wrong branch.
-/// Callers must be `#[serial_test::serial(GROK_AGENT)]` (process-global env).
+/// Callers must be `#[serial_test::serial(DEEPSEEK_BUILD_AGENT)]` (process-global env).
 fn without_grok_agent() -> crate::test_util::EnvVarGuard {
-    crate::test_util::EnvVarGuard::set("GROK_AGENT", "")
+    crate::test_util::EnvVarGuard::set("DEEPSEEK_BUILD_AGENT", "")
 }
 /// At the runtime defaults every `--no-*` flag is false, so every `SessionFlags` bool is true via `!args.no_*`.
 /// `to_meta()` then reflects the full plan profile and no separate `askUserQuestion` toggle.
-#[serial_test::serial(GROK_AGENT)]
+#[serial_test::serial(DEEPSEEK_BUILD_AGENT)]
 #[test]
 fn runtime_default_flags_produce_plan_meta() {
     let _env = without_grok_agent();
@@ -2321,7 +2321,7 @@ fn runtime_default_flags_produce_plan_meta() {
     assert_eq!(j(&meta, "yoloMode"), false);
 }
 /// --plan alone produces meta with `agentProfile` only and a `askUserQuestion: false` since `ask_user` is off here.
-#[serial_test::serial(GROK_AGENT)]
+#[serial_test::serial(DEEPSEEK_BUILD_AGENT)]
 #[test]
 fn plan_only_meta() {
     let _env = without_grok_agent();
@@ -2337,7 +2337,7 @@ fn plan_only_meta() {
     assert_eq!(j(&meta, "yoloMode"), false);
 }
 /// --plan --subagents selects the full plan profile.
-#[serial_test::serial(GROK_AGENT)]
+#[serial_test::serial(DEEPSEEK_BUILD_AGENT)]
 #[test]
 fn plan_with_subagents_meta() {
     let _env = without_grok_agent();
@@ -2353,7 +2353,7 @@ fn plan_with_subagents_meta() {
     assert_eq!(j(&meta, "yoloMode"), false);
 }
 /// --ask-user alone selects the grok-build-ask-user profile.
-#[serial_test::serial(GROK_AGENT)]
+#[serial_test::serial(DEEPSEEK_BUILD_AGENT)]
 #[test]
 fn ask_user_alone_meta() {
     let _env = without_grok_agent();
@@ -2369,7 +2369,7 @@ fn ask_user_alone_meta() {
     assert_eq!(j(&meta, "yoloMode"), false);
 }
 /// --plan --ask-user: plan already includes ask-user; profile is plan.
-#[serial_test::serial(GROK_AGENT)]
+#[serial_test::serial(DEEPSEEK_BUILD_AGENT)]
 #[test]
 fn plan_with_ask_user_uses_plan_profile() {
     let _env = without_grok_agent();
@@ -2400,7 +2400,7 @@ fn subagents_alone_emits_only_ask_user_question_disable() {
     assert_eq!(j(&meta, "askUserQuestion"), false);
 }
 /// All three flags on at the runtime default produce grok-build-plan and no `askUserQuestion` field.
-#[serial_test::serial(GROK_AGENT)]
+#[serial_test::serial(DEEPSEEK_BUILD_AGENT)]
 #[test]
 fn all_flags_meta() {
     let _env = without_grok_agent();

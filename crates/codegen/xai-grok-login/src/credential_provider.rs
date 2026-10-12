@@ -200,10 +200,6 @@ impl AuthCredentialProvider for ShellAuthCredentialProvider {
             .try_recover_unauthorized(crate::recovery::RecoverySource::Background)
             .await
     }
-
-    fn needs_token_auth_header(&self) -> bool {
-        self.static_credentials.deployment_key.is_none()
-    }
 }
 
 /// Resolves the embedding credentials for `embed_base_url`, attaching the xAI session credential only to xAI-operated endpoints over `https`.
@@ -368,10 +364,6 @@ impl AuthCredentialProvider for OtelAuthCredentialProvider {
         am.try_recover_unauthorized(crate::recovery::RecoverySource::Background)
             .await
     }
-
-    fn needs_token_auth_header(&self) -> bool {
-        self.deployment_key.load().is_none()
-    }
 }
 
 /// Process-wide OTel credential provider handle. This is one of two acceptable process-wide statics in this crate (the other is `TRACER_PROVIDER` in `otel_layer.rs`).
@@ -413,9 +405,8 @@ pub fn wire_otel_deployment_key(key: String) {
 pub fn install_bootstrap_otel_provider(
     proxy_base_url: String,
     deployment_id_resolver: DeploymentIdResolver,
-) -> (Arc<dyn AuthCredentialProvider>, String) {
+) -> Arc<dyn AuthCredentialProvider> {
     let grok_com_config = crate::GrokComConfig::default();
-    let token_header_value = grok_com_config.token_header.clone();
 
     let grok_home = xai_grok_shell_base::util::grok_home::grok_home();
     let bootstrap = Arc::new(AuthManager::new_with_proxy_base_url(
@@ -429,10 +420,7 @@ pub fn install_bootstrap_otel_provider(
     ));
     let _ = OTEL_PROVIDER.set(provider.clone());
 
-    (
-        provider as Arc<dyn AuthCredentialProvider>,
-        token_header_value,
-    )
+    provider as Arc<dyn AuthCredentialProvider>
 }
 
 #[cfg(test)]

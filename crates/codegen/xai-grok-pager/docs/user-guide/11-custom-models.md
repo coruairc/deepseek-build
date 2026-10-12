@@ -334,14 +334,14 @@ Point deepseek-build at a custom OpenAI-compatible `/v1/models` endpoint instead
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GROK_MODELS_BASE_URL` | Yes | Base URL for inference. deepseek-build fetches the model list from `{base_url}/models`. |
+| `DEEPSEEK_BUILD_MODELS_BASE_URL` | Yes | Base URL for inference. deepseek-build fetches the model list from `{base_url}/models`. |
 | `DEEPSEEK_API_KEY` | Yes | API key sent as `Authorization: Bearer`. |
-| `GROK_MODELS_LIST_URL` | No | Override the model-list URL when it differs from `{base_url}/models`. |
+| `DEEPSEEK_BUILD_MODELS_LIST_URL` | No | Override the model-list URL when it differs from `{base_url}/models`. |
 
 ### Setup
 
 ```bash
-export GROK_MODELS_BASE_URL="https://api.acme.com/v1"
+export DEEPSEEK_BUILD_MODELS_BASE_URL="https://api.acme.com/v1"
 export DEEPSEEK_API_KEY="sk-..."
 deepseek-build
 ```
@@ -377,7 +377,7 @@ web_search = "deepseek-v4-pro"
 Or via environment variable:
 
 ```bash
-export GROK_WEB_SEARCH_MODEL="deepseek-v4-pro"
+export DEEPSEEK_BUILD_WEB_SEARCH_MODEL="deepseek-v4-pro"
 ```
 
 If you point web search at a custom model, you also need a `[model.*]` entry so deepseek-build can reach it. Server-side ("backend") web search runs only when the model sets `supports_backend_search = true` (and the build enables backend search); it does not depend on `api_backend`:
@@ -455,7 +455,7 @@ curl -s https://api.example.com/v1/models \
 ### Debug Logging
 
 ```bash
-RUST_LOG=debug GROK_LOG_FILE=/tmp/deepseek-build.log deepseek-build
+RUST_LOG=debug DEEPSEEK_BUILD_LOG_FILE=/tmp/deepseek-build.log deepseek-build
 tail -f /tmp/deepseek-build.log
 ```
 

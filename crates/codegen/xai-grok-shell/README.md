@@ -122,7 +122,7 @@ export GROK_OIDC_CLIENT_ID="0oa1b2c3d4e5f6g7h8i9"
 
 Customers typically also override the API endpoint to point at their own proxy:
 ```bash
-export GROK_CLI_CHAT_PROXY_BASE_URL="https://grok-proxy.acme.com/v1"
+export DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL="https://grok-proxy.acme.com/v1"
 ```
 
 **3. Run `grok`.** The CLI discovers endpoints via `{issuer}/.well-known/openid-configuration`, opens the IdP login page, and stores tokens in `~/.grok/auth.json`. The OIDC token is sent as `Authorization: Bearer` to the configured proxy. Tokens auto-refresh silently via the stored `refresh_token`.
@@ -373,7 +373,7 @@ auth_provider = "litellm"
 
 **Interaction with other credentials:** a literal `api_key`/`env_key` on the model wins over its `auth_provider`. Provider-backed models are BYOK: your xAI session token is never sent to their endpoints, and a failing provider command fails the request rather than falling back to the session token.
 
-**Security:** provider commands execute code, so they are honored only from trusted config layers (`~/.grok/config.toml`, managed config, requirements). A project's `.grok/config.toml` can never define one. Whatever layer sets a model's `base_url` decides where that model's minted token is sent, and `base_url` (unlike the provider table) is not stripped from remote or campaign patches, the same as for a static `env_key`. Keep provider tables and the model `base_url` in layers you trust. The command inherits Grok's environment (so it sees `PATH`, `HOME`, and any other secrets there), but Grok's own first-party credentials (`XAI_API_KEY`, `GROK_DEPLOYMENT_KEY`, and related keys) are removed so a BYOK helper never receives them; write helpers that read only what they need, and prefer the `GROK_AUTH_PROVIDER_*` handback for the prior credential.
+**Security:** provider commands execute code, so they are honored only from trusted config layers (`~/.grok/config.toml`, managed config, requirements). A project's `.grok/config.toml` can never define one. Whatever layer sets a model's `base_url` decides where that model's minted token is sent, and `base_url` (unlike the provider table) is not stripped from remote or campaign patches, the same as for a static `env_key`. Keep provider tables and the model `base_url` in layers you trust. The command inherits Grok's environment (so it sees `PATH`, `HOME`, and any other secrets there), but Grok's own first-party credentials (`XAI_API_KEY`, `DEEPSEEK_BUILD_DEPLOYMENT_KEY`, and related keys) are removed so a BYOK helper never receives them; write helpers that read only what they need, and prefer the `GROK_AUTH_PROVIDER_*` handback for the prior credential.
 
 ### Using auth.json for API Access
 
@@ -1331,7 +1331,7 @@ max_thoughts_width = 120               # max column width for reasoning display
 [features]
 support_permission = false             # prompt before tool execution
 telemetry = false                      # anonymous usage telemetry (env: GROK_TELEMETRY_ENABLED)
-feedback = false                       # feedback system (env: GROK_FEEDBACK_ENABLED)
+feedback = false                       # feedback system (env: DEEPSEEK_BUILD_FEEDBACK_ENABLED)
 lsp_tools = false                      # expose the lsp tool (see LSP Servers below)
 codebase_indexing = true               # code graph indexing (true, false, or glob patterns)
 
@@ -1340,7 +1340,7 @@ auto_compact_threshold_percent = 85    # auto-compact at this % of context windo
 load_envrc = true                      # load .envrc environment variables into bash commands
 
 [tools]
-respect_gitignore = true               # filter gitignored files from tools (env: GROK_RESPECT_GITIGNORE)
+respect_gitignore = true               # filter gitignored files from tools (env: DEEPSEEK_BUILD_RESPECT_GITIGNORE)
 
 [toolset.bash]
 timeout_secs = 120.0                   # command timeout in seconds
@@ -1388,13 +1388,13 @@ If the same server name appears in both places, the project config wins.
 
 Having an `lsp.json` file is enough for passive diagnostics. The model-visible `lsp` tool is exposed when both of these are true:
 
-- LSP tools are enabled (`GROK_LSP_TOOLS=1` or `[features] lsp_tools = true`)
+- LSP tools are enabled (`DEEPSEEK_BUILD_LSP_TOOLS=1` or `[features] lsp_tools = true`)
 - the merged LSP configuration is non-empty
 
 Enable the tool for one run:
 
 ```bash
-GROK_LSP_TOOLS=1 grok
+DEEPSEEK_BUILD_LSP_TOOLS=1 grok
 ```
 
 Or enable it in config:
@@ -1493,7 +1493,7 @@ Examples:
 
 #### Notes
 
-- Passive diagnostics do **not** require `GROK_LSP_TOOLS=1`; they run whenever an applicable server is configured and starts successfully.
+- Passive diagnostics do **not** require `DEEPSEEK_BUILD_LSP_TOOLS=1`; they run whenever an applicable server is configured and starts successfully.
 - Passive diagnostics are currently driven by `search_replace` edits; they are not a general watcher for arbitrary shell or git mutations in the workspace.
 - The `lsp` tool is intentionally hidden when disabled or unconfigured so the model does not plan around unavailable capabilities.
 - Same-workspace subagents reuse the parent session's live LSP runtime instead of starting a duplicate server pool.
@@ -1646,7 +1646,7 @@ Grok discovers agent definitions from `.grok/agents/` (project), `~/.grok/agents
 
 1. `--agent-profile <PATH>` CLI flag
 2. `[agent]` section in `config.toml`
-3. `GROK_AGENT` env var
+3. `DEEPSEEK_BUILD_AGENT` env var
 4. Default `grok-build` agent
 
 ```toml
@@ -1659,7 +1659,7 @@ name = "my-custom-agent"             # Discovered by name
 ```bash
 grok --agent-profile ./my-agent.md
 # or
-export GROK_AGENT="my-custom-agent"
+export DEEPSEEK_BUILD_AGENT="my-custom-agent"
 ```
 
 ---
@@ -1671,7 +1671,7 @@ Subagents spawn independent child sessions that handle tasks in parallel. Each c
 ### Disabling
 
 ```bash
-export GROK_SUBAGENTS=0              # Environment variable
+export DEEPSEEK_BUILD_SUBAGENTS=0              # Environment variable
 ```
 
 ```toml
@@ -1854,7 +1854,7 @@ api_key = "sk-custom"
 2. Prefetched models from remote `/v1/models`
 3. Hardcoded defaults — lowest priority
 
-**Web search model:** Set `[models] web_search`, `GROK_WEB_SEARCH_MODEL`, or `--web-search-model` to point the `web_search` tool at a different model. The target endpoint must support the Responses API and web search.
+**Web search model:** Set `[models] web_search`, `DEEPSEEK_BUILD_WEB_SEARCH_MODEL`, or `--web-search-model` to point the `web_search` tool at a different model. The target endpoint must support the Responses API and web search.
 
 > **Overriding with a custom model:** Setting `[models] web_search` alone is not
 > enough if the model isn't already in the catalog (built-in defaults or
@@ -1938,21 +1938,21 @@ Point Grok at a custom OpenAI-compatible `/v1/models` endpoint instead of the de
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GROK_MODELS_BASE_URL` | Yes | Base URL for inference / chat completions (e.g. `https://api.acme.com/v1`). The model list is fetched from `{base_url}/models` automatically |
+| `DEEPSEEK_BUILD_MODELS_BASE_URL` | Yes | Base URL for inference / chat completions (e.g. `https://api.acme.com/v1`). The model list is fetched from `{base_url}/models` automatically |
 | `XAI_API_KEY` | Yes | API key sent as `Authorization: Bearer` to the custom endpoint |
-| `GROK_MODELS_LIST_URL` | No | Override the model list URL if it differs from `{base_url}/models` |
+| `DEEPSEEK_BUILD_MODELS_LIST_URL` | No | Override the model list URL if it differs from `{base_url}/models` |
 
 **Setup:**
 
 ```bash
-export GROK_MODELS_BASE_URL="https://api.acme.com/v1"
+export DEEPSEEK_BUILD_MODELS_BASE_URL="https://api.acme.com/v1"
 export XAI_API_KEY="xai-..."
 grok
 ```
 
-Grok fetches the model list from `{GROK_MODELS_BASE_URL}/models` on startup and sends inference requests to `GROK_MODELS_BASE_URL`. This follows the standard OpenAI-compatible convention used by OpenAI, Anthropic, OpenRouter, Groq, Together.ai, and others.
+Grok fetches the model list from `{DEEPSEEK_BUILD_MODELS_BASE_URL}/models` on startup and sends inference requests to `DEEPSEEK_BUILD_MODELS_BASE_URL`. This follows the standard OpenAI-compatible convention used by OpenAI, Anthropic, OpenRouter, Groq, Together.ai, and others.
 
-If your model list endpoint differs from `{base_url}/models`, set `GROK_MODELS_LIST_URL` explicitly.
+If your model list endpoint differs from `{base_url}/models`, set `DEEPSEEK_BUILD_MODELS_LIST_URL` explicitly.
 
 **Combining with `[endpoints]` config:** You can also set endpoints in `~/.grok/config.toml`:
 
@@ -2090,7 +2090,7 @@ See the [MCP Server Registry](https://github.com/modelcontextprotocol/servers) f
 
 ## Memory
 
-> **Experimental:** enable with `GROK_MEMORY=1`, `[memory] enabled = true`, or managed remote settings.
+> **Experimental:** enable with `DEEPSEEK_BUILD_MEMORY=1`, `[memory] enabled = true`, or managed remote settings.
 
 Cross-session memory lets Grok remember facts, decisions, code patterns, and debugging workflows across separate sessions in the same project.
 
@@ -2109,7 +2109,7 @@ An SQLite index enables fast hybrid search (FTS5 keyword + optional vector KNN) 
 
 ```bash
 # Environment variable (persists for the shell session)
-export GROK_MEMORY=1
+export DEEPSEEK_BUILD_MEMORY=1
 grok
 
 # Config file (persists permanently)
@@ -2385,7 +2385,7 @@ disallowedTools:
 
 ### `web_fetch`
 
-Fetch a specific URL and return its content as markdown. **Disabled by default** — enable with `GROK_WEB_FETCH=1`. 
+Fetch a specific URL and return its content as markdown. **Disabled by default** — enable with `DEEPSEEK_BUILD_WEB_FETCH=1`. 
 
 When no custom `allowed_domains` is set, the tool permits a default allowlist of useful documentation sites (SpaceXAI, language docs, frameworks, cloud providers, databases, etc.). Domains not on the allowlist prompt the user for approval; `--always-approve` auto-approves all. Domain matching is case-insensitive, strips `www.` prefixes, and supports path-scoped entries (e.g. `x.ai/company`).
 
@@ -2501,26 +2501,26 @@ The agent persists all session updates automatically. Clients can reconnect and 
 | Variable                         | Description                                                                                              |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `XAI_API_KEY`         | API key from [console.x.ai](https://console.x.ai). Used for custom endpoint auth and API key login      |
-| `GROK_CLI_CHAT_PROXY_BASE_URL`  | Override the cli-chat-proxy URL (default: `https://cli-chat-proxy.grok.com/v1`)                          |
-| `GROK_MODELS_BASE_URL`          | Custom base URL for inference. Model list auto-fetched from `{base_url}/models` (see [Custom Models Endpoint](#custom-models-endpoint)) |
-| `GROK_MODELS_LIST_URL`          | Override the model list URL if it differs from `{GROK_MODELS_BASE_URL}/models`                                              |
+| `DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL`  | Override the cli-chat-proxy URL (default: `https://cli-chat-proxy.grok.com/v1`)                          |
+| `DEEPSEEK_BUILD_MODELS_BASE_URL`          | Custom base URL for inference. Model list auto-fetched from `{base_url}/models` (see [Custom Models Endpoint](#custom-models-endpoint)) |
+| `DEEPSEEK_BUILD_MODELS_LIST_URL`          | Override the model list URL if it differs from `{DEEPSEEK_BUILD_MODELS_BASE_URL}/models`                                              |
 | `GROK_AUTH_PROVIDER_COMMAND`     | External auth binary (alternative to config file). See [External Auth Provider](#external-auth-provider) |
 | `GROK_AUTH_TOKEN_TTL`            | Token lifetime in seconds for external auth providers that output bare tokens. See [External Auth Provider](#external-auth-provider) |
 | `GROK_AUTH_EARLY_INVALIDATION_SECS` | Seconds before `expires_at` to consider a token expired (default: `300`). See [Automatic Credential Refresh](#automatic-credential-refresh) |
 | `GROK_OIDC_ISSUER`              | OIDC issuer URL (alternative to config file). See [OIDC](#oidc-customer-sso)                             |
 | `GROK_OIDC_CLIENT_ID`           | OIDC client ID (alternative to config file). See [OIDC](#oidc-customer-sso)                              |
 | `DEEPSEEK_BUILD_HOME`           | Override config directory (default: `~/.deepseek-build`)                                                           |
-| `GROK_SUBAGENTS`                | Enable (`1`) or disable (`0`) subagent/task tool support                                                 |
-| `GROK_MEMORY`                   | Enable (`1`) or disable (`0`) cross-session memory                                                       |
-| `GROK_AGENT`                    | Custom agent definition path or name (see [Agent Profiles](#agent-profiles))                             |
-| `GROK_WEB_FETCH`                | Enable (`1`) or disable (`0`) the `web_fetch` tool                                                       |
-| `GROK_WEB_FETCH_PROXY`          | Egress proxy URL for `web_fetch` requests (overridden by `[toolset.web_fetch] proxy_endpoint`)           |
-| `GROK_RESPECT_GITIGNORE`        | Disable `.gitignore` filtering in tools when set to `0`                                                  |
-| `GROK_FEEDBACK_ENABLED`         | Enable (`1`) or disable (`0`) feedback system independently from telemetry                               |
-| `GROK_DEPLOYMENT_KEY`           | Management API key for enterprise deployments                                                            |
-| `GROK_LOG_FILE`                 | Enable file logging by providing a file path (the value is used verbatim as the path)                    |
+| `DEEPSEEK_BUILD_SUBAGENTS`                | Enable (`1`) or disable (`0`) subagent/task tool support                                                 |
+| `DEEPSEEK_BUILD_MEMORY`                   | Enable (`1`) or disable (`0`) cross-session memory                                                       |
+| `DEEPSEEK_BUILD_AGENT`                    | Custom agent definition path or name (see [Agent Profiles](#agent-profiles))                             |
+| `DEEPSEEK_BUILD_WEB_FETCH`                | Enable (`1`) or disable (`0`) the `web_fetch` tool                                                       |
+| `DEEPSEEK_BUILD_WEB_FETCH_PROXY`          | Egress proxy URL for `web_fetch` requests (overridden by `[toolset.web_fetch] proxy_endpoint`)           |
+| `DEEPSEEK_BUILD_RESPECT_GITIGNORE`        | Disable `.gitignore` filtering in tools when set to `0`                                                  |
+| `DEEPSEEK_BUILD_FEEDBACK_ENABLED`         | Enable (`1`) or disable (`0`) feedback system independently from telemetry                               |
+| `DEEPSEEK_BUILD_DEPLOYMENT_KEY`           | Management API key for enterprise deployments                                                            |
+| `DEEPSEEK_BUILD_LOG_FILE`                 | Enable file logging by providing a file path (the value is used verbatim as the path)                    |
 | `GROK_DEBUG_LOG`                | Debug firehose (set by `--debug`): truthy routes per-session logs to `~/.grok/debug/<sessionId>.txt`, a path writes that one file |
-| `RUST_LOG`                      | Log filter for stderr (headless `-p` defaults to `off`, other non-TUI modes to `error`; TUI captures stderr) and for the `GROK_LOG_FILE` log; the `--debug` firehose ignores it |
+| `RUST_LOG`                      | Log filter for stderr (headless `-p` defaults to `off`, other non-TUI modes to `error`; TUI captures stderr) and for the `DEEPSEEK_BUILD_LOG_FILE` log; the `--debug` firehose ignores it |
 
 ---
 
@@ -2596,24 +2596,24 @@ Regenerate completions after upgrading `grok` — the script reflects the CLI of
 
 ### Debug logging
 
-Write logs to a file for debugging. The TUI captures stderr, so `RUST_LOG` alone won't produce visible output in production — use `grok --debug` or `GROK_LOG_FILE` instead:
+Write logs to a file for debugging. The TUI captures stderr, so `RUST_LOG` alone won't produce visible output in production — use `grok --debug` or `DEEPSEEK_BUILD_LOG_FILE` instead:
 
 ```bash
 # Per-session debug log (~/.grok/debug/<sessionId>.txt)
 grok --debug
 
 # Log to a custom path
-GROK_LOG_FILE=/tmp/grok-debug.log grok
+DEEPSEEK_BUILD_LOG_FILE=/tmp/grok-debug.log grok
 
 # Tail the most-recently-opened session's log in another terminal (Unix symlink)
 tail -f ~/.grok/debug/latest.txt
 ```
 
-The `--debug` firehose uses a fixed filter (first-party crates at `debug`) and is not narrowed by `RUST_LOG`. A `GROK_LOG_FILE` log defaults to `debug` and honors `RUST_LOG`, so you can set module-level filters for targeted debugging:
+The `--debug` firehose uses a fixed filter (first-party crates at `debug`) and is not narrowed by `RUST_LOG`. A `DEEPSEEK_BUILD_LOG_FILE` log defaults to `debug` and honors `RUST_LOG`, so you can set module-level filters for targeted debugging:
 
 ```bash
 # Debug auth, info for everything else
-GROK_LOG_FILE=/tmp/grok-debug.log RUST_LOG="info,xai_grok_login=debug" grok
+DEEPSEEK_BUILD_LOG_FILE=/tmp/grok-debug.log RUST_LOG="info,xai_grok_login=debug" grok
 ```
 
 ### Authentication fails

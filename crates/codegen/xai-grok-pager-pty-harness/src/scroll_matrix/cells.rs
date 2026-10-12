@@ -30,7 +30,7 @@ pub struct ExpectedProfile {
     pub wheel_lpt: u16,
     pub trackpad_lpt: u16,
     pub invert: bool,
-    /// Speed multiplier (NOT the 1-100 setting): `GROK_SCROLL_SPEED=100` echoes 6.0 via the pager's `speed_to_multiplier`.
+    /// Speed multiplier (NOT the 1-100 setting): `DEEPSEEK_BUILD_SCROLL_SPEED=100` echoes 6.0 via the pager's `speed_to_multiplier`.
     pub speed: f32,
 }
 
@@ -86,11 +86,11 @@ const ITERM: (&str, &str) = ("TERM_PROGRAM", "iTerm.app");
 const ZED: (&str, &str) = ("TERM_PROGRAM", "zed");
 const VSCODE: (&str, &str) = ("TERM_PROGRAM", "vscode");
 const TMUX: (&str, &str) = ("TMUX", "/tmp/tmux-0/default,1,0");
-const SPEED100: (&str, &str) = ("GROK_SCROLL_SPEED", "100");
-const MODE_WHEEL: (&str, &str) = ("GROK_SCROLL_MODE", "wheel");
-const MODE_TRACKPAD: (&str, &str) = ("GROK_SCROLL_MODE", "trackpad");
-const LINES1: (&str, &str) = ("GROK_SCROLL_LINES", "1");
-const INVERT: (&str, &str) = ("GROK_INVERT_SCROLL", "1");
+const SPEED100: (&str, &str) = ("DEEPSEEK_BUILD_SCROLL_SPEED", "100");
+const MODE_WHEEL: (&str, &str) = ("DEEPSEEK_BUILD_SCROLL_MODE", "wheel");
+const MODE_TRACKPAD: (&str, &str) = ("DEEPSEEK_BUILD_SCROLL_MODE", "trackpad");
+const LINES1: (&str, &str) = ("DEEPSEEK_BUILD_SCROLL_LINES", "1");
+const INVERT: (&str, &str) = ("DEEPSEEK_BUILD_INVERT_SCROLL", "1");
 
 use InvariantId::*;
 
@@ -233,23 +233,23 @@ mod tests {
                 Some(other) => panic!("unmapped TERM_PROGRAM {other:?}"),
             }
         };
-        if let Some(lines) = get("GROK_SCROLL_LINES") {
+        if let Some(lines) = get("DEEPSEEK_BUILD_SCROLL_LINES") {
             let lines: u16 = lines.parse().unwrap();
             wheel_lpt = lines;
             trackpad_lpt = lines; // one knob overrides both paths
         }
         // These arms mirror the pager's `speed_to_multiplier` for the settings the rows use
-        let speed = match get("GROK_SCROLL_SPEED") {
+        let speed = match get("DEEPSEEK_BUILD_SCROLL_SPEED") {
             None | Some("50") => 1.0,
             Some("100") => 6.0,
-            Some(other) => panic!("unmapped GROK_SCROLL_SPEED {other:?}"),
+            Some(other) => panic!("unmapped DEEPSEEK_BUILD_SCROLL_SPEED {other:?}"),
         };
         ExpectedProfile {
-            mode: get("GROK_SCROLL_MODE").unwrap_or("auto"),
+            mode: get("DEEPSEEK_BUILD_SCROLL_MODE").unwrap_or("auto"),
             ept,
             wheel_lpt,
             trackpad_lpt,
-            invert: get("GROK_INVERT_SCROLL") == Some("1"),
+            invert: get("DEEPSEEK_BUILD_INVERT_SCROLL") == Some("1"),
             speed,
         }
     }

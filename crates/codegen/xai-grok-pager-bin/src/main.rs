@@ -324,7 +324,7 @@ async fn connect_to_leader(
         .ok_or_else(|| anyhow::anyhow!("resolved leader target did not include a socket path"))?;
     let client = xai_grok_shell::leader::LeaderClient::connect(
         socket_path.to_path_buf(),
-        "grok-pager-leader-cli",
+        "deepseek-build-pager-leader-cli",
         ClientMode::Stdio,
         ClientCapabilities::default(),
     )
@@ -1493,10 +1493,10 @@ fn configure_process_env(mut args: PagerArgs) -> Result<PagerArgs> {
     let args = args.apply_cwd()?;
     unsafe {
         if let Some(mode) = args.compaction_mode.as_deref() {
-            std::env::set_var("GROK_COMPACTION_MODE", mode);
+            std::env::set_var("DEEPSEEK_BUILD_COMPACTION_MODE", mode);
         }
         if let Some(detail) = args.compaction_detail.as_deref() {
-            std::env::set_var("GROK_COMPACTION_DETAIL", detail);
+            std::env::set_var("DEEPSEEK_BUILD_COMPACTION_DETAIL", detail);
         }
         if args.chat() {
             // chat mode (`--chat`) was removed; no env lane to set.
@@ -1509,7 +1509,7 @@ fn configure_process_env(mut args: PagerArgs) -> Result<PagerArgs> {
         }
         if let Some(path) = args.debug_file.as_deref() {
             std::env::set_var("GROK_DEBUG_LOG", path);
-            std::env::remove_var("GROK_LOG_FILE");
+            std::env::remove_var("DEEPSEEK_BUILD_LOG_FILE");
         }
         if args.debug || args.debug_file.is_some() {
             if std::env::var_os("GROK_DEBUG_LOG").is_none() {
@@ -1523,12 +1523,12 @@ fn configure_process_env(mut args: PagerArgs) -> Result<PagerArgs> {
     Ok(args)
 }
 const RUNTIME_SHUTDOWN_GRACE: std::time::Duration = std::time::Duration::from_secs(2);
-const GROK_WORKER_THREADS_ENV: &str = "GROK_WORKER_THREADS";
+const GROK_WORKER_THREADS_ENV: &str = "DEEPSEEK_BUILD_WORKER_THREADS";
 /// tokio defaults to one worker per logical CPU.
 /// On a host with hundreds of CPUs that can exhaust a cgroup thread budget at startup and abort under `panic = "abort"`.
 /// A terminal UI is I/O-bound, so cap at 8.
 const DEFAULT_MAX_WORKER_THREADS: NonZeroUsize = NonZeroUsize::new(8).unwrap();
-/// How `GROK_WORKER_THREADS` resolved.
+/// How `DEEPSEEK_BUILD_WORKER_THREADS` resolved.
 #[derive(Debug, PartialEq, Eq)]
 enum WorkerCount {
     Accepted(NonZeroUsize),
@@ -2233,7 +2233,7 @@ mod tests {
         assert_eq!(
             resolve_worker_override("100000", cores).notice().unwrap(),
             format!(
-                "{}: clamped GROK_WORKER_THREADS=100000 to 360 (valid range is 1..=360)",
+                "{}: clamped DEEPSEEK_BUILD_WORKER_THREADS=100000 to 360 (valid range is 1..=360)",
                 xai_grok_brand::NAME
             )
         );
@@ -2249,7 +2249,7 @@ mod tests {
         assert_eq!(
             resolve_worker_override("abc", cores).notice().unwrap(),
             format!(
-                "{}: ignoring GROK_WORKER_THREADS=\"abc\" (not a valid integer)",
+                "{}: ignoring DEEPSEEK_BUILD_WORKER_THREADS=\"abc\" (not a valid integer)",
                 xai_grok_brand::NAME
             )
         );

@@ -1378,14 +1378,14 @@ fn an_api_key_run_writes_no_answer_on_either_path() {
     );
 }
 /// The index a click or a number key carries is only worth anything if it reaches the right url.
-#[serial_test::serial(GROK_TEST_OPEN_URL_FILE)]
+#[serial_test::serial(DEEPSEEK_BUILD_TEST_OPEN_URL_FILE)]
 #[test]
 fn a_consent_link_opens_the_url_its_label_stands_for() {
     use crate::app::consent::{ConsentSegment, ConsentState};
     let url_file =
         std::env::temp_dir().join(format!("grok-consent-open-{}.txt", std::process::id()));
     let _ = std::fs::remove_file(&url_file);
-    unsafe { std::env::set_var("GROK_TEST_OPEN_URL_FILE", &url_file) };
+    unsafe { std::env::set_var("DEEPSEEK_BUILD_TEST_OPEN_URL_FILE", &url_file) };
     let opened = || std::fs::read_to_string(&url_file).unwrap_or_default();
     let mut app = test_app();
     app.consent_state = painted_notice("tos-2026", 3);
@@ -1418,7 +1418,7 @@ fn a_consent_link_opens_the_url_its_label_stands_for() {
     app.consent_state = ConsentState::Done;
     dispatch(Action::OpenConsentLink(0), &mut app);
     assert!(opened().trim().is_empty(), "got {:?}", opened());
-    unsafe { std::env::remove_var("GROK_TEST_OPEN_URL_FILE") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_TEST_OPEN_URL_FILE") };
     let _ = std::fs::remove_file(&url_file);
 }
 /// Accepting the trust question (its `finish_trust` tail) resolves trust and replays the deferred startup when auth is already done.
@@ -3203,7 +3203,7 @@ mod welcome_workspace_mode {
     };
     use crate::views::welcome::WelcomeWorkspaceMode;
     #[test]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ACK)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ACK)]
     fn welcome_new_session_sets_own_override() {
         let _ack = xai_grok_test_support::EnvGuard::set(
             crate::app::session_startup::GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV,
@@ -3310,7 +3310,7 @@ mod welcome_workspace_mode {
         set_active_local_workspace(None).unwrap();
     }
     #[test]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ACK)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ACK)]
     fn confirm_ack_skips_reapply_and_sets_oneshot() {
         let _ack = xai_grok_test_support::EnvGuard::unset(
             crate::app::session_startup::GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV,
@@ -3349,7 +3349,7 @@ mod welcome_workspace_mode {
         set_active_local_workspace(None).unwrap();
     }
     #[test]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ACK)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ACK)]
     fn welcome_local_worktree_always_keeps_oneshot_until_create() {
         let _ack = xai_grok_test_support::EnvGuard::set(
             crate::app::session_startup::GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV,
@@ -3390,7 +3390,7 @@ mod welcome_workspace_mode {
         set_active_local_workspace(None).unwrap();
     }
     #[test]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ACK)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ACK)]
     fn failed_worktree_create_clears_welcome_oneshot() {
         let _ack = xai_grok_test_support::EnvGuard::set(
             crate::app::session_startup::GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV,
@@ -3425,7 +3425,7 @@ mod welcome_workspace_mode {
         set_active_local_workspace(None).unwrap();
     }
     #[test]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ACK)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ACK)]
     fn confirm_ack_honors_worktree_always() {
         let _ack = xai_grok_test_support::EnvGuard::unset(
             crate::app::session_startup::GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV,
@@ -3680,7 +3680,7 @@ mod welcome_workspace_mode {
         set_active_local_workspace(None).unwrap();
     }
     #[test]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ACK)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ACK)]
     fn pick_in_worktree_no_git_clears_history_bypass() {
         let _ack = xai_grok_test_support::EnvGuard::set(
             crate::app::session_startup::GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV,

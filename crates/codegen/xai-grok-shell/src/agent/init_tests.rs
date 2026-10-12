@@ -17,7 +17,7 @@ fn unit_test_bootstrap_does_not_touch_the_managed_config_lock() {
     let dir = tempfile::tempdir().expect("tempdir");
     let home = dir.path().to_str().expect("utf8 temp home");
     let _env = crate::env::EnvVarGuard::set("DEEPSEEK_BUILD_HOME", home)
-        .and_set("GROK_DEPLOYMENT_KEY", "unit-test-deployment-key");
+        .and_set("DEEPSEEK_BUILD_DEPLOYMENT_KEY", "unit-test-deployment-key");
     // `grok_home()` is a process-wide OnceLock. Read the env path directly so this
     // test neither observes a home cached by an earlier test nor pins one for later tests.
     let grok_home = xai_dirs::resolve_grok_home().expect("DEEPSEEK_BUILD_HOME is set");

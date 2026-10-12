@@ -33,7 +33,7 @@ pub enum AuthMode {
     Oidc,
     /// External auth provider binary
     External,
-    /// Plain API key (e.g. from grok-desktop login or `grok login --api-key`)
+    /// Plain API key (e.g. from deepseek-build-desktop login or `grok login --api-key`)
     ApiKey,
 }
 

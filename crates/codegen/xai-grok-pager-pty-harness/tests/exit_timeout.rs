@@ -68,7 +68,7 @@ async fn spawn_pager_with_teardown_hold() -> Result<(PtyHarness, tempfile::TempD
         &content,
         &[],
         &[
-            ("GROK_EXIT_TIMEOUT_SECS", TIMEOUT_SECS),
+            ("DEEPSEEK_BUILD_EXIT_TIMEOUT_SECS", TIMEOUT_SECS),
             ("GROK_TEST_HOLD_TEARDOWN_SECS", HOLD_SECS),
         ],
         Some(project.path()),

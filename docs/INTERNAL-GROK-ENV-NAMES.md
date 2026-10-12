@@ -1,0 +1,738 @@
+# Remaining internal GROK_* names
+
+Snapshot generated when the user-visible `GROK_*` environment names were
+renamed to `DEEPSEEK_BUILD_*` (2026-10-12, branch `dsb/integration`).
+These names are internal only: identifiers, build-script plumbing, test
+fixtures/markers, or environment interfaces that no shipped doc, `--help`,
+or product error message names. Handle in the open-build branch.
+
+- Distinct names: **435**
+- Occurrences: **1529**
+- Files: **284**
+- Names appearing inside string literals: **395**
+- Names present only in test files: **58**
+
+## Names
+
+- `GROK_AGENT_DASHBOARD` — 3 occ, 1 file(s) [literal, product]
+- `GROK_AGENT_ENV` — 10 occ, 5 file(s) [identifier, product]
+- `GROK_AGENT_ENV_VALUE` — 9 occ, 5 file(s) [identifier, product]
+- `GROK_AGENT_ID` — 7 occ, 4 file(s) [literal, product]
+- `GROK_AGENT_ID_HEADER` — 8 occ, 3 file(s) [literal, product]
+- `GROK_AGENT_METADATA` — 1 occ, 1 file(s) [literal, product]
+- `GROK_ANNOUNCEMENTS_OVERRIDE` — 4 occ, 2 file(s) [literal, test]
+- `GROK_ANNOUNCEMENTS_REFRESH_INTERVAL_SECS` — 1 occ, 1 file(s) [literal, test]
+- `GROK_API_KEY` — 2 occ, 2 file(s) [literal, product]
+- `GROK_ARTIFACTS_BIND_REMOUNT` — 1 occ, 1 file(s) [literal, product]
+- `GROK_ASKPASS` — 3 occ, 2 file(s) [literal, product]
+- `GROK_AUTH_EARLY_INVALIDATION_SECS` — 8 occ, 2 file(s) [literal, product]
+- `GROK_AUTH_EXPIRED` — 14 occ, 7 file(s) [literal, product]
+- `GROK_AUTH_FORCE_DARK_WAKE` — 6 occ, 2 file(s) [literal, product]
+- `GROK_AUTH_JSON` — 2 occ, 1 file(s) [literal, test]
+- `GROK_AUTH_PATH` — 17 occ, 9 file(s) [literal, product]
+- `GROK_AUTH_PROVIDER_` — 2 occ, 2 file(s) [identifier, product]
+- `GROK_AUTH_PROVIDER_ACCESS_TOKEN` — 2 occ, 2 file(s) [literal, product]
+- `GROK_AUTH_PROVIDER_COMMAND` — 2 occ, 2 file(s) [literal, product]
+- `GROK_AUTH_PROVIDER_EXPIRES_AT` — 1 occ, 1 file(s) [literal, product]
+- `GROK_AUTH_PROVIDER_LABEL` — 2 occ, 1 file(s) [literal, product]
+- `GROK_AUTH_PROVIDER_REFRESH_TOKEN` — 1 occ, 1 file(s) [literal, product]
+- `GROK_AUTH_TOKEN_TTL` — 2 occ, 1 file(s) [literal, product]
+- `GROK_AUTO_COMPACT_THRESHOLD_PERCENT` — 3 occ, 2 file(s) [literal, product]
+- `GROK_AUTO_PERMISSION_MODE` — 13 occ, 3 file(s) [literal, product]
+- `GROK_BASH_STATE_END__` — 6 occ, 1 file(s) [literal, product]
+- `GROK_BASH_STATE_START__` — 6 occ, 1 file(s) [literal, product]
+- `GROK_BINARY` — 3 occ, 3 file(s) [literal, product]
+- `GROK_BINARY_CLIENT` — 1 occ, 1 file(s) [literal, product]
+- `GROK_BINARY_LEADER` — 1 occ, 1 file(s) [literal, product]
+- `GROK_BINARY_OVERRIDE` — 3 occ, 1 file(s) [identifier, product]
+- `GROK_BOOTSTRAP_REGRESSION_SOFT` — 2 occ, 1 file(s) [literal, test]
+- `GROK_BUILD` — 1 occ, 1 file(s) [literal, product]
+- `GROK_BUILD_SPAWN_TOOL` — 3 occ, 2 file(s) [identifier, product]
+- `GROK_BUILD_TOOLS` — 16 occ, 2 file(s) [identifier, test]
+- `GROK_BWRAP_RUNTIME_SOCKET_DENY` — 1 occ, 1 file(s) [literal, product]
+- `GROK_CAMPAIGNS` — 12 occ, 2 file(s) [literal, product]
+- `GROK_CHANGELOG_OFFLINE` — 1 occ, 1 file(s) [literal, product]
+- `GROK_CHAT_CLIENT_NONCE_PREFIX` — 2 occ, 2 file(s) [identifier, product]
+- `GROK_CHAT_LOCAL_WORKSPACE` — 2 occ, 1 file(s) [literal, product]
+- `GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV` — 14 occ, 4 file(s) [identifier, product]
+- `GROK_CHAT_LOCAL_WORKSPACE_ADVERTISED_TOOLS` — 15 occ, 3 file(s) [literal, product]
+- `GROK_CHAT_LOCAL_WORKSPACE_ADVERTISED_TOOLS_ENV` — 6 occ, 1 file(s) [identifier, product]
+- `GROK_CHAT_LOCAL_WORKSPACE_ALLOW_HOME_ENV` — 4 occ, 1 file(s) [identifier, product]
+- `GROK_CHAT_LOCAL_WORKSPACE_CWD` — 2 occ, 1 file(s) [literal, product]
+- `GROK_CHAT_LOCAL_WORKSPACE_CWD_ENV` — 4 occ, 1 file(s) [identifier, product]
+- `GROK_CHAT_LOCAL_WORKSPACE_ENV` — 4 occ, 1 file(s) [identifier, product]
+- `GROK_CHAT_LOCAL_WORKSPACE_MODE_ENV` — 5 occ, 1 file(s) [literal, product]
+- `GROK_CHAT_LOCAL_WORKSPACE_SERVER_ID_ENV` — 5 occ, 1 file(s) [identifier, product]
+- `GROK_CHILD_ENV_RESTORED` — 3 occ, 1 file(s) [literal, test]
+- `GROK_CHILD_ENV_SET` — 2 occ, 1 file(s) [literal, test]
+- `GROK_CLAUDE_MARKER_OVERRIDE` — 5 occ, 3 file(s) [literal, product]
+- `GROK_CLAUDE_SESSIONS_ENABLED` — 2 occ, 2 file(s) [literal, product]
+- `GROK_CLIENT_VERSION` — 5 occ, 3 file(s) [literal, product]
+- `GROK_CLIPBOARD_NO_NATIVE_READ` — 4 occ, 2 file(s) [literal, product]
+- `GROK_CLI_VERSION` — 1 occ, 1 file(s) [identifier, product]
+- `GROK_CODEX_AGENTS_ENABLED` — 1 occ, 1 file(s) [literal, product]
+- `GROK_CODEX_HOOKS_ENABLED` — 2 occ, 2 file(s) [literal, product]
+- `GROK_CODEX_MCPS_ENABLED` — 1 occ, 1 file(s) [literal, product]
+- `GROK_CODEX_RULES_ENABLED` — 1 occ, 1 file(s) [literal, product]
+- `GROK_CODEX_SESSIONS_ENABLED` — 3 occ, 2 file(s) [literal, product]
+- `GROK_CODEX_SKILLS_ENABLED` — 1 occ, 1 file(s) [literal, product]
+- `GROK_CODE_WEB_URL` — 1 occ, 1 file(s) [literal, product]
+- `GROK_CODE_XAI_API_KEY` — 12 occ, 7 file(s) [literal, product]
+- `GROK_COMPACTION_TOOL_CHOICE` — 1 occ, 1 file(s) [literal, product]
+- `GROK_COMPACTION_WALL_CLOCK_SECS` — 4 occ, 2 file(s) [literal, product]
+- `GROK_COMPUTER_SESSION_RESUMED_EMIT` — 6 occ, 1 file(s) [literal, product]
+- `GROK_COM_FIGMA` — 1 occ, 1 file(s) [literal, test]
+- `GROK_COM_METHOD_ID` — 26 occ, 6 file(s) [identifier, product]
+- `GROK_COM_SLACK__SLACK_SEND_MESSAGE` — 1 occ, 1 file(s) [literal, test]
+- `GROK_CONFIG_ENV` — 9 occ, 5 file(s) [identifier, product]
+- `GROK_CONFIG_PATH_ENV` — 9 occ, 5 file(s) [identifier, product]
+- `GROK_CONNECT_TIMEOUT_SECS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_CONTEXTUAL_HINTS` — 10 occ, 5 file(s) [literal, product]
+- `GROK_CONVERSATIONS_BASE_URL` — 1 occ, 1 file(s) [literal, product]
+- `GROK_COPY_FILE_ENV` — 8 occ, 1 file(s) [identifier, product]
+- `GROK_CURSOR_SESSIONS_ENABLED` — 4 occ, 3 file(s) [literal, product]
+- `GROK_DEBUG_LOG` — 16 occ, 3 file(s) [literal, product]
+- `GROK_DEFAULT_MODEL_TEST_NONEXISTENT` — 1 occ, 1 file(s) [literal, test]
+- `GROK_DEFAULT_PERMISSION_MODE` — 3 occ, 2 file(s) [literal, product]
+- `GROK_DEPLOYMENT_CONFIG_CACHE_TTL_SECS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_DISABLE_API_KEY_AUTH` — 11 occ, 4 file(s) [literal, product]
+- `GROK_DISABLE_CUSTOM_BRIDGE` — 1 occ, 1 file(s) [literal, product]
+- `GROK_DISABLE_CUSTOM_BRIDGE_ENV` — 7 occ, 2 file(s) [identifier, product]
+- `GROK_DISABLE_WEB_FETCH` — 3 occ, 2 file(s) [literal, product]
+- `GROK_DISPLAY_REFRESH_PROBE_ENABLED` — 1 occ, 1 file(s) [literal, product]
+- `GROK_DOCK_V2` — 3 occ, 2 file(s) [literal, product]
+- `GROK_DOOM_LOOP_RECOVERY` — 9 occ, 2 file(s) [literal, product]
+- `GROK_ENVRC_COMPLETE__` — 3 occ, 1 file(s) [literal, product]
+- `GROK_ENVRC_TIMEOUT_SECS` — 2 occ, 2 file(s) [literal, product]
+- `GROK_ENV_VAR_GUARD_CHAIN_A_PROBE` — 1 occ, 1 file(s) [literal, product]
+- `GROK_ENV_VAR_GUARD_CHAIN_B_PROBE` — 1 occ, 1 file(s) [literal, product]
+- `GROK_ENV_VAR_GUARD_REENTRANCY_PROBE` — 1 occ, 1 file(s) [literal, product]
+- `GROK_ENV_VAR_GUARD_SET_VALUE_PROBE` — 1 occ, 1 file(s) [literal, product]
+- `GROK_ERROR_REPORTING` — 1 occ, 1 file(s) [literal, product]
+- `GROK_ESC_DOUBLE_PRESS_MS` — 5 occ, 3 file(s) [literal, product]
+- `GROK_EXIT_AFTER_FIRST_RENDER` — 1 occ, 1 file(s) [literal, product]
+- `GROK_EXTRA_AUTH_KEY` — 4 occ, 3 file(s) [literal, product]
+- `GROK_EXTRA_CA_BUNDLE` — 19 occ, 10 file(s) [literal, product]
+- `GROK_FILES_JWT_FILE_FLAG` — 3 occ, 1 file(s) [literal, product]
+- `GROK_FILES_LIVE_CHECK_TIMEOUT` — 2 occ, 1 file(s) [identifier, product]
+- `GROK_FILES_MKDIR_TIMEOUT` — 2 occ, 1 file(s) [identifier, product]
+- `GROK_FILES_READY_PROBE_TIMEOUT` — 2 occ, 1 file(s) [identifier, product]
+- `GROK_FILES_REMOUNT_SPAWN_TIMEOUT` — 2 occ, 1 file(s) [identifier, product]
+- `GROK_FILE_LOCK_SLOT_DIR` — 5 occ, 3 file(s) [literal, product]
+- `GROK_FIND_BFS` — 2 occ, 2 file(s) [literal, product]
+- `GROK_FORCE_LEGACY_CONSOLE` — 3 occ, 1 file(s) [literal, product]
+- `GROK_FOREGROUND_BLOCK_BUDGET_MS` — 3 occ, 2 file(s) [literal, product]
+- `GROK_FPS` — 16 occ, 4 file(s) [literal, product]
+- `GROK_FPS_ENV` — 5 occ, 1 file(s) [identifier, product]
+- `GROK_FSNOTIFY_MAX_WATCHES` — 3 occ, 2 file(s) [literal, product]
+- `GROK_FSNOTIFY_PER_DIR` — 7 occ, 3 file(s) [literal, product]
+- `GROK_FSNOTIFY_SAPLING` — 7 occ, 3 file(s) [literal, product]
+- `GROK_GATEWAY_URL_ENV` — 6 occ, 1 file(s) [identifier, product]
+- `GROK_GIX_STATUS_THREADS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_GOAL` — 11 occ, 3 file(s) [literal, product]
+- `GROK_GOAL_CLASSIFIER` — 5 occ, 2 file(s) [literal, product]
+- `GROK_GOAL_CLASSIFIER_MAX` — 12 occ, 4 file(s) [literal, product]
+- `GROK_GOAL_PLANNER` — 6 occ, 3 file(s) [literal, product]
+- `GROK_GOAL_REVERIFY_AFTER` — 3 occ, 3 file(s) [literal, product]
+- `GROK_GOAL_STRATEGIST_EVERY` — 6 occ, 3 file(s) [literal, product]
+- `GROK_GOAL_SUMMARY` — 4 occ, 2 file(s) [literal, product]
+- `GROK_GOAL_USE_CURRENT_MODEL_ONLY` — 3 occ, 3 file(s) [literal, product]
+- `GROK_GOAL_VERIFIER_N` — 12 occ, 4 file(s) [literal, product]
+- `GROK_GREP_UGREP` — 2 occ, 2 file(s) [literal, product]
+- `GROK_HOME` — 5 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_ALT` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_ASSIGN` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_DEFAULT_SET` — 2 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_DEFER` — 2 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_EMPTY` — 2 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_EMPTY_MOD` — 2 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_ENV_EXPAND_MODIFIER_UNSET` — 2 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_ENV_EXPAND_NEVER_SET` — 2 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_ENV_EXPAND_TEST_FALLBACK` — 2 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_ENV_EXPAND_TEST_PRECEDENCE` — 3 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_ERR` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_HTTP_TEST_UNRESOLVED` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_LOG` — 10 occ, 3 file(s) [literal, product]
+- `GROK_HOOKS_MASK_` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_MASK__` — 2 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_NCD` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_PARSE_TEST_CMD_PROC_ENV` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_PARSE_TEST_MATCHER_VAR` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_PARSE_TEST_NEVER_SET_AT_LOAD_TIME` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_PARSE_TEST_URL_NEVER_SET_AT_LOAD_TIME` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_PARSE_TEST_URL_PROC_ENV` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_PLAIN` — 2 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_PREFIX` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_RECURSION_BAR` — 3 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_RECURSION_FOO` — 2 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_SUB` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_SUBSTR` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_SUFFIX` — 1 occ, 1 file(s) [literal, product]
+- `GROK_HOOKS_TEST_SUPPORT_EXPLICIT_UNSET` — 1 occ, 1 file(s) [literal, test]
+- `GROK_HOOKS_TEST_SUPPORT_PANIC_RESTORE` — 1 occ, 1 file(s) [literal, test]
+- `GROK_HOOKS_TEST_SUPPORT_RESTORE` — 1 occ, 1 file(s) [literal, test]
+- `GROK_HOOKS_TEST_SUPPORT_UNSET_RESTORE` — 1 occ, 1 file(s) [literal, test]
+- `GROK_HOOK_DEBUG` — 1 occ, 1 file(s) [literal, product]
+- `GROK_IDLE_NOTIFICATION_DELAY_MS` — 4 occ, 1 file(s) [literal, product]
+- `GROK_IMAGE_CAPABILITIES_DIR` — 1 occ, 1 file(s) [literal, product]
+- `GROK_IMAGE_DESCRIPTION_MODEL` — 2 occ, 2 file(s) [literal, product]
+- `GROK_INIT_STATE_MARKER__` — 4 occ, 1 file(s) [literal, product]
+- `GROK_INSIDE_BWRAP` — 10 occ, 4 file(s) [literal, product]
+- `GROK_INSTRUMENTATION` — 5 occ, 4 file(s) [literal, product]
+- `GROK_INSTRUMENTATION_LOG` — 2 occ, 2 file(s) [literal, product]
+- `GROK_INTERNAL_OTLP_HEADERS` — 6 occ, 4 file(s) [literal, product]
+- `GROK_INTERNAL_OTLP_TRACES_ENDPOINT` — 5 occ, 3 file(s) [literal, product]
+- `GROK_LEADER_LOG` — 2 occ, 1 file(s) [literal, product]
+- `GROK_LEADER_SOCKET` — 7 occ, 5 file(s) [literal, product]
+- `GROK_LENGTH_SALVAGE` — 8 occ, 3 file(s) [literal, product]
+- `GROK_LIFECYCLE_` — 1 occ, 1 file(s) [identifier, product]
+- `GROK_LIFECYCLE_DEADLINE_MS` — 3 occ, 2 file(s) [literal, product]
+- `GROK_LIFECYCLE_DISK` — 2 occ, 2 file(s) [literal, product]
+- `GROK_LIFECYCLE_EVENT` — 2 occ, 2 file(s) [literal, product]
+- `GROK_LIFECYCLE_REASON` — 2 occ, 2 file(s) [literal, product]
+- `GROK_LOCAL_AUTH` — 1 occ, 1 file(s) [literal, test]
+- `GROK_LOCK_HOLDER_READY__` — 1 occ, 1 file(s) [literal, test]
+- `GROK_LOC_TRACKING` — 1 occ, 1 file(s) [literal, product]
+- `GROK_LOGIN_DEVICE_FLOW` — 1 occ, 1 file(s) [identifier, product]
+- `GROK_LOGIN_ENV` — 4 occ, 2 file(s) [literal, product]
+- `GROK_LOG_SAMPLING` — 5 occ, 4 file(s) [literal, product]
+- `GROK_MANAGED_CONFIG` — 6 occ, 5 file(s) [literal, product]
+- `GROK_MANAGED_CONFIG_FAIL_CLOSED` — 1 occ, 1 file(s) [literal, product]
+- `GROK_MANAGED_CONFIG_URL` — 6 occ, 5 file(s) [literal, product]
+- `GROK_MAX_CONCURRENT_SUBAGENTS` — 5 occ, 3 file(s) [literal, product]
+- `GROK_MAX_FOREGROUND_BLOCK_MS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_MAX_MCP_OUTPUT_BYTES` — 14 occ, 2 file(s) [identifier, product]
+- `GROK_MAX_OUTPUT_FILE_BYTES` — 2 occ, 1 file(s) [literal, product]
+- `GROK_MAX_RETRIES` — 2 occ, 2 file(s) [literal, product]
+- `GROK_MCP_LIVENESS_WATCHERS` — 13 occ, 3 file(s) [literal, product]
+- `GROK_MCP_RECURSIVE_CONFIG_WATCH` — 13 occ, 3 file(s) [literal, product]
+- `GROK_MDM_NO_EXPAND_TEST` — 6 occ, 1 file(s) [literal, product]
+- `GROK_MEMORY_LOG` — 4 occ, 1 file(s) [literal, product]
+- `GROK_MEMTRACE` — 4 occ, 2 file(s) [literal, product]
+- `GROK_MEMTRACE_INTERVAL_SECS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_MEMTRACE_THRESHOLD_MB` — 2 occ, 1 file(s) [literal, product]
+- `GROK_MESSAGE` — 2 occ, 1 file(s) [identifier, product]
+- `GROK_MIN_DRAW_MS` — 3 occ, 2 file(s) [literal, product]
+- `GROK_NERD_FONTS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_OAUTH2_CLIENT_ID` — 2 occ, 1 file(s) [literal, product]
+- `GROK_OAUTH2_ISSUER` — 2 occ, 1 file(s) [literal, product]
+- `GROK_OAUTH2_PRINCIPAL_ID` — 1 occ, 1 file(s) [literal, product]
+- `GROK_OAUTH2_PRINCIPAL_TYPE` — 1 occ, 1 file(s) [literal, product]
+- `GROK_OAUTH2_REFERRER` — 1 occ, 1 file(s) [literal, product]
+- `GROK_OAUTH2_SCOPES` — 1 occ, 1 file(s) [literal, product]
+- `GROK_OAUTH_ENABLED` — 2 occ, 1 file(s) [literal, product]
+- `GROK_OFFICIAL_MARKETPLACE_AUTO_REGISTER` — 2 occ, 1 file(s) [literal, product]
+- `GROK_OIDC_AUDIENCE` — 1 occ, 1 file(s) [literal, product]
+- `GROK_OIDC_CLIENT_ID` — 1 occ, 1 file(s) [literal, product]
+- `GROK_OIDC_ISSUER` — 1 occ, 1 file(s) [literal, product]
+- `GROK_OIDC_SCOPES` — 1 occ, 1 file(s) [literal, product]
+- `GROK_OPEN_DASHBOARD_AT_STARTUP` — 9 occ, 3 file(s) [literal, product]
+- `GROK_OSC52_SINK` — 20 occ, 6 file(s) [literal, product]
+- `GROK_PARALLEL_TOOL_DISPATCH` — 1 occ, 1 file(s) [identifier, test]
+- `GROK_PDEATHSIG_HELPER` — 1 occ, 1 file(s) [literal, product]
+- `GROK_PERF_GIT_FILES` — 1 occ, 1 file(s) [identifier, product]
+- `GROK_PERSIST_TEST` — 2 occ, 1 file(s) [literal, product]
+- `GROK_PIN_BASE` — 1 occ, 1 file(s) [literal, test]
+- `GROK_PIN_LOGIN` — 1 occ, 1 file(s) [literal, test]
+- `GROK_PIN_REQ` — 1 occ, 1 file(s) [literal, test]
+- `GROK_PIN_SECRET` — 2 occ, 2 file(s) [literal, test]
+- `GROK_PIN_SECRET_TOKEN` — 1 occ, 1 file(s) [literal, test]
+- `GROK_PLUGIN_` — 1 occ, 1 file(s) [identifier, product]
+- `GROK_PLUGIN_CTA` — 2 occ, 2 file(s) [literal, product]
+- `GROK_POOL_IDLE_TIMEOUT_SECS` — 2 occ, 2 file(s) [literal, product]
+- `GROK_POOL_MAX_IDLE` — 2 occ, 2 file(s) [literal, product]
+- `GROK_PREFIRE_LEAD_PERCENT` — 3 occ, 2 file(s) [literal, product]
+- `GROK_PRIVACY_BANNER_RESHOW_DAYS` — 2 occ, 2 file(s) [literal, product]
+- `GROK_PRIVACY_NOTICE_ROLLOUT` — 7 occ, 4 file(s) [literal, product]
+- `GROK_PROMPT_ACK_TIMEOUT_SECS` — 1 occ, 1 file(s) [literal, product]
+- `GROK_PROMPT_SUGGESTIONS_MODEL` — 6 occ, 4 file(s) [literal, product]
+- `GROK_PTY_CAST_DIR` — 5 occ, 2 file(s) [literal, test]
+- `GROK_PTY_REQUIRE_AUTH` — 3 occ, 1 file(s) [literal, test]
+- `GROK_RELAY_SYNC_ENABLED` — 2 occ, 1 file(s) [literal, product]
+- `GROK_REQUEST_COMPRESSION` — 3 occ, 2 file(s) [literal, product]
+- `GROK_RESUME_NUDGE_DISABLED` — 6 occ, 1 file(s) [literal, product]
+- `GROK_REVIVE_SCRIPT_CONFIGURED` — 6 occ, 1 file(s) [literal, product]
+- `GROK_SANDBOX` — 2 occ, 1 file(s) [literal, test]
+- `GROK_SANDBOX_MODE_TEST_UNSET_VAR` — 1 occ, 1 file(s) [literal, test]
+- `GROK_SANDBOX_MODE_UNSET_VAR` — 1 occ, 1 file(s) [literal, product]
+- `GROK_SCROLL_` — 1 occ, 1 file(s) [identifier, product]
+- `GROK_SCROLL_CADENCE_MS` — 5 occ, 3 file(s) [literal, product]
+- `GROK_SCROLL_DEBUG` — 13 occ, 6 file(s) [literal, product]
+- `GROK_SCROLL_LOG` — 21 occ, 16 file(s) [literal, product]
+- `GROK_SERVER_KEY` — 1 occ, 1 file(s) [identifier, product]
+- `GROK_SESSION_ID` — 2 occ, 1 file(s) [identifier, product]
+- `GROK_SESSION_LIST_CONVERSATIONS` — 4 occ, 1 file(s) [literal, product]
+- `GROK_SESSION_PICKER_GROUPED` — 3 occ, 3 file(s) [literal, product]
+- `GROK_SESSION_RESTORED` — 6 occ, 1 file(s) [literal, product]
+- `GROK_SESSION_SUMMARY_MODEL` — 3 occ, 3 file(s) [literal, product]
+- `GROK_SHELL_BLOCKING_POOL_CONTAINMENT_CHILD` — 1 occ, 1 file(s) [literal, test]
+- `GROK_SHELL_BUNDLE_RG_PATH` — 9 occ, 1 file(s) [literal, product]
+- `GROK_SHELL_RG_DOWNLOAD_BASE` — 3 occ, 1 file(s) [literal, product]
+- `GROK_SHELL_RG_GEN_DIR` — 1 occ, 1 file(s) [literal, product]
+- `GROK_SHELL_RG_TARGET` — 2 occ, 1 file(s) [literal, product]
+- `GROK_SHELL_RG_VER` — 1 occ, 1 file(s) [literal, product]
+- `GROK_SHELL_RUNTIME_CONTAINMENT_CHILD` — 1 occ, 1 file(s) [literal, test]
+- `GROK_SKILLS_WATCHER_BENCH_DIRS` — 3 occ, 1 file(s) [literal, product]
+- `GROK_SNAP_EOF_` — 4 occ, 1 file(s) [identifier, product]
+- `GROK_SNAP_EOF_ENV_VARS_B64` — 3 occ, 1 file(s) [literal, product]
+- `GROK_SPAN_PROFILE_OUT` — 2 occ, 1 file(s) [literal, product]
+- `GROK_SPAWN_TIMESTAMP_MS` — 1 occ, 1 file(s) [literal, product]
+- `GROK_STATIC_SHELL_MARKER__` — 1 occ, 1 file(s) [literal, product]
+- `GROK_STORAGE_MODE` — 3 occ, 3 file(s) [literal, product]
+- `GROK_SUBAGENT_AWAIT_BUDGET_MS` — 1 occ, 1 file(s) [literal, product]
+- `GROK_SUBAGENT_WATERFALL` — 1 occ, 1 file(s) [literal, product]
+- `GROK_SUBAGENT_WORKER_THREADS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_SUBSCRIPTION_WATCH_INTERVAL_SECS` — 4 occ, 2 file(s) [literal, product]
+- `GROK_SUGGESTIONS` — 7 occ, 5 file(s) [literal, product]
+- `GROK_SUGGESTIONS_AI` — 2 occ, 1 file(s) [literal, product]
+- `GROK_SUGGESTIONS_AI_MODEL` — 2 occ, 1 file(s) [literal, product]
+- `GROK_SUGGEST_TEST_DIR` — 4 occ, 1 file(s) [literal, product]
+- `GROK_SWEEP_ASSERT_NO_FAILURES` — 1 occ, 1 file(s) [literal, test]
+- `GROK_SWEEP_DEADLINE_S` — 1 occ, 1 file(s) [literal, test]
+- `GROK_SWEEP_LOG` — 2 occ, 2 file(s) [literal, test]
+- `GROK_SWEEP_REPO_FILES` — 1 occ, 1 file(s) [literal, test]
+- `GROK_SYSTEM_PROMPT_LABEL` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TELEMETRY_ALLOW_DEV_BUILD` — 1 occ, 1 file(s) [literal, product]
+- `GROK_TELEMETRY_BUILD_MIXPANEL_TOKEN` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TELEMETRY_ENABLED` — 25 occ, 11 file(s) [literal, product]
+- `GROK_TELEMETRY_EVENTS_API_KEY` — 4 occ, 3 file(s) [literal, product]
+- `GROK_TELEMETRY_EVENTS_URL` — 6 occ, 5 file(s) [literal, product]
+- `GROK_TELEMETRY_MIXPANEL_ENABLED` — 4 occ, 3 file(s) [literal, product]
+- `GROK_TELEMETRY_MIXPANEL_TOKEN` — 4 occ, 3 file(s) [literal, product]
+- `GROK_TELEMETRY_SPECIAL_USER` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TELEMETRY_TRACE_UPLOAD` — 11 occ, 5 file(s) [literal, product]
+- `GROK_TERMINAL_NOTIFICATION_INTERVAL_MS` — 1 occ, 1 file(s) [literal, product]
+- `GROK_TEST_BASE` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TEST_CONFIG_EXPAND` — 3 occ, 1 file(s) [literal, test]
+- `GROK_TEST_CONFIG_MISSING` — 2 occ, 1 file(s) [literal, test]
+- `GROK_TEST_EMPTY_ENV_GLOBAL_ALIAS` — 1 occ, 1 file(s) [literal, test]
+- `GROK_TEST_EMPTY_ENV_GLOBAL_PRIMARY` — 1 occ, 1 file(s) [literal, test]
+- `GROK_TEST_EMPTY_ENV_LC_ALIAS` — 1 occ, 1 file(s) [literal, test]
+- `GROK_TEST_EMPTY_ENV_PRIMARY` — 1 occ, 1 file(s) [literal, test]
+- `GROK_TEST_ENVKEY_SHADOW` — 1 occ, 1 file(s) [literal, test]
+- `GROK_TEST_ENV_KEY_FALLBACK` — 4 occ, 1 file(s) [literal, test]
+- `GROK_TEST_ENV_KEY_PRIMARY` — 3 occ, 1 file(s) [literal, test]
+- `GROK_TEST_ENV_STRING` — 3 occ, 1 file(s) [literal, product]
+- `GROK_TEST_FAIL_REFRESH_PROMOTE` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TEST_FAIL_REGISTRY_SAVE_AFTER_SERIALIZE` — 3 occ, 2 file(s) [literal, product]
+- `GROK_TEST_FIRST_OWN_CRED_ENV` — 1 occ, 1 file(s) [literal, test]
+- `GROK_TEST_FRAME_WRITE_DELAY_MS` — 2 occ, 2 file(s) [literal, product]
+- `GROK_TEST_HOLD_TEARDOWN_SECS` — 3 occ, 2 file(s) [literal, product]
+- `GROK_TEST_LOCK_HOLDER` — 3 occ, 1 file(s) [literal, test]
+- `GROK_TEST_LOGIN` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TEST_MCP_CONSENT_URL_FILE` — 1 occ, 1 file(s) [literal, product]
+- `GROK_TEST_MCP_UNSET_VAR_12345` — 1 occ, 1 file(s) [identifier, test]
+- `GROK_TEST_MULTI_ENV_LC_ALIAS` — 1 occ, 1 file(s) [literal, test]
+- `GROK_TEST_MULTI_ENV_PRIMARY` — 1 occ, 1 file(s) [literal, test]
+- `GROK_TEST_PROMPT_BLACKHOLE` — 2 occ, 1 file(s) [literal, test]
+- `GROK_TEST_REQ` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TEST_ROOT` — 2 occ, 1 file(s) [literal, test]
+- `GROK_TEST_SECRET` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TEST_TIMEOUT_SCALE` — 3 occ, 2 file(s) [literal, product]
+- `GROK_TEST_TRUSTED_PUBKEY_FILE` — 1 occ, 1 file(s) [literal, product]
+- `GROK_TEST_UNTRUSTED_DISCOVERY_CHILD` — 1 occ, 1 file(s) [literal, product]
+- `GROK_TEST_USER` — 2 occ, 1 file(s) [literal, test]
+- `GROK_TEST_VAR` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TEST_VERSION` — 8 occ, 6 file(s) [literal, product]
+- `GROK_TEST_WS_FALLBACK` — 2 occ, 1 file(s) [literal, test]
+- `GROK_TEST_WS_ONLY` — 1 occ, 1 file(s) [literal, test]
+- `GROK_TEST_WS_PAD` — 1 occ, 1 file(s) [literal, test]
+- `GROK_TEST_WS_PRIMARY` — 2 occ, 1 file(s) [literal, test]
+- `GROK_TIPS_OVERRIDE` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TOOLS_` — 5 occ, 3 file(s) [literal, product]
+- `GROK_TOOLS_BFS_PATH` — 1 occ, 1 file(s) [literal, product]
+- `GROK_TOOLS_BFS_SHA256` — 1 occ, 1 file(s) [literal, product]
+- `GROK_TOOLS_BFS_TARGET` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TOOLS_BFS_VER` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TOOLS_BUNDLE_` — 3 occ, 2 file(s) [literal, product]
+- `GROK_TOOLS_BUNDLE_FD_PATH` — 8 occ, 1 file(s) [literal, product]
+- `GROK_TOOLS_BUNDLE_RG_PATH` — 9 occ, 1 file(s) [literal, product]
+- `GROK_TOOLS_FD_TARGET` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TOOLS_FD_VER` — 1 occ, 1 file(s) [literal, product]
+- `GROK_TOOLS_FIND_BFS` — 2 occ, 2 file(s) [literal, product]
+- `GROK_TOOLS_GREP_UGREP` — 2 occ, 2 file(s) [literal, product]
+- `GROK_TOOLS_RESET_CHILD_OOM` — 3 occ, 2 file(s) [literal, product]
+- `GROK_TOOLS_RG_SHA256` — 1 occ, 1 file(s) [literal, product]
+- `GROK_TOOLS_RG_TARGET` — 4 occ, 2 file(s) [literal, product]
+- `GROK_TOOLS_RG_VER` — 3 occ, 2 file(s) [literal, product]
+- `GROK_TOOLS_UGREP_PATH` — 1 occ, 1 file(s) [literal, product]
+- `GROK_TOOLS_UGREP_SHA256` — 1 occ, 1 file(s) [literal, product]
+- `GROK_TOOLS_UGREP_TARGET` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TOOLS_UGREP_VER` — 2 occ, 1 file(s) [literal, product]
+- `GROK_TRACE_UPLOAD` — 8 occ, 8 file(s) [literal, product]
+- `GROK_TRACK_HEADLESS` — 1 occ, 1 file(s) [literal, product]
+- `GROK_TURN_TRANSIENT_RETRY` — 8 occ, 3 file(s) [literal, product]
+- `GROK_UNCHARGED_401_PARK` — 2 occ, 1 file(s) [literal, product]
+- `GROK_UPLOAD_QUEUE_AUTH_PROBE_SECS` — 1 occ, 1 file(s) [literal, test]
+- `GROK_VERSION` — 14 occ, 7 file(s) [literal, product]
+- `GROK_W1_KEEP` — 3 occ, 1 file(s) [literal, test]
+- `GROK_W1_MARKER` — 2 occ, 1 file(s) [literal, test]
+- `GROK_W1_REMOVED` — 3 occ, 1 file(s) [literal, test]
+- `GROK_W1_SECRET_TOKEN` — 3 occ, 1 file(s) [literal, test]
+- `GROK_WORKER_THREADS_ENV` — 4 occ, 1 file(s) [literal, product]
+- `GROK_WORKFLOW_MAX_CONCURRENT_AGENTS` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_` — 3 occ, 1 file(s) [identifier, product]
+- `GROK_WORKSPACE_AFTER_TURN_WATCHDOG_MS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_AGENT_CONNECT_TIMEOUT_SECS` — 3 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_AGENT_RPC_TIMEOUT_SECS` — 4 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_BUNDLED_SKILLS_ALLOWLIST` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_BUNDLED_SKILLS_DIR` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_COMMAND` — 8 occ, 2 file(s) [literal, product]
+- `GROK_WORKSPACE_CONFINE_FS_TO_ROOT` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_DASHBOARD` — 3 occ, 2 file(s) [literal, product]
+- `GROK_WORKSPACE_DATA_COLLECTION_DISABLED` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_DRAINING_FILE` — 3 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_DRAIN_TIMEOUT_SECS` — 3 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_DURABILITY_IDLE_HOLD_MAX_MS` — 4 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_EVENTS_ENABLED` — 3 occ, 2 file(s) [literal, product]
+- `GROK_WORKSPACE_HEARTBEAT_SECS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_HOME` — 10 occ, 4 file(s) [literal, product]
+- `GROK_WORKSPACE_HUB_BACKOFF_BASE_MS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_HUB_CONNECT_DEADLINE_SECS` — 4 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_HUB_CONNECT_HEDGE_AFTER_SECS` — 4 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_HUB_WARN_THRESHOLD` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_IDLE_IGNORE_BACKGROUND_TASKS` — 5 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_KEEPALIVE_SECS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_OIDC_` — 2 occ, 1 file(s) [identifier, product]
+- `GROK_WORKSPACE_OIDC_MIN_REFRESH_INTERVAL_SECS` — 7 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_OIDC_PROACTIVE_REFRESH_ENABLED` — 7 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_OIDC_REFRESH_FRACTION` — 7 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_OIDC_REFRESH_JITTER_FRACTION` — 7 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_OIDC_REFRESH_SAFETY_MARGIN_SECS` — 6 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_PRESENCE_ACTIVITY_WINDOW_MS` — 6 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_PRESENCE_KEEPALIVE_ENABLED` — 4 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_PREVIEW_ACTIVITY_SCRAPE_INTERVAL_MS` — 5 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_PREVIEW_ACTIVITY_WINDOW_MS` — 5 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_PREVIEW_DISCOVERY_REFRESH_MS` — 4 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_PREVIEW_STATE_POLL_INTERVAL_MS` — 3 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_PREVIEW_STATE_REPORTER_ENABLED` — 3 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_PREVIEW_STATE_WAIT_SECS` — 4 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_PROJECT_LSP_TRUSTED` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_REWIND_ALL_OUTCOMES` — 3 occ, 2 file(s) [literal, product]
+- `GROK_WORKSPACE_REWIND_DURABLE` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_REWIND_GIT` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_REWIND_HUNKS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_RPC_ACTIVITY_WINDOW_MS` — 5 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_SCHEDULED_TASK_KEEP_AWAKE_MS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_SERVER_SKILLS_DIR` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_SESSION_IDLE_PRUNE_SECS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TERMINATION_GRACE_MS` — 4 occ, 2 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_BACKOFF_MALFORMED` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_BACKOFF_UNSET` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_BACKOFF_VALID` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_FRAC_OR_GARBAGE` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_FRAC_OR_RANGE` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_FRAC_OR_UNSET` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_FRAC_OR_VALID` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_MS_OR_INVALID` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_MS_OR_VALID` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_PARSE_OR_INVALID` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_PARSE_OR_UNSET` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_PARSE_OR_VALID` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_SECS_OR_INVALID` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_SECS_OR_UNSET` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TEST_SECS_OR_VALID` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_TOOL_DEFS_ENABLED` — 3 occ, 2 file(s) [literal, product]
+- `GROK_WORKSPACE_TOOL_STATE_ENABLED` — 5 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_WS_LIVENESS_DEADLINE_SECS` — 4 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_WS_PING_SECS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKSPACE_WS_RECONNECT_BACKOFF_MS` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKTREE_AUTO_GC` — 3 occ, 1 file(s) [literal, product]
+- `GROK_WORKTREE_AUTO_GC_DRY_RUN` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WORKTREE_AUTO_GC_MAX_AGE` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WORKTREE_AUTO_GC_REBUILD` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WRAP_IM` — 1 occ, 1 file(s) [literal, product]
+- `GROK_WRAP_IMG` — 7 occ, 2 file(s) [literal, product]
+- `GROK_WRAP_NONE` — 2 occ, 1 file(s) [literal, product]
+- `GROK_WS_ORIGIN` — 2 occ, 2 file(s) [literal, product]
+- `GROK_WS_URL` — 1 occ, 1 file(s) [literal, product]
+- `GROK_X` — 1 occ, 1 file(s) [identifier, product]
+- `GROK_ZSH_STATE_END__` — 4 occ, 1 file(s) [literal, product]
+- `GROK_ZSH_STATE_START__` — 4 occ, 1 file(s) [literal, product]
+
+## Files
+
+- `crates/codegen/xai-grok-pager-bin/build.rs`
+- `crates/codegen/xai-grok-shell/build.rs`
+- `crates/codegen/xai-grok-tools/build.rs`
+- `crates/codegen/xai-grok-version/build.rs`
+- `crates/codegen/xai-dirs/src/lib.rs`
+- `crates/codegen/xai-fast-worktree/src/auto_gc.rs`
+- `crates/codegen/xai-fsnotify/benches/startup.rs`
+- `crates/codegen/xai-fsnotify/examples/watch_stats.rs`
+- `crates/codegen/xai-fsnotify/src/handle.rs`
+- `crates/codegen/xai-fsnotify/src/source.rs`
+- `crates/codegen/xai-fsnotify/src/vcs.rs`
+- `crates/codegen/xai-fsnotify/src/watcher.rs`
+- `crates/codegen/xai-fsnotify/src/watcher_tests.rs`
+- `crates/codegen/xai-gix-status/src/lib.rs`
+- `crates/codegen/xai-grok-config-types/src/mcp.rs`
+- `crates/codegen/xai-grok-config-types/src/registry.rs`
+- `crates/codegen/xai-grok-config-types/src/sandbox.rs`
+- `crates/codegen/xai-grok-config/src/compat.rs`
+- `crates/codegen/xai-grok-config/src/compat_tests.rs`
+- `crates/codegen/xai-grok-config/src/config_layers.rs`
+- `crates/codegen/xai-grok-config/src/effective_config.rs`
+- `crates/codegen/xai-grok-config/src/endpoints.rs`
+- `crates/codegen/xai-grok-config/src/endpoints_tests.rs`
+- `crates/codegen/xai-grok-config/src/env_overlay.rs`
+- `crates/codegen/xai-grok-config/src/env_overlay_tests.rs`
+- `crates/codegen/xai-grok-config/src/lib.rs`
+- `crates/codegen/xai-grok-config/src/loader.rs`
+- `crates/codegen/xai-grok-config/src/macos_managed.rs`
+- `crates/codegen/xai-grok-config/src/managed_cache.rs`
+- `crates/codegen/xai-grok-config/src/remote_settings.rs`
+- `crates/codegen/xai-grok-config/src/validation.rs`
+- `crates/codegen/xai-grok-env/src/lib.rs`
+- `crates/codegen/xai-grok-env/src/registry.rs`
+- `crates/codegen/xai-grok-extra-ca/src/lib.rs`
+- `crates/codegen/xai-grok-extra-ca/src/lib_tests.rs`
+- `crates/codegen/xai-grok-extra-ca/tests/extra_ca_async_handshake.rs`
+- `crates/codegen/xai-grok-extra-ca/tests/extra_ca_ssl_cert_file_handshake.rs`
+- `crates/codegen/xai-grok-extra-ca/tests/extra_ca_valid_env.rs`
+- `crates/codegen/xai-grok-extra-ca/tests/extra_ca_zero_certs.rs`
+- `crates/codegen/xai-grok-file-lock/src/lib.rs`
+- `crates/codegen/xai-grok-file-lock/src/slot.rs`
+- `crates/codegen/xai-grok-hooks/src/config.rs`
+- `crates/codegen/xai-grok-hooks/src/env_expand.rs`
+- `crates/codegen/xai-grok-hooks/src/test_support.rs`
+- `crates/codegen/xai-grok-http/src/lib.rs`
+- `crates/codegen/xai-grok-lifecycle/src/exec.rs`
+- `crates/codegen/xai-grok-lifecycle/src/exec_tests.rs`
+- `crates/codegen/xai-grok-login/src/auth_method.rs`
+- `crates/codegen/xai-grok-login/src/auth_provider.rs`
+- `crates/codegen/xai-grok-login/src/auth_provider_tests.rs`
+- `crates/codegen/xai-grok-login/src/config.rs`
+- `crates/codegen/xai-grok-login/src/credential_provider.rs`
+- `crates/codegen/xai-grok-login/src/error.rs`
+- `crates/codegen/xai-grok-login/src/external_auth.rs`
+- `crates/codegen/xai-grok-login/src/flow.rs`
+- `crates/codegen/xai-grok-login/src/manager.rs`
+- `crates/codegen/xai-grok-login/src/manager_tests.rs`
+- `crates/codegen/xai-grok-login/src/model.rs`
+- `crates/codegen/xai-grok-login/src/side_call_bearer_tests.rs`
+- `crates/codegen/xai-grok-login/src/storage.rs`
+- `crates/codegen/xai-grok-mcp/src/oauth.rs`
+- `crates/codegen/xai-grok-mcp/src/servers.rs`
+- `crates/codegen/xai-grok-mcp/src/servers_tests.rs`
+- `crates/codegen/xai-grok-pager-bin/src/main.rs`
+- `crates/codegen/xai-grok-pager-bin/tests/branding_surface.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/src/content.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/src/lib.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/src/pty_spawn.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/exit_error_dead_stderr.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/exit_timeout.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/mcp_toggle_cli.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/privacy_banner_e2e.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_auto_mode.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e_clipboard.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/scripted_scenarios.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/scroll_matrix_curated.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/settings_locked_row_e2e.rs`
+- `crates/codegen/xai-grok-pager-render/src/glyphs.rs`
+- `crates/codegen/xai-grok-pager/src/git_info.rs`
+- `crates/codegen/xai-grok-pager/src/headless.rs`
+- `crates/codegen/xai-grok-pager/src/memory_release.rs`
+- `crates/codegen/xai-grok-pager/src/memory_trace.rs`
+- `crates/codegen/xai-grok-pager/src/pty_wrap.rs`
+- `crates/codegen/xai-grok-pager/src/wrap_clipboard_image.rs`
+- `crates/codegen/xai-grok-permission-rules/src/claude_settings.rs`
+- `crates/codegen/xai-grok-permission-rules/src/folder_trust.rs`
+- `crates/codegen/xai-grok-permission-rules/src/resolution_tests.rs`
+- `crates/codegen/xai-grok-plugin-marketplace/src/installer.rs`
+- `crates/codegen/xai-grok-sampler/src/retry.rs`
+- `crates/codegen/xai-grok-sampler/src/shared_http.rs`
+- `crates/codegen/xai-grok-sampler/tests/shared_http_wire.rs`
+- `crates/codegen/xai-grok-sandbox/src/lib.rs`
+- `crates/codegen/xai-grok-sandbox/src/read_deny_verify.rs`
+- `crates/codegen/xai-grok-sandbox/src/runtime_sockets.rs`
+- `crates/codegen/xai-grok-sandbox/tests/deny_paths_e2e.rs`
+- `crates/codegen/xai-grok-shared/examples/clipboard_probe.rs`
+- `crates/codegen/xai-grok-shared/src/clipboard.rs`
+- `crates/codegen/xai-grok-shell-base/src/env.rs`
+- `crates/codegen/xai-grok-shell-terminal/src/streaming_local_terminal.rs`
+- `crates/codegen/xai-grok-shell/benches/skills_watcher_startup.rs`
+- `crates/codegen/xai-grok-shell/src/claude_import_tests.rs`
+- `crates/codegen/xai-grok-shell/src/cli_models.rs`
+- `crates/codegen/xai-grok-shell/src/waterfall.rs`
+- `crates/codegen/xai-grok-shell/tests/external_auth_conforming_provider.rs`
+- `crates/codegen/xai-grok-shell/tests/subagent_bootstrap_regression.rs`
+- `crates/codegen/xai-grok-shell/tests/test_trusted_local_plugin_refresh_e2e.rs`
+- `crates/codegen/xai-grok-telemetry/src/client.rs`
+- `crates/codegen/xai-grok-telemetry/src/config.rs`
+- `crates/codegen/xai-grok-telemetry/src/http.rs`
+- `crates/codegen/xai-grok-telemetry/src/id.rs`
+- `crates/codegen/xai-grok-telemetry/tests/agent_id_prewarm.rs`
+- `crates/codegen/xai-grok-telemetry/tests/machine_id_off_boot_path.rs`
+- `crates/codegen/xai-grok-test-support/src/conversation_replay_failure_tests.rs`
+- `crates/codegen/xai-grok-test-support/src/conversation_replay_tests.rs`
+- `crates/codegen/xai-grok-test-support/src/env.rs`
+- `crates/codegen/xai-grok-test-support/src/headless.rs`
+- `crates/codegen/xai-grok-test-support/src/leader.rs`
+- `crates/codegen/xai-grok-test-support/src/lib.rs`
+- `crates/codegen/xai-grok-test-support/src/mock_server.rs`
+- `crates/codegen/xai-grok-test-support/src/sandbox.rs`
+- `crates/codegen/xai-grok-test-support/src/telemetry_events.rs`
+- `crates/codegen/xai-grok-test-support/src/tools.rs`
+- `crates/codegen/xai-grok-tools/src/lib.rs`
+- `crates/codegen/xai-grok-tools/src/sandbox_launch_tests.rs`
+- `crates/codegen/xai-grok-version/src/lib.rs`
+- `crates/codegen/xai-grok-workspace-daemon/src/preview_supervisor.rs`
+- `crates/codegen/xai-grok-workspace-types/src/lib.rs`
+- `crates/codegen/xai-grok-workspace/src/activity.rs`
+- `crates/codegen/xai-grok-workspace/src/envrc.rs`
+- `crates/codegen/xai-grok-workspace/src/folder_trust.rs`
+- `crates/codegen/xai-grok-workspace/src/handle.rs`
+- `crates/codegen/xai-grok-workspace/src/handle_tests.rs`
+- `crates/codegen/xai-grok-workspace/src/image_capabilities.rs`
+- `crates/codegen/xai-grok-workspace/src/path_virtualization.rs`
+- `crates/codegen/xai-grok-workspace/src/sandbox_mode_tests.rs`
+- `crates/codegen/xai-grok-workspace/src/status_config.rs`
+- `crates/codegen/xai-tty-utils/src/lib.rs`
+- `crates/common/xai-test-utils/src/env.rs`
+- `crates/common/xai-tool-protocol/src/bot_relay.rs`
+- `crates/common/xai-tool-protocol/src/lib.rs`
+- `crates/codegen/xai-grok-agent/src/plugins/hooks_adapter.rs`
+- `crates/codegen/xai-grok-agent/src/plugins/install_registry.rs`
+- `crates/codegen/xai-grok-agent/src/plugins/local_refresh.rs`
+- `crates/codegen/xai-grok-config/src/mcp_servers/json_config_tests.rs`
+- `crates/codegen/xai-grok-hooks/src/runner/command.rs`
+- `crates/codegen/xai-grok-hooks/src/runner/http.rs`
+- `crates/codegen/xai-grok-login/src/manager/lock_tests.rs`
+- `crates/codegen/xai-grok-login/src/manager/sleep_gate.rs`
+- `crates/codegen/xai-grok-login/src/refresh/external_refresher.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/src/bin/scroll_matrix.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/src/scroll_matrix/cells.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/src/scroll_matrix/invariants.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/src/scroll_matrix/log.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/src/scroll_matrix/mod.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/src/scroll_matrix/report.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/src/scroll_matrix/runner.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/auto_wake_cancel_preserves_queued_user_prompt.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/bash_mode_file_completion_shell_like.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/bash_mode_tab_completion_dropdown.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/common.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/critical_announcement_session_banner_pty.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/dashboard_preview_setting.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/embedded_mode_boots_without_hanging_on_blocked_backend.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/feedback_modal_pty.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/managed_policy_gate_refusal_reaches_real_terminal.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/scroll_debug_hud_env_toggles_overlay.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/storage_upload_parks_on_401_and_drains_after_recovery.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/subscription_watch_and_gate_verify_pty.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/word_select_tip_on_double_click_pty.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/wrap_osc52_sink_env_advertised_through_shell.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/writer_blocked_tty_keeps_loop_alive.rs`
+- `crates/codegen/xai-grok-pager-render/src/appearance/config.rs`
+- `crates/codegen/xai-grok-pager-render/src/clipboard/mod.rs`
+- `crates/codegen/xai-grok-pager-render/src/input/mouse.rs`
+- `crates/codegen/xai-grok-pager-render/src/input/scroll_log.rs`
+- `crates/codegen/xai-grok-pager-render/src/render/draw.rs`
+- `crates/codegen/xai-grok-pager/src/acp/mod.rs`
+- `crates/codegen/xai-grok-pager/src/app/actions.rs`
+- `crates/codegen/xai-grok-pager/src/app/app_view.rs`
+- `crates/codegen/xai-grok-pager/src/app/cli.rs`
+- `crates/codegen/xai-grok-pager/src/app/display_refresh_startup.rs`
+- `crates/codegen/xai-grok-pager/src/app/event_loop.rs`
+- `crates/codegen/xai-grok-pager/src/app/exit_timeout.rs`
+- `crates/codegen/xai-grok-pager/src/app/mod.rs`
+- `crates/codegen/xai-grok-pager/src/app/prompt_ack.rs`
+- `crates/codegen/xai-grok-pager/src/app/session_startup.rs`
+- `crates/codegen/xai-grok-pager/src/app/subscription.rs`
+- `crates/codegen/xai-grok-pager/src/notifications/hooks.rs`
+- `crates/codegen/xai-grok-pager/src/views/fps_hud.rs`
+- `crates/codegen/xai-grok-pager/src/views/prompt_suggestion.rs`
+- `crates/codegen/xai-grok-pager/src/views/scroll_debug_hud.rs`
+- `crates/codegen/xai-grok-sampler/tests/support/mod.rs`
+- `crates/codegen/xai-grok-shell-base/src/util/changelog.rs`
+- `crates/codegen/xai-grok-shell/src/agent/app.rs`
+- `crates/codegen/xai-grok-shell/src/agent/auth_method.rs`
+- `crates/codegen/xai-grok-shell/src/agent/config.rs`
+- `crates/codegen/xai-grok-shell/src/agent/config_tests.rs`
+- `crates/codegen/xai-grok-shell/src/agent/folder_trust.rs`
+- `crates/codegen/xai-grok-shell/src/config/mod.rs`
+- `crates/codegen/xai-grok-shell/src/config/tests.rs`
+- `crates/codegen/xai-grok-shell/src/extensions/billing.rs`
+- `crates/codegen/xai-grok-shell/src/inspect/mod.rs`
+- `crates/codegen/xai-grok-shell/src/leader/lock.rs`
+- `crates/codegen/xai-grok-shell/src/leader/mod.rs`
+- `crates/codegen/xai-grok-shell/src/sampling/error.rs`
+- `crates/codegen/xai-grok-shell/src/session/acp_session.rs`
+- `crates/codegen/xai-grok-shell/src/session/compaction.rs`
+- `crates/codegen/xai-grok-shell/src/session/compaction_two_pass_prefire_helper_tests.rs`
+- `crates/codegen/xai-grok-shell/src/session/goal_classifier.rs`
+- `crates/codegen/xai-grok-shell/src/session/goal_classifier_tests.rs`
+- `crates/codegen/xai-grok-shell/src/session/managed_mcp.rs`
+- `crates/codegen/xai-grok-shell/src/session/tool_index_tests.rs`
+- `crates/codegen/xai-grok-shell/tests/acp_harness/mod.rs`
+- `crates/codegen/xai-grok-shell/tests/subagent_sweep_support/mod.rs`
+- `crates/codegen/xai-grok-telemetry/src/logs/debug_log.rs`
+- `crates/codegen/xai-grok-telemetry/src/logs/hooks_log.rs`
+- `crates/codegen/xai-grok-telemetry/src/logs/memory_log.rs`
+- `crates/codegen/xai-grok-telemetry/src/logs/sampling_log.rs`
+- `crates/codegen/xai-grok-telemetry/src/spans/instrumentation.rs`
+- `crates/codegen/xai-grok-telemetry/src/spans/span_profile.rs`
+- `crates/codegen/xai-grok-telemetry/src/spans/startup.rs`
+- `crates/codegen/xai-grok-tools/src/util/env.rs`
+- `crates/codegen/xai-grok-tools/src/util/mcp_truncate.rs`
+- `crates/codegen/xai-grok-tools/src/util/mod.rs`
+- `crates/codegen/xai-grok-workspace/src/bin/workspace_server.rs`
+- `crates/codegen/xai-grok-workspace/src/session/checkpoint.rs`
+- `crates/codegen/xai-grok-workspace/src/session/git.rs`
+- `crates/codegen/xai-grok-workspace/src/session/mod.rs`
+- `crates/codegen/xai-grok-workspace/src/session/tool_config.rs`
+- `crates/codegen/xai-grok-pager-pty-harness/tests/pty_e2e/minimal/minimal_transcript_pager_restore_no_artifacts.rs`
+- `crates/codegen/xai-grok-pager-render/src/input/mouse/tests.rs`
+- `crates/codegen/xai-grok-pager/src/app/acp_handler/settings.rs`
+- `crates/codegen/xai-grok-pager/src/app/agent_view/paste.rs`
+- `crates/codegen/xai-grok-pager/src/app/agent_view/prompt.rs`
+- `crates/codegen/xai-grok-pager/src/app/agent_view/shell_completion.rs`
+- `crates/codegen/xai-grok-pager/src/app/effects/helpers.rs`
+- `crates/codegen/xai-grok-pager/src/app/leader_cluster/mod.rs`
+- `crates/codegen/xai-grok-pager/src/slash/commands/usage.rs`
+- `crates/codegen/xai-grok-pager/src/views/dashboard/mod.rs`
+- `crates/codegen/xai-grok-pager/src/views/suggestion_controller/mod.rs`
+- `crates/codegen/xai-grok-pager/src/views/welcome/workspace_mode.rs`
+- `crates/codegen/xai-grok-sandbox/src/command/backend/seatbelt_tests.rs`
+- `crates/codegen/xai-grok-shell/src/agent/mvp_agent/acp_agent.rs`
+- `crates/codegen/xai-grok-shell/src/agent/mvp_agent/agent_ops.rs`
+- `crates/codegen/xai-grok-shell/src/agent/mvp_agent/test_hooks.rs`
+- `crates/codegen/xai-grok-shell/src/agent/mvp_agent/tests.rs`
+- `crates/codegen/xai-grok-shell/src/agent/subagent/spawn.rs`
+- `crates/codegen/xai-grok-shell/src/extensions/suggest/file_provider.rs`
+- `crates/codegen/xai-grok-shell/src/session/acp_session_impl/goal_support.rs`
+- `crates/codegen/xai-grok-shell/src/session/acp_session_impl/length_salvage.rs`
+- `crates/codegen/xai-grok-shell/src/session/acp_session_impl/spawn_runtime_containment_tests.rs`
+- `crates/codegen/xai-grok-shell/src/session/acp_session_tests/parallel_dispatch_tests.rs`
+- `crates/codegen/xai-grok-shell/src/session/unified_list/mod.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/hints.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/mcp_reenable.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/permissions.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/persist_tests.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/tips.rs`
+- `crates/codegen/xai-grok-tools/src/computer/local/embedded_search_tools.rs`
+- `crates/codegen/xai-grok-tools/src/computer/local/shell_state.rs`
+- `crates/codegen/xai-grok-tools/src/computer/local/shell_state_cli_facing_unchanged_tests.rs`
+- `crates/codegen/xai-grok-tools/src/computer/local/static_shell.rs`
+- `crates/codegen/xai-grok-tools/src/computer/local/terminal.rs`
+- `crates/codegen/xai-grok-tools/src/computer/local/terminal_cli_facing_unchanged_tests.rs`
+- `crates/codegen/xai-grok-pager/src/app/dispatch/tests/dashboard.rs`
+- `crates/codegen/xai-grok-pager/src/app/dispatch/tests/mod.rs`
+- `crates/codegen/xai-grok-pager/src/app/dispatch/tests/prompt.rs`
+- `crates/codegen/xai-grok-shell/src/session/acp_session_impl/extensions/idle_prompt.rs`
+- `crates/codegen/xai-grok-shell/src/session/acp_session_tests/turn/length_salvage_tests.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/resolve/auto_mode.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/resolve/compaction.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/resolve/display_refresh.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/resolve/features.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/resolve/flags.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/resolve/mcp.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/resolve/request_compression.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/resolve/system_prompt.rs`
+- `crates/codegen/xai-grok-shell/src/util/config/resolve/toolset.rs`
+- `crates/codegen/xai-grok-tools/src/implementations/grok_build/bash/mod.rs`
+- `crates/codegen/xai-grok-tools/src/implementations/grok_build/grep/ripgrep.rs`
+- `crates/codegen/xai-grok-tools/src/implementations/grok_build/task/admission.rs`
+- `crates/codegen/xai-grok-tools/src/implementations/grok_build/task/admission_tests.rs`
+- `crates/codegen/xai-grok-pager/src/app/dispatch/tests/session/lifecycle.rs`
+- `crates/codegen/xai-grok-pager/src/app/dispatch/tests/session/optimistic_home.rs`

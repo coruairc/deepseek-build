@@ -38,8 +38,8 @@ async fn wheel_overscroll_at_bottom_reengages_follow_mid_stream() {
         CHUNK_DELAY,
         &[
             ("TERM_PROGRAM", "zed"),
-            ("GROK_SCROLL_MODE", "wheel"),
-            ("GROK_SCROLL_LINES", "1"),
+            ("DEEPSEEK_BUILD_SCROLL_MODE", "wheel"),
+            ("DEEPSEEK_BUILD_SCROLL_LINES", "1"),
         ],
     )
     .await;

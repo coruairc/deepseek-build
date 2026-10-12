@@ -272,7 +272,7 @@ class IsolatedEnv:
             sys.exit(1)
         env = os.environ.copy()
         env["HOME"] = self.fake_home
-        env["GROK_MEMORY"] = "1"
+        env["DEEPSEEK_BUILD_MEMORY"] = "1"
         env["RUST_LOG"] = "warn"
         # Disable leader mode
         env["GROK_NO_LEADER"] = "1"
@@ -919,7 +919,7 @@ def test_memory_disabled():
 enabled = false
 """)
         env.write_global_memory("# Should not be indexed\n")
-        client = env.spawn_agent(extra_env={"GROK_MEMORY": "0"})
+        client = env.spawn_agent(extra_env={"DEEPSEEK_BUILD_MEMORY": "0"})
         init_session(client)
         time.sleep(2)
 
@@ -949,7 +949,7 @@ def test_memory_disabled_no_config():
         # Config with no memory section at all
         env.write_config("")
         env.write_global_memory("# Should not be indexed\n")
-        client = env.spawn_agent(extra_env={"GROK_MEMORY": "0"})
+        client = env.spawn_agent(extra_env={"DEEPSEEK_BUILD_MEMORY": "0"})
         init_session(client)
         time.sleep(2)
 
@@ -965,22 +965,22 @@ def test_memory_disabled_no_config():
 
 
 def test_memory_enabled_env_override():
-    """GROK_MEMORY=1 env var enables memory even without config."""
-    section("13. GROK_MEMORY Env Var Override")
+    """DEEPSEEK_BUILD_MEMORY=1 env var enables memory even without config."""
+    section("13. DEEPSEEK_BUILD_MEMORY Env Var Override")
     env = IsolatedEnv()
     try:
         # Config enables memory
         env.write_config(INDEXING_ONLY_CONFIG)
         env.write_global_memory("# Env test content\n* Key value here\n")
-        client = env.spawn_agent(extra_env={"GROK_MEMORY": "1"})
+        client = env.spawn_agent(extra_env={"DEEPSEEK_BUILD_MEMORY": "1"})
         init_session(client)
         time.sleep(3)
 
         db = env.get_db_path()
         if db:
-            ok("index created with GROK_MEMORY=1")
+            ok("index created with DEEPSEEK_BUILD_MEMORY=1")
         else:
-            fail("no index despite GROK_MEMORY=1 and config enabled")
+            fail("no index despite DEEPSEEK_BUILD_MEMORY=1 and config enabled")
 
         client.close()
     finally:
@@ -1350,7 +1350,7 @@ def test_multiple_workspace_isolation():
         binary = os.environ.get("GROK_BINARY", "grok")
         env_vars = os.environ.copy()
         env_vars["HOME"] = env1.fake_home
-        env_vars["GROK_MEMORY"] = "1"
+        env_vars["DEEPSEEK_BUILD_MEMORY"] = "1"
         env_vars["RUST_LOG"] = "warn"
         env_vars["GROK_NO_LEADER"] = "1"
         proc2 = subprocess.Popen(

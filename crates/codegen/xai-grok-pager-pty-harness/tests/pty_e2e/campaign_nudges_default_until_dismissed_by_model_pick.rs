@@ -30,7 +30,7 @@ async fn campaign_nudges_default_until_dismissed_by_model_pick() {
 
     // The env var stands in for a remotely served campaign; it nudges new sessions to CAMPAIGN_MODEL
     let campaign_env = (
-        "GROK_CAMPAIGNS_OVERRIDE".to_string(),
+        "DEEPSEEK_BUILD_CAMPAIGNS_OVERRIDE".to_string(),
         format!(r#"[{{"id":"{CAMPAIGN_ID}","models":{{"default":"{CAMPAIGN_MODEL}"}}}}]"#),
     );
     let binary = pager_binary().expect("resolve pager binary");

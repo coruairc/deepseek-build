@@ -844,10 +844,10 @@ mod tests {
     }
 
     // -- deepseek-build login --legacy regression coverage ------------------------ `deepseek-build login --legacy` produces a GrokAuth with `auth_mode: WebLogin`, `oidc_issuer: None`, and no `expires_at` (30-day hardcoded TTL)
-    // When this token is in the `GROK_AUTH` env var (or the legacy scope fallback in auth.json), `AuthManager::new` returns it from `current()`
+    // When this token is in the `DEEPSEEK_BUILD_AUTH` env var (or the legacy scope fallback in auth.json), `AuthManager::new` returns it from `current()`
     // That feeds `has_cached_token = true` into `build_auth_methods`, which puts `cached_token` first `startup_auth_metadata()` then returns `needs_login = false`: legacy users get frictionless auth, no login screen This test pins the env-var path (highest priority in AuthManager) end-to-end
 
-    /// END-TO-END REGRESSION TEST for a legacy auth token (WebLogin, no expires_at) in the `GROK_AUTH` env var with no other auth available.
+    /// END-TO-END REGRESSION TEST for a legacy auth token (WebLogin, no expires_at) in the `DEEPSEEK_BUILD_AUTH` env var with no other auth available.
     /// `AuthManager` MUST load it and `build_auth_methods` must advertise `cached_token` first.
     /// The pager therefore skips the login screen (frictionless legacy auth).
     #[test]
@@ -874,10 +874,10 @@ mod tests {
             ..GrokAuth::test_default()
         };
 
-        // Provide it via the GROK_AUTH env var (highest priority code path in AuthManager::new)
+        // Provide it via the DEEPSEEK_BUILD_AUTH env var (highest priority code path in AuthManager::new)
         // This is the "legacy auth token exists in the env" case with no other auth
         let legacy_json = serde_json::to_string(&legacy_token).expect("serialize legacy token");
-        let _g = EnvGuard::set("GROK_AUTH", &legacy_json);
+        let _g = EnvGuard::set("DEEPSEEK_BUILD_AUTH", &legacy_json);
 
         // AuthManager picks it up from the env var directly (no file needed).
         let dir = tempfile::tempdir().unwrap();
@@ -886,7 +886,7 @@ mod tests {
         let current = mgr.current();
         assert!(
             current.is_some(),
-            "legacy token in GROK_AUTH env MUST be loaded directly -- if this fails, \
+            "legacy token in DEEPSEEK_BUILD_AUTH env MUST be loaded directly -- if this fails, \
              users with legacy auth in env would be sent to the login screen",
         );
         assert_eq!(
@@ -937,7 +937,7 @@ mod tests {
     fn no_legacy_token_means_no_cached_token_advertised() {
         use xai_grok_login::{AuthManager, GrokComConfig};
 
-        let _g1 = EnvGuard::unset("GROK_AUTH");
+        let _g1 = EnvGuard::unset("DEEPSEEK_BUILD_AUTH");
         let _g2 = EnvGuard::unset("GROK_AUTH_PATH");
 
         let dir = tempfile::tempdir().unwrap();

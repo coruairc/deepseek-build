@@ -108,14 +108,14 @@ terminal focused. Older compositors may require deepseek-build to remain focused
 the copy message appears. deepseek-build shows a startup warning when this applies; run
 `/doctor` for the detected status and steps.
 
-`GROK_CLIPBOARD_NO_DATA_CONTROL=1` is an advanced fallback that disables the
+`DEEPSEEK_BUILD_CLIPBOARD_NO_DATA_CONTROL=1` is an advanced fallback that disables the
 data-control route. Copies then use command-line clipboard tools.
 
 #### OSC 52 kill switch
 
 deepseek-build emits OSC 52 on Linux and across tmux, SSH, or displayless containers when
 that route is enabled. A terminal that does not implement OSC 52 may display the
-encoded payload as text. Set `GROK_CLIPBOARD_NO_OSC52=1` before starting deepseek-build to
+encoded payload as text. Set `DEEPSEEK_BUILD_CLIPBOARD_NO_OSC52=1` before starting deepseek-build to
 disable that route. `/doctor` then shows `osc 52 off`; native and tmux routes are
 unchanged.
 
@@ -142,7 +142,7 @@ backup file so you can retrieve the text. Run `/doctor` for other copy options.
 
 Apple Terminal does not support OSC 52, so a remote copy cannot reach the local
 clipboard. Each copy is still saved to a backup file (`~/.deepseek-build/last-copy.txt` by
-default; override with `GROK_COPY_FILE`); the toast names that path when delivery
+default; override with `DEEPSEEK_BUILD_COPY_FILE`); the toast names that path when delivery
 is unverified or the clipboard is unreachable. You can also use `/copy <file>` or
 `/minimal`.
 
@@ -254,7 +254,7 @@ macOS microphone access passively when macOS supplies silence.
 
 On macOS, each dictation uses a short-lived capture helper process so the audio
 stack's memory is released when capture ends. If the helper itself may be the
-problem, set `GROK_VOICE_CAPTURE=inprocess` to use the in-process fallback for
+problem, set `DEEPSEEK_BUILD_VOICE_CAPTURE=inprocess` to use the in-process fallback for
 comparison.
 
 ### Byobu with GNU screen

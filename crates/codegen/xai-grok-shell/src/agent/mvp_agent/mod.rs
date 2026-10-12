@@ -722,7 +722,7 @@ pub struct MvpAgent {
     /// Shared plugin registry handle.
     pub(crate) plugin_registry_handle: xai_grok_agent::plugins::SharedPluginRegistryHandle,
     /// One-shot guard for the lazy launch-dir population of `plugin_registry_handle`. Boot-time plugin discovery is deferred past ACP `initialize`, so the shared snapshot starts empty.
-    /// The walk (cwd to git root, plus user and marketplace dirs) stalled grok-desktop's first `initialize`.
+    /// The walk (cwd to git root, plus user and marketplace dirs) stalled deepseek-build-desktop's first `initialize`.
     /// It is built once on the first session-creating call via [`Self::ensure_plugin_registry`]; this flag keeps that to a single discovery walk.
     plugin_registry_initialized: std::cell::Cell<bool>,
     /// Single-flight guard for [`spawn_post_unblock_jwt_and_catalog_retry`]. After a free-to-paid unblock the JWT may still lack a `tier` claim for several seconds.
@@ -1048,7 +1048,7 @@ pub(crate) fn resolve_subagent_rate_limit_max_attempts(
 }
 pub(crate) fn subagent_rate_limit_max_attempts_env() -> Option<u32> {
     parse_subagent_rate_limit_max_attempts(
-        std::env::var("GROK_SUBAGENT_RATE_LIMIT_MAX_ATTEMPTS").ok().as_deref(),
+        std::env::var("DEEPSEEK_BUILD_SUBAGENT_RATE_LIMIT_MAX_ATTEMPTS").ok().as_deref(),
     )
 }
 /// Empty is unset; an invalid value (non-numeric, negative, or overflowing `u32`) is ignored with one warning per spawn.
@@ -1063,7 +1063,7 @@ fn parse_subagent_rate_limit_max_attempts(raw: Option<&str>) -> Option<u32> {
         Err(_) => {
             tracing::warn!(
                 value,
-                "ignoring invalid GROK_SUBAGENT_RATE_LIMIT_MAX_ATTEMPTS"
+                "ignoring invalid DEEPSEEK_BUILD_SUBAGENT_RATE_LIMIT_MAX_ATTEMPTS"
             );
             None
         }

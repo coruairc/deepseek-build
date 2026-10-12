@@ -253,7 +253,7 @@ run_dsb() {
   HOME="$HOME_DIR" \
   DEEPSEEK_BUILD_HOME="$DSH" \
   GROK_AUTO_COMPACT_THRESHOLD_PERCENT=1 \
-  GROK_WEB_FETCH=1 \
+  DEEPSEEK_BUILD_WEB_FETCH=1 \
   EGRESS_LOG="$EGRESS_LOG" \
   LD_PRELOAD="$WORK/egress_log.so" \
   TERM=dumb \
@@ -515,7 +515,7 @@ SB_PROMPT="Use the shell tool (run_terminal_cmd) to run: echo sandbox-probe. The
 HOME="$HOME_DIR" \
 DEEPSEEK_BUILD_HOME="$DSH" \
 GROK_AUTO_COMPACT_THRESHOLD_PERCENT=1 \
-GROK_WEB_FETCH=1 \
+DEEPSEEK_BUILD_WEB_FETCH=1 \
 BIN="$BIN" \
 TERM=dumb \
 timeout "$SANDBOX_TIMEOUT" "$REPO_ROOT/scripts/sandbox-run.sh" \

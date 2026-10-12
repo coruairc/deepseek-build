@@ -164,23 +164,32 @@ fn subagent_permission_mode_precedence() {
     }
 }
 #[test]
-fn inject_url_derived_headers_adds_proxy_headers_for_cli_chat_proxy_url() {
-    let mut headers = IndexMap::new();
-    inject_url_derived_headers(&mut headers, None, crate::env::PROD_CLI_CHAT_PROXY_BASE_URL);
-    assert_eq!(
-        headers.get("X-XAI-Token-Auth").map(String::as_str),
-        Some("xai-grok-cli")
-    );
-    assert_eq!(
-        headers.get("x-authenticateresponse").map(String::as_str),
-        Some("authenticate-response")
-    );
-    assert_eq!(
-        headers
-            .get(crate::http::CLIENT_MODE_HEADER)
-            .map(String::as_str),
-        Some(crate::http::process_client_mode())
-    );
+fn inject_url_derived_headers_never_carry_legacy_proxy_auth() {
+    // The xAI model-proxy middleware is gone; neither the prod proxy URL nor a
+    // loopback URL may attach its legacy auth headers to model traffic.
+    for base in [
+        crate::env::PROD_CLI_CHAT_PROXY_BASE_URL,
+        "https://api.deepseek.com",
+        "http://127.0.0.1:8123",
+    ] {
+        let mut headers = IndexMap::new();
+        inject_url_derived_headers(&mut headers, None, base);
+        assert!(
+            !headers.contains_key("X-XAI-Token-Auth"),
+            "legacy token header sent to {base}"
+        );
+        assert!(
+            !headers.contains_key("x-authenticateresponse"),
+            "legacy response header sent to {base}"
+        );
+        assert_eq!(
+            headers
+                .get(crate::http::CLIENT_MODE_HEADER)
+                .map(String::as_str),
+            Some(crate::http::process_client_mode()),
+            "client mode header missing for {base}"
+        );
+    }
 }
 #[test]
 fn inject_url_derived_headers_preserves_caller_extra_headers() {
@@ -191,18 +200,15 @@ fn inject_url_derived_headers_preserves_caller_extra_headers() {
         headers.get("x-custom-byok").map(String::as_str),
         Some("value")
     );
-    assert_eq!(
-        headers.get("X-XAI-Token-Auth").map(String::as_str),
-        Some("xai-grok-cli")
-    );
+    assert!(!headers.contains_key("X-XAI-Token-Auth"));
 }
 #[test]
 fn inject_url_derived_headers_does_not_overwrite_existing_entries() {
     let mut headers = IndexMap::new();
-    headers.insert("X-XAI-Token-Auth".to_string(), "caller-set".to_string());
+    headers.insert("x-custom-byok".to_string(), "caller-set".to_string());
     inject_url_derived_headers(&mut headers, None, crate::env::PROD_CLI_CHAT_PROXY_BASE_URL);
     assert_eq!(
-        headers.get("X-XAI-Token-Auth").map(String::as_str),
+        headers.get("x-custom-byok").map(String::as_str),
         Some("caller-set"),
     );
 }
@@ -2821,7 +2827,7 @@ fn login_device_flow_reads_from_config() {
 #[test]
 fn force_login_team_uuid_parses_string_and_array() {
     use xai_grok_login::ForceLoginTeam;
-    let _g = crate::env::EnvVarGuard::remove("GROK_FORCE_LOGIN_TEAM_ID");
+    let _g = crate::env::EnvVarGuard::remove("DEEPSEEK_BUILD_FORCE_LOGIN_TEAM_ID");
     assert!(
         xai_grok_login::force_login_team_from_requirements().is_none(),
         "clear the force_login_team_uuid pin in requirements.toml to run this test",
@@ -2873,7 +2879,7 @@ fn force_login_team_uuid_parses_string_and_array() {
 #[test]
 fn force_login_team_id_env_overrides_user_config() {
     use xai_grok_login::ForceLoginTeam;
-    let _guard = crate::env::EnvVarGuard::set("GROK_FORCE_LOGIN_TEAM_ID", "env-team");
+    let _guard = crate::env::EnvVarGuard::set("DEEPSEEK_BUILD_FORCE_LOGIN_TEAM_ID", "env-team");
     assert!(
         xai_grok_login::force_login_team_from_requirements().is_none(),
         "clear the force_login_team_uuid pin in requirements.toml to run this test",
@@ -2900,7 +2906,7 @@ fn force_login_team_id_env_overrides_user_config() {
 #[test]
 fn force_login_team_id_env_unset_keeps_config_value() {
     use xai_grok_login::ForceLoginTeam;
-    let _guard = crate::env::EnvVarGuard::remove("GROK_FORCE_LOGIN_TEAM_ID");
+    let _guard = crate::env::EnvVarGuard::remove("DEEPSEEK_BUILD_FORCE_LOGIN_TEAM_ID");
     assert!(
         xai_grok_login::force_login_team_from_requirements().is_none(),
         "clear the force_login_team_uuid pin in requirements.toml to run this test",
@@ -3180,19 +3186,19 @@ fn e2e_acp_model_info_no_dedup_on_model_field() {
 /// Gated behind `#[serial]`.
 fn unset_endpoint_env_vars() {
     for k in [
-        "GROK_CLI_CHAT_PROXY_BASE_URL",
-        "GROK_XAI_API_BASE_URL",
-        "GROK_FEEDBACK_BASE_URL",
-        "GROK_TRACE_UPLOAD_URL",
+        "DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL",
+        "DEEPSEEK_BUILD_XAI_API_BASE_URL",
+        "DEEPSEEK_BUILD_FEEDBACK_BASE_URL",
+        "DEEPSEEK_BUILD_TRACE_UPLOAD_URL",
         "GROK_MANAGED_CONFIG_URL",
-        "GROK_MODELS_BASE_URL",
-        "GROK_MODELS_LIST_URL",
+        "DEEPSEEK_BUILD_MODELS_BASE_URL",
+        "DEEPSEEK_BUILD_MODELS_LIST_URL",
         "OTEL_EXPORTER_OTLP_ENDPOINT",
         "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
         "OTEL_EXPORTER_OTLP_HEADERS",
         "GROK_INTERNAL_OTLP_TRACES_ENDPOINT",
         "GROK_INTERNAL_OTLP_HEADERS",
-        "GROK_EXTERNAL_OTEL",
+        "DEEPSEEK_BUILD_EXTERNAL_OTEL",
     ] {
         unsafe { std::env::remove_var(k) };
     }
@@ -3630,8 +3636,8 @@ fn non_boolean_feature_value_fails_the_load() {
 #[test]
 #[serial]
 fn resolve_title_refresh_defaults_to_turn_summary_but_decouples() {
-    unsafe { std::env::remove_var("GROK_TITLE_REFRESH") };
-    unsafe { std::env::remove_var("GROK_TURN_SUMMARY") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_TITLE_REFRESH") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_TURN_SUMMARY") };
     let r = Config::default().resolve_title_refresh();
     assert!(r.value, "title_refresh defaults to turn_summary (on)");
     let ts_off = Config {
@@ -3658,19 +3664,19 @@ fn resolve_title_refresh_defaults_to_turn_summary_but_decouples() {
         "title_refresh config overrides the turn_summary default"
     );
     assert_eq!(r.source, ConfigSource::Config);
-    unsafe { std::env::set_var("GROK_TITLE_REFRESH", "0") };
+    unsafe { std::env::set_var("DEEPSEEK_BUILD_TITLE_REFRESH", "0") };
     let r = decoupled.resolve_title_refresh();
-    assert!(!r.value, "GROK_TITLE_REFRESH env wins");
+    assert!(!r.value, "DEEPSEEK_BUILD_TITLE_REFRESH env wins");
     assert_eq!(r.source, ConfigSource::Env);
-    unsafe { std::env::remove_var("GROK_TITLE_REFRESH") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_TITLE_REFRESH") };
 }
 /// A `turn_summary` pin lands in the title's default slot, so it moves the title with it.
-/// Only the default slot, so `GROK_TITLE_REFRESH` still outranks it and a user can turn the title back on.
+/// Only the default slot, so `DEEPSEEK_BUILD_TITLE_REFRESH` still outranks it and a user can turn the title back on.
 /// Pinning `title_refresh` is what closes that.
 #[test]
 #[serial]
 fn a_turn_summary_pin_moves_the_title_default_and_the_environment_lifts_it() {
-    let _env = EnvGuard::set("GROK_TURN_SUMMARY", "1");
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_TURN_SUMMARY", "1");
     let mut cfg = Config::default();
     cfg.requirements.pin_feature(
         Feature::TurnSummary,
@@ -3678,13 +3684,13 @@ fn a_turn_summary_pin_moves_the_title_default_and_the_environment_lifts_it() {
         crate::config::RequirementSource::Unknown,
     );
     {
-        let _title = EnvGuard::unset("GROK_TITLE_REFRESH");
+        let _title = EnvGuard::unset("DEEPSEEK_BUILD_TITLE_REFRESH");
         assert!(
             !cfg.resolve_title_refresh().value,
-            "the pin outranks GROK_TURN_SUMMARY, and the title default follows the pin"
+            "the pin outranks DEEPSEEK_BUILD_TURN_SUMMARY, and the title default follows the pin"
         );
     }
-    let _title = EnvGuard::set("GROK_TITLE_REFRESH", "1");
+    let _title = EnvGuard::set("DEEPSEEK_BUILD_TITLE_REFRESH", "1");
     let r = cfg.resolve_title_refresh();
     assert!(r.value, "the environment outranks a derived default");
     assert_eq!(r.source, ConfigSource::Env);
@@ -3694,13 +3700,13 @@ fn a_turn_summary_pin_moves_the_title_default_and_the_environment_lifts_it() {
 #[test]
 #[serial]
 fn a_title_refresh_pin_outranks_the_environment() {
-    let _env = EnvGuard::set("GROK_TITLE_REFRESH", "1");
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_TITLE_REFRESH", "1");
     let mut cfg = Config::default();
     cfg.requirements
         .title_refresh
         .pin(false, crate::config::RequirementSource::Unknown);
     let r = cfg.resolve_title_refresh();
-    assert!(!r.value, "the pin lost to GROK_TITLE_REFRESH");
+    assert!(!r.value, "the pin lost to DEEPSEEK_BUILD_TITLE_REFRESH");
     assert_eq!(r.source, ConfigSource::Requirement);
 }
 #[test]
@@ -3708,7 +3714,7 @@ fn a_title_refresh_pin_outranks_the_environment() {
 fn resolve_long_reasoning_reminder_precedence() {
     use crate::session::long_reasoning_reminder::LongReasoningReminder;
     use crate::util::config::LongReasoningReminderSettings;
-    let _env = EnvGuard::unset("GROK_LONG_REASONING_REMINDER");
+    let _env = EnvGuard::unset("DEEPSEEK_BUILD_LONG_REASONING_REMINDER");
     assert_eq!(
         LongReasoningReminder {
             enabled: false,
@@ -3779,13 +3785,13 @@ fn resolve_long_reasoning_reminder_precedence() {
         toml_on.resolve_long_reasoning_reminder(),
         "TOML true beats a remote false; TOML tokens beat remote, remote delay fills in"
     );
-    let _env = EnvGuard::set("GROK_LONG_REASONING_REMINDER", "0");
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_LONG_REASONING_REMINDER", "0");
     assert!(
         !toml_on.resolve_long_reasoning_reminder().enabled,
         "env kill switch wins over TOML + remote"
     );
     let _env = EnvGuard::set(
-        "GROK_LONG_REASONING_REMINDER",
+        "DEEPSEEK_BUILD_LONG_REASONING_REMINDER",
         r#"{"enabled": true, "tokens": 9000}"#,
     );
     assert_eq!(
@@ -4205,7 +4211,7 @@ fn resolve_goal_remote_settings_kill_switch_overrides_default_on() {
 #[test]
 #[serial]
 fn background_workflows_default_on_without_affecting_goal() {
-    unsafe { std::env::remove_var("GROK_WORKFLOWS") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_WORKFLOWS") };
     let cfg = Config::default();
     let r = cfg.resolve_workflows();
     assert!(r.value);
@@ -4215,7 +4221,7 @@ fn background_workflows_default_on_without_affecting_goal() {
 #[test]
 #[serial]
 fn resolve_workflows_remote_settings_enables() {
-    unsafe { std::env::remove_var("GROK_WORKFLOWS") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_WORKFLOWS") };
     let cfg = Config {
         remote_settings: Some(crate::util::config::RemoteSettings {
             workflows_enabled: Some(true),
@@ -4230,7 +4236,7 @@ fn resolve_workflows_remote_settings_enables() {
 #[test]
 #[serial]
 fn resolve_workflows_remote_false_kills_local_opt_in() {
-    unsafe { std::env::set_var("GROK_WORKFLOWS", "1") };
+    unsafe { std::env::set_var("DEEPSEEK_BUILD_WORKFLOWS", "1") };
     let mut cfg = Config::default();
     cfg.workflows.enabled = Some(true);
     cfg.remote_settings = Some(crate::util::config::RemoteSettings {
@@ -4240,12 +4246,12 @@ fn resolve_workflows_remote_false_kills_local_opt_in() {
     let r = cfg.resolve_workflows();
     assert_eq!(r.source, ConfigSource::Remote);
     assert!(!r.value);
-    unsafe { std::env::remove_var("GROK_WORKFLOWS") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_WORKFLOWS") };
 }
 #[test]
 #[serial]
 fn resolve_workflows_env_wins() {
-    unsafe { std::env::set_var("GROK_WORKFLOWS", "0") };
+    unsafe { std::env::set_var("DEEPSEEK_BUILD_WORKFLOWS", "0") };
     let cfg = Config::default();
     let r = cfg.resolve_workflows();
     assert_eq!(r.source, ConfigSource::Env);
@@ -4253,7 +4259,7 @@ fn resolve_workflows_env_wins() {
         !r.value,
         "env must be able to kill the default-on workflows"
     );
-    unsafe { std::env::remove_var("GROK_WORKFLOWS") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_WORKFLOWS") };
 }
 /// Clear every env var the goal/companion resolvers read so tests start from a known baseline regardless of run order.
 fn clear_goal_envs() {
@@ -5194,7 +5200,6 @@ fn config_accepts_all_known_sections() {
             timeout_secs = 120
             login_shell_capture = true
             [grok_com_config]
-            token_header = "test"
             [auth.oidc]
             issuer = "https://sso.corp.com"
             client_id = "abc123"
@@ -5331,22 +5336,22 @@ fn empty_config() -> toml::Value {
 }
 fn clear_runtime_env_vars() {
     unsafe {
-        std::env::remove_var("GROK_SUBAGENTS");
-        std::env::remove_var("GROK_RESPECT_GITIGNORE");
-        std::env::remove_var("GROK_WEB_SEARCH_MODEL");
+        std::env::remove_var("DEEPSEEK_BUILD_SUBAGENTS");
+        std::env::remove_var("DEEPSEEK_BUILD_RESPECT_GITIGNORE");
+        std::env::remove_var("DEEPSEEK_BUILD_WEB_SEARCH_MODEL");
         std::env::remove_var("GROK_SESSION_SUMMARY_MODEL");
-        std::env::remove_var("GROK_CURSOR_SKILLS_ENABLED");
-        std::env::remove_var("GROK_CURSOR_RULES_ENABLED");
-        std::env::remove_var("GROK_CURSOR_AGENTS_ENABLED");
-        std::env::remove_var("GROK_CLAUDE_SKILLS_ENABLED");
-        std::env::remove_var("GROK_CLAUDE_RULES_ENABLED");
-        std::env::remove_var("GROK_CLAUDE_AGENTS_ENABLED");
+        std::env::remove_var("DEEPSEEK_BUILD_CURSOR_SKILLS_ENABLED");
+        std::env::remove_var("DEEPSEEK_BUILD_CURSOR_RULES_ENABLED");
+        std::env::remove_var("DEEPSEEK_BUILD_CURSOR_AGENTS_ENABLED");
+        std::env::remove_var("DEEPSEEK_BUILD_CLAUDE_SKILLS_ENABLED");
+        std::env::remove_var("DEEPSEEK_BUILD_CLAUDE_RULES_ENABLED");
+        std::env::remove_var("DEEPSEEK_BUILD_CLAUDE_AGENTS_ENABLED");
     }
 }
 fn clear_managed_mcp_env_vars() {
     unsafe {
-        std::env::remove_var("GROK_MANAGED_MCPS_ENABLED");
-        std::env::remove_var("GROK_MANAGED_MCP_GATEWAY_TOOLS_ENABLED");
+        std::env::remove_var("DEEPSEEK_BUILD_MANAGED_MCPS_ENABLED");
+        std::env::remove_var("DEEPSEEK_BUILD_MANAGED_MCP_GATEWAY_TOOLS_ENABLED");
     }
 }
 fn isolate_compat_env() -> Vec<EnvGuard> {
@@ -5563,7 +5568,7 @@ fn resolve_runtime_fields_partial_subagents_table_stays_enabled() {
 #[serial]
 fn resolve_runtime_fields_gitignore_from_env() {
     clear_runtime_env_vars();
-    unsafe { std::env::set_var("GROK_RESPECT_GITIGNORE", "0") };
+    unsafe { std::env::set_var("DEEPSEEK_BUILD_RESPECT_GITIGNORE", "0") };
     let raw = empty_config();
     let mut cfg = Config::new_from_toml_cfg(&raw).unwrap();
     cfg.resolve_runtime_fields(&RuntimeResolutionContext {
@@ -6757,7 +6762,7 @@ fn mcp_liveness_watchers_feature_flag_used_when_no_higher_layer() {
 #[test]
 #[serial]
 fn mcp_auto_restart_default_is_true() {
-    unsafe { std::env::remove_var("GROK_MCP_AUTO_RESTART") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_MCP_AUTO_RESTART") };
     let r = resolve_mcp_auto_restart(None, None, None, None, None);
     assert!(r.value, "recovery is on by default");
     assert_eq!(r.source, ConfigSource::Default);
@@ -6765,7 +6770,7 @@ fn mcp_auto_restart_default_is_true() {
 #[test]
 #[serial]
 fn mcp_auto_restart_requirement_wins_over_everything() {
-    unsafe { std::env::set_var("GROK_MCP_AUTO_RESTART", "false") };
+    unsafe { std::env::set_var("DEEPSEEK_BUILD_MCP_AUTO_RESTART", "false") };
     let r = resolve_mcp_auto_restart(
         Some(true),
         Some(false),
@@ -6773,16 +6778,16 @@ fn mcp_auto_restart_requirement_wins_over_everything() {
         Some(false),
         Some(false),
     );
-    unsafe { std::env::remove_var("GROK_MCP_AUTO_RESTART") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_MCP_AUTO_RESTART") };
     assert!(r.value);
     assert_eq!(r.source, ConfigSource::Requirement);
 }
 #[test]
 #[serial]
 fn mcp_auto_restart_env_wins_over_config_and_below() {
-    unsafe { std::env::set_var("GROK_MCP_AUTO_RESTART", "true") };
+    unsafe { std::env::set_var("DEEPSEEK_BUILD_MCP_AUTO_RESTART", "true") };
     let r = resolve_mcp_auto_restart(None, None, Some(false), Some(false), Some(false));
-    unsafe { std::env::remove_var("GROK_MCP_AUTO_RESTART") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_MCP_AUTO_RESTART") };
     assert!(r.value);
     assert_eq!(r.source, ConfigSource::Env);
 }
@@ -6831,7 +6836,7 @@ fn turn_transient_retry_env_wins_over_config() {
 #[test]
 #[serial]
 fn mcp_push_server_status_default_is_true() {
-    unsafe { std::env::remove_var("GROK_MCP_PUSH_SERVER_STATUS") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS") };
     let r = resolve_mcp_push_server_status(None, None, None, None, None);
     assert!(r.value, "default-on by spec");
     assert_eq!(r.source, ConfigSource::Default);
@@ -6839,35 +6844,35 @@ fn mcp_push_server_status_default_is_true() {
 #[test]
 #[serial]
 fn mcp_push_server_status_requirement_wins_over_everything() {
-    unsafe { std::env::set_var("GROK_MCP_PUSH_SERVER_STATUS", "true") };
+    unsafe { std::env::set_var("DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS", "true") };
     let r =
         resolve_mcp_push_server_status(Some(false), Some(true), Some(true), Some(true), Some(true));
-    unsafe { std::env::remove_var("GROK_MCP_PUSH_SERVER_STATUS") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS") };
     assert!(!r.value, "requirement overrides every other layer");
     assert_eq!(r.source, ConfigSource::Requirement);
 }
 #[test]
 #[serial]
 fn mcp_push_server_status_cli_wins_over_env_and_below() {
-    unsafe { std::env::set_var("GROK_MCP_PUSH_SERVER_STATUS", "true") };
+    unsafe { std::env::set_var("DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS", "true") };
     let r = resolve_mcp_push_server_status(None, Some(false), Some(true), Some(true), Some(true));
-    unsafe { std::env::remove_var("GROK_MCP_PUSH_SERVER_STATUS") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS") };
     assert!(!r.value);
     assert_eq!(r.source, ConfigSource::Cli);
 }
 #[test]
 #[serial]
 fn mcp_push_server_status_env_wins_over_config_and_below() {
-    unsafe { std::env::set_var("GROK_MCP_PUSH_SERVER_STATUS", "false") };
+    unsafe { std::env::set_var("DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS", "false") };
     let r = resolve_mcp_push_server_status(None, None, Some(true), Some(true), Some(true));
-    unsafe { std::env::remove_var("GROK_MCP_PUSH_SERVER_STATUS") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS") };
     assert!(!r.value);
     assert_eq!(r.source, ConfigSource::Env);
 }
 #[test]
 #[serial]
 fn mcp_push_server_status_config_wins_over_managed_and_feature_flag() {
-    unsafe { std::env::remove_var("GROK_MCP_PUSH_SERVER_STATUS") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS") };
     let r = resolve_mcp_push_server_status(None, None, Some(false), Some(true), Some(true));
     assert!(!r.value);
     assert_eq!(r.source, ConfigSource::Config);
@@ -6875,7 +6880,7 @@ fn mcp_push_server_status_config_wins_over_managed_and_feature_flag() {
 #[test]
 #[serial]
 fn mcp_push_server_status_managed_wins_over_feature_flag() {
-    unsafe { std::env::remove_var("GROK_MCP_PUSH_SERVER_STATUS") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS") };
     let r = resolve_mcp_push_server_status(None, None, None, Some(false), Some(true));
     assert!(!r.value);
     assert_eq!(r.source, ConfigSource::ManagedConfig);
@@ -6883,7 +6888,7 @@ fn mcp_push_server_status_managed_wins_over_feature_flag() {
 #[test]
 #[serial]
 fn mcp_push_server_status_feature_flag_used_when_no_higher_layer() {
-    unsafe { std::env::remove_var("GROK_MCP_PUSH_SERVER_STATUS") };
+    unsafe { std::env::remove_var("DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS") };
     let r = resolve_mcp_push_server_status(None, None, None, None, Some(false));
     assert!(!r.value);
     assert_eq!(r.source, ConfigSource::Remote);
@@ -6958,7 +6963,7 @@ fn mcp_recursive_config_watch_feature_flag_used_when_no_higher_layer() {
 #[serial_test::serial(remote_sig_disarm)]
 fn remote_settings_disarm_managed_config_signatures() {
     let prod = crate::env::PROD_CLI_CHAT_PROXY_BASE_URL;
-    let _env = crate::env::EnvVarGuard::remove("GROK_CLI_CHAT_PROXY_BASE_URL");
+    let _env = crate::env::EnvVarGuard::remove("DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL");
     xai_grok_config::signed_policy::apply_remote_managed_config_signature_verification(
         Some(true),
         true,
@@ -7082,7 +7087,7 @@ fn remote_settings_disarm_requires_prod_proxy_when_keys_embedded() {
         managed_config_signature_verification: Some(false),
         ..Default::default()
     };
-    let env = crate::env::EnvVarGuard::remove("GROK_CLI_CHAT_PROXY_BASE_URL");
+    let env = crate::env::EnvVarGuard::remove("DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL");
     apply_remote_settings_side_effects(Some(&settings), prod);
     assert!(
         !xai_grok_config::signed_policy::verification_active(),

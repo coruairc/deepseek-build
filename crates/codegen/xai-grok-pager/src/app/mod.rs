@@ -184,7 +184,7 @@ pub(crate) fn minimal_mode_active() -> bool {
 pub(crate) fn set_minimal_mode_active_for_test(on: bool) {
     MINIMAL_MODE_ACTIVE.store(on, Ordering::Release);
 }
-/// Whether the opt-in mouse-reporting toggle feature is enabled (`[ui] mouse_reporting_toggle` / `GROK_MOUSE_REPORTING_TOGGLE`).
+/// Whether the opt-in mouse-reporting toggle feature is enabled (`[ui] mouse_reporting_toggle` / `DEEPSEEK_BUILD_MOUSE_REPORTING_TOGGLE`).
 /// Seeded once at startup; gates both the `Ctrl+R` shortcut registration and the `/toggle-mouse-reporting` slash command's visibility/execution.
 pub(crate) static MOUSE_REPORTING_TOGGLE_ENABLED: AtomicBool = AtomicBool::new(false);
 /// Read the cached opt-in mouse-reporting toggle flag (see [`MOUSE_REPORTING_TOGGLE_ENABLED`]).
@@ -206,7 +206,7 @@ pub(crate) fn dock_requirement_pin() -> Option<bool> {
 pub(crate) fn dock_config_value() -> Option<bool> {
     dock_flag_in(&xai_grok_shell::config::load_effective_config().ok()?)
 }
-/// Registry precedence: pin, `GROK_DOCK` / `GROK_DOCK_V2`, config, remote `dock_enabled`, default off.
+/// Registry precedence: pin, `DEEPSEEK_BUILD_DOCK` / `GROK_DOCK_V2`, config, remote `dock_enabled`, default off.
 pub(crate) fn resolve_dock_enabled(remote: Option<bool>) -> bool {
     use xai_grok_shell::agent::config::{Feature, FeatureSources};
     let mut sources = FeatureSources::from_process_env(Feature::Dock);
@@ -232,7 +232,7 @@ fn terminal_theme_requirement_pin() -> Option<bool> {
 fn terminal_theme_config_value() -> Option<bool> {
     terminal_theme_flag_in(&xai_grok_shell::config::load_effective_config().ok()?)
 }
-/// Registry precedence: pin, `GROK_TERMINAL_THEME`, config, remote `terminal_theme_enabled`, default off.
+/// Registry precedence: pin, `DEEPSEEK_BUILD_TERMINAL_THEME`, config, remote `terminal_theme_enabled`, default off.
 pub(crate) fn resolve_terminal_theme_enabled(remote: Option<bool>) -> bool {
     use xai_grok_shell::agent::config::{Feature, FeatureSources};
     let mut sources = FeatureSources::from_process_env(Feature::TerminalTheme);
@@ -737,7 +737,7 @@ pub async fn run(mut args: PagerArgs) -> anyhow::Result<bool> {
         } => original_cwd.clone(),
         _ => None,
     };
-    let env_hunk_tracker_mode = std::env::var("GROK_HUNK_TRACKER").ok();
+    let env_hunk_tracker_mode = std::env::var("DEEPSEEK_BUILD_HUNK_TRACKER").ok();
     let config_hunk_tracker_mode = raw_config
         .get("ui")
         .and_then(|ui| ui.get("hunk_tracker_mode"))
@@ -1764,49 +1764,60 @@ mod tests {
     }
     #[test]
     fn cli_leader_and_no_leader_conflict() {
-        let result = try_parse_pager(&["grok-pager", "--leader", "--no-leader"]);
+        let result = try_parse_pager(&["deepseek-build-pager", "--leader", "--no-leader"]);
         assert!(result.is_err());
     }
     #[test]
     fn cli_leader_flag_parses() {
-        let args = try_parse_pager(&["grok-pager", "--leader"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--leader"]).unwrap();
         assert!(args.leader);
         assert!(!args.no_leader);
     }
     #[test]
     fn cli_no_leader_flag_parses() {
-        let args = try_parse_pager(&["grok-pager", "--no-leader"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--no-leader"]).unwrap();
         assert!(!args.leader);
         assert!(args.no_leader);
     }
     #[test]
     fn cli_hidden_memory_compat_flags_parse_and_collapse() {
-        let enabled = try_parse_pager(&["grok-pager", "--experimental-memory"]).unwrap();
+        let enabled = try_parse_pager(&["deepseek-build-pager", "--experimental-memory"]).unwrap();
         assert_eq!(enabled.memory_enabled_override(), Some(true));
         assert_eq!(
             enabled.memory_override_flag(),
             Some("--experimental-memory")
         );
-        let disabled = try_parse_pager(&["grok-pager", "--no-memory"]).unwrap();
+        let disabled = try_parse_pager(&["deepseek-build-pager", "--no-memory"]).unwrap();
         assert_eq!(disabled.memory_enabled_override(), Some(false));
         assert_eq!(disabled.memory_override_flag(), Some("--no-memory"));
-        let deferred = try_parse_pager(&["grok-pager"]).unwrap();
+        let deferred = try_parse_pager(&["deepseek-build-pager"]).unwrap();
         assert_eq!(deferred.memory_enabled_override(), None);
         assert_eq!(deferred.memory_override_flag(), None);
     }
     #[test]
     fn cli_hidden_memory_compat_flags_conflict() {
-        assert!(try_parse_pager(&["grok-pager", "--experimental-memory", "--no-memory"]).is_err());
+        assert!(
+            try_parse_pager(&[
+                "deepseek-build-pager",
+                "--experimental-memory",
+                "--no-memory"
+            ])
+            .is_err()
+        );
     }
     #[test]
     fn cli_memory_flush_flag_parses() {
-        let args = try_parse_pager(&["grok-pager", "--memory-flush"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--memory-flush"]).unwrap();
         assert!(args.memory_flush);
-        assert!(!try_parse_pager(&["grok-pager"]).unwrap().memory_flush);
+        assert!(
+            !try_parse_pager(&["deepseek-build-pager"])
+                .unwrap()
+                .memory_flush
+        );
     }
     #[test]
     fn cli_neither_leader_flag_defaults_false() {
-        let args = try_parse_pager(&["grok-pager"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager"]).unwrap();
         assert!(!args.leader);
         assert!(!args.no_leader);
     }
@@ -1820,13 +1831,13 @@ mod tests {
     /// clap accepts top-level --leader with agent subcommand, so main() must reject the combination at runtime.
     #[test]
     fn cli_top_level_leader_with_agent_subcommand_parses_flag() {
-        let args = try_parse_pager(&["grok-pager", "--leader", "agent"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--leader", "agent"]).unwrap();
         assert!(args.leader);
         assert!(matches!(args.command, Some(Command::Agent(_))));
     }
     #[test]
     fn cli_top_level_no_leader_with_agent_subcommand_parses_flag() {
-        let args = try_parse_pager(&["grok-pager", "--no-leader", "agent"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--no-leader", "agent"]).unwrap();
         assert!(args.no_leader);
         assert!(matches!(args.command, Some(Command::Agent(_))));
     }
@@ -1887,73 +1898,74 @@ mod tests {
     }
     #[test]
     fn cli_resume_parses_session_id() {
-        let args = try_parse_pager(&["grok-pager", "--resume", "abc-123"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--resume", "abc-123"]).unwrap();
         assert_eq!(args.session_to_resume(), Some("abc-123"));
     }
     #[test]
     fn cli_short_r_parses_session_id() {
-        let args = try_parse_pager(&["grok-pager", "-r", "abc-123"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "-r", "abc-123"]).unwrap();
         assert_eq!(args.session_to_resume(), Some("abc-123"));
     }
     #[test]
     fn cli_load_alias_parses_session_id() {
-        let args = try_parse_pager(&["grok-pager", "--load", "abc-123"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--load", "abc-123"]).unwrap();
         assert_eq!(args.session_to_resume(), Some("abc-123"));
     }
     #[test]
     fn cli_resume_preferred_over_load() {
-        let mut args = try_parse_pager(&["grok-pager", "--resume", "from-resume"]).unwrap();
+        let mut args =
+            try_parse_pager(&["deepseek-build-pager", "--resume", "from-resume"]).unwrap();
         args.load_session = Some("from-load".into());
         assert_eq!(args.session_to_resume(), Some("from-resume"));
     }
     #[test]
     fn cli_continue_flag_parses() {
-        let args = try_parse_pager(&["grok-pager", "--continue"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--continue"]).unwrap();
         assert!(args.continue_last_session);
         assert_eq!(args.session_to_resume(), None);
     }
     #[test]
     fn cli_continue_short_c_parses() {
-        let args = try_parse_pager(&["grok-pager", "-c"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "-c"]).unwrap();
         assert!(args.continue_last_session);
     }
     #[test]
     fn cli_resume_no_id_sets_empty_sentinel() {
-        let args = try_parse_pager(&["grok-pager", "--resume"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--resume"]).unwrap();
         assert_eq!(args.resume_session.as_deref(), Some(""));
         assert!(args.resume_most_recent());
         assert_eq!(args.session_to_resume(), None);
     }
     #[test]
     fn cli_short_r_no_id_sets_empty_sentinel() {
-        let args = try_parse_pager(&["grok-pager", "-r"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "-r"]).unwrap();
         assert_eq!(args.resume_session.as_deref(), Some(""));
         assert!(args.resume_most_recent());
     }
     #[test]
     fn cli_resume_with_id_is_not_most_recent() {
-        let args = try_parse_pager(&["grok-pager", "--resume", "abc-123"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--resume", "abc-123"]).unwrap();
         assert!(!args.resume_most_recent());
         assert_eq!(args.session_to_resume(), Some("abc-123"));
     }
     #[test]
     fn cli_no_resume_is_not_most_recent() {
-        let args = try_parse_pager(&["grok-pager"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager"]).unwrap();
         assert!(!args.resume_most_recent());
     }
     #[test]
     fn cli_continue_conflicts_with_resume() {
-        let result = try_parse_pager(&["grok-pager", "--continue", "--resume", "abc"]);
+        let result = try_parse_pager(&["deepseek-build-pager", "--continue", "--resume", "abc"]);
         assert!(result.is_err());
     }
     #[test]
     fn cli_continue_conflicts_with_load() {
-        let result = try_parse_pager(&["grok-pager", "--continue", "--load", "abc"]);
+        let result = try_parse_pager(&["deepseek-build-pager", "--continue", "--load", "abc"]);
         assert!(result.is_err());
     }
     #[test]
     fn cli_no_session_flags_defaults() {
-        let args = try_parse_pager(&["grok-pager"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager"]).unwrap();
         assert!(!args.continue_last_session);
         assert!(args.worktree.is_none());
         assert_eq!(args.session_to_resume(), None);
@@ -1962,17 +1974,21 @@ mod tests {
     /// Without the optional feature the flag must not exist at all: a stable binary given that flag fails clap parsing instead of silently ignoring.
     #[test]
     fn cli_chat_flag_rejected_without_feature() {
-        assert!(try_parse_pager(&["grok-pager", "--chat"]).is_err());
+        assert!(try_parse_pager(&["deepseek-build-pager", "--chat"]).is_err());
     }
     #[cfg(feature = "local-workspace")]
     #[test]
     fn cli_local_workspace_attach_requires_chat() {
         assert!(
-            try_parse_pager(&["grok-pager", "--local-workspace-attach=srv"]).is_err(),
+            try_parse_pager(&["deepseek-build-pager", "--local-workspace-attach=srv"]).is_err(),
             "attach without --chat must clap-error"
         );
-        let args =
-            try_parse_pager(&["grok-pager", "--chat", "--local-workspace-attach=srv"]).unwrap();
+        let args = try_parse_pager(&[
+            "deepseek-build-pager",
+            "--chat",
+            "--local-workspace-attach=srv",
+        ])
+        .unwrap();
         assert_eq!(args.local_workspace_attach(), Some("srv"));
     }
     #[cfg(feature = "local-workspace")]
@@ -1980,7 +1996,7 @@ mod tests {
     fn cli_local_workspace_own_conflicts_with_attach() {
         assert!(
             try_parse_pager(&[
-                "grok-pager",
+                "deepseek-build-pager",
                 "--chat",
                 "--local-workspace=/tmp/a",
                 "--local-workspace-attach=srv",
@@ -1992,9 +2008,11 @@ mod tests {
     #[cfg(feature = "local-workspace")]
     #[test]
     fn cli_local_workspace_cwd_requires_chat() {
-        assert!(try_parse_pager(&["grok-pager", "--local-workspace-cwd=/tmp/a"]).is_err());
+        assert!(
+            try_parse_pager(&["deepseek-build-pager", "--local-workspace-cwd=/tmp/a"]).is_err()
+        );
         let args = try_parse_pager(&[
-            "grok-pager",
+            "deepseek-build-pager",
             "--chat",
             "--local-workspace-attach=srv",
             "--local-workspace-cwd=/tmp/repo",
@@ -2007,9 +2025,11 @@ mod tests {
     }
     #[test]
     fn cli_local_workspace_flags_rejected_without_feature() {
-        assert!(try_parse_pager(&["grok-pager", "--local-workspace-attach=srv"]).is_err());
-        assert!(try_parse_pager(&["grok-pager", "--local-workspace"]).is_err());
-        assert!(try_parse_pager(&["grok-pager", "--local-workspace-cwd=/tmp"]).is_err());
+        assert!(
+            try_parse_pager(&["deepseek-build-pager", "--local-workspace-attach=srv"]).is_err()
+        );
+        assert!(try_parse_pager(&["deepseek-build-pager", "--local-workspace"]).is_err());
+        assert!(try_parse_pager(&["deepseek-build-pager", "--local-workspace-cwd=/tmp"]).is_err());
     }
     #[test]
     fn chat_mode_leader_guard_truth_table() {
@@ -2026,49 +2046,50 @@ mod tests {
     }
     #[test]
     fn cli_worktree_flag_parses() {
-        let args = try_parse_pager(&["grok-pager", "--worktree"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--worktree"]).unwrap();
         assert_eq!(args.worktree.as_deref(), Some(""));
     }
     #[test]
     fn cli_worktree_short_w_parses() {
-        let args = try_parse_pager(&["grok-pager", "-w"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "-w"]).unwrap();
         assert_eq!(args.worktree.as_deref(), Some(""));
     }
     #[test]
     fn cli_worktree_with_label() {
-        let args = try_parse_pager(&["grok-pager", "-w", "my-label"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "-w", "my-label"]).unwrap();
         assert_eq!(args.worktree.as_deref(), Some("my-label"));
     }
     #[test]
     fn cli_worktree_long_with_label() {
-        let args = try_parse_pager(&["grok-pager", "--worktree", "fix-bug"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--worktree", "fix-bug"]).unwrap();
         assert_eq!(args.worktree.as_deref(), Some("fix-bug"));
     }
     #[test]
     fn cli_worktree_with_empty_string() {
-        let args = try_parse_pager(&["grok-pager", "-w", ""]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "-w", ""]).unwrap();
         assert_eq!(args.worktree.as_deref(), Some(""));
     }
     #[test]
     fn cli_worktree_with_resume_parses() {
-        let args = try_parse_pager(&["grok-pager", "-w", "--resume", "abc"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "-w", "--resume", "abc"]).unwrap();
         assert_eq!(args.worktree.as_deref(), Some(""));
         assert_eq!(args.session_to_resume(), Some("abc"));
     }
     #[test]
     fn cli_worktree_label_with_resume() {
-        let args = try_parse_pager(&["grok-pager", "-w", "my-label", "--resume", "abc"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "-w", "my-label", "--resume", "abc"])
+            .unwrap();
         assert_eq!(args.worktree.as_deref(), Some("my-label"));
         assert_eq!(args.session_to_resume(), Some("abc"));
     }
     #[test]
     fn cli_worktree_default_none() {
-        let args = try_parse_pager(&["grok-pager"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager"]).unwrap();
         assert!(args.worktree.is_none());
     }
     #[test]
     fn cli_session_id_parses() {
-        let args = try_parse_pager(&["grok-pager", "--session-id", "my-id"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--session-id", "my-id"]).unwrap();
         assert_eq!(args.session_id.as_deref(), Some("my-id"));
         assert!(matches!(
             args.session_startup_intent().unwrap(),
@@ -2077,38 +2098,45 @@ mod tests {
     }
     #[test]
     fn cli_session_id_short_s_parses() {
-        let args = try_parse_pager(&["grok-pager", "-s", "my-id"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "-s", "my-id"]).unwrap();
         assert_eq!(args.session_id.as_deref(), Some("my-id"));
     }
     #[test]
     fn cli_session_id_with_resume_requires_fork() {
-        let args = try_parse_pager(&["grok-pager", "-s", "a", "--resume", "b"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "-s", "a", "--resume", "b"]).unwrap();
         assert!(args.session_startup_intent().is_err());
     }
     #[test]
     fn cli_session_id_with_continue_requires_fork() {
-        let args = try_parse_pager(&["grok-pager", "-s", "a", "--continue"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "-s", "a", "--continue"]).unwrap();
         assert!(args.session_startup_intent().is_err());
     }
     #[test]
     fn cli_session_id_with_resume_and_fork_ok() {
-        let args =
-            try_parse_pager(&["grok-pager", "-s", "a", "--resume", "b", "--fork-session"]).unwrap();
+        let args = try_parse_pager(&[
+            "deepseek-build-pager",
+            "-s",
+            "a",
+            "--resume",
+            "b",
+            "--fork-session",
+        ])
+        .unwrap();
         assert!(args.session_startup_intent().is_ok());
     }
     #[test]
     fn cli_session_id_default_none() {
-        let args = try_parse_pager(&["grok-pager"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager"]).unwrap();
         assert!(args.session_id.is_none());
     }
     #[test]
     fn cli_no_alt_screen_flag_parses() {
-        let args = try_parse_pager(&["grok-pager", "--no-alt-screen"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "--no-alt-screen"]).unwrap();
         assert!(args.no_alt_screen);
     }
     #[test]
     fn cli_no_alt_screen_default_false() {
-        let args = try_parse_pager(&["grok-pager"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager"]).unwrap();
         assert!(!args.no_alt_screen);
     }
     #[test]
@@ -2137,12 +2165,12 @@ mod tests {
     #[test]
     fn cli_completions_parses() {
         use clap_complete::Shell;
-        let args = try_parse_pager(&["grok-pager", "completions", "zsh"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "completions", "zsh"]).unwrap();
         assert!(matches!(
             args.command,
             Some(Command::Completions { shell: Shell::Zsh })
         ));
-        let args = try_parse_pager(&["grok-pager", "completions", "bash"]).unwrap();
+        let args = try_parse_pager(&["deepseek-build-pager", "completions", "bash"]).unwrap();
         assert!(matches!(
             args.command,
             Some(Command::Completions { shell: Shell::Bash })

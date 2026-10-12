@@ -171,7 +171,7 @@ fn plugin_inline_stdio_expands_plugin_root() {
             "mcpServers": {
                 "echo-mcp": {
                     "command": "python3",
-                    "args": ["${GROK_PLUGIN_ROOT}/mcp-echo-server.py"]
+                    "args": ["${DEEPSEEK_BUILD_PLUGIN_ROOT}/mcp-echo-server.py"]
                 }
             }
         })),

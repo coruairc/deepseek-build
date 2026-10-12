@@ -96,7 +96,7 @@ fn slash_command_tags_from_toml(root: &TomlValue) -> std::collections::HashMap<S
     out
 }
 
-/// Parse a `GROK_SLASH_COMMAND_TAGS` payload (a JSON object of string values) into a name-to-tag map.
+/// Parse a `DEEPSEEK_BUILD_SLASH_COMMAND_TAGS` payload (a JSON object of string values) into a name-to-tag map.
 fn parse_slash_command_tags_json(raw: Option<&str>) -> std::collections::HashMap<String, String> {
     // Unset or empty/whitespace-only is the normal "no override" state, not an error
     let Some(raw) = raw.map(str::trim).filter(|s| !s.is_empty()) else {
@@ -107,7 +107,7 @@ fn parse_slash_command_tags_json(raw: Option<&str>) -> std::collections::HashMap
         Err(e) => {
             tracing::warn!(
                 error = %e,
-                "ignoring malformed GROK_SLASH_COMMAND_TAGS; expected a JSON object of string values"
+                "ignoring malformed DEEPSEEK_BUILD_SLASH_COMMAND_TAGS; expected a JSON object of string values"
             );
             std::collections::HashMap::new()
         }
@@ -115,7 +115,11 @@ fn parse_slash_command_tags_json(raw: Option<&str>) -> std::collections::HashMap
 }
 
 fn slash_command_tags_from_env() -> std::collections::HashMap<String, String> {
-    parse_slash_command_tags_json(std::env::var("GROK_SLASH_COMMAND_TAGS").ok().as_deref())
+    parse_slash_command_tags_json(
+        std::env::var("DEEPSEEK_BUILD_SLASH_COMMAND_TAGS")
+            .ok()
+            .as_deref(),
+    )
 }
 
 /// Remote is the base, local `[slash_command_tags]` overrides it, and env wins.
@@ -143,7 +147,7 @@ fn resolve_slash_command_tags_with_env(
 }
 
 /// Resolve per-command slash-dropdown tags.
-/// Remote settings are the base, local `[slash_command_tags]` overrides them, and the `GROK_SLASH_COMMAND_TAGS` env var wins.
+/// Remote settings are the base, local `[slash_command_tags]` overrides them, and the `DEEPSEEK_BUILD_SLASH_COMMAND_TAGS` env var wins.
 pub fn resolve_slash_command_tags(
     effective_config: &TomlValue,
     remote: Option<&std::collections::BTreeMap<String, String>>,
@@ -217,7 +221,7 @@ mod tests {
         assert_eq!(s.tips, Some(vec!["a".to_string(), "b".to_string()]));
     }
 
-    // Hermetic: drive the resolver through `_with_env` with an EXPLICIT env map so ambient `GROK_SLASH_COMMAND_TAGS` can't affect these assertions
+    // Hermetic: drive the resolver through `_with_env` with an EXPLICIT env map so ambient `DEEPSEEK_BUILD_SLASH_COMMAND_TAGS` can't affect these assertions
     #[test]
     fn resolve_slash_command_tags_local_overrides_remote_per_key() {
         let mut remote = std::collections::BTreeMap::new();

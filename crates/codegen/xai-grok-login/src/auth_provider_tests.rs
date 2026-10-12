@@ -740,13 +740,13 @@ async fn provider_output_over_cap_fails_closed() {
 #[tokio::test]
 async fn provider_helper_env_scrubs_first_party_credentials() {
     const EXPECTED: &[&str] = &[
-        "GROK_AUTH",
+        "DEEPSEEK_BUILD_AUTH",
         "GROK_AUTH_PATH",
         "XAI_API_KEY",
-        "GROK_DEPLOYMENT_KEY",
+        "DEEPSEEK_BUILD_DEPLOYMENT_KEY",
         "GROK_CODE_XAI_API_KEY",
         "GROK_EXTRA_AUTH_KEY",
-        "GROK_TRACE_UPLOAD_CREDENTIALS_FILE",
+        "DEEPSEEK_BUILD_TRACE_UPLOAD_CREDENTIALS_FILE",
         "OTEL_EXPORTER_OTLP_HEADERS",
         "GROK_INTERNAL_OTLP_HEADERS",
     ];

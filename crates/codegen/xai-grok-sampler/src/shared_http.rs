@@ -18,18 +18,20 @@ pub(crate) use mtls::client as mtls_client;
 static SHARED_H2: OnceLock<reqwest::Client> = OnceLock::new();
 static SHARED_HTTP1: OnceLock<reqwest::Client> = OnceLock::new();
 
-/// Kill switch: `GROK_SAMPLER_SHARED_CLIENT=0` (or `false`, any case) builds a fresh `reqwest::Client` per `SamplingClient` instead.
+/// Kill switch: `DEEPSEEK_BUILD_SAMPLER_SHARED_CLIENT=0` (or `false`, any case) builds a fresh `reqwest::Client` per `SamplingClient` instead.
 /// Resolved once per process: the environment cannot change externally after spawn.
 /// Latching keeps the rollback consistent with the pool knobs, which are also read only once.
 fn sharing_disabled() -> bool {
     static DISABLED: OnceLock<bool> = OnceLock::new();
     *DISABLED.get_or_init(|| {
-        let disabled = match std::env::var("GROK_SAMPLER_SHARED_CLIENT") {
+        let disabled = match std::env::var("DEEPSEEK_BUILD_SAMPLER_SHARED_CLIENT") {
             Ok(v) => v == "0" || v.eq_ignore_ascii_case("false"),
             Err(_) => false,
         };
         if disabled {
-            tracing::info!("sampler HTTP client sharing disabled via GROK_SAMPLER_SHARED_CLIENT");
+            tracing::info!(
+                "sampler HTTP client sharing disabled via DEEPSEEK_BUILD_SAMPLER_SHARED_CLIENT"
+            );
         }
         disabled
     })

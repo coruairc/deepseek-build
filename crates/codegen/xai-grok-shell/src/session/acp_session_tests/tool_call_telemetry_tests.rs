@@ -272,7 +272,7 @@ fn product_event<'a>(rows: &'a [Value], invocation_id: &str) -> &'a Value {
     rows.iter()
         .find(|event| {
             event.get("event_name").and_then(Value::as_str)
-                == Some("grok-shell-tool_call_completed")
+                == Some("deepseek-build-tool_call_completed")
                 && event
                     .get("event_metadata")
                     .and_then(|metadata| metadata.get("invocation_id"))

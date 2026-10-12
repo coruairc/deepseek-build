@@ -498,7 +498,7 @@ pub fn sweep_env_init() -> SweepEnv {
         std::env::set_var("DEEPSEEK_BUILD_HOME", grok_home.path());
         std::env::set_var("DEEPSEEK_API_KEY", "test-key-for-ci");
         std::env::set_var("GROK_TELEMETRY_ENABLED", "false");
-        std::env::set_var("GROK_FEEDBACK_ENABLED", "false");
+        std::env::set_var("DEEPSEEK_BUILD_FEEDBACK_ENABLED", "false");
         std::env::set_var("GROK_TRACE_UPLOAD", "false");
     }
     SweepEnv {
@@ -516,8 +516,8 @@ pub fn burst_on_fresh_mock(env: &SweepEnv, n: usize, isolation: &str) -> BurstOu
         .block_on(MockInferenceServer::start())
         .expect("mock server");
     unsafe {
-        std::env::set_var("GROK_CLI_CHAT_PROXY_BASE_URL", server.url());
-        std::env::set_var("GROK_XAI_API_BASE_URL", server.url());
+        std::env::set_var("DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL", server.url());
+        std::env::set_var("DEEPSEEK_BUILD_XAI_API_BASE_URL", server.url());
     }
     let outcome = run_burst(&server, n, isolation, env.deadline);
     std::thread::sleep(Duration::from_secs(1));

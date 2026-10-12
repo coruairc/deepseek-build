@@ -3,10 +3,10 @@ use std::str::FromStr;
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// Environment override for the mode, above every config file.
-pub const SANDBOX_MODE_ENV: &str = "GROK_SANDBOX_MODE";
+pub const SANDBOX_MODE_ENV: &str = "DEEPSEEK_BUILD_SANDBOX_MODE";
 
 /// Rollout mode of the per-command sandbox. Resolved per workspace by [`SandboxMode::resolve`]:
-/// `GROK_SANDBOX_MODE`, then the remote rollout switch, then `<grok_home>/workspaced.toml`, then
+/// `DEEPSEEK_BUILD_SANDBOX_MODE`, then the remote rollout switch, then `<grok_home>/workspaced.toml`, then
 /// the default (`Off`); the workspace's `.grok/workspaced.toml` may only tighten the result. On a
 /// host with no sandbox backend the result is then subject to [`ResolvedSandboxMode::on_host`].
 ///
@@ -328,7 +328,7 @@ impl ResolvedSandboxMode {
             requested = <&str>::from(self.mode),
             source = <&str>::from(self.source),
             "the rollout switch asks for enforce but this host has no sandbox backend: running \
-             off; a developer's own enforce (GROK_SANDBOX_MODE or workspaced.toml) would refuse \
+             off; a developer's own enforce (DEEPSEEK_BUILD_SANDBOX_MODE or workspaced.toml) would refuse \
              every command instead"
         );
         ResolvedSandboxMode {

@@ -66,12 +66,12 @@ struct Row {
 }
 
 fn committed_markdown_path() -> PathBuf {
-    if let Some(path) = std::env::var_os("GROK_CONFIG_REFERENCE_MD") {
+    if let Some(path) = std::env::var_os("DEEPSEEK_BUILD_CONFIG_REFERENCE_MD") {
         return PathBuf::from(path);
     }
     let root = find_monorepo_root().unwrap_or_else(|| {
         panic!(
-            "committed config-reference user-guide not found; set GROK_CONFIG_REFERENCE_MD or run from the monorepo (CARGO_MANIFEST_DIR={})",
+            "committed config-reference user-guide not found; set DEEPSEEK_BUILD_CONFIG_REFERENCE_MD or run from the monorepo (CARGO_MANIFEST_DIR={})",
             env!("CARGO_MANIFEST_DIR")
         )
     });
@@ -112,7 +112,7 @@ fn load_markdown() -> String {
 }
 
 fn agents_md_path() -> PathBuf {
-    if let Some(path) = std::env::var_os("GROK_CONFIG_DOCS_AGENTS_MD") {
+    if let Some(path) = std::env::var_os("DEEPSEEK_BUILD_CONFIG_DOCS_AGENTS_MD") {
         return PathBuf::from(path);
     }
     let crate_agents = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("AGENTS.md");
@@ -121,7 +121,7 @@ fn agents_md_path() -> PathBuf {
     }
     let root = find_monorepo_root().unwrap_or_else(|| {
         panic!(
-            "xai-grok-shell AGENTS.md not found; set GROK_CONFIG_DOCS_AGENTS_MD or run from the monorepo (CARGO_MANIFEST_DIR={})",
+            "xai-grok-shell AGENTS.md not found; set DEEPSEEK_BUILD_CONFIG_DOCS_AGENTS_MD or run from the monorepo (CARGO_MANIFEST_DIR={})",
             env!("CARGO_MANIFEST_DIR")
         )
     });
@@ -372,8 +372,8 @@ mod tests {
                     | "features.image_edit"
             ) {
                 assert!(
-                    !row.details.contains("GROK_CONFIG"),
-                    "{} must not claim GROK_CONFIG",
+                    !row.details.contains("DEEPSEEK_BUILD_CONFIG"),
+                    "{} must not claim DEEPSEEK_BUILD_CONFIG",
                     row.key
                 );
             }

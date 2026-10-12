@@ -572,8 +572,8 @@ url = "https://denied.corp.com/mcp"
         let exe = std::env::current_exe().expect("current_exe");
         let mut cmd = std::process::Command::new(exe);
         cmd.env("DEEPSEEK_BUILD_HOME", grok_home.path())
-            .env_remove("GROK_CONFIG")
-            .env_remove("GROK_CONFIG_PATH")
+            .env_remove("DEEPSEEK_BUILD_CONFIG")
+            .env_remove("DEEPSEEK_BUILD_CONFIG_PATH")
             .env(UNTRUSTED_DISCOVERY_CHILD, "1")
             .arg("--ignored")
             .arg("--exact")

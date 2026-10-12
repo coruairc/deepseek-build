@@ -76,7 +76,7 @@ deepseek-build agent --always-approve serve --bind 127.0.0.1:2419 --secret <toke
 deepseek-build agent --always-approve serve --bind 127.0.0.1:2419 --secret <token>
 ```
 
-Clients connect over WebSocket and authenticate with the secret token. If you omit `--secret`, the agent prints a generated token at startup, or set `GROK_AGENT_SECRET`. The process keeps state across client reconnects. Permissions match other entry points; see [Permissions and safety](22-permissions-and-safety.md).
+Clients connect over WebSocket and authenticate with the secret token. If you omit `--secret`, the agent prints a generated token at startup, or set `DEEPSEEK_BUILD_AGENT_SECRET`. The process keeps state across client reconnects. Permissions match other entry points; see [Permissions and safety](22-permissions-and-safety.md).
 
 ---
 

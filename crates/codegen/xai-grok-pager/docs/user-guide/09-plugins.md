@@ -292,8 +292,8 @@ Plugin hooks receive two variables beyond the standard hook environment:
 
 | Variable | Description |
 |----------|-------------|
-| `GROK_PLUGIN_ROOT` | Absolute path to the plugin's installed directory. |
-| `GROK_PLUGIN_DATA` | Absolute path to the plugin's writable data directory, for state, caches, and logs. |
+| `DEEPSEEK_BUILD_PLUGIN_ROOT` | Absolute path to the plugin's installed directory. |
+| `DEEPSEEK_BUILD_PLUGIN_DATA` | Absolute path to the plugin's writable data directory, for state, caches, and logs. |
 
 deepseek-build sets these and overrides any same-named value in the hook's `env` map (the `CLAUDE_PLUGIN_ROOT` and `CLAUDE_PLUGIN_DATA` aliases are set too). See the [Hooks guide](10-hooks.md) for every variable passed to hooks.
 

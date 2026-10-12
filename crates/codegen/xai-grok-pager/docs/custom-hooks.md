@@ -135,17 +135,17 @@ For events like `SessionStart` or `Notification`, stdout is ignored. Just exit 0
 
 deepseek-build injects the following variables into every hook process:
 
-- `GROK_HOOK_EVENT`: the event name (e.g. `pre_tool_use`, `session_start`, `post_tool_use`).
-- `GROK_HOOK_NAME`: the full configured name of this hook.
-- `GROK_SESSION_ID`: the current session identifier.
-- `GROK_WORKSPACE_ROOT`: absolute path to the workspace root.
+- `DEEPSEEK_BUILD_HOOK_EVENT`: the event name (e.g. `pre_tool_use`, `session_start`, `post_tool_use`).
+- `DEEPSEEK_BUILD_HOOK_NAME`: the full configured name of this hook.
+- `DEEPSEEK_BUILD_SESSION_ID`: the current session identifier.
+- `DEEPSEEK_BUILD_WORKSPACE_ROOT`: absolute path to the workspace root.
 
 For hooks provided by plugins, the following are also set:
 
-- `GROK_PLUGIN_ROOT`: absolute path to the plugin's installation directory.
-- `GROK_PLUGIN_DATA`: absolute path to the plugin's writable data directory.
+- `DEEPSEEK_BUILD_PLUGIN_ROOT`: absolute path to the plugin's installation directory.
+- `DEEPSEEK_BUILD_PLUGIN_DATA`: absolute path to the plugin's writable data directory.
 
-These runner- and plugin-injected variables always take precedence. Attempts to override the reserved runner keys via the `env` field are stripped at load time (with a warning logged). For plugin hooks, `GROK_PLUGIN_ROOT` and `GROK_PLUGIN_DATA` similarly override any user-supplied values for those keys.
+These runner- and plugin-injected variables always take precedence. Attempts to override the reserved runner keys via the `env` field are stripped at load time (with a warning logged). For plugin hooks, `DEEPSEEK_BUILD_PLUGIN_ROOT` and `DEEPSEEK_BUILD_PLUGIN_DATA` similarly override any user-supplied values for those keys.
 
 ### Custom Environment Variables (`env` field)
 
@@ -166,7 +166,7 @@ Values must be **strings**. JSON numbers and bools currently fail to parse; wrap
 them in quotes if you need them.
 
 For plugin hooks, the plugin adapter additionally injects
-`GROK_PLUGIN_ROOT` and `GROK_PLUGIN_DATA`. These keys override any user-declared
+`DEEPSEEK_BUILD_PLUGIN_ROOT` and `DEEPSEEK_BUILD_PLUGIN_DATA`. These keys override any user-declared
 values for the same names (the plugin contract is non-negotiable).
 
 ### Variable Substitution
@@ -187,8 +187,8 @@ Lookup order for each reference:
 
 If a reference is unset in both, it's **preserved verbatim** (e.g. `${UNSET}`
 stays as the literal string). Runner-injected names (`CLAUDE_PROJECT_DIR`,
-`GROK_WORKSPACE_ROOT`, `GROK_HOOK_EVENT`, `GROK_HOOK_NAME`,
-`GROK_SESSION_ID`) are not taken from the deepseek-build process environment at
+`DEEPSEEK_BUILD_WORKSPACE_ROOT`, `DEEPSEEK_BUILD_HOOK_EVENT`, `DEEPSEEK_BUILD_HOOK_NAME`,
+`DEEPSEEK_BUILD_SESSION_ID`) are not taken from the deepseek-build process environment at
 load. Unix `sh -c` expands them from the child env; Windows PowerShell
 rewrites `$VAR` to `$env:VAR`. HTTP `url` substitutes them at request
 time. Remaining unresolved command refs are refused with "required env
@@ -196,7 +196,7 @@ var(s) not set".
 
 For HTTP hooks specifically, `url` is also re-expanded **at request time**
 (immediately before SSRF validation), so plugin-injected vars like
-`${GROK_PLUGIN_ROOT}/check` resolve against the plugin's actual path.
+`${DEEPSEEK_BUILD_PLUGIN_ROOT}/check` resolve against the plugin's actual path.
 
 #### Parameter-expansion modifiers
 
@@ -267,7 +267,7 @@ The full event envelope is POSTed as JSON. Useful for webhooks, analytics, or se
 - **Hook not running?** Press `Ctrl+L` outside the VS Code family (or run `/hooks` anywhere) to see if it's loaded and matched.
 - **Project hooks ignored?** Trust the project first.
 - **Script not found?** Check the path is relative to the `.json` file and executable (`chmod +x`).
-- **`The argument '/.claude/hooks/….ps1' to the -File parameter does not exist`?** PowerShell treated `$CLAUDE_PROJECT_DIR` as empty. deepseek-build rewrites it to `$env:CLAUDE_PROJECT_DIR` unless `GROK_SHELL=cmd`.
+- **`The argument '/.claude/hooks/….ps1' to the -File parameter does not exist`?** PowerShell treated `$CLAUDE_PROJECT_DIR` as empty. deepseek-build rewrites it to `$env:CLAUDE_PROJECT_DIR` unless `DEEPSEEK_BUILD_SHELL=cmd`.
 - **See errors?** Check the pager logs (usually in the tracing pane or `~/.deepseek-build/logs`).
 
 ## More Examples

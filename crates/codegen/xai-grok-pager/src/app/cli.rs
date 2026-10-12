@@ -444,11 +444,11 @@ pub struct PagerArgs {
     pub rules: Option<String>,
     /// Compaction mode [summary|transcript|segments].
     /// `summary` adds no pointer; `transcript` points at the raw transcript; `segments` (default) persists per-segment markdown to grep.
-    /// Sets `GROK_COMPACTION_MODE`.
+    /// Sets `DEEPSEEK_BUILD_COMPACTION_MODE`.
     #[clap(long = "compaction-mode", value_name = "MODE", hide = true)]
     pub compaction_mode: Option<String>,
     /// Segments verbatim detail [none|minimal|balanced|verbose] (default `verbose`).
-    /// Only affects `--compaction-mode segments`. Sets `GROK_COMPACTION_DETAIL`.
+    /// Only affects `--compaction-mode segments`. Sets `DEEPSEEK_BUILD_COMPACTION_DETAIL`.
     #[clap(long = "compaction-detail", value_name = "DETAIL", hide = true)]
     pub compaction_detail: Option<String>,
     /// Override the agent's system prompt (compat alias: --system-prompt).

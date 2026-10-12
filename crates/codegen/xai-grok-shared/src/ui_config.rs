@@ -81,7 +81,7 @@ pub struct UiConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub render_mermaid: Option<String>,
     /// Hunk-tracker mode the pager advertises to the agent (`agent_only` | `all_dirty` | `off`).
-    /// Written by the pager's settings modal; read at connect time (CLI `--hunk-tracker-mode` / `GROK_HUNK_TRACKER` override it).
+    /// Written by the pager's settings modal; read at connect time (CLI `--hunk-tracker-mode` / `DEEPSEEK_BUILD_HUNK_TRACKER` override it).
     /// Unset defaults to `off`, which disables hunk tracking entirely.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hunk_tracker_mode: Option<String>,
@@ -137,7 +137,7 @@ pub struct UiConfig {
     pub collapsed_edit_blocks: Option<bool>,
     /// Next-prompt suggestions (tab autocomplete ghost text) after each turn.
     /// `None` means on (client default).
-    /// Written by the pager's settings modal; the `GROK_PROMPT_SUGGESTIONS` env var overrides at runtime.
+    /// Written by the pager's settings modal; the `DEEPSEEK_BUILD_PROMPT_SUGGESTIONS` env var overrides at runtime.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_suggestions: Option<bool>,
     /// Startup cursor style: `None` (default) inherits the terminal's own style.

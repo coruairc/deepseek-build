@@ -233,12 +233,12 @@ impl SessionActor {
         if !self.two_pass_active() {
             return PrefireOutcome::Disabled.into();
         }
-        if std::env::var("GROK_DEBUG_TWO_PASS_FAIL_PASS1")
+        if std::env::var("DEEPSEEK_BUILD_DEBUG_TWO_PASS_FAIL_PASS1")
             .is_ok_and(|v| matches!(v.trim(), "1" | "true" | "yes" | "on"))
         {
             tracing::info!(
                 target: "two_pass",
-                "two_pass: DEBUG GROK_DEBUG_TWO_PASS_FAIL_PASS1 — prefire pass1 produces no cache"
+                "two_pass: DEBUG DEEPSEEK_BUILD_DEBUG_TWO_PASS_FAIL_PASS1 — prefire pass1 produces no cache"
             );
             return PrefireOutcome::DebugFailPass1.into();
         }

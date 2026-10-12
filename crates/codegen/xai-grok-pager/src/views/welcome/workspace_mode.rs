@@ -725,7 +725,7 @@ mod apply_tests {
     }
 
     #[test]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ACK)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ACK)]
     fn welcome_local_one_shot_only_when_agents_alive() {
         let _ack = xai_grok_test_support::EnvGuard::set(GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV, "1");
         set_active_local_workspace(None).unwrap();
@@ -754,7 +754,7 @@ mod apply_tests {
     }
 
     #[test]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ACK)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ACK)]
     fn welcome_local_stamps_own_mode() {
         let _ack = xai_grok_test_support::EnvGuard::set(GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV, "1");
         set_active_local_workspace(None).unwrap();
@@ -816,7 +816,7 @@ mod apply_tests {
     }
 
     #[test]
-    #[serial_test::serial(GROK_CHAT_LOCAL_WORKSPACE_ACK)]
+    #[serial_test::serial(DEEPSEEK_BUILD_CHAT_LOCAL_WORKSPACE_ACK)]
     fn local_without_ack_awaits_confirm() {
         let _ack = xai_grok_test_support::EnvGuard::unset(GROK_CHAT_LOCAL_WORKSPACE_ACK_ENV);
         // Isolate the ack file from the developer machine

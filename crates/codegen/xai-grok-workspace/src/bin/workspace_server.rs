@@ -295,7 +295,7 @@ fn main() -> anyhow::Result<()> {
 /// The same binary serves sandbox containers and headless user machines. Only the sandbox launcher
 /// passes a `sandbox_id` in `--metadata`, so that is the opt-in to the sandbox's full catalog and
 /// credential reach; the environment is not a policy input (a `grok --local-workspace` spawned by a
-/// hook or MCP child inherits `GROK_SESSION_ID`). Pickers label the server by the same kind.
+/// hook or MCP child inherits `DEEPSEEK_BUILD_SESSION_ID`). Pickers label the server by the same kind.
 fn host_kind_for(metadata: Option<&serde_json::Value>) -> WorkspaceHostKind {
     let is_sandbox = metadata
         .map(WorkspaceServerMetadata::from_metadata)
@@ -342,14 +342,14 @@ async fn run(
     }
     {
         use xai_grok_sandbox::{ProfileName, SandboxManager};
-        let profile = match std::env::var("GROK_SANDBOX_PROFILE").ok() {
+        let profile = match std::env::var("DEEPSEEK_BUILD_SANDBOX_PROFILE").ok() {
             Some(val) => {
                 let parsed = val
                     .parse::<ProfileName>()
                     .expect("ProfileName::from_str is infallible");
                 if matches!(parsed, ProfileName::Custom(_)) {
                     tracing::warn!(value = %val,
-                        "Unrecognized GROK_SANDBOX_PROFILE, defaulting to workspace");
+                        "Unrecognized DEEPSEEK_BUILD_SANDBOX_PROFILE, defaulting to workspace");
                     ProfileName::Workspace
                 } else {
                     parsed
@@ -360,7 +360,7 @@ async fn run(
         };
         let profile_name = profile.to_string();
         if profile == ProfileName::Off {
-            tracing::info!(profile = %profile_name, "Sandbox explicitly disabled via GROK_SANDBOX_PROFILE=off");
+            tracing::info!(profile = %profile_name, "Sandbox explicitly disabled via DEEPSEEK_BUILD_SANDBOX_PROFILE=off");
         } else {
             let mut sandbox = SandboxManager::new(profile, &cwd);
             if let Err(e) = sandbox.apply(&cwd) {
@@ -390,7 +390,7 @@ async fn run(
         "Starting workspace server"
     );
     let cwd_display = cwd.display().to_string();
-    let session_id = std::env::var("GROK_SESSION_ID").ok();
+    let session_id = std::env::var("DEEPSEEK_BUILD_SESSION_ID").ok();
     let parsed_metadata = match args.metadata {
         Some(json_str) => Some(
             serde_json::from_str(&json_str)

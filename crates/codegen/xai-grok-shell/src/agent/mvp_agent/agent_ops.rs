@@ -314,7 +314,7 @@ impl MvpAgent {
     }
     /// Resolve folder trust and load launch-dir MCP configs after `initialize` returns.
     /// The walks are synchronous and expensive in large monorepos.
-    /// They must not block the ACP response (grok-desktop sends `initialize` immediately).
+    /// They must not block the ACP response (deepseek-build-desktop sends `initialize` immediately).
     pub(super) fn spawn_initialize_launch_mcp_setup(&self) {
         let cwd = self.launch_cwd.clone();
         let compat = self.cfg.borrow().compat_resolved;
@@ -356,7 +356,7 @@ impl MvpAgent {
         self.agent_mcp_state.clone()
     }
     /// Build the launch-dir plugin registry snapshot on first use. Boot-time discovery was deferred past ACP `initialize`, leaving `plugin_registry_handle` empty.
-    /// The cwd-to-git-root and user/marketplace walks stalled grok-desktop's first `initialize`. That shared snapshot still backs the launch-dir plugin MCP/LSP merges read in `resolve_mcp_servers` and the session LSP build.
+    /// The cwd-to-git-root and user/marketplace walks stalled deepseek-build-desktop's first `initialize`. That shared snapshot still backs the launch-dir plugin MCP/LSP merges read in `resolve_mcp_servers` and the session LSP build.
     /// So populate it lazily, off the `initialize` critical path, on the first session-creating call. Runs the discovery walk once; per-session `build_for_cwd` still re-resolves project-scoped plugins for each session's own cwd.
     pub(crate) fn ensure_plugin_registry(&self) {
         if self.plugin_registry_initialized.replace(true) {
@@ -1278,7 +1278,7 @@ impl MvpAgent {
     }
     /// Build the process-lifetime local `WorkspaceOps` on first use.
     /// Deferred past ACP wiring so `initialize` can respond before folder-trust scans and `WorkspaceHandle::new_minimal` run.
-    /// This is the same boot stall as plugin discovery on grok-desktop Windows.
+    /// This is the same boot stall as plugin discovery on deepseek-build-desktop Windows.
     fn ensure_local_workspace_ops(
         &self,
     ) -> Result<xai_grok_workspace::WorkspaceOps, acp::Error> {
@@ -1737,8 +1737,8 @@ impl MvpAgent {
         Ok(Self::with_models(gateway, &cfg, auth_manager, models_manager))
     }
     /// Prepare the web fetch configuration based on feature flags.
-    /// Enabled gate: `disable_web_search` kill-switch > `GROK_WEB_FETCH` env > remote settings `web_fetch_enabled` > default (false).
-    /// Params resolution (TOML > env > remote settings > default): `proxy_endpoint`: `[toolset.web_fetch] proxy_endpoint` > `GROK_WEB_FETCH_PROXY` > remote settings > None `allowed_domains`: `[toolset.web_fetch] allowed_domains` > remote settings > built-in defaults `allow_local`: `[toolset.web_fetch] allow_local` > `GROK_WEB_FETCH_ALLOW_LOCAL` > false
+    /// Enabled gate: `disable_web_search` kill-switch > `DEEPSEEK_BUILD_WEB_FETCH` env > remote settings `web_fetch_enabled` > default (false).
+    /// Params resolution (TOML > env > remote settings > default): `proxy_endpoint`: `[toolset.web_fetch] proxy_endpoint` > `DEEPSEEK_BUILD_WEB_FETCH_PROXY` > remote settings > None `allowed_domains`: `[toolset.web_fetch] allowed_domains` > remote settings > built-in defaults `allow_local`: `[toolset.web_fetch] allow_local` > `DEEPSEEK_BUILD_WEB_FETCH_ALLOW_LOCAL` > false
     pub(super) fn prepare_web_fetch_config(
         &self,
     ) -> xai_grok_tools::implementations::grok_build::web_fetch::WebFetchConfig {
@@ -2698,7 +2698,7 @@ impl MvpAgent {
         model_agent_type: Option<&str>,
     ) -> xai_grok_agent::AgentDefinition {
         use xai_grok_agent::AgentDefinition;
-        let grok_agent_env_set = std::env::var("GROK_AGENT")
+        let grok_agent_env_set = std::env::var("DEEPSEEK_BUILD_AGENT")
             .ok()
             .is_some_and(|s| !s.trim().is_empty());
         let config_agent_explicitly_set = agent_config.name.is_some();
@@ -2773,7 +2773,7 @@ impl MvpAgent {
                 name
             );
         }
-        let agent_name = std::env::var("GROK_AGENT").ok();
+        let agent_name = std::env::var("DEEPSEEK_BUILD_AGENT").ok();
         let resolved = match agent_name.as_deref() {
             Some("browser-use") | Some("browser_use") => AgentDefinition::browser_use(),
             Some("grok-build-concise") | Some("grok_build_concise") => {

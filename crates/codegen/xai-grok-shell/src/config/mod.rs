@@ -45,7 +45,7 @@ fn resolve_standalone_memory_mode(
 }
 /// Configuration for subagent (task tool) support.
 /// Parsed from the `[subagents]` section of `~/.grok/config.toml` or `.grok/config.toml`.
-/// Enabled by default; can be disabled via the `GROK_SUBAGENTS=0` env var or `[subagents] enabled = false` in config.toml.
+/// Enabled by default; can be disabled via the `DEEPSEEK_BUILD_SUBAGENTS=0` env var or `[subagents] enabled = false` in config.toml.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default)]
 pub struct SubagentsConfig {
@@ -244,7 +244,7 @@ impl SubagentsConfig {
         let roles_dir = cwd.join(".grok").join("roles");
         self.discover_roles_in_dir(&roles_dir);
     }
-    pub const ENV_MAX_DEPTH: &'static str = "GROK_SUBAGENTS_MAX_DEPTH";
+    pub const ENV_MAX_DEPTH: &'static str = "DEEPSEEK_BUILD_SUBAGENTS_MAX_DEPTH";
     pub const DEFAULT_MAX_DEPTH: u32 = 1;
     /// Clamp to `1..=u32::MAX`. Values below 1 (including 0 and negatives) warn and become 1 so nesting is never accidentally disabled.
     pub(crate) fn clamp_max_depth(raw: i64, source: &str) -> u32 {
@@ -280,7 +280,7 @@ impl SubagentsConfig {
                 Err(_) => {
                     tracing::warn!(
                         value = %raw,
-                        "invalid GROK_SUBAGENTS_MAX_DEPTH (expected integer); ignoring"
+                        "invalid DEEPSEEK_BUILD_SUBAGENTS_MAX_DEPTH (expected integer); ignoring"
                     );
                 }
             }
@@ -294,8 +294,8 @@ impl SubagentsConfig {
         Self::DEFAULT_MAX_DEPTH
     }
     pub const ENV_MAX_CONCURRENT: &'static str = "GROK_MAX_CONCURRENT_SUBAGENTS";
-    pub const ENV_SAMPLING_LIMIT: &'static str = "GROK_SUBAGENT_SAMPLING_LIMIT";
-    pub const ENV_LIMIT_BEHAVIOR: &'static str = "GROK_SUBAGENT_LIMIT_BEHAVIOR";
+    pub const ENV_SAMPLING_LIMIT: &'static str = "DEEPSEEK_BUILD_SUBAGENT_SAMPLING_LIMIT";
+    pub const ENV_LIMIT_BEHAVIOR: &'static str = "DEEPSEEK_BUILD_SUBAGENT_LIMIT_BEHAVIOR";
     pub const ENV_WORKFLOW_MAX_CONCURRENT: &'static str = "GROK_WORKFLOW_MAX_CONCURRENT_AGENTS";
     pub(crate) fn resolve_max_concurrent(
         env: Option<&str>,
@@ -312,7 +312,7 @@ impl SubagentsConfig {
     }
     /// Resolve the subagent turn-sampling limit, clamped to [`crate::agent::subagent::MAX_SUBAGENT_SAMPLING_LIMIT`].
     /// `default` is the resolved concurrent-subagent bound (`GROK_MAX_CONCURRENT_SUBAGENTS`).
-    /// A lower `GROK_SUBAGENT_SAMPLING_LIMIT`, `[subagents] sampling_limit`, or remote value caps sampling further.
+    /// A lower `DEEPSEEK_BUILD_SUBAGENT_SAMPLING_LIMIT`, `[subagents] sampling_limit`, or remote value caps sampling further.
     pub(crate) fn resolve_sampling_limit(
         env: Option<&str>,
         config: Option<i64>,
@@ -368,8 +368,8 @@ impl SubagentsConfig {
         LimitBehavior::Queue
     }
     /// Resolve the final subagents config from all sources (in priority order): CLI tri-state (`Some(false)` from `--no-subagents` force-disables, `Some(true)` force-enables, `None` defers)
-    /// `GROK_SUBAGENTS` env var: `1`/`true` enables, `0`/`false` force-disables; config file `[subagents] enabled`; Default (enabled).
-    /// `enabled` is deliberately not remotely gated. Only explicit local intent (CLI flag, `GROK_SUBAGENTS`, `[subagents] enabled`) changes the default.
+    /// `DEEPSEEK_BUILD_SUBAGENTS` env var: `1`/`true` enables, `0`/`false` force-disables; config file `[subagents] enabled`; Default (enabled).
+    /// `enabled` is deliberately not remotely gated. Only explicit local intent (CLI flag, `DEEPSEEK_BUILD_SUBAGENTS`, `[subagents] enabled`) changes the default.
     /// A `[subagents]` table without an `enabled` key is not intent: it keeps the default so tuning `max_depth` or `[subagents.models]` cannot turn subagents off.
     /// Project files are excluded from this trust-independent base; Task boundaries overlay them using the parent cwd's authoritative trust verdict.
     pub fn resolve(cli_flag: Option<bool>, config: &toml::Value) -> Self {
@@ -397,7 +397,7 @@ impl SubagentsConfig {
             .is_some_and(|t| t.contains_key("enabled"));
         let resolved = crate::agent::config::resolve_enabled(
             cli_flag,
-            "GROK_SUBAGENTS",
+            "DEEPSEEK_BUILD_SUBAGENTS",
             result.enabled,
             has_local_enabled,
             None,
@@ -473,7 +473,7 @@ impl ManagedMcpsConfig {
         let has_local_enabled = managed_mcps_table.is_some_and(|t| t.contains_key("enabled"));
         let resolved = crate::agent::config::resolve_enabled(
             None,
-            "GROK_MANAGED_MCPS_ENABLED",
+            "DEEPSEEK_BUILD_MANAGED_MCPS_ENABLED",
             result.enabled,
             has_local_enabled,
             remote.and_then(|r| r.managed_mcps_enabled),
@@ -484,7 +484,7 @@ impl ManagedMcpsConfig {
             managed_mcps_table.is_some_and(|t| t.contains_key("gateway_tools_enabled"));
         let gateway_resolved = crate::agent::config::resolve_enabled(
             None,
-            "GROK_MANAGED_MCP_GATEWAY_TOOLS_ENABLED",
+            "DEEPSEEK_BUILD_MANAGED_MCP_GATEWAY_TOOLS_ENABLED",
             result.gateway_tools_enabled,
             has_local_gateway_tools,
             remote.and_then(|r| r.managed_mcp_gateway_tools_enabled),
@@ -590,7 +590,7 @@ impl ModelOverrideConfig {
                 result.prompt_suggestion = PromptSuggestModelPin::Pinned(v);
             }
         }
-        if let Ok(v) = std::env::var("GROK_WEB_SEARCH_MODEL") {
+        if let Ok(v) = std::env::var("DEEPSEEK_BUILD_WEB_SEARCH_MODEL") {
             let v = v.trim();
             if !v.is_empty() {
                 result.web_search = v.to_owned();
@@ -644,9 +644,11 @@ pub struct ToolsConfig {
     pub media_gen: MediaGenToolsConfig,
 }
 impl ToolsConfig {
-    pub const ENV_MAX_PARALLEL_IMAGE_GEN_CALLS: &'static str = "GROK_MAX_PARALLEL_IMAGE_GEN_CALLS";
-    pub const ENV_MAX_PARALLEL_VIDEO_GEN_CALLS: &'static str = "GROK_MAX_PARALLEL_VIDEO_GEN_CALLS";
-    /// Resolve the final tools config, in priority order: Env var `GROK_RESPECT_GITIGNORE` (`0`/`false` off, `1`/`true` on). `[tools]` block from the merged effective config.
+    pub const ENV_MAX_PARALLEL_IMAGE_GEN_CALLS: &'static str =
+        "DEEPSEEK_BUILD_MAX_PARALLEL_IMAGE_GEN_CALLS";
+    pub const ENV_MAX_PARALLEL_VIDEO_GEN_CALLS: &'static str =
+        "DEEPSEEK_BUILD_MAX_PARALLEL_VIDEO_GEN_CALLS";
+    /// Resolve the final tools config, in priority order: Env var `DEEPSEEK_BUILD_RESPECT_GITIGNORE` (`0`/`false` off, `1`/`true` on). `[tools]` block from the merged effective config.
     /// Defaults to `false`.
     pub fn resolve(config: &toml::Value) -> Self {
         let tools = config.get("tools");
@@ -666,7 +668,7 @@ impl ToolsConfig {
                     .and_then(|v| v.as_integer()),
             },
         };
-        match std::env::var("GROK_RESPECT_GITIGNORE").as_deref() {
+        match std::env::var("DEEPSEEK_BUILD_RESPECT_GITIGNORE").as_deref() {
             Ok("0") | Ok("false") => {
                 result.respect_gitignore = false;
             }
@@ -888,7 +890,7 @@ pub(crate) use crate::config::reloader::parse_skills_config;
 /// Effective config with disk campaigns only, for one-shot entrypoints that never fetch remote settings.
 /// This avoids resolving against a never-seeded cache.
 pub use crate::util::config::load_effective_config_disk_only;
-/// Effective config: the layers plus the campaign overlay (remote cache and `GROK_CAMPAIGNS_OVERRIDE`).
+/// Effective config: the layers plus the campaign overlay (remote cache and `DEEPSEEK_BUILD_CAMPAIGNS_OVERRIDE`).
 pub use crate::util::config::{
     EffectiveConfigLayers, load_effective_config, load_effective_config_with_layers,
 };

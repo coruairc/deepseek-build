@@ -95,7 +95,7 @@ command = "$$HOME"
     let command = test.get("command").and_then(|v| v.as_str()).unwrap();
     assert_eq!(command, "$HOME");
 }
-/// Mutex to serialize tests that touch the GROK_MEMORY env var.
+/// Mutex to serialize tests that touch the DEEPSEEK_BUILD_MEMORY env var.
 /// Env vars are process-global, so parallel tests race on them.
 static MEMORY_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 /// Run `f` with `name` set to `value` (Some) or removed (None).
@@ -113,15 +113,15 @@ fn with_env_var_opt<T>(name: &str, value: Option<&str>, f: impl FnOnce() -> T) -
     }
     result.unwrap_or_else(|p| std::panic::resume_unwind(p))
 }
-/// Run `f` with GROK_MEMORY explicitly unset.
+/// Run `f` with DEEPSEEK_BUILD_MEMORY explicitly unset.
 fn without_grok_memory<T>(f: impl FnOnce() -> T) -> T {
     let _guard = MEMORY_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-    with_env_var_opt("GROK_MEMORY", None, f)
+    with_env_var_opt("DEEPSEEK_BUILD_MEMORY", None, f)
 }
-/// Run `f` with GROK_MEMORY set to a specific value.
+/// Run `f` with DEEPSEEK_BUILD_MEMORY set to a specific value.
 fn with_grok_memory<T>(value: &str, f: impl FnOnce() -> T) -> T {
     let _guard = MEMORY_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-    with_env_var_opt("GROK_MEMORY", Some(value), f)
+    with_env_var_opt("DEEPSEEK_BUILD_MEMORY", Some(value), f)
 }
 #[test]
 fn memory_config_default_disabled() {
@@ -280,7 +280,7 @@ fn memory_config_env_var_zero_does_not_enable() {
         || {
             let config = toml::Value::Table(toml::map::Map::new());
             let mem = MemoryConfig::resolve(false, false, &config, None);
-            assert!(!mem.enabled, "GROK_MEMORY=0 should not enable memory");
+            assert!(!mem.enabled, "DEEPSEEK_BUILD_MEMORY=0 should not enable memory");
         },
     );
 }
@@ -291,7 +291,7 @@ fn memory_config_env_var_false_does_not_enable() {
         || {
             let config = toml::Value::Table(toml::map::Map::new());
             let mem = MemoryConfig::resolve(false, false, &config, None);
-            assert!(!mem.enabled, "GROK_MEMORY=false should not enable memory");
+            assert!(!mem.enabled, "DEEPSEEK_BUILD_MEMORY=false should not enable memory");
         },
     );
 }
@@ -315,7 +315,7 @@ fn memory_config_env_zero_force_disables_toml_enabled() {
             let mem = MemoryConfig::resolve(false, false, &config, None);
             assert!(
                 !mem.enabled,
-                "GROK_MEMORY=0 should force-disable both legacy and v2 TOML gates"
+                "DEEPSEEK_BUILD_MEMORY=0 should force-disable both legacy and v2 TOML gates"
             );
         },
     );
@@ -330,7 +330,7 @@ fn memory_config_env_false_force_disables_toml_enabled() {
             let mem = MemoryConfig::resolve(false, false, &config, None);
             assert!(
                 !mem.enabled,
-                "GROK_MEMORY=false should force-disable even when TOML enables memory"
+                "DEEPSEEK_BUILD_MEMORY=false should force-disable even when TOML enables memory"
             );
         },
     );
@@ -344,7 +344,7 @@ fn memory_config_cli_flag_overrides_env_disable() {
             let mem = MemoryConfig::resolve(true, false, &config, None);
             assert!(
                 mem.enabled,
-                "CLI --experimental-memory should override GROK_MEMORY=0"
+                "CLI --experimental-memory should override DEEPSEEK_BUILD_MEMORY=0"
             );
         },
     );
@@ -364,7 +364,7 @@ fn memory_config_no_memory_overrides_env_enable() {
         || {
             let config = toml::Value::Table(toml::map::Map::new());
             let mem = MemoryConfig::resolve(false, true, &config, None);
-            assert!(!mem.enabled, "--no-memory should override GROK_MEMORY=1");
+            assert!(!mem.enabled, "--no-memory should override DEEPSEEK_BUILD_MEMORY=1");
         },
     );
 }
@@ -1086,17 +1086,17 @@ max_results = 8
         assert!((mem.search.mmr.lambda - 0.3).abs() < f64::EPSILON);
     });
 }
-/// Mutex to serialize tests that touch the GROK_SUBAGENTS env var.
+/// Mutex to serialize tests that touch the DEEPSEEK_BUILD_SUBAGENTS env var.
 static SUBAGENTS_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-/// Run `f` with GROK_SUBAGENTS explicitly unset.
+/// Run `f` with DEEPSEEK_BUILD_SUBAGENTS explicitly unset.
 fn without_grok_subagents<T>(f: impl FnOnce() -> T) -> T {
     let _guard = SUBAGENTS_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-    with_env_var_opt("GROK_SUBAGENTS", None, f)
+    with_env_var_opt("DEEPSEEK_BUILD_SUBAGENTS", None, f)
 }
-/// Run `f` with GROK_SUBAGENTS set to a specific value.
+/// Run `f` with DEEPSEEK_BUILD_SUBAGENTS set to a specific value.
 fn with_grok_subagents<T>(value: &str, f: impl FnOnce() -> T) -> T {
     let _guard = SUBAGENTS_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-    with_env_var_opt("GROK_SUBAGENTS", Some(value), f)
+    with_env_var_opt("DEEPSEEK_BUILD_SUBAGENTS", Some(value), f)
 }
 #[test]
 #[serial_test::serial]
@@ -1309,7 +1309,7 @@ fn subagents_config_env_var_disables() {
             let config: toml::Value = toml::from_str("[subagents]\nenabled = true")
                 .unwrap();
             let sa = SubagentsConfig::resolve(None, &config);
-            assert!(!sa.enabled, "GROK_SUBAGENTS=0 should override config file");
+            assert!(!sa.enabled, "DEEPSEEK_BUILD_SUBAGENTS=0 should override config file");
         },
     );
 }
@@ -1342,7 +1342,7 @@ fn subagents_config_env_var_disables_default() {
             let sa = SubagentsConfig::resolve(None, &config);
             assert!(
                 !sa.enabled,
-                "GROK_SUBAGENTS=0 should override the enabled default"
+                "DEEPSEEK_BUILD_SUBAGENTS=0 should override the enabled default"
             );
         },
     );
@@ -1371,7 +1371,7 @@ fn subagents_config_cli_flag_overrides_env_var() {
             let sa = SubagentsConfig::resolve(Some(true), &config);
             assert!(
                 sa.enabled,
-                "--subagents CLI flag should override GROK_SUBAGENTS=0"
+                "--subagents CLI flag should override DEEPSEEK_BUILD_SUBAGENTS=0"
             );
         },
     );
@@ -1453,7 +1453,7 @@ fn subagents_config_cli_disable_overrides_env_and_toml() {
             let sa = SubagentsConfig::resolve(Some(false), &config);
             assert!(
                 !sa.enabled,
-                "--no-subagents must win over GROK_SUBAGENTS=1 and [subagents] enabled = true"
+                "--no-subagents must win over DEEPSEEK_BUILD_SUBAGENTS=1 and [subagents] enabled = true"
             );
         },
     );
@@ -1472,7 +1472,7 @@ fn subagents_config_models_with_env_var_enables() {
                 )
                 .unwrap();
             let sa = SubagentsConfig::resolve(None, &config);
-            assert!(sa.enabled, "GROK_SUBAGENTS=1 should enable");
+            assert!(sa.enabled, "DEEPSEEK_BUILD_SUBAGENTS=1 should enable");
             assert_eq!(sa.models.get("explore").unwrap(), "deepseek-3-fast");
         },
     );
@@ -1564,9 +1564,9 @@ fn with_managed_mcp_env<T>(
     static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
     let _guard = LOCK.lock().unwrap_or_else(|e| e.into_inner());
     with_env_var_opt(
-        "GROK_MANAGED_MCPS_ENABLED",
+        "DEEPSEEK_BUILD_MANAGED_MCPS_ENABLED",
         managed_mcps,
-        || with_env_var_opt("GROK_MANAGED_MCP_GATEWAY_TOOLS_ENABLED", gateway_tools, f),
+        || with_env_var_opt("DEEPSEEK_BUILD_MANAGED_MCP_GATEWAY_TOOLS_ENABLED", gateway_tools, f),
     )
 }
 #[test]
@@ -1714,7 +1714,7 @@ fn with_model_overrides_env_full<T>(
     static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
     let _guard = LOCK.lock().unwrap_or_else(|e| e.into_inner());
     with_env_var_opt(
-        "GROK_WEB_SEARCH_MODEL",
+        "DEEPSEEK_BUILD_WEB_SEARCH_MODEL",
         ws,
         || with_env_var_opt(
             "GROK_SESSION_SUMMARY_MODEL",
@@ -2226,9 +2226,9 @@ fn with_tools_env<T>(
 ) -> T {
     let _guard = TOOLS_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     with_env_var_opt(
-        "GROK_RESPECT_GITIGNORE",
+        "DEEPSEEK_BUILD_RESPECT_GITIGNORE",
         respect_gitignore,
-        || with_env_var_opt("GROK_DISABLE_ZDR_INCOMPATIBLE_TOOLS", disable_zdr, f),
+        || with_env_var_opt("DEEPSEEK_BUILD_DISABLE_ZDR_INCOMPATIBLE_TOOLS", disable_zdr, f),
     )
 }
 fn without_grok_respect_gitignore<T>(f: impl FnOnce() -> T) -> T {
@@ -2289,7 +2289,7 @@ fn tools_config_env_false_overrides_toml_true() {
             let tc = ToolsConfig::resolve(&config);
             assert!(
                 !tc.respect_gitignore,
-                "GROK_RESPECT_GITIGNORE=false should override config file"
+                "DEEPSEEK_BUILD_RESPECT_GITIGNORE=false should override config file"
             );
         },
     );
@@ -2833,8 +2833,8 @@ fn model_provider_honored_only_from_trusted_disk_layers() {
 fn enterprise_two_file_merge_routes_deployment_key_to_proxy() {
     for k in [
         "GROK_MANAGED_CONFIG_URL",
-        "GROK_CLI_CHAT_PROXY_BASE_URL",
-        "GROK_TRACE_UPLOAD_ENDPOINT_URL",
+        "DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL",
+        "DEEPSEEK_BUILD_TRACE_UPLOAD_ENDPOINT_URL",
     ] {
         unsafe { std::env::remove_var(k) };
     }
@@ -2954,7 +2954,7 @@ fn project_config_never_sources_feedback_user() {
     use xai_grok_test_support::EnvGuard;
     let home = tempfile::tempdir().unwrap();
     let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-    let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+    let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
     let _sim = simulate_release_build();
     let repo = tempfile::tempdir().unwrap();
     git2::Repository::init(repo.path()).unwrap();
@@ -3213,12 +3213,12 @@ fn a_repeated_pin_is_reported_against_the_layer_that_decided() {
     assert_eq!(row.source, system);
 }
 /// title_refresh is not a registry row, so the loop that pins those does not reach it.
-/// An administrator pinning the title off must still outrank a user's GROK_TITLE_REFRESH, which a config-tier value would lose to.
+/// An administrator pinning the title off must still outrank a user's DEEPSEEK_BUILD_TITLE_REFRESH, which a config-tier value would lose to.
 #[test]
 #[serial_test::serial]
 fn apply_requirements_pins_title_refresh_over_the_environment() {
     use xai_grok_test_support::EnvGuard;
-    let _env = EnvGuard::set("GROK_TITLE_REFRESH", "1");
+    let _env = EnvGuard::set("DEEPSEEK_BUILD_TITLE_REFRESH", "1");
     let mut cfg = crate::agent::config::Config::default();
     let req: toml::Value = toml::from_str("[features]\ntitle_refresh = false\n")
         .unwrap();
@@ -3227,7 +3227,7 @@ fn apply_requirements_pins_title_refresh_over_the_environment() {
     };
     let enforced = apply_requirements_inner(&mut cfg, &req, &source);
     let resolved = cfg.resolve_title_refresh();
-    assert!(!resolved.value, "the pin lost to GROK_TITLE_REFRESH");
+    assert!(!resolved.value, "the pin lost to DEEPSEEK_BUILD_TITLE_REFRESH");
     assert_eq!(
             resolved.source,
             crate::agent::config::ConfigSource::Requirement
@@ -3781,7 +3781,7 @@ fn discover_plugins_excludes_untrusted_configpath_plugin_end_to_end() {
     use xai_grok_test_support::EnvGuard;
     let home = tempfile::tempdir().unwrap();
     let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-    let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+    let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
     let _sim = simulate_release_build();
     let repo = tempfile::tempdir().unwrap();
     git2::Repository::init(repo.path()).unwrap();
@@ -3843,14 +3843,14 @@ fn discover_plugins_excludes_untrusted_configpath_plugin_end_to_end() {
 }
 /// Kill-switch ordering regression: plugin-config call sites that read the folder-trust gate for their verdict (commands/list, plugin fan-out, reload) must resolve with the REAL RemoteSettings first.
 /// A cold key under an org kill-switch must end up allowed. If the plugins-config read ran first, the gate's remote-less backstop would record a durable kill-switch-blind deny.
-/// The `Some(false)` arm of `resolve_and_record_inner` (store-only reconcile) could never lift that deny. The test is DEEPSEEK_BUILD_HOME-isolated (empty store); GROK_FOLDER_TRUST is unset so the kill-switch is the only signal.
+/// The `Some(false)` arm of `resolve_and_record_inner` (store-only reconcile) could never lift that deny. The test is DEEPSEEK_BUILD_HOME-isolated (empty store); DEEPSEEK_BUILD_FOLDER_TRUST is unset so the kill-switch is the only signal.
 #[test]
 #[serial_test::serial]
 fn kill_switched_cold_cwd_stays_allowed_through_plugins_config_read() {
     use xai_grok_test_support::EnvGuard;
     let home = tempfile::tempdir().unwrap();
     let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-    let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+    let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
     let _sim = simulate_release_build();
     let repo = tempfile::tempdir().unwrap();
     git2::Repository::init(repo.path()).unwrap();

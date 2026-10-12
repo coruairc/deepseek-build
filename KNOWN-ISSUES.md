@@ -208,9 +208,12 @@ real-use passes (2026-10-07), with the test state refreshed 2026-10-09.
   `LC_DEEPSEEK_BUILD_APPEARANCE`. The old `GROK_HOME`, `GROK_SANDBOX`,
   `GROK_AGENT_DASHBOARD`, `GROK_THEME`, and `GROK_APPEARANCE` names (including
   the `LC_` forms) are ignored, with tests pinning that. No automatic
-  migration from `~/.grok`: set `DEEPSEEK_BUILD_HOME` to reuse it.
-  **Most other `GROK_*` names remain primary internals** (~480 distinct
-  identifiers at `e6b664cc`), per D2; they are not fallbacks.
+  migration from `~/.grok`: set `DEEPSEEK_BUILD_HOME` to reuse it. Every
+  `GROK_*` name named in the docs, `--help`, or product error text was renamed
+  to `DEEPSEEK_BUILD_*` (2026-10-12); the remaining ~435 internal-only names
+  (1,529 occurrences across 284 files) are listed in
+  [`docs/INTERNAL-GROK-ENV-NAMES.md`](docs/INTERNAL-GROK-ENV-NAMES.md) for the
+  open-build branch.
 - **User-guide swept (2026-10-12).** The shipped guide no longer uses
   `grok <command>` examples, and the pages/sections describing removed flows
   (OAuth/OIDC/login, external auth providers, remote settings, managed config,

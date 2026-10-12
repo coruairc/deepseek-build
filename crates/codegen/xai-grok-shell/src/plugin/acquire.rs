@@ -561,7 +561,7 @@ pub(crate) fn provenance_update_source(
 }
 
 /// The require-sha pin for remote plugin code: disk config + env, both tighten-only, read from
-/// the overlay-free layer merge so no `GROK_CONFIG` overlay can relax a disk-set `true`.
+/// the overlay-free layer merge so no `DEEPSEEK_BUILD_CONFIG` overlay can relax a disk-set `true`.
 pub(crate) fn marketplace_require_sha() -> bool {
     require_sha_policy(xai_grok_config::ConfigLayers::load())
 }

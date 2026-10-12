@@ -1218,7 +1218,7 @@ pub enum MemoryDisabledReason {
     SessionToggle,
     /// `[memory] enabled = false` in the effective TOML; `/memory on` enables it for this session only.
     ConfigOptOut,
-    /// `--no-memory` or `GROK_MEMORY=0` turned memory off for the whole process; it cannot be enabled until a new session.
+    /// `--no-memory` or `DEEPSEEK_BUILD_MEMORY=0` turned memory off for the whole process; it cannot be enabled until a new session.
     ProcessDisabled,
     /// The session's pinned rollout controls disable memory; it cannot be enabled until a new session.
     RolloutRestricted,

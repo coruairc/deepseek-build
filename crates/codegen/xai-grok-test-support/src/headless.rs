@@ -336,16 +336,16 @@ mod tests {
         let mut cmd = tokio::process::Command::new("/bin/sh");
         cmd.args([
             "-c",
-            "printf '%s|%s|%s|%s' \"${AMBIENT_ONLY-unset}\" \"$GROK_PROMPT_SUGGESTIONS\" \"$FEATURE_TEST_VAR\" \"$HOME\"",
+            "printf '%s|%s|%s|%s' \"${AMBIENT_ONLY-unset}\" \"$DEEPSEEK_BUILD_PROMPT_SUGGESTIONS\" \"$FEATURE_TEST_VAR\" \"$HOME\"",
         ])
         .env("AMBIENT_ONLY", "discarded")
-        .env("GROK_PROMPT_SUGGESTIONS", "command-level-discarded");
+        .env("DEEPSEEK_BUILD_PROMPT_SUGGESTIONS", "command-level-discarded");
 
         let result = run_headless_in_sandbox_borrowed_with_env(
             cmd,
             &sandbox,
             &[
-                ("GROK_PROMPT_SUGGESTIONS", "explicit-override"),
+                ("DEEPSEEK_BUILD_PROMPT_SUGGESTIONS", "explicit-override"),
                 ("FEATURE_TEST_VAR", "enabled"),
             ],
         )

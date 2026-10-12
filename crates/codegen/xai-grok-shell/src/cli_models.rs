@@ -117,9 +117,9 @@ mod tests {
         let guards = [
             EnvGuard::unset(XAI_API_KEY_ENV_VAR),
             EnvGuard::unset(LEGACY_XAI_API_KEY_ENV_VAR),
-            EnvGuard::unset("GROK_AUTH"),
+            EnvGuard::unset("DEEPSEEK_BUILD_AUTH"),
             EnvGuard::set("GROK_AUTH_PATH", auth_path.to_str().unwrap()),
-            EnvGuard::unset("GROK_DEPLOYMENT_KEY"),
+            EnvGuard::unset("DEEPSEEK_BUILD_DEPLOYMENT_KEY"),
             EnvGuard::unset("GROK_WS_ORIGIN"),
             EnvGuard::unset("GROK_DISABLE_API_KEY_AUTH"),
         ];

@@ -252,7 +252,7 @@ pub struct AgentsModalState {
     pub cwd: PathBuf,
     /// Snapshot of bundle catalog used to merge persona lists.
     bundle: BundleState,
-    /// Resolved startup agent name (same chain as the shell: `[agent]`, `GROK_AGENT`, model `agentType`, then `grok-build`).
+    /// Resolved startup agent name (same chain as the shell: `[agent]`, `DEEPSEEK_BUILD_AGENT`, model `agentType`, then `grok-build`).
     pub default_agent: String,
     /// Agent running in the current session (`session/info` `agentName`).
     pub active_agent: Option<String>,

@@ -38,7 +38,7 @@ tool_timeouts = { slow_op = 120 }     # Per-tool timeout overrides, seconds
 > **Global startup-timeout override:** instead of setting `startup_timeout_sec`
 > per server, you can change the default for all servers via the `MCP_TIMEOUT`
 > environment variable (milliseconds, compatible with Claude Code) or
-> `GROK_MCP_STARTUP_TIMEOUT_SECS` (seconds). A per-server `startup_timeout_sec`
+> `DEEPSEEK_BUILD_MCP_STARTUP_TIMEOUT_SECS` (seconds). A per-server `startup_timeout_sec`
 > still takes precedence over both. Cold-start `npx`/`uvx` servers that download
 > packages on first launch often need this; the default is 30s.
 >
@@ -46,7 +46,7 @@ tool_timeouts = { slow_op = 120 }     # Per-tool timeout overrides, seconds
 > inline (full payload spilled under the session `mcp/` folder). Default is
 > **20_000 bytes**. Override via:
 >
-> - env `GROK_MAX_MCP_OUTPUT_BYTES` or `MAX_MCP_OUTPUT_BYTES` (bytes; deepseek-build-native
+> - env `DEEPSEEK_BUILD_MAX_MCP_OUTPUT_BYTES` or `MAX_MCP_OUTPUT_BYTES` (bytes; deepseek-build-native
 >   wins if both set; Claude-style name, but we bound by **bytes** not tokens)
 > - `config.toml` — user-level (`~/.deepseek-build/config.toml`) **or repo-level**
 >   (`.grok/config.toml` anywhere on the cwd → git-root chain; the deepest
@@ -289,7 +289,7 @@ deepseek-build loads MCP server configurations from multiple sources for compati
 
 All sources are merged in priority order: config.toml > Claude > Cursor > `.mcp.json`. Servers from higher-priority sources take precedence when names conflict.
 
-The Claude and Cursor MCP sources are scanned by default. To disable scanning for a specific vendor, set `[compat.<vendor>] mcps = false` in `~/.deepseek-build/config.toml` or the corresponding environment variable (`GROK_CURSOR_MCPS_ENABLED`, `GROK_CLAUDE_MCPS_ENABLED`). See [Configuration](05-configuration.md#harness-compatibility) for details. Use `deepseek-build inspect` to see which MCP servers were loaded and their vendor origin (`[cursor]`, `[claude]`).
+The Claude and Cursor MCP sources are scanned by default. To disable scanning for a specific vendor, set `[compat.<vendor>] mcps = false` in `~/.deepseek-build/config.toml` or the corresponding environment variable (`DEEPSEEK_BUILD_CURSOR_MCPS_ENABLED`, `DEEPSEEK_BUILD_CLAUDE_MCPS_ENABLED`). See [Configuration](05-configuration.md#harness-compatibility) for details. Use `deepseek-build inspect` to see which MCP servers were loaded and their vendor origin (`[cursor]`, `[claude]`).
 
 ---
 
@@ -440,7 +440,7 @@ tail -f ~/.deepseek-build/logs/mcp/filesystem.stderr.log
 
 The server starts and `tools/list` returns the tool, but `/mcps` and `search_tool` omit it.
 
-1. Check `Skipping MCP tool` in `GROK_LOG_FILE` / `--debug`. The reason names the rule that failed (invalid server name, invalid tool name, ambiguous `__`, or catalog key longer than 256 characters).
+1. Check `Skipping MCP tool` in `DEEPSEEK_BUILD_LOG_FILE` / `--debug`. The reason names the rule that failed (invalid server name, invalid tool name, ambiguous `__`, or catalog key longer than 256 characters).
 2. Confirm the server config key starts with a letter or underscore. A digit-leading key never enters the catalog. A key that ends with `_` is skipped as an ambiguous `___` name.
 3. Confirm the tool name uses only `[A-Za-z0-9_-]`. Dots and colons in the raw MCP name are skipped.
 4. Do not shorten a `server__tool` key to 64 characters. Catalog keys may be up to 256. The 64-character cap is only for `search_tool` / `use_tool` as function names. See [Tool Naming](#tool-naming).
@@ -459,7 +459,7 @@ deepseek-build inspect --json   # Machine-readable
 ### Debug Logging
 
 ```bash
-RUST_LOG=debug GROK_LOG_FILE=/tmp/deepseek-build.log deepseek-build
+RUST_LOG=debug DEEPSEEK_BUILD_LOG_FILE=/tmp/deepseek-build.log deepseek-build
 tail -f /tmp/deepseek-build.log
 ```
 

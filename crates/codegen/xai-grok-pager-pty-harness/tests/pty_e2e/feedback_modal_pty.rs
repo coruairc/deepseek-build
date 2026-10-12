@@ -14,7 +14,7 @@ use xai_grok_pager_pty_harness::{
     InferenceEndpoint, InferenceExpectation, InferenceRequestMatcher, inference_request_count,
 };
 
-const USER_FEEDBACK_EVENT: &str = "grok-shell-user_feedback";
+const USER_FEEDBACK_EVENT: &str = "deepseek-build-user_feedback";
 
 const EMPTY_SUBMIT_SENTINEL: &str = "Add feedback text";
 const THANKS_SENTINEL: &str = "Thanks for the feedback";
@@ -84,7 +84,7 @@ async fn feedback_modal_send_prefill_edit_and_palette_pty() {
         &content,
         &["--yolo", "--trust"],
         // The sandbox baseline disables feedback; the send path needs the shell gate open.
-        &[EnvOp::set("GROK_FEEDBACK_ENABLED", "true")],
+        &[EnvOp::set("DEEPSEEK_BUILD_FEEDBACK_ENABLED", "true")],
         Some(content.home()),
     )
     .expect("spawn pager with content");
@@ -205,7 +205,7 @@ async fn feedback_modal_trace_step_and_upload_ordering_pty() {
 
     let content = ContentController::start().await.expect("start content");
     let mut overrides = enable_feedback_posting(&content, "feedback-trace-pty");
-    overrides.push(EnvOp::set("GROK_FEEDBACK_TRACE_CARD", "true"));
+    overrides.push(EnvOp::set("DEEPSEEK_BUILD_FEEDBACK_TRACE_CARD", "true"));
     // TestSandbox pins DISABLE_TELEMETRY=1; this test needs product telemetry on.
     overrides.push(EnvOp::remove("DISABLE_TELEMETRY"));
     overrides.push(EnvOp::set("GROK_TELEMETRY_ENABLED", "true"));
@@ -213,7 +213,7 @@ async fn feedback_modal_trace_step_and_upload_ordering_pty() {
     let events_url = format!("{}/events", content.url());
     overrides.push(EnvOp::set("GROK_TELEMETRY_EVENTS_URL", events_url.as_str()));
     overrides.push(EnvOp::set("GROK_TELEMETRY_EVENTS_API_KEY", "pty-capture"));
-    overrides.push(EnvOp::remove("GROK_TRACE_UPLOAD_URL"));
+    overrides.push(EnvOp::remove("DEEPSEEK_BUILD_TRACE_UPLOAD_URL"));
 
     let binary = pager_binary().expect("resolve pager binary");
     let mut harness = PtyHarness::spawn_with_content_env_ops_in_dir(

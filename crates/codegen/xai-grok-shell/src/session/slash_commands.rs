@@ -1030,7 +1030,7 @@ pub(crate) fn acu_skill_source(is_chat_kind: bool) -> AcuSkillSource {
     }
 }
 /// `None`: builtins plus global (User-scoped) skills only.
-/// `kind == Some("chat")` (feature `chat` only): product Skills REST catalog (same as grok-web) plus builtins, not Build disk skills.
+/// `kind == Some("chat")` (feature `chat` only): product Skills REST catalog (same as deepseek-build-web) plus builtins, not Build disk skills.
 /// Product REST failure still advertises builtins only (empty product skills).
 pub(crate) async fn list_commands(
     cwd: Option<&str>,

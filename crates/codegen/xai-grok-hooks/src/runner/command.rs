@@ -218,10 +218,13 @@ pub async fn run_command_hook(
         .current_dir(ctx.workspace_root)
         // SECURITY: extra_env is applied before the GROK_* identity vars so a hook cannot spoof them.
         .envs(&spec.extra_env)
-        .env("GROK_HOOK_EVENT", envelope.hook_event_name.to_string())
-        .env("GROK_HOOK_NAME", &spec.name)
-        .env("GROK_SESSION_ID", ctx.session_id)
-        .env("GROK_WORKSPACE_ROOT", env_root.as_ref())
+        .env(
+            "DEEPSEEK_BUILD_HOOK_EVENT",
+            envelope.hook_event_name.to_string(),
+        )
+        .env("DEEPSEEK_BUILD_HOOK_NAME", &spec.name)
+        .env("DEEPSEEK_BUILD_SESSION_ID", ctx.session_id)
+        .env("DEEPSEEK_BUILD_WORKSPACE_ROOT", env_root.as_ref())
         .env("CLAUDE_PROJECT_DIR", env_root.as_ref())
         .kill_on_drop(true)
         .spawn()
@@ -2172,8 +2175,8 @@ mod tests {
                 r#"powershell -File "$env:CLAUDE_PROJECT_DIR/.claude/hooks/foo.ps1""#,
             ),
             (
-                "$CLAUDE_PROJECT_DIR/$GROK_HOOK_NAME.ps1",
-                r#"& "$env:CLAUDE_PROJECT_DIR/$env:GROK_HOOK_NAME.ps1""#,
+                "$CLAUDE_PROJECT_DIR/$DEEPSEEK_BUILD_HOOK_NAME.ps1",
+                r#"& "$env:CLAUDE_PROJECT_DIR/$env:DEEPSEEK_BUILD_HOOK_NAME.ps1""#,
             ),
             (
                 "Join-Path ($CLAUDE_PROJECT_DIR) hooks",
@@ -2219,7 +2222,7 @@ mod tests {
         let mut env = std::collections::HashMap::new();
         env.insert("CLAUDE_PLUGIN_ROOT".to_string(), "/plugins/foo".to_string());
         let v = find_unresolved_env_vars(
-            "${GROK_HOOK_EVENT}/${CLAUDE_PROJECT_DIR}/${GROK_SESSION_ID}/${CLAUDE_PLUGIN_ROOT}/foo",
+            "${DEEPSEEK_BUILD_HOOK_EVENT}/${CLAUDE_PROJECT_DIR}/${DEEPSEEK_BUILD_SESSION_ID}/${CLAUDE_PLUGIN_ROOT}/foo",
             &env,
         );
         assert!(

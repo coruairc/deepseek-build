@@ -277,11 +277,11 @@ fn run_git(sandbox: &TestSandbox, args: &[&str]) {
 
 fn apply_mock_url(env: &mut BTreeMap<OsString, OsString>, url: String) {
     for key in [
-        "GROK_CLI_CHAT_PROXY_BASE_URL",
-        "GROK_XAI_API_BASE_URL",
-        "GROK_MODELS_BASE_URL",
-        "GROK_FEEDBACK_BASE_URL",
-        "GROK_TRACE_UPLOAD_URL",
+        "DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL",
+        "DEEPSEEK_BUILD_XAI_API_BASE_URL",
+        "DEEPSEEK_BUILD_MODELS_BASE_URL",
+        "DEEPSEEK_BUILD_FEEDBACK_BASE_URL",
+        "DEEPSEEK_BUILD_TRACE_UPLOAD_URL",
         "GROK_MANAGED_CONFIG_URL",
         "GROK_CODE_WEB_URL",
         "GROK_CONVERSATIONS_BASE_URL",
@@ -338,14 +338,14 @@ fn baseline_env_from_parent(
         ("GROK_TELEMETRY_EVENTS_URL", ""),
         ("GROK_TELEMETRY_EVENTS_API_KEY", ""),
         ("GROK_TELEMETRY_TRACE_UPLOAD", "false"),
-        ("GROK_FEEDBACK_ENABLED", "false"),
+        ("DEEPSEEK_BUILD_FEEDBACK_ENABLED", "false"),
         ("GROK_TRACE_UPLOAD", "false"),
         ("GROK_INSTRUMENTATION", "disabled"),
         ("OTEL_SDK_DISABLED", "true"),
         ("DISABLE_TELEMETRY", "1"),
         ("DISABLE_FEEDBACK_COMMAND", "1"),
-        ("GROK_DISABLE_AUTOUPDATER", "1"),
-        ("GROK_PROMPT_SUGGESTIONS", "false"),
+        ("DEEPSEEK_BUILD_DISABLE_AUTOUPDATER", "1"),
+        ("DEEPSEEK_BUILD_PROMPT_SUGGESTIONS", "false"),
         // Every sandbox has an empty `DEEPSEEK_BUILD_HOME`, so without this the agent id is
         // recomputed per test; on Windows that is a ~30s `powershell Get-WmiObject`
         // run inside `initialize`, which blew the harness deadlines (GB-5593).
@@ -353,7 +353,7 @@ fn baseline_env_from_parent(
         // Pin so a developer-exported override cannot flake empty-home launch tests.
         ("GROK_DEFAULT_PERMISSION_MODE", "ask"),
         // The post-turn summary would send unscripted requests to the mock server and break exact wire-traffic assertions
-        ("GROK_TURN_SUMMARY", "0"),
+        ("DEEPSEEK_BUILD_TURN_SUMMARY", "0"),
         ("NO_PROXY", "127.0.0.1,localhost,::1"),
         ("no_proxy", "127.0.0.1,localhost,::1"),
         ("GIT_CONFIG_NOSYSTEM", "1"),
@@ -800,7 +800,7 @@ mod tests {
             Some(OsStr::new(TEST_API_KEY))
         );
         assert_eq!(
-            env_value(&sandbox, "GROK_DISABLE_AUTOUPDATER").as_deref(),
+            env_value(&sandbox, "DEEPSEEK_BUILD_DISABLE_AUTOUPDATER").as_deref(),
             Some(OsStr::new("1"))
         );
         assert_eq!(
@@ -840,7 +840,7 @@ mod tests {
         }
         assert_eq!(env_value(&sandbox, "GROK_LEADER_SOCKET"), None);
         assert_eq!(env_value(&sandbox, "GROK_DISABLE_WEB_FETCH"), None);
-        assert_eq!(env_value(&sandbox, "GROK_WEB_FETCH"), None);
+        assert_eq!(env_value(&sandbox, "DEEPSEEK_BUILD_WEB_FETCH"), None);
     }
 
     #[cfg(unix)]
@@ -871,16 +871,16 @@ mod tests {
         let sandbox = TestSandbox::new();
         let mut cmd = Command::new("unused");
         cmd.env("AMBIENT_SECRET", "must-disappear")
-            .env("GROK_PROMPT_SUGGESTIONS", "ambient");
+            .env("DEEPSEEK_BUILD_PROMPT_SUGGESTIONS", "ambient");
         sandbox.apply_to_std_command(&mut cmd);
-        cmd.env("GROK_PROMPT_SUGGESTIONS", "command");
+        cmd.env("DEEPSEEK_BUILD_PROMPT_SUGGESTIONS", "command");
         let env: BTreeMap<_, _> = cmd
             .get_envs()
             .filter_map(|(key, value)| value.map(|value| (key.to_owned(), value.to_owned())))
             .collect();
         assert!(!env.contains_key(OsStr::new("AMBIENT_SECRET")));
         assert_eq!(
-            env.get(OsStr::new("GROK_PROMPT_SUGGESTIONS"))
+            env.get(OsStr::new("DEEPSEEK_BUILD_PROMPT_SUGGESTIONS"))
                 .map(OsString::as_os_str),
             Some(OsStr::new("command"))
         );
@@ -891,22 +891,25 @@ mod tests {
         let mut sandbox = TestSandbox::new();
         sandbox
             .set_env("TERM_PROGRAM", "vscode")
-            .set_env("GROK_PROMPT_SUGGESTIONS", "true")
+            .set_env("DEEPSEEK_BUILD_PROMPT_SUGGESTIONS", "true")
             .set_env("NO_PROXY", "override.invalid")
-            .remove_env("GROK_DISABLE_AUTOUPDATER");
+            .remove_env("DEEPSEEK_BUILD_DISABLE_AUTOUPDATER");
         assert_eq!(
             env_value(&sandbox, "TERM_PROGRAM").as_deref(),
             Some(OsStr::new("vscode"))
         );
         assert_eq!(
-            env_value(&sandbox, "GROK_PROMPT_SUGGESTIONS").as_deref(),
+            env_value(&sandbox, "DEEPSEEK_BUILD_PROMPT_SUGGESTIONS").as_deref(),
             Some(OsStr::new("true"))
         );
         assert_eq!(
             env_value(&sandbox, "NO_PROXY").as_deref(),
             Some(OsStr::new("override.invalid"))
         );
-        assert_eq!(env_value(&sandbox, "GROK_DISABLE_AUTOUPDATER"), None);
+        assert_eq!(
+            env_value(&sandbox, "DEEPSEEK_BUILD_DISABLE_AUTOUPDATER"),
+            None
+        );
     }
 
     #[test]
@@ -992,7 +995,10 @@ mod tests {
             ("DB_PASSWORD_FILE", "/secret/password-file"),
             ("AWS_CREDENTIALS", "credentials-do-not-print"),
             ("SESSION_COOKIE", "cookie-do-not-print"),
-            ("GROK_DEPLOYMENT_KEY", "deployment-key-do-not-print"),
+            (
+                "DEEPSEEK_BUILD_DEPLOYMENT_KEY",
+                "deployment-key-do-not-print",
+            ),
             ("GROK_EXTRA_AUTH_KEY", "alpha-test-key-do-not-print"),
             ("AWS_ACCESS_KEY_ID", "aws-access-key-do-not-print"),
             ("PRIVATE_KEY", "private-key-do-not-print"),
@@ -1008,7 +1014,7 @@ mod tests {
             "DB_PASSWORD_FILE",
             "AWS_CREDENTIALS",
             "SESSION_COOKIE",
-            "GROK_DEPLOYMENT_KEY",
+            "DEEPSEEK_BUILD_DEPLOYMENT_KEY",
             "GROK_EXTRA_AUTH_KEY",
             "AWS_ACCESS_KEY_ID",
             "PRIVATE_KEY",

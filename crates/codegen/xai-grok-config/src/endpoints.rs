@@ -17,35 +17,35 @@ pub struct EndpointsConfig {
     /// An extra access header value for matching first-party hosts, used only with the optional non-production feature.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub alpha_test_key: Option<String>,
-    /// Env: `GROK_MODELS_BASE_URL`. Setting it makes `has_custom_endpoint` true.
+    /// Env: `DEEPSEEK_BUILD_MODELS_BASE_URL`. Setting it makes `has_custom_endpoint` true.
     /// The models list URL defaults to `{models_base_url}/models`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub models_base_url: Option<String>,
-    /// Env: `GROK_MODELS_LIST_URL`. Overrides the default `{base}/models` list URL.
+    /// Env: `DEEPSEEK_BUILD_MODELS_LIST_URL`. Overrides the default `{base}/models` list URL.
     #[serde(alias = "models_endpoint", skip_serializing_if = "Option::is_none")]
     pub models_list_url: Option<String>,
-    /// Env: `GROK_FEEDBACK_BASE_URL`. Where feedback submissions go.
+    /// Env: `DEEPSEEK_BUILD_FEEDBACK_BASE_URL`. Where feedback submissions go.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub feedback_base_url: Option<String>,
-    /// Env: `GROK_TRACE_UPLOAD_URL`. Where trace uploads go.
+    /// Env: `DEEPSEEK_BUILD_TRACE_UPLOAD_URL`. Where trace uploads go.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trace_upload_url: Option<String>,
-    /// Env: `GROK_TRACE_UPLOAD_BUCKET`. A `file://` bucket that receives uploads directly, without the proxy.
+    /// Env: `DEEPSEEK_BUILD_TRACE_UPLOAD_BUCKET`. A `file://` bucket that receives uploads directly, without the proxy.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trace_upload_bucket: Option<String>,
-    /// Env: `GROK_TRACE_UPLOAD_REGION`. AWS region (S3 only).
+    /// Env: `DEEPSEEK_BUILD_TRACE_UPLOAD_REGION`. AWS region (S3 only).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trace_upload_region: Option<String>,
-    /// Env: `GROK_TRACE_UPLOAD_CREDENTIALS_FILE`. The path to a GCS service account key or an AWS credentials file.
+    /// Env: `DEEPSEEK_BUILD_TRACE_UPLOAD_CREDENTIALS_FILE`. The path to a GCS service account key or an AWS credentials file.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trace_upload_credentials_file: Option<String>,
     /// Inline credentials as JSON or INI, preferred over `trace_upload_credentials_file`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trace_upload_credentials: Option<String>,
-    /// Env: `GROK_TRACE_UPLOAD_ENDPOINT_URL`. Custom S3-compatible endpoint.
+    /// Env: `DEEPSEEK_BUILD_TRACE_UPLOAD_ENDPOINT_URL`. Custom S3-compatible endpoint.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trace_upload_endpoint_url: Option<String>,
-    /// Env: `GROK_DEPLOYMENT_KEY`. The management API key for an enterprise deployment.
+    /// Env: `DEEPSEEK_BUILD_DEPLOYMENT_KEY`. The management API key for an enterprise deployment.
     /// Telemetry and service requests carry it to identify the deployment.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub deployment_key: Option<String>,
@@ -273,20 +273,22 @@ const XAI_API_BASE_URL_DEFAULT: &str = "https://api.deepseek.com";
 impl Default for EndpointsConfig {
     fn default() -> Self {
         Self {
-            cli_chat_proxy_base_url: std::env::var("GROK_CLI_CHAT_PROXY_BASE_URL").ok(),
-            xai_api_base_url: std::env::var("GROK_XAI_API_BASE_URL")
+            cli_chat_proxy_base_url: std::env::var("DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL").ok(),
+            xai_api_base_url: std::env::var("DEEPSEEK_BUILD_XAI_API_BASE_URL")
                 .unwrap_or_else(|_| XAI_API_BASE_URL_DEFAULT.to_owned()),
             alpha_test_key: None,
-            models_base_url: env_string("GROK_MODELS_BASE_URL"),
-            models_list_url: env_string("GROK_MODELS_LIST_URL"),
-            feedback_base_url: env_string("GROK_FEEDBACK_BASE_URL"),
-            trace_upload_url: env_string("GROK_TRACE_UPLOAD_URL"),
-            trace_upload_bucket: env_string("GROK_TRACE_UPLOAD_BUCKET"),
-            trace_upload_region: env_string("GROK_TRACE_UPLOAD_REGION"),
-            trace_upload_credentials_file: env_string("GROK_TRACE_UPLOAD_CREDENTIALS_FILE"),
+            models_base_url: env_string("DEEPSEEK_BUILD_MODELS_BASE_URL"),
+            models_list_url: env_string("DEEPSEEK_BUILD_MODELS_LIST_URL"),
+            feedback_base_url: env_string("DEEPSEEK_BUILD_FEEDBACK_BASE_URL"),
+            trace_upload_url: env_string("DEEPSEEK_BUILD_TRACE_UPLOAD_URL"),
+            trace_upload_bucket: env_string("DEEPSEEK_BUILD_TRACE_UPLOAD_BUCKET"),
+            trace_upload_region: env_string("DEEPSEEK_BUILD_TRACE_UPLOAD_REGION"),
+            trace_upload_credentials_file: env_string(
+                "DEEPSEEK_BUILD_TRACE_UPLOAD_CREDENTIALS_FILE",
+            ),
             trace_upload_credentials: None,
-            trace_upload_endpoint_url: env_string("GROK_TRACE_UPLOAD_ENDPOINT_URL"),
-            deployment_key: env_string("GROK_DEPLOYMENT_KEY"),
+            trace_upload_endpoint_url: env_string("DEEPSEEK_BUILD_TRACE_UPLOAD_ENDPOINT_URL"),
+            deployment_key: env_string("DEEPSEEK_BUILD_DEPLOYMENT_KEY"),
             managed_config_url: env_string("GROK_MANAGED_CONFIG_URL"),
             otel_exporter_otlp_endpoint: env_string("OTEL_EXPORTER_OTLP_ENDPOINT"),
             otel_exporter_otlp_traces_endpoint: env_string("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"),
@@ -310,7 +312,7 @@ impl Default for EndpointsConfig {
 fn external_otel_master_switch_resolved() -> bool {
     external_otel_master_switch_from(
         crate::load_merged_requirements().as_ref(),
-        env_bool("GROK_EXTERNAL_OTEL"),
+        env_bool("DEEPSEEK_BUILD_EXTERNAL_OTEL"),
         crate::effective_config::load_effective_config()
             .ok()
             .as_ref(),

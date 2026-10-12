@@ -551,7 +551,7 @@ Key environment variables that affect headless mode:
 | ------------------------------- | ------------------------------------------------------------- |
 | `DEEPSEEK_API_KEY`        | API key for authentication                                    |
 | `DEEPSEEK_BUILD_HOME`                    | Override config directory (default: `~/.deepseek-build`)                |
-| `GROK_LOG_FILE`                | Path to a log file (used verbatim as the path; works in headless and TUI, honors `RUST_LOG`) |
+| `DEEPSEEK_BUILD_LOG_FILE`                | Path to a log file (used verbatim as the path; works in headless and TUI, honors `RUST_LOG`) |
 | `RUST_LOG`                     | Log level filter (e.g. `debug`). Headless logs to stderr.     |
 
 For CI environments without browser access, set `DEEPSEEK_API_KEY` with an API key from [platform.deepseek.com](https://platform.deepseek.com):
@@ -651,7 +651,7 @@ These flags supplement the [Command-Line Options](#command-line-options) table a
 | `--system-prompt-override`    | Override the agent's system prompt                |
 | `--no-plan`                   | Disable plan mode                                 |
 | `--no-subagents`              | Disable subagent spawning                         |
-| `GROK_MEMORY=0`                | Disable cross-session memory for the process      |
+| `DEEPSEEK_BUILD_MEMORY=0`                | Disable cross-session memory for the process      |
 | `--disable-web-search`        | Disable web search and fetch tools                |
 | `--no-alt-screen`             | Run inline (no alternate screen)                  |
 | `--worktree [NAME]`           | Create a git worktree from the current checkout (dirty changes included) and run the session there. Launching from a subdirectory lands in the same subdirectory of the worktree. With `-r`, the session is resumed into the new worktree. Not combinable with `--fork-session`. |

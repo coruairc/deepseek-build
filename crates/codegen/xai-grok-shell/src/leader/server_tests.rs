@@ -615,11 +615,11 @@ async fn initialize_gets_client_identifier_injected() {
     let stream = LeaderStream::connect(&sock_path).await.unwrap();
     let (mut reader, mut writer) = tokio::io::split(stream);
 
-    // Register with client_type "grok-tui"
+    // Register with client_type "deepseek-build-tui"
     write_message(
         &mut writer,
         &ClientMessage::Register {
-            client_type: "grok-tui".into(),
+            client_type: "deepseek-build-tui".into(),
             mode: ClientMode::Stdio,
             capabilities: ClientCapabilities::default(),
         },
@@ -645,7 +645,7 @@ async fn initialize_gets_client_identifier_injected() {
     let json: serde_json::Value = serde_json::from_str(&received).unwrap();
     assert_eq!(
         j(&json, "/params/_meta/clientIdentifier"),
-        "grok-tui",
+        "deepseek-build-tui",
         "Leader should inject clientIdentifier from IPC registration"
     );
     // Injection leaves the rest of the message intact (the id is now namespaced)
@@ -662,11 +662,11 @@ async fn initialize_preserves_existing_client_identifier() {
     let stream = LeaderStream::connect(&sock_path).await.unwrap();
     let (mut reader, mut writer) = tokio::io::split(stream);
 
-    // Register with client_type "grok-tui"
+    // Register with client_type "deepseek-build-tui"
     write_message(
         &mut writer,
         &ClientMessage::Register {
-            client_type: "grok-tui".into(),
+            client_type: "deepseek-build-tui".into(),
             mode: ClientMode::Stdio,
             capabilities: ClientCapabilities::default(),
         },
@@ -676,7 +676,7 @@ async fn initialize_preserves_existing_client_identifier() {
     let _: ServerMessage = read_message(&mut reader).await.unwrap();
 
     // Send initialize WITH clientIdentifier already set
-    let payload = r#"{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"0.1","_meta":{"clientIdentifier":"grok-web"}}}"#;
+    let payload = r#"{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"0.1","_meta":{"clientIdentifier":"deepseek-build-web"}}}"#;
     write_message(
         &mut writer,
         &ClientMessage::Acp {
@@ -691,7 +691,7 @@ async fn initialize_preserves_existing_client_identifier() {
     let json: serde_json::Value = serde_json::from_str(&received).unwrap();
     assert_eq!(
         j(&json, "/params/_meta/clientIdentifier"),
-        "grok-web",
+        "deepseek-build-web",
         "Leader should not override existing clientIdentifier"
     );
 
@@ -1140,7 +1140,7 @@ fn inject_capabilities_adds_auto_mode_to_session_load() {
     assert!(inject_session_request_context(
         &mut json,
         &caps,
-        "grok-tui",
+        "deepseek-build-tui",
         ClientId(1)
     ));
     assert_eq!(j(&json, "/params/_meta/autoMode"), true);
@@ -1161,7 +1161,7 @@ fn inject_capabilities_adds_auto_mode_to_session_resume() {
     assert!(inject_session_request_context(
         &mut json,
         &caps,
-        "grok-tui",
+        "deepseek-build-tui",
         ClientId(1)
     ));
     assert_eq!(j(&json, "/params/_meta/autoMode"), true);
@@ -1209,7 +1209,7 @@ fn inject_capabilities_preserves_explicit_auto_over_stale_yolo() {
     assert!(inject_session_request_context(
         &mut json,
         &caps,
-        "grok-tui",
+        "deepseek-build-tui",
         ClientId(1)
     ));
     assert_eq!(j(&json, "/params/_meta/yoloMode"), false);
@@ -1883,12 +1883,12 @@ fn inject_capabilities_adds_client_identifier_to_session_new() {
     assert!(inject_session_request_context(
         &mut json,
         &caps,
-        "grok-code-extension",
+        "deepseek-build-extension",
         ClientId(1),
     ));
     assert_eq!(
         j(&json, "/params/_meta/clientIdentifier"),
-        "grok-code-extension"
+        "deepseek-build-extension"
     );
 }
 
@@ -1901,7 +1901,7 @@ fn inject_capabilities_does_not_override_existing_client_identifier() {
     let caps = ClientCapabilities::default();
 
     let mut json = pv(&payload);
-    inject_session_request_context(&mut json, &caps, "grok-tui", ClientId(1));
+    inject_session_request_context(&mut json, &caps, "deepseek-build-tui", ClientId(1));
     assert_eq!(j(&json, "/params/_meta/clientIdentifier"), "custom-client");
 }
 
@@ -1917,12 +1917,12 @@ fn inject_capabilities_adds_client_identifier_to_session_load() {
     assert!(inject_session_request_context(
         &mut json,
         &caps,
-        "grok-code-extension",
+        "deepseek-build-extension",
         ClientId(1),
     ));
     assert_eq!(
         j(&json, "/params/_meta/clientIdentifier"),
-        "grok-code-extension"
+        "deepseek-build-extension"
     );
     // session/load gets neither yoloMode nor modelId injected
     assert!(j(&json, "/params/_meta").get("yoloMode").is_none());
@@ -1958,9 +1958,10 @@ fn inject_yolo_notification_adds_client_identifier() {
     );
 
     assert!(inject_client_identity_into_yolo_notification(
-        &mut json, "grok-tui"
+        &mut json,
+        "deepseek-build-tui"
     ));
-    assert_eq!(j(&json, "/params/clientIdentifier"), "grok-tui");
+    assert_eq!(j(&json, "/params/clientIdentifier"), "deepseek-build-tui");
     assert_eq!(j(&json, "/params/yolo_mode"), true);
 }
 
@@ -1970,7 +1971,8 @@ fn inject_yolo_notification_skips_non_yolo_methods() {
     let before = json.clone();
 
     assert!(!inject_client_identity_into_yolo_notification(
-        &mut json, "grok-tui"
+        &mut json,
+        "deepseek-build-tui"
     ));
     assert_eq!(json, before);
 }
@@ -1980,22 +1982,30 @@ fn inject_client_identity_adds_identifier_to_initialize() {
     let mut json =
         pv(r#"{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"0.1"}}"#);
 
-    let (mutated, was_initialize) = inject_client_identity_into_initialize(&mut json, "grok-tui");
+    let (mutated, was_initialize) =
+        inject_client_identity_into_initialize(&mut json, "deepseek-build-tui");
     assert!(was_initialize, "should have detected an initialize message");
     assert!(mutated, "should have injected the identifier");
-    assert_eq!(j(&json, "/params/_meta/clientIdentifier"), "grok-tui");
+    assert_eq!(
+        j(&json, "/params/_meta/clientIdentifier"),
+        "deepseek-build-tui"
+    );
 }
 
 #[test]
 fn inject_client_identity_does_not_override_existing() {
     let mut json = pv(
-        r#"{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"0.1","_meta":{"clientIdentifier":"grok-web"}}}"#,
+        r#"{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"0.1","_meta":{"clientIdentifier":"deepseek-build-web"}}}"#,
     );
 
-    let (mutated, was_initialize) = inject_client_identity_into_initialize(&mut json, "grok-tui");
+    let (mutated, was_initialize) =
+        inject_client_identity_into_initialize(&mut json, "deepseek-build-tui");
     assert!(was_initialize, "should have detected an initialize message");
     assert!(!mutated, "existing identifier means nothing was injected");
-    assert_eq!(j(&json, "/params/_meta/clientIdentifier"), "grok-web");
+    assert_eq!(
+        j(&json, "/params/_meta/clientIdentifier"),
+        "deepseek-build-web"
+    );
 }
 
 #[test]
@@ -2003,7 +2013,8 @@ fn inject_client_identity_skips_non_initialize() {
     let mut json = pv(r#"{"jsonrpc":"2.0","method":"session/new","id":1,"params":{"cwd":"/tmp"}}"#);
     let before = json.clone();
 
-    let (mutated, was_initialize) = inject_client_identity_into_initialize(&mut json, "grok-tui");
+    let (mutated, was_initialize) =
+        inject_client_identity_into_initialize(&mut json, "deepseek-build-tui");
     assert!(
         !was_initialize,
         "session/new should not be detected as initialize"
@@ -2034,13 +2045,13 @@ fn inject_client_identity_preserves_existing_meta() {
     );
 
     let (mutated, was_initialize) =
-        inject_client_identity_into_initialize(&mut json, "grok-code-extension");
+        inject_client_identity_into_initialize(&mut json, "deepseek-build-extension");
     assert!(was_initialize, "should have detected an initialize message");
     assert!(mutated);
     assert_eq!(j(&json, "/params/_meta/foo"), "bar");
     assert_eq!(
         j(&json, "/params/_meta/clientIdentifier"),
-        "grok-code-extension"
+        "deepseek-build-extension"
     );
 }
 
@@ -2986,7 +2997,7 @@ async fn high_throughput_replay_no_drops() {
     let (sock_path, cancel, response_tx, mut acp_rx) =
         setup_persistent_server_with_agent(&temp).await;
 
-    let (mut reader, mut writer) = connect_and_register(&sock_path, "grok-tui").await;
+    let (mut reader, mut writer) = connect_and_register(&sock_path, "deepseek-build-tui").await;
 
     let load_req =
         r#"{"jsonrpc":"2.0","method":"session/load","id":1,"params":{"session_id":"sess_replay"}}"#;
@@ -4461,7 +4472,7 @@ fn inject_capabilities_sets_code_nav_enabled_true() {
     let payload =
         r#"{"jsonrpc":"2.0","method":"session/new","id":1,"params":{"cwd":"/repo","_meta":{}}}"#;
     let mut json = pv(payload);
-    inject_session_request_context(&mut json, &caps, "grok-web", ClientId(1));
+    inject_session_request_context(&mut json, &caps, "deepseek-build-web", ClientId(1));
     assert_eq!(
         j(&json, "/params/_meta/codeNavEnabled"),
         &serde_json::json!(true),
@@ -4480,9 +4491,9 @@ fn inject_capabilities_sets_code_nav_enabled_false() {
         code_nav_enabled: false,
         ..Default::default()
     };
-    let payload = r#"{"jsonrpc":"2.0","method":"session/new","id":1,"params":{"cwd":"/repo","_meta":{"clientIdentifier":"grok-tui"}}}"#;
+    let payload = r#"{"jsonrpc":"2.0","method":"session/new","id":1,"params":{"cwd":"/repo","_meta":{"clientIdentifier":"deepseek-build-tui"}}}"#;
     let mut json = pv(payload);
-    inject_session_request_context(&mut json, &caps, "grok-tui", ClientId(1));
+    inject_session_request_context(&mut json, &caps, "deepseek-build-tui", ClientId(1));
     assert_eq!(
         j(&json, "/params/_meta/codeNavEnabled"),
         &serde_json::json!(false),
@@ -4502,7 +4513,7 @@ fn inject_capabilities_injects_code_nav_into_session_load() {
     };
     let payload = r#"{"jsonrpc":"2.0","method":"session/load","id":2,"params":{"sessionId":"abc","cwd":"/repo","_meta":{}}}"#;
     let mut json = pv(payload);
-    inject_session_request_context(&mut json, &caps, "grok-web", ClientId(1));
+    inject_session_request_context(&mut json, &caps, "deepseek-build-web", ClientId(1));
     assert_eq!(
         j(&json, "/params/_meta/codeNavEnabled"),
         &serde_json::json!(true),
@@ -4526,9 +4537,9 @@ fn inject_capabilities_two_clients_stay_isolated() {
         r#"{"jsonrpc":"2.0","method":"session/new","id":1,"params":{"cwd":"/repo","_meta":{}}}"#;
 
     let mut web_json = pv(session_new);
-    inject_session_request_context(&mut web_json, &web_caps, "grok-web", ClientId(1));
+    inject_session_request_context(&mut web_json, &web_caps, "deepseek-build-web", ClientId(1));
     let mut tui_json = pv(session_new);
-    inject_session_request_context(&mut tui_json, &tui_caps, "grok-tui", ClientId(2));
+    inject_session_request_context(&mut tui_json, &tui_caps, "deepseek-build-tui", ClientId(2));
 
     assert_eq!(
         j(&web_json, "/params/_meta/codeNavEnabled"),
@@ -4558,9 +4569,9 @@ fn inject_capabilities_terminal_and_fs_per_client() {
         r#"{"jsonrpc":"2.0","method":"session/new","id":1,"params":{"cwd":"/repo","_meta":{}}}"#;
 
     let mut web_json = pv(session_new);
-    inject_session_request_context(&mut web_json, &web_caps, "grok-web", ClientId(1));
+    inject_session_request_context(&mut web_json, &web_caps, "deepseek-build-web", ClientId(1));
     let mut tui_json = pv(session_new);
-    inject_session_request_context(&mut tui_json, &tui_caps, "grok-tui", ClientId(2));
+    inject_session_request_context(&mut tui_json, &tui_caps, "deepseek-build-tui", ClientId(2));
 
     assert_eq!(
         j(&web_json, "/params/_meta/clientTerminal"),
@@ -4600,7 +4611,7 @@ fn inject_capabilities_terminal_into_session_load() {
     let session_load = r#"{"jsonrpc":"2.0","method":"session/load","id":2,"params":{"sessionId":"sess-1","_meta":{}}}"#;
 
     let mut json = pv(session_load);
-    inject_session_request_context(&mut json, &caps, "grok-web", ClientId(1));
+    inject_session_request_context(&mut json, &caps, "deepseek-build-web", ClientId(1));
 
     assert_eq!(
         j(&json, "/params/_meta/clientTerminal"),

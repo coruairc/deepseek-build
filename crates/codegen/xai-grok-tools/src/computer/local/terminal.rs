@@ -3146,7 +3146,7 @@ fn login_env_var_excluded(key: &str) -> bool {
             | "SHLVL"
             | "_"
             | "TERM"
-            | "GROK_AGENT"
+            | "DEEPSEEK_BUILD_AGENT"
             | "SUDO_ASKPASS"
             | "GROK_ASKPASS"
             | "ELECTRON_RUN_AS_NODE"

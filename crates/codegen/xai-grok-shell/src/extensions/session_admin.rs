@@ -688,7 +688,7 @@ async fn handle_commands_list(agent: &MvpAgent, args: &acp::ExtRequest) -> ExtRe
     }
 
     // For a given cwd, compute the plugin registry the same way a session would at spawn time (via build_for_cwd) That is also how reload_plugins_impl computes it (ancestor project config walk and vendor compat merge)
-    // This makes `deepseek-build/commands/list` (the pull grok-desktop uses after session start) return plugin-provided slash commands for the target cwd
+    // This makes `deepseek-build/commands/list` (the pull deepseek-build-desktop uses after session start) return plugin-provided slash commands for the target cwd
     // In desktop-to-docker (and ssh) setups the agent's launch CWD is unrelated to the user's chosen workspace dir; without a cwd the shared launch-dir snapshot serves the pre-session case
     let plugin_reg = agent
         .plugin_registry_for_cwd(req.cwd.as_deref().map(Path::new))

@@ -357,7 +357,7 @@ async fn scripted_goal_slash_presession_disabled() {
     run_scenario("goal_slash_presession_disabled.yaml").await;
 }
 
-/// Full folder-trust session: `GROK_FOLDER_TRUST=1` and a git repo that ships a repo-local `.mcp.json` (declared via the scenario `workspace`).
+/// Full folder-trust session: `DEEPSEEK_BUILD_FOLDER_TRUST=1` and a git repo that ships a repo-local `.mcp.json` (declared via the scenario `workspace`).
 /// The trust question renders before any session, accepting it (`y`) lets the session proceed, and a submitted prompt streams the mock response.
 /// This is the declarative counterpart to the programmatic `folder_trust_*` PTY tests.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

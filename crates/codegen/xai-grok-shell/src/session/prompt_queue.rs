@@ -22,7 +22,7 @@ mod tests {
             entries: vec![QueueEntryWire {
                 id: "p1".to_string(),
                 version: 0,
-                owner: Some("grok-tui".to_string()),
+                owner: Some("deepseek-build-tui".to_string()),
                 last_editor: None,
                 kind: "prompt".to_string(),
                 text: "hello".to_string(),
@@ -82,7 +82,7 @@ mod tests {
         let entry = QueueEntryWire {
             id: "p1".to_string(),
             version: 3,
-            owner: Some("grok-tui".to_string()),
+            owner: Some("deepseek-build-tui".to_string()),
             last_editor: Some("grok-vscode".to_string()),
             kind: "prompt".to_string(),
             text: "hello".to_string(),

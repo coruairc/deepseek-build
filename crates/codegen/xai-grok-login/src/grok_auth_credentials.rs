@@ -54,7 +54,7 @@ impl GrokAuthCredentials {
     /// Error hint for 401 responses.
     pub fn auth_error_hint(&self) -> &'static str {
         if self.deployment_key.is_some() {
-            "Your GROK_DEPLOYMENT_KEY is invalid or expired. Please contact a team admin."
+            "Your DEEPSEEK_BUILD_DEPLOYMENT_KEY is invalid or expired. Please contact a team admin."
         } else if self.user_token.is_some() {
             "Your auth token is invalid or expired. Run `grok login` to re-authenticate."
         } else {
@@ -97,12 +97,7 @@ impl GrokAuthCredentials {
         let builder = if let Some(ref key) = self.deployment_key {
             builder.header("Authorization", format!("Bearer {}", key))
         } else if let Some(ref token) = self.user_token {
-            builder
-                .header("Authorization", format!("Bearer {}", token))
-                .header(
-                    obfstr::obfstr!("X-XAI-Token-Auth"),
-                    obfstr::obfstr!("xai-grok-cli"),
-                )
+            builder.header("Authorization", format!("Bearer {}", token))
         } else {
             builder
         };

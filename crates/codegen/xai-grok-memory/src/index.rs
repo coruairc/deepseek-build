@@ -902,8 +902,8 @@ mod tests {
 
     #[test]
     fn test_open_or_create_uses_wal_on_local_fs() {
-        // GROK_SQLITE_JOURNAL_MODE overrides the journal-mode decision; skip when it is set
-        if std::env::var("GROK_SQLITE_JOURNAL_MODE").is_ok() {
+        // DEEPSEEK_BUILD_SQLITE_JOURNAL_MODE overrides the journal-mode decision; skip when it is set
+        if std::env::var("DEEPSEEK_BUILD_SQLITE_JOURNAL_MODE").is_ok() {
             return;
         }
         let tmp = TempDir::new().unwrap();

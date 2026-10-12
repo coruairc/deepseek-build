@@ -144,7 +144,7 @@ impl ProactiveRefreshConfig {
             tracing::warn!(
                 fraction = self.fraction,
                 default = DEFAULT_OIDC_REFRESH_FRACTION,
-                "GROK_WORKSPACE OIDC refresh fraction out of range; using default"
+                "OIDC refresh fraction out of range; using default"
             );
             self.fraction = DEFAULT_OIDC_REFRESH_FRACTION;
         }
@@ -152,7 +152,7 @@ impl ProactiveRefreshConfig {
             tracing::warn!(
                 jitter_fraction = self.jitter_fraction,
                 default = DEFAULT_OIDC_REFRESH_JITTER_FRACTION,
-                "GROK_WORKSPACE OIDC jitter fraction out of range; using default"
+                "OIDC jitter fraction out of range; using default"
             );
             self.jitter_fraction = DEFAULT_OIDC_REFRESH_JITTER_FRACTION;
         }
@@ -160,7 +160,7 @@ impl ProactiveRefreshConfig {
             tracing::warn!(
                 safety_margin = ?self.safety_margin,
                 clamped = ?MAX_OIDC_DURATION,
-                "GROK_WORKSPACE OIDC safety margin above cap; clamped"
+                "OIDC safety margin above cap; clamped"
             );
             self.safety_margin = MAX_OIDC_DURATION;
         }
@@ -168,7 +168,7 @@ impl ProactiveRefreshConfig {
             tracing::warn!(
                 min_refresh_interval = ?self.min_refresh_interval,
                 clamped = ?MAX_OIDC_DURATION,
-                "GROK_WORKSPACE OIDC min refresh interval above cap; clamped"
+                "OIDC min refresh interval above cap; clamped"
             );
             self.min_refresh_interval = MAX_OIDC_DURATION;
         }
@@ -176,7 +176,7 @@ impl ProactiveRefreshConfig {
             tracing::warn!(
                 min_refresh_interval = ?self.min_refresh_interval,
                 floored_to = ?MIN_OIDC_MIN_REFRESH_INTERVAL,
-                "GROK_WORKSPACE OIDC min refresh interval below floor; floored"
+                "OIDC min refresh interval below floor; floored"
             );
             self.min_refresh_interval = MIN_OIDC_MIN_REFRESH_INTERVAL;
         }
@@ -187,7 +187,7 @@ impl ProactiveRefreshConfig {
                     min_refresh_interval = ?self.min_refresh_interval,
                     safety_margin = ?self.safety_margin,
                     repaired_min = ?shrunk,
-                    "GROK_WORKSPACE OIDC min refresh interval must be < safety_margin; reduced"
+                    "OIDC min refresh interval must be < safety_margin; reduced"
                 );
                 self.min_refresh_interval = shrunk;
             } else {
@@ -197,7 +197,7 @@ impl ProactiveRefreshConfig {
                         min_refresh_interval = ?self.min_refresh_interval,
                         safety_margin = ?self.safety_margin,
                         repaired_safety = ?raised,
-                        "GROK_WORKSPACE OIDC safety_margin too small to sit above min interval; raised"
+                        "OIDC safety_margin too small to sit above min interval; raised"
                     );
                     self.safety_margin = raised;
                 } else {
@@ -208,7 +208,7 @@ impl ProactiveRefreshConfig {
                         safety_margin = ?self.safety_margin,
                         repaired_min = ?repaired_min,
                         repaired_safety = ?MAX_OIDC_DURATION,
-                        "GROK_WORKSPACE OIDC safety_margin cannot rise above the 24h cap; pinned and reduced min"
+                        "OIDC safety_margin cannot rise above the 24h cap; pinned and reduced min"
                     );
                     self.safety_margin = MAX_OIDC_DURATION;
                     self.min_refresh_interval = repaired_min;
@@ -472,7 +472,7 @@ impl StatusConfig {
             tracing::warn!(
                 keepalive = ?self.keepalive,
                 heartbeat = ?self.heartbeat,
-                "GROK_WORKSPACE keepalive <= heartbeat; transport may time out between heartbeats"
+                "keepalive <= heartbeat; transport may time out between heartbeats"
             );
         }
         let min_scrape = Duration::from_millis(MIN_PREVIEW_ACTIVITY_SCRAPE_INTERVAL_MS);
@@ -489,7 +489,7 @@ impl StatusConfig {
                 window = ?self.preview_activity_window,
                 clamped_scrape = ?scrape,
                 clamped_window = ?window,
-                "GROK_WORKSPACE preview scrape interval/window out of range; clamped to 1ms <= scrape < window"
+                "preview scrape interval/window out of range; clamped to 1ms <= scrape < window"
             );
             self.preview_activity_window = window;
             self.preview_activity_scrape_interval = scrape;
@@ -500,7 +500,7 @@ impl StatusConfig {
             tracing::warn!(
                 window = ?self.rpc_activity_window,
                 clamped_window = ?rpc_cap,
-                "GROK_WORKSPACE rpc activity window above cap; clamped"
+                "rpc activity window above cap; clamped"
             );
             self.rpc_activity_window = rpc_cap;
         }
@@ -509,7 +509,7 @@ impl StatusConfig {
             tracing::warn!(
                 window = ?self.presence_activity_window,
                 clamped_window = ?presence_cap,
-                "GROK_WORKSPACE presence activity window above cap; clamped"
+                "presence activity window above cap; clamped"
             );
             self.presence_activity_window = presence_cap;
         }
@@ -518,7 +518,7 @@ impl StatusConfig {
             tracing::warn!(
                 window = ?self.scheduled_task_keep_awake,
                 clamped_window = ?scheduled_cap,
-                "GROK_WORKSPACE scheduled-task keep-awake window above cap; clamped"
+                "scheduled-task keep-awake window above cap; clamped"
             );
             self.scheduled_task_keep_awake = scheduled_cap;
         }
@@ -527,7 +527,7 @@ impl StatusConfig {
             tracing::warn!(
                 poll_interval = ?self.preview_state_poll_interval,
                 floored_to = ?min_poll,
-                "GROK_WORKSPACE preview-state poll interval below floor; floored"
+                "preview-state poll interval below floor; floored"
             );
             self.preview_state_poll_interval = min_poll;
         }
@@ -537,7 +537,7 @@ impl StatusConfig {
             tracing::warn!(
                 wait = ?self.preview_state_wait,
                 clamped_wait = ?wait_cap,
-                "GROK_WORKSPACE preview-state wait above the proxy's hold ceiling; clamped"
+                "preview-state wait above the proxy's hold ceiling; clamped"
             );
             self.preview_state_wait = wait_cap;
         }
@@ -551,7 +551,7 @@ impl StatusConfig {
                 tracing::warn!(
                     refresh = ?self.preview_discovery_refresh,
                     clamped_refresh = ?refresh,
-                    "GROK_WORKSPACE preview discovery refresh out of range; clamped to 100ms..=10s"
+                    "preview discovery refresh out of range; clamped to 100ms..=10s"
                 );
                 self.preview_discovery_refresh = refresh;
             }
@@ -567,7 +567,7 @@ fn parse_or<T: FromStr>(var: &str, default: T) -> T {
         Ok(raw) => match raw.parse::<T>() {
             Ok(value) => value,
             Err(_) => {
-                tracing::warn!(var, value = %raw, "Unparseable GROK_WORKSPACE value; using default");
+                tracing::warn!(var, value = %raw, "Unparseable workspace status value; using default");
                 default
             }
         },
@@ -589,7 +589,7 @@ fn frac_or(var: &str, default: f64, in_range: impl Fn(f64) -> bool) -> f64 {
                 tracing::warn!(
                     var,
                     value = %raw,
-                    "GROK_WORKSPACE fraction out of range; using default"
+                    "fraction out of range; using default"
                 );
                 default
             }
@@ -597,7 +597,7 @@ fn frac_or(var: &str, default: f64, in_range: impl Fn(f64) -> bool) -> f64 {
                 tracing::warn!(
                     var,
                     value = %raw,
-                    "Unparseable GROK_WORKSPACE value; using default"
+                    "Unparseable workspace status value; using default"
                 );
                 default
             }
@@ -615,7 +615,7 @@ fn optional_secs(var: &str) -> Option<Duration> {
                 tracing::warn!(
                     var,
                     value = %raw,
-                    "Unparseable GROK_WORKSPACE value; using default"
+                    "Unparseable workspace status value; using default"
                 );
                 None
             }
@@ -635,7 +635,7 @@ fn nonzero_secs_or(var: &str, secs: u64, default: Duration) -> Duration {
         tracing::warn!(
             var,
             default = ?default,
-            "GROK_WORKSPACE agent timeout of 0s is invalid; using default"
+            "agent timeout of 0s is invalid; using default"
         );
         return default;
     }
@@ -655,7 +655,7 @@ fn backoff_schedule_from_env(var: &str) -> Option<Vec<Duration>> {
                 tracing::warn!(
                     var,
                     value = %raw,
-                    "Unparseable GROK_WORKSPACE backoff schedule; using SDK default"
+                    "Unparseable workspace backoff schedule; using SDK default"
                 );
                 return None;
             }

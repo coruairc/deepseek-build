@@ -76,7 +76,7 @@ Config-file hooks live in your own `config.toml`; see [Hooks in Config Files](#h
 
 **Trusting a project**: The first time you open a project with hooks, you must trust it before its project hooks will run; until then they are silently skipped. Grant trust by running `/hooks-trust` (or launching with `--trust`); the decision is recorded in the unified folder-trust store (`~/.deepseek-build/trusted_folders.toml`), the same gate that governs repo-local MCP/LSP servers. Global hooks in `~/.deepseek-build/hooks/` are always trusted and need no entry. This prevents untrusted repos from running arbitrary code.
 
-Because hooks are unified under folder-trust, a `--trust` / `/hooks-trust` grant trusts the whole folder for **MCP, LSP, hooks, project instructions, and project skills** together, and covers subdirectories of the same repository. A nested git checkout under that folder is a separate workspace and is not covered. Conversely, disabling folder-trust (`GROK_FOLDER_TRUST=0` or `[folder_trust] enabled = false`) ungates those surfaces together.
+Because hooks are unified under folder-trust, a `--trust` / `/hooks-trust` grant trusts the whole folder for **MCP, LSP, hooks, project instructions, and project skills** together, and covers subdirectories of the same repository. A nested git checkout under that folder is a separate workspace and is not covered. Conversely, disabling folder-trust (`DEEPSEEK_BUILD_FOLDER_TRUST=0` or `[folder_trust] enabled = false`) ungates those surfaces together.
 
 ---
 
@@ -414,7 +414,7 @@ What the two scripts have to get right:
   turn correctable. Re-read that record first, so you only clear a turn you recorded yourself.
 - **Keep it to a local write.** Teardown gives the whole queue of turn-end reports half a second,
   and each `SessionEnd` hook is then bounded by its own timeout (default 1.5s; set
-  `GROK_SESSION_END_HOOKS_TIMEOUT_MS`, in milliseconds, to change that default, capped at 60s).
+  `DEEPSEEK_BUILD_SESSION_END_HOOKS_TIMEOUT_MS`, in milliseconds, to change that default, capped at 60s).
 
 `Stop` is a gate, so that entry runs on the turn's critical path: keep it fast, give it a `timeout`,
 and exit 0, because exit 2 blocks the stop and keeps the agent working. Leave `Stop` out if you also
@@ -479,11 +479,11 @@ These variables are set by the hook runner for **every** hook:
 
 | Variable              | Description |
 |-----------------------|-------------|
-| `GROK_HOOK_EVENT`     | The name of the event that triggered the hook (e.g. `pre_tool_use`, `session_start`, `post_tool_use`, `session_end`, `stop`, `notification`). |
-| `GROK_HOOK_NAME`      | The configured name of this specific hook (includes the plugin prefix for plugin-provided hooks). |
-| `GROK_SESSION_ID`     | The unique identifier of the current deepseek-build session. |
-| `GROK_WORKSPACE_ROOT` | Absolute path to the root of the current workspace. |
-| `CLAUDE_PROJECT_DIR`  | Absolute path to the workspace root. A Claude Code-compatible alias for `GROK_WORKSPACE_ROOT`, set for every hook. |
+| `DEEPSEEK_BUILD_HOOK_EVENT`     | The name of the event that triggered the hook (e.g. `pre_tool_use`, `session_start`, `post_tool_use`, `session_end`, `stop`, `notification`). |
+| `DEEPSEEK_BUILD_HOOK_NAME`      | The configured name of this specific hook (includes the plugin prefix for plugin-provided hooks). |
+| `DEEPSEEK_BUILD_SESSION_ID`     | The unique identifier of the current deepseek-build session. |
+| `DEEPSEEK_BUILD_WORKSPACE_ROOT` | Absolute path to the root of the current workspace. |
+| `CLAUDE_PROJECT_DIR`  | Absolute path to the workspace root. A Claude Code-compatible alias for `DEEPSEEK_BUILD_WORKSPACE_ROOT`, set for every hook. |
 
 These variables are **reserved**. Any values you attempt to set for them via the `env` field in your hook JSON are stripped at load time (a warning is logged), and the runner always injects the real values at spawn time.
 
@@ -493,10 +493,10 @@ When a hook originates from a plugin, deepseek-build additionally injects the fo
 
 | Variable             | Description |
 |----------------------|-------------|
-| `GROK_PLUGIN_ROOT`   | Absolute path to the plugin's installed directory. |
-| `GROK_PLUGIN_DATA`   | Absolute path to the plugin's writable data directory (for storing plugin state, caches, etc.). |
+| `DEEPSEEK_BUILD_PLUGIN_ROOT`   | Absolute path to the plugin's installed directory. |
+| `DEEPSEEK_BUILD_PLUGIN_DATA`   | Absolute path to the plugin's writable data directory (for storing plugin state, caches, etc.). |
 
-These values are provided by the plugin system. For the four plugin-related keys (`GROK_PLUGIN_ROOT`, `GROK_PLUGIN_DATA`, and their Claude aliases), the plugin adapter ensures the official plugin values always win over any user-declared values in the hook's `env` map.
+These values are provided by the plugin system. For the four plugin-related keys (`DEEPSEEK_BUILD_PLUGIN_ROOT`, `DEEPSEEK_BUILD_PLUGIN_DATA`, and their Claude aliases), the plugin adapter ensures the official plugin values always win over any user-declared values in the hook's `env` map.
 
 #### User-defined environment variables
 
@@ -653,4 +653,4 @@ echo '{"decision": "allow"}'
 - **Hook not running?** Press `Ctrl+L` on non–VS Code family (or run `/hooks` anywhere) to see if it is loaded and matched.
 - **Project hooks ignored?** The folder may be untrusted. Run `/hooks-trust` (or relaunch with `--trust`).
 - **Script not found?** Check the path is relative to the `.json` file and executable (`chmod +x`).
-- **See errors?** Capture logs by launching with `RUST_LOG=debug GROK_LOG_FILE=/tmp/deepseek-build.log deepseek-build`, then check `/tmp/deepseek-build.log`.
+- **See errors?** Capture logs by launching with `RUST_LOG=debug DEEPSEEK_BUILD_LOG_FILE=/tmp/deepseek-build.log deepseek-build`, then check `/tmp/deepseek-build.log`.

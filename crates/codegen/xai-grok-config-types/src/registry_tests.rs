@@ -45,39 +45,51 @@ fn registered_settings() {
     assert_eq!(
         rows,
         BTreeMap::from([
-            ("session_search", ("GROK_SESSION_SEARCH", true)),
-            ("lsp_tools", ("GROK_LSP_TOOLS", false)),
-            ("web_fetch", ("GROK_WEB_FETCH", false)),
-            ("session_recap", ("GROK_SESSION_RECAP", true)),
-            ("ask_user_question", ("GROK_ASK_USER_QUESTION", true)),
-            ("voice_mode", ("GROK_VOICE_MODE", true)),
-            ("write_file", ("GROK_WRITE_FILE", true)),
-            ("feedback", ("GROK_FEEDBACK_ENABLED", true)),
-            ("feedback_trace_card", ("GROK_FEEDBACK_TRACE_CARD", false)),
-            ("turn_summary", ("GROK_TURN_SUMMARY", true)),
-            ("cancel_rewind", ("GROK_CANCEL_REWIND", true)),
+            ("session_search", ("DEEPSEEK_BUILD_SESSION_SEARCH", true)),
+            ("lsp_tools", ("DEEPSEEK_BUILD_LSP_TOOLS", false)),
+            ("web_fetch", ("DEEPSEEK_BUILD_WEB_FETCH", false)),
+            ("session_recap", ("DEEPSEEK_BUILD_SESSION_RECAP", true)),
+            (
+                "ask_user_question",
+                ("DEEPSEEK_BUILD_ASK_USER_QUESTION", true)
+            ),
+            ("voice_mode", ("DEEPSEEK_BUILD_VOICE_MODE", true)),
+            ("write_file", ("DEEPSEEK_BUILD_WRITE_FILE", true)),
+            ("feedback", ("DEEPSEEK_BUILD_FEEDBACK_ENABLED", true)),
+            (
+                "feedback_trace_card",
+                ("DEEPSEEK_BUILD_FEEDBACK_TRACE_CARD", false)
+            ),
+            ("turn_summary", ("DEEPSEEK_BUILD_TURN_SUMMARY", true)),
+            ("cancel_rewind", ("DEEPSEEK_BUILD_CANCEL_REWIND", true)),
             (
                 "compaction_verbatim_input",
-                ("GROK_COMPACTION_VERBATIM_INPUT", true),
+                ("DEEPSEEK_BUILD_COMPACTION_VERBATIM_INPUT", true),
             ),
-            ("two_pass_compaction", ("GROK_TWO_PASS_COMPACTION", true)),
-            ("backend_tools", ("GROK_BACKEND_SEARCH", true)),
-            ("auto_wake", ("GROK_AUTO_WAKE", true)),
+            (
+                "two_pass_compaction",
+                ("DEEPSEEK_BUILD_TWO_PASS_COMPACTION", true)
+            ),
+            ("backend_tools", ("DEEPSEEK_BUILD_BACKEND_SEARCH", true)),
+            ("auto_wake", ("DEEPSEEK_BUILD_AUTO_WAKE", true)),
             (
                 "subagent_worktree_snapshot",
-                ("GROK_SUBAGENT_WORKTREE_SNAPSHOT", false),
+                ("DEEPSEEK_BUILD_SUBAGENT_WORKTREE_SNAPSHOT", false),
             ),
             (
                 "subagent_model_inheritance",
-                ("GROK_SUBAGENT_MODEL_INHERITANCE", false),
+                ("DEEPSEEK_BUILD_SUBAGENT_MODEL_INHERITANCE", false),
             ),
             (
                 "active_agent_messages",
-                ("GROK_ACTIVE_AGENT_MESSAGES", false),
+                ("DEEPSEEK_BUILD_ACTIVE_AGENT_MESSAGES", false),
             ),
-            ("dock", ("GROK_DOCK", false)),
-            ("terminal_theme", ("GROK_TERMINAL_THEME", false)),
-            ("file_acceleration", ("GROK_FILE_ACCELERATION", false)),
+            ("dock", ("DEEPSEEK_BUILD_DOCK", false)),
+            ("terminal_theme", ("DEEPSEEK_BUILD_TERMINAL_THEME", false)),
+            (
+                "file_acceleration",
+                ("DEEPSEEK_BUILD_FILE_ACCELERATION", false)
+            ),
         ]),
     );
 }
@@ -199,7 +211,7 @@ fn off_reason_names_the_setting_that_turned_it_off() {
                 env: Some(false),
                 ..Default::default()
             },
-            "the GROK_SESSION_SEARCH environment variable",
+            "the DEEPSEEK_BUILD_SESSION_SEARCH environment variable",
         ),
         (
             FeatureSources {

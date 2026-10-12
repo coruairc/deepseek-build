@@ -1172,7 +1172,7 @@ async fn test_set_model_broadcasts_to_session_subscribers() {
     // Two TUIs connected to the same leader, sharing one session.
     let mut invoker = LeaderClient::connect(
         sock_path.clone(),
-        "grok-tui-A",
+        "deepseek-build-tui-A",
         ClientMode::Stdio,
         ClientCapabilities::default(),
     )
@@ -1180,7 +1180,7 @@ async fn test_set_model_broadcasts_to_session_subscribers() {
     .unwrap();
     let mut follower = LeaderClient::connect(
         sock_path,
-        "grok-tui-B",
+        "deepseek-build-tui-B",
         ClientMode::Stdio,
         ClientCapabilities::default(),
     )
@@ -1434,7 +1434,7 @@ async fn test_cancel_prompt_id_meta_passes_through_with_two_clients() {
 
     let client_a = LeaderClient::connect(
         sock_path.clone(),
-        "grok-pager",
+        "deepseek-build-pager",
         ClientMode::Stdio,
         ClientCapabilities::default(),
     )
@@ -1442,7 +1442,7 @@ async fn test_cancel_prompt_id_meta_passes_through_with_two_clients() {
     .unwrap();
     let client_b = LeaderClient::connect(
         sock_path,
-        "grok-pager",
+        "deepseek-build-pager",
         ClientMode::Stdio,
         ClientCapabilities::default(),
     )
@@ -1738,7 +1738,7 @@ async fn test_code_nav_capable_client_gets_true_injected_into_session_new() {
     // Web client that advertised code-nav capability during registration.
     let web_client = LeaderClient::connect(
         sock_path,
-        "grok-web",
+        "deepseek-build-web",
         ClientMode::Stdio,
         ClientCapabilities {
             code_nav_enabled: true,
@@ -1774,7 +1774,7 @@ async fn test_non_code_nav_client_gets_false_injected_into_session_new() {
     // TUI client with no code-nav capability.
     let tui_client = LeaderClient::connect(
         sock_path,
-        "grok-tui",
+        "deepseek-build-tui",
         ClientMode::Stdio,
         ClientCapabilities {
             code_nav_enabled: false,
@@ -1812,7 +1812,7 @@ async fn test_leader_code_nav_client_isolation() {
     // Web client with code-nav capability.
     let web_client = LeaderClient::connect(
         sock_path.clone(),
-        "grok-web",
+        "deepseek-build-web",
         ClientMode::Stdio,
         ClientCapabilities {
             code_nav_enabled: true,
@@ -1825,7 +1825,7 @@ async fn test_leader_code_nav_client_isolation() {
     // TUI client without code-nav capability.
     let tui_client = LeaderClient::connect(
         sock_path,
-        "grok-tui",
+        "deepseek-build-tui",
         ClientMode::Stdio,
         ClientCapabilities {
             code_nav_enabled: false,
@@ -1872,7 +1872,7 @@ async fn test_code_nav_capability_injected_into_session_load() {
 
     let web_client = LeaderClient::connect(
         sock_path,
-        "grok-web",
+        "deepseek-build-web",
         ClientMode::Stdio,
         ClientCapabilities {
             code_nav_enabled: true,
@@ -1908,7 +1908,7 @@ async fn test_code_status_ext_request_forwarded_to_agent() {
 
     let web_client = LeaderClient::connect(
         sock_path,
-        "grok-web",
+        "deepseek-build-web",
         ClientMode::Stdio,
         ClientCapabilities {
             code_nav_enabled: true,
@@ -2142,7 +2142,7 @@ async fn test_connect_waits_for_leader_ready() {
     let connect_start = tokio::time::Instant::now();
     let mut client = LeaderClient::connect(
         sock_path,
-        "grok-tui",
+        "deepseek-build-tui",
         ClientMode::Stdio,
         ClientCapabilities::default(),
     )
@@ -2570,7 +2570,7 @@ async fn test_initialize_injected_when_not_first_message() {
 
     let client = LeaderClient::connect(
         sock_path,
-        "grok-tui",
+        "deepseek-build-tui",
         ClientMode::Stdio,
         ClientCapabilities::default(),
     )
@@ -2601,7 +2601,7 @@ async fn test_initialize_injected_when_not_first_message() {
         .and_then(|v| v.as_str());
     assert_eq!(
         client_id,
-        Some("grok-tui"),
+        Some("deepseek-build-tui"),
         "clientIdentifier must be injected into initialize even when it is not the first message"
     );
 
@@ -2619,7 +2619,7 @@ async fn test_leader_code_nav_isolation_end_to_end() {
     // Web client with code-nav capability.
     let web_client = LeaderClient::connect(
         sock_path.clone(),
-        "grok-web",
+        "deepseek-build-web",
         ClientMode::Stdio,
         ClientCapabilities {
             code_nav_enabled: true,
@@ -2632,7 +2632,7 @@ async fn test_leader_code_nav_isolation_end_to_end() {
     // TUI client without code-nav capability.
     let tui_client = LeaderClient::connect(
         sock_path,
-        "grok-tui",
+        "deepseek-build-tui",
         ClientMode::Stdio,
         ClientCapabilities {
             code_nav_enabled: false,

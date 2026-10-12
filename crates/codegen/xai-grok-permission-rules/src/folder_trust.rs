@@ -142,7 +142,7 @@ fn feature_enabled_for_build(remote: Option<&RemoteSettings>, is_local_build: bo
             .and_then(|v| v.as_bool())
     };
 
-    BoolFlag::env("GROK_FOLDER_TRUST")
+    BoolFlag::env("DEEPSEEK_BUILD_FOLDER_TRUST")
         .config(flag(user.as_ref()))
         .managed(flag(managed.as_ref()))
         .feature_flag(remote.and_then(|r| r.folder_trust_enabled))
@@ -313,7 +313,7 @@ mod tests {
             "DEEPSEEK_BUILD_HOME",
             home.0.to_str().expect("temp home is utf-8"),
         );
-        let flag = EnvVar::unset("GROK_FOLDER_TRUST");
+        let flag = EnvVar::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         (lock, home, home_var, flag)
     }
 
@@ -357,7 +357,7 @@ mod tests {
             "DEEPSEEK_BUILD_HOME",
             home.0.to_str().expect("temp home is utf-8"),
         );
-        let _flag = EnvVar::set("GROK_FOLDER_TRUST", "1");
+        let _flag = EnvVar::set("DEEPSEEK_BUILD_FOLDER_TRUST", "1");
         assert!(!super::feature_enabled_for_build(None, true));
     }
 

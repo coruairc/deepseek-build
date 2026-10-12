@@ -635,7 +635,7 @@ pub struct AppView {
     /// Gated by `GROK_SESSION_PICKER_GROUPED` env var or remote settings `session_picker_grouped`; defaults to `false`.
     pub session_picker_grouped: bool,
     /// Whether Ctrl+C before first server activity rewinds the prompt back into the input box.
-    /// Gated by `GROK_CANCEL_REWIND` env / `[features] cancel_rewind` config / remote settings flag.
+    /// Gated by `DEEPSEEK_BUILD_CANCEL_REWIND` env / `[features] cancel_rewind` config / remote settings flag.
     pub cancel_rewind_enabled: bool,
     /// Whether session recap (`/recap` and the automatic away recap) is rolled out.
     /// Resolved by the shell and advertised on ACP initialize (`sessionRecap`).

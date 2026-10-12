@@ -2,7 +2,7 @@ use crate::util::config::RemoteSettings;
 use toml::Value as TomlValue;
 
 /// Env override for the full crash-handler install gate.
-pub(crate) const ENV_CRASH_HANDLER: &str = "GROK_CRASH_HANDLER";
+pub(crate) const ENV_CRASH_HANDLER: &str = "DEEPSEEK_BUILD_CRASH_HANDLER";
 
 fn crash_handler_from_toml(v: Option<&TomlValue>) -> Option<bool> {
     v?.get("diagnostics")?.get("crash_handler")?.as_bool()
@@ -25,7 +25,7 @@ fn resolve_crash_handler_enabled_layers(
         .resolve()
 }
 
-/// Precedence: requirements > env (`GROK_CRASH_HANDLER`) > user `[diagnostics] crash_handler` > managed > remote settings `crash_handler_enabled`.
+/// Precedence: requirements > env (`DEEPSEEK_BUILD_CRASH_HANDLER`) > user `[diagnostics] crash_handler` > managed > remote settings `crash_handler_enabled`.
 /// Defaults to `false`.
 pub fn resolve_crash_handler_enabled(
     requirements: Option<&TomlValue>,
@@ -91,7 +91,7 @@ mod crash_handler_gate_tests {
     use super::*;
     use crate::agent::config::ConfigSource;
 
-    // `GROK_CRASH_HANDLER` is process-global
+    // `DEEPSEEK_BUILD_CRASH_HANDLER` is process-global
     // Serialize and force it unset at the top of each test so a developer's shell value can't make these flaky
     static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
     fn guard() -> std::sync::MutexGuard<'static, ()> {

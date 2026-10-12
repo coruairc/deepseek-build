@@ -9,26 +9,26 @@ deepseek-build reads settings from config files, environment variables, and CLI 
 Settings resolve highest-priority first:
 
 1. **CLI flags** (e.g. `--yolo`, `--model`, `--sandbox`)
-2. **Environment variables** (e.g. `DEEPSEEK_API_KEY`, `GROK_MEMORY`)
-3. **`GROK_CONFIG` / `GROK_CONFIG_PATH` overlay** (above `config.toml`)
+2. **Environment variables** (e.g. `DEEPSEEK_API_KEY`, `DEEPSEEK_BUILD_MEMORY`)
+3. **`DEEPSEEK_BUILD_CONFIG` / `DEEPSEEK_BUILD_CONFIG_PATH` overlay** (above `config.toml`)
 4. **config.toml** (`~/.deepseek-build/config.toml`)
 5. **Built-in defaults**
 
-Within the config-file tier, the layers merge lowest-to-highest: `config.toml` → `GROK_CONFIG` overlay.
+Within the config-file tier, the layers merge lowest-to-highest: `config.toml` → `DEEPSEEK_BUILD_CONFIG` overlay.
 
-`GROK_CONFIG` / `GROK_CONFIG_PATH` (tier 3) are config **overlays**: a merged config layer, not direct-setting environment variables like `DEEPSEEK_API_KEY` (tier 2). They set config keys (subject to the allowlist below), so read them as part of the config-file tier rather than the env-var tier.
+`DEEPSEEK_BUILD_CONFIG` / `DEEPSEEK_BUILD_CONFIG_PATH` (tier 3) are config **overlays**: a merged config layer, not direct-setting environment variables like `DEEPSEEK_API_KEY` (tier 2). They set config keys (subject to the allowlist below), so read them as part of the config-file tier rather than the env-var tier.
 
-### Injecting config with `GROK_CONFIG`
+### Injecting config with `DEEPSEEK_BUILD_CONFIG`
 
 A harness or ACP client that launches `deepseek-build agent stdio` can inject settings without writing a `config.toml` or relocating `$DEEPSEEK_BUILD_HOME`:
 
-- **`GROK_CONFIG`**: an inline JSON object overlay.
-- **`GROK_CONFIG_PATH`**: an *additional* file overlay (not a replacement for `config.toml`), a JSON or TOML file read by its extension (`.json` → JSON, else TOML). `GROK_CONFIG` wins if both are set. An empty `GROK_CONFIG` is treated as unset, and a malformed one logs a warning and falls through to `GROK_CONFIG_PATH`.
+- **`DEEPSEEK_BUILD_CONFIG`**: an inline JSON object overlay.
+- **`DEEPSEEK_BUILD_CONFIG_PATH`**: an *additional* file overlay (not a replacement for `config.toml`), a JSON or TOML file read by its extension (`.json` → JSON, else TOML). `DEEPSEEK_BUILD_CONFIG` wins if both are set. An empty `DEEPSEEK_BUILD_CONFIG` is treated as unset, and a malformed one logs a warning and falls through to `DEEPSEEK_BUILD_CONFIG_PATH`.
 
-The overlay is **deep-merged** on top of your `config.toml` (it overrides only the keys it sets). A malformed blob is ignored with a warning. This mirrors `CODEX_CONFIG` from the `codex-acp` adapter (a JSON object merged into the session config); deepseek-build is ACP-native, so the overlay lives in the agent itself. It only affects settings read from the merged config, and it is **not** a permission-escalation path. The overlay is confined, fail-closed, to an **allowlist** of soft settings (`models`, `features`, a narrowed `toolset`, and a `shell_environment_policy` limited to its filter fields, which select among env names the launcher already controls and cannot inject an env value into tool subprocesses); every other table is dropped at the choke point, so the overlay cannot spawn commands, set auth policy, redirect network traffic, elevate trust, or add a discovery source. Even on the allowlisted settings, a specific set of security gates read the raw disk layers rather than the overlay. The `ConfigLayers::env_overlay` rustdoc is the canonical list of what the overlay can and cannot reach and which gates read it overlay-free; see also the [configuration reference](26-config-reference.md). Use `GROK_DEFAULT_SELECTED_PERMISSION` for headless permission control. For example, to set the default reasoning effort:
+The overlay is **deep-merged** on top of your `config.toml` (it overrides only the keys it sets). A malformed blob is ignored with a warning. This mirrors `CODEX_CONFIG` from the `codex-acp` adapter (a JSON object merged into the session config); deepseek-build is ACP-native, so the overlay lives in the agent itself. It only affects settings read from the merged config, and it is **not** a permission-escalation path. The overlay is confined, fail-closed, to an **allowlist** of soft settings (`models`, `features`, a narrowed `toolset`, and a `shell_environment_policy` limited to its filter fields, which select among env names the launcher already controls and cannot inject an env value into tool subprocesses); every other table is dropped at the choke point, so the overlay cannot spawn commands, set auth policy, redirect network traffic, elevate trust, or add a discovery source. Even on the allowlisted settings, a specific set of security gates read the raw disk layers rather than the overlay. The `ConfigLayers::env_overlay` rustdoc is the canonical list of what the overlay can and cannot reach and which gates read it overlay-free; see also the [configuration reference](26-config-reference.md). Use `DEEPSEEK_BUILD_DEFAULT_SELECTED_PERMISSION` for headless permission control. For example, to set the default reasoning effort:
 
 ```bash
-GROK_CONFIG='{"models": {"default_reasoning_effort": "high"}}' deepseek-build agent stdio
+DEEPSEEK_BUILD_CONFIG='{"models": {"default_reasoning_effort": "high"}}' deepseek-build agent stdio
 ```
 
 ---
@@ -105,7 +105,7 @@ respect_gitignore = false              # default: false; set true to make every 
 # Per tool name. First 2×-or-more burst: discard that step and retry once.
 # Any other over-cap (including a second 2× burst) keeps the first K.
 # Defaults: image 8, video 4.
-# Env vars GROK_MAX_PARALLEL_IMAGE_GEN_CALLS / GROK_MAX_PARALLEL_VIDEO_GEN_CALLS
+# Env vars DEEPSEEK_BUILD_MAX_PARALLEL_IMAGE_GEN_CALLS / DEEPSEEK_BUILD_MAX_PARALLEL_VIDEO_GEN_CALLS
 # override these values (see environment-variables doc).
 # [tools.media_gen]
 # max_parallel_image_gen_calls = 8
@@ -122,7 +122,7 @@ name = "my-custom-agent"
 # definition = "/path/to/agent.md"   # path wins over name
 ```
 
-`definition` is a markdown file with YAML frontmatter. `name` is a built-in or discovered agent (`~/.deepseek-build/agents/`, `.grok/agents/`). If the named agent is missing, deepseek-build uses `GROK_AGENT`, then the built-in default. `--agent-profile`, `--plan`, and `--ask-user` still override that session. Field list: [26-config-reference.md](26-config-reference.md).
+`definition` is a markdown file with YAML frontmatter. `name` is a built-in or discovered agent (`~/.deepseek-build/agents/`, `.grok/agents/`). If the named agent is missing, deepseek-build uses `DEEPSEEK_BUILD_AGENT`, then the built-in default. `--agent-profile`, `--plan`, and `--ask-user` still override that session. Field list: [26-config-reference.md](26-config-reference.md).
 
 #### Input mode
 
@@ -162,7 +162,7 @@ After you answer the first prompt the cursor turns **sticky**: each later prompt
 
 Values match case-insensitively; an unset or unrecognized value falls back to `always_allow_all_sessions`. The `allow_command_always` row is always scoped to the specific action being approved (command / tool / domain / edit-session), never a global allow-everything — that's what `always_allow_all_sessions` is for. Note the per-command "Always allow" rows appear while `[ui] remember_tool_approvals` is enabled (the default; set it to `false` to hide them). See [22-permissions-and-safety.md](22-permissions-and-safety.md).
 
-You can also override this with `GROK_DEFAULT_SELECTED_PERMISSION`, which is handy for headless or agent test runs that shouldn't mutate `config.toml`. Precedence: env var → `config.toml` → `always_allow_all_sessions`.
+You can also override this with `DEEPSEEK_BUILD_DEFAULT_SELECTED_PERMISSION`, which is handy for headless or agent test runs that shouldn't mutate `config.toml`. Precedence: env var → `config.toml` → `always_allow_all_sessions`.
 
 #### Vim mode
 
@@ -211,7 +211,7 @@ invert_scroll = false
 # scroll_lines = 3
 ```
 
-Each setting also has an environment-variable override, applied on first load only (again, handy for headless / test runs): `GROK_SCROLL_SPEED`, `GROK_SCROLL_MODE`, `GROK_INVERT_SCROLL` (`1`/`true`/`0`/`false`), and `GROK_SCROLL_LINES`. Precedence: env var → `config.toml` → default. Unrecognized values fall back to the default, and out-of-range numbers clamp.
+Each setting also has an environment-variable override, applied on first load only (again, handy for headless / test runs): `DEEPSEEK_BUILD_SCROLL_SPEED`, `DEEPSEEK_BUILD_SCROLL_MODE`, `DEEPSEEK_BUILD_INVERT_SCROLL` (`1`/`true`/`0`/`false`), and `DEEPSEEK_BUILD_SCROLL_LINES`. Precedence: env var → `config.toml` → default. Unrecognized values fall back to the default, and out-of-range numbers clamp.
 
 ### Tool configuration
 
@@ -236,11 +236,11 @@ allowed_domains = ["platform.deepseek.com", "arxiv.org"]
 # excluded_domains = ["reddit.com", "pinterest.com"]
 ```
 
-`allow_local` is off by default (SSRF fail-closed). Turn it on (or set `GROK_WEB_FETCH_ALLOW_LOCAL=1`) and `web_fetch` may reach **explicit** loopback hosts only — private, link-local, and cloud-metadata ranges stay blocked. Resolution: TOML > env > default off.
+`allow_local` is off by default (SSRF fail-closed). Turn it on (or set `DEEPSEEK_BUILD_WEB_FETCH_ALLOW_LOCAL=1`) and `web_fetch` may reach **explicit** loopback hosts only — private, link-local, and cloud-metadata ranges stay blocked. Resolution: TOML > env > default off.
 
 `[toolset.web_search]` constrains the `web_search` tool's domains — the allowlist/blocklist the search itself runs under (not a post-filter). `allowed_domains` and `excluded_domains` are **mutually exclusive**; if you set both, the allowlist wins and the blocklist is dropped with a warning. An empty or absent list is unbounded. This applies to both the backend-hosted search (models with server-side search) and the client-side fallback. A configured policy is **authoritative**: it cannot be bypassed by the model — the model's own per-call `allowed_domains` is ignored whenever you have set `allowed_domains` or `excluded_domains` here (so a blocklist is a real block). The model's per-call allowlist only applies when you have configured nothing. Resolution: user `config.toml` → default (unset). Config is read at session start, so edit it before starting a session — changes don't apply mid-session.
 
-`[toolset.ask_user_question]` is honored from your user **`config.toml`**. Precedence: env (`GROK_ASK_USER_QUESTION_TIMEOUT_ENABLED` / `GROK_ASK_USER_QUESTION_TIMEOUT_SECS`) → user config → defaults. Set `timeout_enabled = false` in your user config to disable the automatic questionnaire timeout for yourself; `timeout_secs` must be a positive integer. You can also toggle `timeout_enabled` from `/settings` → **Ask-Question timeout** (under Agent & Approval); changes apply to newly started sessions.
+`[toolset.ask_user_question]` is honored from your user **`config.toml`**. Precedence: env (`DEEPSEEK_BUILD_ASK_USER_QUESTION_TIMEOUT_ENABLED` / `DEEPSEEK_BUILD_ASK_USER_QUESTION_TIMEOUT_SECS`) → user config → defaults. Set `timeout_enabled = false` in your user config to disable the automatic questionnaire timeout for yourself; `timeout_secs` must be a positive integer. You can also toggle `timeout_enabled` from `/settings` → **Ask-Question timeout** (under Agent & Approval); changes apply to newly started sessions.
 
 ### Custom models
 
@@ -305,7 +305,7 @@ Priority for `[mcp_servers]` and `[plugins]`: `.grok/config.toml` (current dir) 
 ### Memory
 
 Persist knowledge across sessions. Enable it with `[memory] enabled = true` or
-`GROK_MEMORY=1`; an explicit `[memory] enabled = false` turns it off. Notes recorded by earlier versions are
+`DEEPSEEK_BUILD_MEMORY=1`; an explicit `[memory] enabled = false` turns it off. Notes recorded by earlier versions are
 carried over automatically. See [13-memory.md](13-memory.md).
 
 ```toml
@@ -336,7 +336,7 @@ dimensions = 1024                     # vector dimensions
 ```toml
 [subagents]
 enabled = true
-sampling_limit = 12                   # concurrent in-flight subagent sampling calls per process; defaults to max_concurrent (32) when unset (GROK_SUBAGENT_SAMPLING_LIMIT)
+sampling_limit = 12                   # concurrent in-flight subagent sampling calls per process; defaults to max_concurrent (32) when unset (DEEPSEEK_BUILD_SUBAGENT_SAMPLING_LIMIT)
 
 [subagents.toggle]
 explore = true                        # enable/disable specific types
@@ -356,7 +356,7 @@ Background workflows — the `workflow` tool, named `.grok/workflows/*.rhai` scr
 
 ```toml
 [workflows]
-enabled = false                       # disable background workflows (or GROK_WORKFLOWS=0)
+enabled = false                       # disable background workflows (or DEEPSEEK_BUILD_WORKFLOWS=0)
 ```
 
 Project workflows are discovered from `<repo-root>/.grok/workflows/`; user workflows from `~/.deepseek-build/workflows/`. Discovery and invocation key off the script's `meta.name`, so keep each filename aligned with its `meta.name`. Built-ins win over project names, and project names win over user names, so keep names unique across scopes.
@@ -481,19 +481,19 @@ With `method = "auto"`, deepseek-build detects the terminal brand and picks the 
 
 #### Notification hooks
 
-Run your own commands when events fire. Hooks receive `$GROK_EVENT`, `$GROK_MESSAGE`, and `$GROK_SESSION_ID` in the environment.
+Run your own commands when events fire. Hooks receive `$DEEPSEEK_BUILD_EVENT`, `$DEEPSEEK_BUILD_MESSAGE`, and `$DEEPSEEK_BUILD_SESSION_ID` in the environment.
 
 ```toml
 # macOS native notification
 [[ui.notifications.hooks]]
-command = "terminal-notifier -title 'deepseek-build' -message '$GROK_MESSAGE'"
+command = "terminal-notifier -title 'deepseek-build' -message '$DEEPSEEK_BUILD_MESSAGE'"
 events = ["turn_complete", "approval_required"]
 only_unfocused = true
 timeout_secs = 10
 
 # Push to ntfy server
 [[ui.notifications.hooks]]
-command = "curl -s -d '$GROK_MESSAGE' ntfy.sh/my-deepseek-build-alerts"
+command = "curl -s -d '$DEEPSEEK_BUILD_MESSAGE' ntfy.sh/my-deepseek-build-alerts"
 events = ["turn_complete"]
 only_unfocused = true
 timeout_secs = 10
@@ -555,13 +555,13 @@ required_minimum_version = "0.2.100" # refuse to start below this
 required_maximum_version = "0.2.200" # refuse to start above this
 ```
 
-- `minimum_version` (`GROK_MINIMUM_VERSION`) is a soft anti-downgrade floor. The
+- `minimum_version` (`DEEPSEEK_BUILD_MINIMUM_VERSION`) is a soft anti-downgrade floor. The
   updater skips a target below it and keeps the current version. It never blocks
   startup.
-- `maximum_version` (`GROK_MAXIMUM_VERSION`) is a soft ceiling. The updater caps
+- `maximum_version` (`DEEPSEEK_BUILD_MAXIMUM_VERSION`) is a soft ceiling. The updater caps
   its target at it and never installs above it.
-- `required_minimum_version` (`GROK_REQUIRED_MINIMUM_VERSION`) and
-  `required_maximum_version` (`GROK_REQUIRED_MAXIMUM_VERSION`) are hard bounds. If
+- `required_minimum_version` (`DEEPSEEK_BUILD_REQUIRED_MINIMUM_VERSION`) and
+  `required_maximum_version` (`DEEPSEEK_BUILD_REQUIRED_MAXIMUM_VERSION`) are hard bounds. If
   the running version is outside the range, the CLI exits at startup and instructs
   the user to install an approved version. `deepseek-build update` and `deepseek-build --version` keep
   working so an out-of-range install can recover.
@@ -709,34 +709,34 @@ The key ones. See the README for the complete list.
 
 | Variable | Description |
 |----------|-------------|
-| `GROK_CLI_CHAT_PROXY_BASE_URL` | Override API proxy base URL |
+| `DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL` | Override API proxy base URL |
 
 ### Features
 
 | Variable | Description |
 |----------|-------------|
-| `GROK_MEMORY` | Enable (`1`) or disable (`0`) cross-session memory |
-| `GROK_SUBAGENTS` | Enable (`1`) or disable (`0`) subagents |
-| `GROK_WORKFLOWS` | Enable (`1`) or disable (`0`) background workflows and select the `/goal` driver (default on: host-owned workflow driver; off: legacy `update_goal`) |
-| `GROK_WEB_FETCH` | Enable (`1`) or disable (`0`) the web_fetch tool |
-| `GROK_WEB_FETCH_ALLOW_LOCAL` | Allow `web_fetch` to explicit loopback hosts only (`localhost` / `127.0.0.0/8` / `::1`). Same as `[toolset.web_fetch] allow_local`. Default off; private/metadata stay blocked. |
-| `GROK_AGENT` | Custom agent definition path or name |
+| `DEEPSEEK_BUILD_MEMORY` | Enable (`1`) or disable (`0`) cross-session memory |
+| `DEEPSEEK_BUILD_SUBAGENTS` | Enable (`1`) or disable (`0`) subagents |
+| `DEEPSEEK_BUILD_WORKFLOWS` | Enable (`1`) or disable (`0`) background workflows and select the `/goal` driver (default on: host-owned workflow driver; off: legacy `update_goal`) |
+| `DEEPSEEK_BUILD_WEB_FETCH` | Enable (`1`) or disable (`0`) the web_fetch tool |
+| `DEEPSEEK_BUILD_WEB_FETCH_ALLOW_LOCAL` | Allow `web_fetch` to explicit loopback hosts only (`localhost` / `127.0.0.0/8` / `::1`). Same as `[toolset.web_fetch] allow_local`. Default off; private/metadata stay blocked. |
+| `DEEPSEEK_BUILD_AGENT` | Custom agent definition path or name |
 | `DEEPSEEK_BUILD_SANDBOX` | Sandbox profile (off, workspace, devbox, read-only, strict; or a custom profile name) |
-| `GROK_EXIT_TIMEOUT_SECS` | Seconds after a quit is requested before the process is force-exited if teardown hangs (default: 20, `0` disables; a hard exit follows 5s later) |
+| `DEEPSEEK_BUILD_EXIT_TIMEOUT_SECS` | Seconds after a quit is requested before the process is force-exited if teardown hangs (default: 20, `0` disables; a hard exit follows 5s later) |
 
 ### Logging
 
 | Variable | Description |
 |----------|-------------|
-| `GROK_LOG_FILE` | Write logs to this file path (used verbatim as the path) |
-| `RUST_LOG` | Log level filter (e.g. `debug`); controls the `GROK_LOG_FILE` log and headless stderr output |
+| `DEEPSEEK_BUILD_LOG_FILE` | Write logs to this file path (used verbatim as the path) |
+| `RUST_LOG` | Log level filter (e.g. `debug`); controls the `DEEPSEEK_BUILD_LOG_FILE` log and headless stderr output |
 
 ### Paths
 
 | Variable | Description |
 |----------|-------------|
 | `DEEPSEEK_BUILD_HOME` | Override config directory (default: `~/.deepseek-build`) |
-| `GROK_RESPECT_GITIGNORE` | Force gitignore filtering on (`1`) or off (`0`); overrides `[tools] respect_gitignore` |
+| `DEEPSEEK_BUILD_RESPECT_GITIGNORE` | Force gitignore filtering on (`1`) or off (`0`); overrides `[tools] respect_gitignore` |
 
 ---
 

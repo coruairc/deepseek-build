@@ -219,7 +219,10 @@ pub(crate) fn git_repo_with_mcp_json() -> tempfile::TempDir {
 pub(crate) fn trust_env(feature_on: bool) -> [(&'static str, &'static str); 2] {
     [
         ("GROK_TEST_VERSION", "0.0.0-sim"),
-        ("GROK_FOLDER_TRUST", if feature_on { "1" } else { "0" }),
+        (
+            "DEEPSEEK_BUILD_FOLDER_TRUST",
+            if feature_on { "1" } else { "0" },
+        ),
     ]
 }
 
@@ -467,7 +470,7 @@ pub(crate) fn spawn_mouse_toggle_pager(content: &ContentController) -> PtyHarnes
         DEFAULT_COLS,
         content,
         &[],
-        &[EnvOp::set("GROK_MOUSE_REPORTING_TOGGLE", "true")],
+        &[EnvOp::set("DEEPSEEK_BUILD_MOUSE_REPORTING_TOGGLE", "true")],
     )
     .expect("spawn pager")
 }
@@ -1012,7 +1015,7 @@ pub(crate) fn enable_feedback_posting(
 ) -> Vec<EnvOp<'static>> {
     seed_fake_oauth(content, user);
     let mut ops = Vec::from(oauth_credential_ops());
-    ops.push(EnvOp::set("GROK_FEEDBACK_ENABLED", "true"));
+    ops.push(EnvOp::set("DEEPSEEK_BUILD_FEEDBACK_ENABLED", "true"));
     ops
 }
 
@@ -1179,7 +1182,7 @@ pub(crate) fn spawn_minimal_in_dir(
     spawn_minimal_env_ops(content, rows, cols, extra_args, &[], Some(cwd))
 }
 
-/// The one minimal spawn: [`MINIMAL_ARGS`] plus `extra_args`, sandbox env overrides (e.g. `GROK_FEEDBACK_ENABLED`
+/// The one minimal spawn: [`MINIMAL_ARGS`] plus `extra_args`, sandbox env overrides (e.g. `DEEPSEEK_BUILD_FEEDBACK_ENABLED`
 /// for the shell gates the sandbox baseline closes), and an optional project dir.
 pub(crate) fn spawn_minimal_env_ops(
     content: &ContentController,

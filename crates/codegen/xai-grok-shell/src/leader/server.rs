@@ -141,7 +141,7 @@ struct ClientState {
     tx: mpsc::UnboundedSender<ClientOutbound>,
     mode: ClientMode,
     capabilities: ClientCapabilities,
-    /// The client type string from IPC registration (e.g., "grok-tui", "grok-code-extension").
+    /// The client type string from IPC registration (e.g., "deepseek-build-tui", "deepseek-build-extension").
     /// Injected into `initialize` requests as `clientIdentifier` so the agent knows the real client type when several clients share one leader.
     client_type: String,
     /// Set to `true` once the client's `initialize` request has been seen and had `clientIdentifier` injected.

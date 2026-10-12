@@ -44,7 +44,7 @@ pub(crate) fn resolve_mcp_auto_restart(
 
 /// Resolve `mcp.push_server_status` for a session.
 /// Thin wrapper around the canonical [`crate::agent::config::resolve_mcp_push_server_status`] that mirrors [`resolve_mcp_liveness_watchers`].
-/// Pulls each layer from its TOML / runtime source: | Layer | Source | |--------------|-----------------------------------------------------------------| | requirement | `[features] mcp_push_server_status` in `requirements.toml` | | cli | (none — no CLI flag) | | env | `GROK_MCP_PUSH_SERVER_STATUS` (handled by `BoolFlag::env`) | | config | `[features] mcp_push_server_status` in `~/.grok/config.toml` | | managed | `[features] mcp_push_server_status` in `managed_config.toml` | | feature_flag | (none yet — remote settings plumbing TBD) | | default | `true` |
+/// Pulls each layer from its TOML / runtime source: | Layer | Source | |--------------|-----------------------------------------------------------------| | requirement | `[features] mcp_push_server_status` in `requirements.toml` | | cli | (none — no CLI flag) | | env | `DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS` (handled by `BoolFlag::env`) | | config | `[features] mcp_push_server_status` in `~/.grok/config.toml` | | managed | `[features] mcp_push_server_status` in `managed_config.toml` | | feature_flag | (none yet — remote settings plumbing TBD) | | default | `true` |
 pub fn resolve_mcp_push_server_status(
     requirements: Option<&TomlValue>,
     user: Option<&TomlValue>,
@@ -91,7 +91,7 @@ pub const DEFAULT_MCP_STARTUP_TIMEOUT_SECS: u64 = 30;
 
 /// Env override for the MCP startup timeout, in milliseconds (shared with common third-party tooling, so an existing setting carries over).
 const ENV_MCP_TIMEOUT_MS: &str = "MCP_TIMEOUT";
-const ENV_MCP_STARTUP_TIMEOUT_SECS: &str = "GROK_MCP_STARTUP_TIMEOUT_SECS";
+const ENV_MCP_STARTUP_TIMEOUT_SECS: &str = "DEEPSEEK_BUILD_MCP_STARTUP_TIMEOUT_SECS";
 
 /// Cached remote settings `mcp_startup_timeout_secs` (`0` means unset).
 /// MCP servers start from free functions with no handle to the live `RemoteSettings`, so the remote tier is cached here when settings are applied.
@@ -141,7 +141,7 @@ pub(crate) fn resolve_mcp_startup_timeout_secs(remote: Option<u64>) -> u64 {
     )
 }
 
-/// `MCP_TIMEOUT` (ms, rounded up so a sub-second value never becomes 0s) > `GROK_MCP_STARTUP_TIMEOUT_SECS` (secs).
+/// `MCP_TIMEOUT` (ms, rounded up so a sub-second value never becomes 0s) > `DEEPSEEK_BUILD_MCP_STARTUP_TIMEOUT_SECS` (secs).
 /// Unparseable/zero values are ignored.
 fn mcp_startup_timeout_from_env() -> Option<u64> {
     if let Some(ms) = std::env::var(ENV_MCP_TIMEOUT_MS)
@@ -208,7 +208,7 @@ fn max_mcp_output_bytes_from_toml(v: &toml::Value) -> Option<usize> {
 
 /// Resolve the MCP tool-result inline cap (bytes) on the **global / atomic path**.
 /// No cwd here, so no project tier; see [`resolve_max_mcp_output_bytes_for_cwd`].
-/// Precedence (highest first): requirements.toml `[mcp] max_output_bytes` env `GROK_MAX_MCP_OUTPUT_BYTES` / `MAX_MCP_OUTPUT_BYTES` (deepseek-build-native wins when both set) effective `config.toml [mcp] max_output_bytes` remote settings `RemoteSettings.max_mcp_output_bytes` [`DEFAULT_MAX_MCP_OUTPUT_BYTES`] (20_000)
+/// Precedence (highest first): requirements.toml `[mcp] max_output_bytes` env `DEEPSEEK_BUILD_MAX_MCP_OUTPUT_BYTES` / `MAX_MCP_OUTPUT_BYTES` (deepseek-build-native wins when both set) effective `config.toml [mcp] max_output_bytes` remote settings `RemoteSettings.max_mcp_output_bytes` [`DEFAULT_MAX_MCP_OUTPUT_BYTES`] (20_000)
 pub(crate) fn resolve_max_mcp_output_bytes(remote: Option<u64>) -> usize {
     let remote_usize = remote
         .and_then(|n| usize::try_from(n).ok())

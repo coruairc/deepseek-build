@@ -18,7 +18,7 @@ use crate::terminal::{MultiplexerKind, TerminalContext};
 
 /// Env var overriding where the copy backup file is written (supports `~`).
 /// Documented in `xai-grok-pager/docs/internal/22-environment-variables.md`.
-pub const GROK_COPY_FILE_ENV: &str = "GROK_COPY_FILE";
+pub const GROK_COPY_FILE_ENV: &str = "DEEPSEEK_BUILD_COPY_FILE";
 
 /// Cached result of the remote-session check (env vars don't change at runtime).
 fn is_remote() -> bool {
@@ -42,10 +42,10 @@ pub fn osc52_sink_active() -> bool {
     })
 }
 
-/// `GROK_CLIPBOARD_NO_OSC52` forces OSC 52 off everywhere, including Linux always-emit and the wrap sink. For hosts that paint OSC 52 as garbage.
+/// `DEEPSEEK_BUILD_CLIPBOARD_NO_OSC52` forces OSC 52 off everywhere, including Linux always-emit and the wrap sink. For hosts that paint OSC 52 as garbage.
 pub fn osc52_disabled() -> bool {
     static DISABLED: OnceLock<bool> = OnceLock::new();
-    *DISABLED.get_or_init(|| std::env::var_os("GROK_CLIPBOARD_NO_OSC52").is_some())
+    *DISABLED.get_or_init(|| std::env::var_os("DEEPSEEK_BUILD_CLIPBOARD_NO_OSC52").is_some())
 }
 
 /// Cached clipboard route resolved at first use from the terminal context.
@@ -108,7 +108,7 @@ impl std::fmt::Display for ClipboardRoute {
     }
 }
 
-/// `osc52` reads cached ambient markers. Tmux is normally true regardless of SSH; `GROK_CLIPBOARD_NO_OSC52` forces it off everywhere.
+/// `osc52` reads cached ambient markers. Tmux is normally true regardless of SSH; `DEEPSEEK_BUILD_CLIPBOARD_NO_OSC52` forces it off everywhere.
 pub fn resolve_clipboard_route(ctx: &TerminalContext) -> ClipboardRoute {
     resolve_clipboard_route_with(
         ctx,
@@ -130,7 +130,7 @@ struct ClipboardRouteOpts {
 fn resolve_clipboard_route_with(ctx: &TerminalContext, opts: ClipboardRouteOpts) -> ClipboardRoute {
     let is_tmux = ctx.multiplexer == MultiplexerKind::Tmux;
     // Linux always emits OSC 52. macOS/Windows only in tmux/SSH/container or when a wrap sink captures it.
-    // `GROK_CLIPBOARD_NO_OSC52` wins over every automatic path.
+    // `DEEPSEEK_BUILD_CLIPBOARD_NO_OSC52` wins over every automatic path.
     let osc52 = !opts.no_osc52
         && (cfg!(target_os = "linux")
             || is_tmux
@@ -394,7 +394,7 @@ fn decision_for_legs(legs: &ClipboardWriteLegs, text: &str) -> ClipboardFeedback
     trust::resolve_copy_decision(legs, text, clipboard_environment(legs))
 }
 
-/// Write text and return a toast; emits `grok-shell-clipboard_copy` when enabled.
+/// Write text and return a toast; emits `deepseek-build-clipboard_copy` when enabled.
 pub fn copy_text(text: &str) -> CopyResult {
     let started = std::time::Instant::now();
     let route = clipboard_route();
@@ -524,7 +524,7 @@ pub fn write_copy_fallback(text: &str) -> std::io::Result<std::path::PathBuf> {
     let Some(path) = default_copy_fallback_path() else {
         return Err(std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            "no home directory resolves; set GROK_COPY_FILE to enable the copy backup file",
+            "no home directory resolves; set DEEPSEEK_BUILD_COPY_FILE to enable the copy backup file",
         ));
     };
     #[cfg(unix)]
@@ -1926,7 +1926,7 @@ mod tests {
         ];
 
         for case in cases {
-            // Pure helper with kill switch off so ambient GROK_CLIPBOARD_NO_OSC52 cannot flake CI (route() itself still reads the real env)
+            // Pure helper with kill switch off so ambient DEEPSEEK_BUILD_CLIPBOARD_NO_OSC52 cannot flake CI (route() itself still reads the real env)
             let route = resolve_clipboard_route_with(
                 &case.ctx,
                 ClipboardRouteOpts {
@@ -2028,7 +2028,7 @@ mod tests {
         );
         assert!(
             !killed.osc52,
-            "GROK_CLIPBOARD_NO_OSC52 still wins over the wrap sink"
+            "DEEPSEEK_BUILD_CLIPBOARD_NO_OSC52 still wins over the wrap sink"
         );
     }
 
@@ -2053,7 +2053,7 @@ mod tests {
 
     #[test]
     fn clipboard_route_no_osc52_kill_switch_forces_off() {
-        // GROK_CLIPBOARD_NO_OSC52 must win over Linux/tmux/SSH automatic emit.
+        // DEEPSEEK_BUILD_CLIPBOARD_NO_OSC52 must win over Linux/tmux/SSH automatic emit.
         for ctx in [
             plain_terminal_ctx(),
             plain_tmux_ctx(),
@@ -2393,7 +2393,7 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&custom).expect("read"), "payload");
     }
 
-    /// Without `GROK_COPY_FILE`, the default is `~/.grok/last-copy.txt`
+    /// Without `DEEPSEEK_BUILD_COPY_FILE`, the default is `~/.grok/last-copy.txt`
     /// (grok home) — short and toast-friendly, unlike macOS's temp dir.
     #[test]
     #[serial_test::serial(grok_copy_file)]

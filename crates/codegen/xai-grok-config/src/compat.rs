@@ -105,31 +105,31 @@ pub const COMPAT_CELLS: [CompatCell; 18] = [
     CompatCell::new(
         CompatVendor::Cursor,
         CompatSurface::Skills,
-        "GROK_CURSOR_SKILLS_ENABLED",
+        "DEEPSEEK_BUILD_CURSOR_SKILLS_ENABLED",
         Some(CompatRemoteKey::CursorSkills),
     ),
     CompatCell::new(
         CompatVendor::Cursor,
         CompatSurface::Rules,
-        "GROK_CURSOR_RULES_ENABLED",
+        "DEEPSEEK_BUILD_CURSOR_RULES_ENABLED",
         Some(CompatRemoteKey::CursorRules),
     ),
     CompatCell::new(
         CompatVendor::Cursor,
         CompatSurface::Agents,
-        "GROK_CURSOR_AGENTS_ENABLED",
+        "DEEPSEEK_BUILD_CURSOR_AGENTS_ENABLED",
         Some(CompatRemoteKey::CursorAgents),
     ),
     CompatCell::new(
         CompatVendor::Cursor,
         CompatSurface::Mcps,
-        "GROK_CURSOR_MCPS_ENABLED",
+        "DEEPSEEK_BUILD_CURSOR_MCPS_ENABLED",
         Some(CompatRemoteKey::CursorMcps),
     ),
     CompatCell::new(
         CompatVendor::Cursor,
         CompatSurface::Hooks,
-        "GROK_CURSOR_HOOKS_ENABLED",
+        "DEEPSEEK_BUILD_CURSOR_HOOKS_ENABLED",
         Some(CompatRemoteKey::CursorHooks),
     ),
     CompatCell::new(
@@ -141,31 +141,31 @@ pub const COMPAT_CELLS: [CompatCell; 18] = [
     CompatCell::new(
         CompatVendor::Claude,
         CompatSurface::Skills,
-        "GROK_CLAUDE_SKILLS_ENABLED",
+        "DEEPSEEK_BUILD_CLAUDE_SKILLS_ENABLED",
         Some(CompatRemoteKey::ClaudeSkills),
     ),
     CompatCell::new(
         CompatVendor::Claude,
         CompatSurface::Rules,
-        "GROK_CLAUDE_RULES_ENABLED",
+        "DEEPSEEK_BUILD_CLAUDE_RULES_ENABLED",
         Some(CompatRemoteKey::ClaudeRules),
     ),
     CompatCell::new(
         CompatVendor::Claude,
         CompatSurface::Agents,
-        "GROK_CLAUDE_AGENTS_ENABLED",
+        "DEEPSEEK_BUILD_CLAUDE_AGENTS_ENABLED",
         Some(CompatRemoteKey::ClaudeAgents),
     ),
     CompatCell::new(
         CompatVendor::Claude,
         CompatSurface::Mcps,
-        "GROK_CLAUDE_MCPS_ENABLED",
+        "DEEPSEEK_BUILD_CLAUDE_MCPS_ENABLED",
         Some(CompatRemoteKey::ClaudeMcps),
     ),
     CompatCell::new(
         CompatVendor::Claude,
         CompatSurface::Hooks,
-        "GROK_CLAUDE_HOOKS_ENABLED",
+        "DEEPSEEK_BUILD_CLAUDE_HOOKS_ENABLED",
         Some(CompatRemoteKey::ClaudeHooks),
     ),
     CompatCell::new(

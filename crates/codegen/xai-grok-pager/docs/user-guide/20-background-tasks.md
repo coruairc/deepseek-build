@@ -22,7 +22,7 @@ Use `get_command_or_subagent_output` to check a background command or subagent. 
 - Omit `timeout_ms`, or pass `0`, for a non-blocking snapshot.
 - A positive `timeout_ms` waits for completion. Several ids wait until **all** complete.
 
-A positive `timeout_ms` is clamped to **1 hour** (`3600000` ms). Hosts with a shorter transport deadline set `GROK_MAX_WAIT_BLOCK_MS` (plain milliseconds; unparseable values keep the default).
+A positive `timeout_ms` is clamped to **1 hour** (`3600000` ms). Hosts with a shorter transport deadline set `DEEPSEEK_BUILD_MAX_WAIT_BLOCK_MS` (plain milliseconds; unparseable values keep the default).
 
 If the wait returns while the child is still running, leave it alone: do not kill it or tell it to stop. Completion wakes the parent automatically. Poll again only if you need another snapshot.
 

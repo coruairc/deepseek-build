@@ -18,8 +18,8 @@ deepseek-build --version
 ```
 
 To fetch a repository through Grove (NFS on macOS, FUSE on Linux), enable
-`deepseek-build clone` with `[clone] enabled = true` in Grove config, `GROK_CLONE=1`,
-or the enable-both convenience `GROK_GROVE=1` / `[cli] grove = true` in
+`deepseek-build clone` with `[clone] enabled = true` in Grove config, `DEEPSEEK_BUILD_CLONE=1`,
+or the enable-both convenience `DEEPSEEK_BUILD_GROVE=1` / `[cli] grove = true` in
 `~/.deepseek-build/config.toml`:
 
 ```bash

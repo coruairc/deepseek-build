@@ -160,9 +160,9 @@ pub(crate) fn plugin_substitute(root: &Path, data_dir: &Path) -> impl Fn(&str) -
     move |value: &str| {
         let value = value
             .replace("${CLAUDE_PLUGIN_ROOT}", &plugin_root)
-            .replace("${GROK_PLUGIN_ROOT}", &plugin_root)
+            .replace("${DEEPSEEK_BUILD_PLUGIN_ROOT}", &plugin_root)
             .replace("${CLAUDE_PLUGIN_DATA}", &plugin_data)
-            .replace("${GROK_PLUGIN_DATA}", &plugin_data);
+            .replace("${DEEPSEEK_BUILD_PLUGIN_DATA}", &plugin_data);
         crate::expand_env_vars_in_string(&value)
     }
 }

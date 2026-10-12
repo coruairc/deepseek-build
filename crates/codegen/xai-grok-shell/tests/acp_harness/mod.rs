@@ -351,15 +351,15 @@ fn set_test_env(grok_home: &std::path::Path, server_url: &str) {
     // SAFETY: the only live threads are the mock's HTTP workers, which never read env.
     unsafe {
         std::env::set_var("DEEPSEEK_BUILD_HOME", grok_home);
-        std::env::set_var("GROK_CLI_CHAT_PROXY_BASE_URL", server_url);
-        std::env::set_var("GROK_XAI_API_BASE_URL", server_url);
+        std::env::set_var("DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL", server_url);
+        std::env::set_var("DEEPSEEK_BUILD_XAI_API_BASE_URL", server_url);
         std::env::set_var("DEEPSEEK_API_KEY", "test-key-for-ci");
         std::env::set_var("GROK_TELEMETRY_ENABLED", "false");
-        std::env::set_var("GROK_FEEDBACK_ENABLED", "false");
+        std::env::set_var("DEEPSEEK_BUILD_FEEDBACK_ENABLED", "false");
         std::env::set_var("GROK_TRACE_UPLOAD", "false");
         // Turn summaries fire one more request to the same mock endpoint after the turn, on a spawned task
         // The race makes request-count assertions flaky
-        std::env::set_var("GROK_TURN_SUMMARY", "false");
+        std::env::set_var("DEEPSEEK_BUILD_TURN_SUMMARY", "false");
     }
 }
 

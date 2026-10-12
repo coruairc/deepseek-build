@@ -31,7 +31,7 @@ Disable subagents with a CLI flag, an environment variable, or the config file (
 
 ```bash
 deepseek-build --no-subagents                  # This session only
-export GROK_SUBAGENTS=0              # Environment variable
+export DEEPSEEK_BUILD_SUBAGENTS=0              # Environment variable
 ```
 
 ```toml
@@ -160,7 +160,7 @@ When you run a subagent in the background, retrieve its result later with `get_c
 
 ### Sending messages to subagents
 
-The `send_subagent_message` tool is off by default. Enable it with `GROK_ACTIVE_AGENT_MESSAGES` or `[features] active_agent_messages`.
+The `send_subagent_message` tool is off by default. Enable it with `DEEPSEEK_BUILD_ACTIVE_AGENT_MESSAGES` or `[features] active_agent_messages`.
 
 The root session can send a follow-up to a subagent it owns. When the flag is on, a granted child also receives the tool:
 
@@ -284,7 +284,7 @@ Per-type model overrides apply for any parent. Without an override, a subagent i
 
 ### Model Selection by the Agent
 
-The `spawn_subagent` tool offers the agent a `model` argument, and its description lists the models you can pick, for when you explicitly ask for a subagent on a different model. With `[features] subagent_model_inheritance = true` (or `GROK_SUBAGENT_MODEL_INHERITANCE=1`), both are hidden whenever every model in your picker is an DeepSeek model: subagents then always inherit the parent's model, and a spawn that still names one fails with a message asking the agent to retry without it. Catalogs with a third-party model, a model with no declared family, or a catalog still loading keep the argument. `[subagents.models]` pins, roles, and personas are unaffected. Read when a session starts; changing it requires a restart. Precedence: the environment variable, then `config.toml`, then the default (off).
+The `spawn_subagent` tool offers the agent a `model` argument, and its description lists the models you can pick, for when you explicitly ask for a subagent on a different model. With `[features] subagent_model_inheritance = true` (or `DEEPSEEK_BUILD_SUBAGENT_MODEL_INHERITANCE=1`), both are hidden whenever every model in your picker is an DeepSeek model: subagents then always inherit the parent's model, and a spawn that still names one fails with a message asking the agent to retry without it. Catalogs with a third-party model, a model with no declared family, or a catalog still loading keep the argument. `[subagents.models]` pins, roles, and personas are unaffected. Read when a session starts; changing it requires a restart. Precedence: the environment variable, then `config.toml`, then the default (off).
 
 You can also toggle it from `/settings` → Models → **Subagent model inheritance**:
 
@@ -292,7 +292,7 @@ You can also toggle it from `/settings` → Models → **Subagent model inherita
 - Off: deepseek-build may choose a different model for a subagent. Takes effect after restart.
 - NOTE: This setting only applies when all models are DeepSeek "model_family". You likely don't need to configure this setting.
 
-The row shows the value that applies after restart. Toggling writes `[features] subagent_model_inheritance = true` or `= false`; `d` (reset) deletes the key so the default applies again. Agents already running keep the mode they started with. When a layer your `config.toml` cannot override decides the value — the environment variable or the `GROK_CONFIG` overlay — both the toggle and the reset are refused with a toast that names that layer.
+The row shows the value that applies after restart. Toggling writes `[features] subagent_model_inheritance = true` or `= false`; `d` (reset) deletes the key so the default applies again. Agents already running keep the mode they started with. When a layer your `config.toml` cannot override decides the value — the environment variable or the `DEEPSEEK_BUILD_CONFIG` overlay — both the toggle and the reset are refused with a toast that names that layer.
 
 ### Custom Roles and Personas
 

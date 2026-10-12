@@ -860,7 +860,7 @@ fn stable_mapping_tables_are_complete() {
             "rio",
             "foot",
             "jetbrains",
-            "grok_desktop",
+            "deepseek-build-desktop",
             "vte",
             "terminator",
             "windows_terminal",

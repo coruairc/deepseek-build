@@ -439,9 +439,9 @@ async fn first_subagent_turn_allocation_does_not_walk_the_sessions_index() {
 #[test]
 #[serial_test::serial]
 fn resolve_agent_definition_defaults_to_grok_build() {
-    let prev = std::env::var("GROK_AGENT").ok();
+    let prev = std::env::var("DEEPSEEK_BUILD_AGENT").ok();
     unsafe {
-        std::env::remove_var("GROK_AGENT");
+        std::env::remove_var("DEEPSEEK_BUILD_AGENT");
     }
     let tmp = tempfile::tempdir().unwrap();
     let def = MvpAgent::resolve_agent_definition(
@@ -453,16 +453,16 @@ fn resolve_agent_definition_defaults_to_grok_build() {
     );
     assert_eq!(def.name, config::DEFAULT_AGENT_TYPE);
     if let Some(v) = prev {
-        unsafe { std::env::set_var("GROK_AGENT", v) }
+        unsafe { std::env::set_var("DEEPSEEK_BUILD_AGENT", v) }
     }
 }
 /// When model_agent_type = Some("codex"), the codex agent is selected even though the default chain would return grok-build.
 #[test]
 #[serial_test::serial]
 fn resolve_agent_definition_model_agent_type_overrides_default() {
-    let prev = std::env::var("GROK_AGENT").ok();
+    let prev = std::env::var("DEEPSEEK_BUILD_AGENT").ok();
     unsafe {
-        std::env::remove_var("GROK_AGENT");
+        std::env::remove_var("DEEPSEEK_BUILD_AGENT");
     }
     let tmp = tempfile::tempdir().unwrap();
     let def = MvpAgent::resolve_agent_definition(
@@ -474,7 +474,7 @@ fn resolve_agent_definition_model_agent_type_overrides_default() {
     );
     assert_eq!(def.name, "codex");
     if let Some(v) = prev {
-        unsafe { std::env::set_var("GROK_AGENT", v) }
+        unsafe { std::env::set_var("DEEPSEEK_BUILD_AGENT", v) }
     }
 }
 /// When model_agent_type is None, the chain-resolved default agent is NOT overridden.
@@ -482,9 +482,9 @@ fn resolve_agent_definition_model_agent_type_overrides_default() {
 #[test]
 #[serial_test::serial]
 fn resolve_agent_definition_none_agent_type_does_not_override() {
-    let prev = std::env::var("GROK_AGENT").ok();
+    let prev = std::env::var("DEEPSEEK_BUILD_AGENT").ok();
     unsafe {
-        std::env::remove_var("GROK_AGENT");
+        std::env::remove_var("DEEPSEEK_BUILD_AGENT");
     }
     let tmp = tempfile::tempdir().unwrap();
     let def = MvpAgent::resolve_agent_definition(
@@ -496,16 +496,16 @@ fn resolve_agent_definition_none_agent_type_does_not_override() {
     );
     assert_eq!(def.name, config::DEFAULT_AGENT_TYPE);
     if let Some(v) = prev {
-        unsafe { std::env::set_var("GROK_AGENT", v) }
+        unsafe { std::env::set_var("DEEPSEEK_BUILD_AGENT", v) }
     }
 }
 /// Regression for the web-client devbox bug: an ACP profile must win when the model's `agent_type` is the default value.
 #[test]
 #[serial_test::serial]
 fn resolve_agent_definition_acp_profile_wins_when_model_agent_type_is_default() {
-    let prev = std::env::var("GROK_AGENT").ok();
+    let prev = std::env::var("DEEPSEEK_BUILD_AGENT").ok();
     unsafe {
-        std::env::remove_var("GROK_AGENT");
+        std::env::remove_var("DEEPSEEK_BUILD_AGENT");
     }
     let tmp = tempfile::tempdir().unwrap();
     let acp_profile = xai_grok_agent::AgentDefinition::from_json(&serde_json::json!(
@@ -526,7 +526,7 @@ fn resolve_agent_definition_acp_profile_wins_when_model_agent_type_is_default() 
         "ACP _meta.agentProfile must win when model_agent_type is the default value"
     );
     if let Some(v) = prev {
-        unsafe { std::env::set_var("GROK_AGENT", v) }
+        unsafe { std::env::set_var("DEEPSEEK_BUILD_AGENT", v) }
     }
 }
 /// Regression: `DEFAULT_AGENT_TYPE` flipped to `grok-build-plan`.
@@ -535,9 +535,9 @@ fn resolve_agent_definition_acp_profile_wins_when_model_agent_type_is_default() 
 #[test]
 #[serial_test::serial]
 fn resolve_agent_definition_acp_profile_wins_for_explicit_grok_build_family() {
-    let prev = std::env::var("GROK_AGENT").ok();
+    let prev = std::env::var("DEEPSEEK_BUILD_AGENT").ok();
     unsafe {
-        std::env::remove_var("GROK_AGENT");
+        std::env::remove_var("DEEPSEEK_BUILD_AGENT");
     }
     let tmp = tempfile::tempdir().unwrap();
     let acp_profile = xai_grok_agent::AgentDefinition::from_json(&serde_json::json!({
@@ -559,7 +559,7 @@ fn resolve_agent_definition_acp_profile_wins_for_explicit_grok_build_family() {
         );
     }
     if let Some(v) = prev {
-        unsafe { std::env::set_var("GROK_AGENT", v) }
+        unsafe { std::env::set_var("DEEPSEEK_BUILD_AGENT", v) }
     }
 }
 /// A non-strict (stock / vision-capable) model leaves the template alone, so such models keep native image input.
@@ -588,9 +588,9 @@ fn inherited_harness_template_respects_explicit_template() {
 #[test]
 #[serial_test::serial]
 fn resolve_agent_definition_cli_agent_profile_wins_when_model_agent_type_is_default() {
-    let prev = std::env::var("GROK_AGENT").ok();
+    let prev = std::env::var("DEEPSEEK_BUILD_AGENT").ok();
     unsafe {
-        std::env::remove_var("GROK_AGENT");
+        std::env::remove_var("DEEPSEEK_BUILD_AGENT");
     }
     let tmp = tempfile::tempdir().unwrap();
     let profile_path = tmp.path().join("cli-profile.md");
@@ -608,16 +608,16 @@ fn resolve_agent_definition_cli_agent_profile_wins_when_model_agent_type_is_defa
     );
     assert_eq!(def.name, "cli-profile");
     if let Some(v) = prev {
-        unsafe { std::env::set_var("GROK_AGENT", v) }
+        unsafe { std::env::set_var("DEEPSEEK_BUILD_AGENT", v) }
     }
 }
 /// Agent profile with `model: Override(id)` preserves the field through resolution.
 #[test]
 #[serial_test::serial]
 fn resolve_agent_definition_agent_profile_with_model_override() {
-    let prev = std::env::var("GROK_AGENT").ok();
+    let prev = std::env::var("DEEPSEEK_BUILD_AGENT").ok();
     unsafe {
-        std::env::remove_var("GROK_AGENT");
+        std::env::remove_var("DEEPSEEK_BUILD_AGENT");
     }
     let tmp = tempfile::tempdir().unwrap();
     let agents_dir = tmp.path().join(".grok").join("agents");
@@ -640,8 +640,8 @@ fn resolve_agent_definition_agent_profile_with_model_override() {
         "agent profile model override must be preserved through resolution"
     );
     match prev {
-        Some(v) => unsafe { std::env::set_var("GROK_AGENT", v) },
-        None => unsafe { std::env::remove_var("GROK_AGENT") },
+        Some(v) => unsafe { std::env::set_var("DEEPSEEK_BUILD_AGENT", v) },
+        None => unsafe { std::env::remove_var("DEEPSEEK_BUILD_AGENT") },
     }
 }
 #[test]
@@ -1558,16 +1558,16 @@ async fn yolo_toggle_scoped_by_client_identifier() {
     let mut sessions: HashMap<acp::SessionId, crate::session::SessionHandle> = [
         (
             sid_tui.clone(),
-            make_test_handle("deepseek-3", false, Some("grok-tui")),
+            make_test_handle("deepseek-3", false, Some("deepseek-build-tui")),
         ),
         (
             sid_vscode.clone(),
-            make_test_handle("deepseek-3", false, Some("grok-code-extension")),
+            make_test_handle("deepseek-3", false, Some("deepseek-build-extension")),
         ),
     ]
     .into();
     let updated =
-        apply_yolo_mode_to_matching_sessions(sessions.values_mut(), Some("grok-tui"), true);
+        apply_yolo_mode_to_matching_sessions(sessions.values_mut(), Some("deepseek-build-tui"), true);
     assert_eq!(updated, 1, "exactly one matching session should be updated");
     assert!(
         sessions.get(&sid_tui).is_some_and(|s| s.yolo_mode),
@@ -1586,16 +1586,16 @@ async fn yolo_toggle_can_disable_session_started_with_yolo_enabled() {
     let mut sessions: HashMap<acp::SessionId, crate::session::SessionHandle> = [
         (
             sid_tui.clone(),
-            make_test_handle("deepseek-3", true, Some("grok-tui")),
+            make_test_handle("deepseek-3", true, Some("deepseek-build-tui")),
         ),
         (
             sid_other.clone(),
-            make_test_handle("deepseek-3", true, Some("grok-code-extension")),
+            make_test_handle("deepseek-3", true, Some("deepseek-build-extension")),
         ),
     ]
     .into();
     let updated =
-        apply_yolo_mode_to_matching_sessions(sessions.values_mut(), Some("grok-tui"), false);
+        apply_yolo_mode_to_matching_sessions(sessions.values_mut(), Some("deepseek-build-tui"), false);
     assert_eq!(updated, 1, "only the sender's session should be updated");
     assert!(
         sessions.get(&sid_tui).is_some_and(|s| !s.yolo_mode),
@@ -1726,12 +1726,12 @@ fn parse_code_nav_capability_false_returns_false() {
 #[tokio::test]
 async fn test_per_session_code_nav_isolation() {
     let web_handle = {
-        let mut h = make_test_handle("model", false, Some("grok-web"));
+        let mut h = make_test_handle("model", false, Some("deepseek-build-web"));
         h.code_nav_enabled = true;
         h
     };
     let tui_handle = {
-        let mut h = make_test_handle("model", false, Some("grok-tui"));
+        let mut h = make_test_handle("model", false, Some("deepseek-build-tui"));
         h.code_nav_enabled = false;
         h
     };
@@ -2256,7 +2256,7 @@ async fn shared_plugin_registry_snapshot_reads_plugins_config_from_disk() {
     );
 }
 /// Scaffolding for the session-less `deepseek-build/plugins/reload` regressions: a hermetic DEEPSEEK_BUILD_HOME, the
-/// folder-trust feature in its release-build default (`GROK_FOLDER_TRUST` unset), and an agent whose
+/// folder-trust feature in its release-build default (`DEEPSEEK_BUILD_FOLDER_TRUST` unset), and an agent whose
 /// launch dir is `repo` (captured from the process cwd at construction, so callers hold `serial`).
 struct ReloadHarness {
     _env: Vec<xai_grok_test_support::EnvGuard>,
@@ -2272,7 +2272,7 @@ impl ReloadHarness {
         let home = tempfile::tempdir().unwrap();
         let env = vec![
             EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path()),
-            EnvGuard::unset("GROK_FOLDER_TRUST"),
+            EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST"),
             EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0.0-sim"),
         ];
         let previous_cwd = std::env::current_dir().unwrap();
@@ -2688,7 +2688,7 @@ fn check_nav_eligibility_from_sessions(
 #[tokio::test]
 async fn test_web_session_with_capability_is_eligible() {
     let sid = acp::SessionId::new("sess-web");
-    let mut handle = make_test_handle("model", false, Some("grok-web"));
+    let mut handle = make_test_handle("model", false, Some("deepseek-build-web"));
     handle.code_nav_enabled = true;
     let sessions = [(sid.clone(), handle)].into();
     assert!(
@@ -2700,7 +2700,7 @@ async fn test_web_session_with_capability_is_eligible() {
 #[tokio::test]
 async fn test_tui_session_is_rejected() {
     let sid = acp::SessionId::new("sess-tui");
-    let mut handle = make_test_handle("model", false, Some("grok-tui"));
+    let mut handle = make_test_handle("model", false, Some("deepseek-build-tui"));
     handle.code_nav_enabled = true;
     let sessions = [(sid.clone(), handle)].into();
     assert_eq!(
@@ -2713,7 +2713,7 @@ async fn test_tui_session_is_rejected() {
 #[tokio::test]
 async fn test_web_session_without_capability_is_rejected() {
     let sid = acp::SessionId::new("sess-web-no-cap");
-    let mut handle = make_test_handle("model", false, Some("grok-web"));
+    let mut handle = make_test_handle("model", false, Some("deepseek-build-web"));
     handle.code_nav_enabled = false;
     let sessions = [(sid.clone(), handle)].into();
     assert_eq!(
@@ -2727,9 +2727,9 @@ async fn test_web_session_without_capability_is_rejected() {
 async fn test_leader_mode_two_sessions_stay_isolated() {
     let web_sid = acp::SessionId::new("web");
     let tui_sid = acp::SessionId::new("tui");
-    let mut web_handle = make_test_handle("model", false, Some("grok-web"));
+    let mut web_handle = make_test_handle("model", false, Some("deepseek-build-web"));
     web_handle.code_nav_enabled = true;
-    let mut tui_handle = make_test_handle("model", false, Some("grok-tui"));
+    let mut tui_handle = make_test_handle("model", false, Some("deepseek-build-tui"));
     tui_handle.code_nav_enabled = false;
     let sessions = [(web_sid.clone(), web_handle), (tui_sid.clone(), tui_handle)].into();
     assert!(
@@ -2747,7 +2747,7 @@ async fn test_leader_mode_two_sessions_stay_isolated() {
 #[tokio::test]
 async fn test_unknown_session_id_returns_session_required() {
     let known_sid = acp::SessionId::new("known");
-    let mut known_handle = make_test_handle("model", false, Some("grok-web"));
+    let mut known_handle = make_test_handle("model", false, Some("deepseek-build-web"));
     known_handle.code_nav_enabled = true;
     let sessions = [(known_sid.clone(), known_handle)].into();
     let stale_sid = acp::SessionId::new("stale-or-evicted");
@@ -3261,7 +3261,7 @@ fn search_index_env() -> (tempfile::TempDir, [xai_grok_test_support::EnvGuard; 2
     let home = tempfile::tempdir().unwrap();
     let guards = [
         EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path()),
-        EnvGuard::unset("GROK_SESSION_SEARCH"),
+        EnvGuard::unset("DEEPSEEK_BUILD_SESSION_SEARCH"),
     ];
     (home, guards)
 }
@@ -3270,7 +3270,7 @@ fn search_index_env() -> (tempfile::TempDir, [xai_grok_test_support::EnvGuard; 2
 async fn search_index_honors_the_session_search_feature() {
     let (_home, _env) = search_index_env();
     {
-        let _off = xai_grok_test_support::EnvGuard::set("GROK_SESSION_SEARCH", "0");
+        let _off = xai_grok_test_support::EnvGuard::set("DEEPSEEK_BUILD_SESSION_SEARCH", "0");
         let agent = build_agent_with_auth(xai_grok_login::GrokAuth::test_default());
         agent.decide_search_index();
         assert!(
@@ -4937,7 +4937,7 @@ fn make_live_session_handle(
     tokio::sync::mpsc::UnboundedReceiver<TestSessionCommand>,
 ) {
     let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel();
-    let mut handle = make_test_handle("test-model", false, Some("grok-tui"));
+    let mut handle = make_test_handle("test-model", false, Some("deepseek-build-tui"));
     handle.cmd_tx = cmd_tx.clone();
     handle.info = crate::session::info::Info {
         id: sid.clone(),
@@ -5037,7 +5037,7 @@ async fn ext_notification_forwards_each_queue_method_to_session_actor() {
                 "sessionId": session_id,
                 "id": "p-remove",
                 "expectedVersion": 3,
-                "owner": "grok-tui",
+                "owner": "deepseek-build-tui",
             }),
         ),
         (
@@ -5051,7 +5051,7 @@ async fn ext_notification_forwards_each_queue_method_to_session_actor() {
             "deepseek-build/queue/clear",
             serde_json::json!({
                 "sessionId": session_id,
-                "clientIdentifier": "grok-desktop",
+                "clientIdentifier": "deepseek-build-desktop",
             }),
         ),
         (
@@ -5069,7 +5069,7 @@ async fn ext_notification_forwards_each_queue_method_to_session_actor() {
                 "sessionId": session_id,
                 "id": "p-interject",
                 "expectedVersion": 2,
-                "owner": "grok-tui",
+                "owner": "deepseek-build-tui",
                 "newText": "now",
             }),
         ),
@@ -5108,13 +5108,13 @@ async fn ext_notification_forwards_each_queue_method_to_session_actor() {
             ) => {
                 assert_eq!(id, "p-remove");
                 assert_eq!(expected_version, 3);
-                assert_eq!(owner.as_deref(), Some("grok-tui"));
+                assert_eq!(owner.as_deref(), Some("deepseek-build-tui"));
             }
             ("deepseek-build/queue/reorder", SessionCommand::ReorderQueue { ordered_ids }) => {
                 assert_eq!(ordered_ids, vec!["a", "b"]);
             }
             ("deepseek-build/queue/clear", SessionCommand::ClearQueue { owner }) => {
-                assert_eq!(owner.as_deref(), Some("grok-desktop"));
+                assert_eq!(owner.as_deref(), Some("deepseek-build-desktop"));
             }
             (
                 "deepseek-build/queue/edit",
@@ -5139,7 +5139,7 @@ async fn ext_notification_forwards_each_queue_method_to_session_actor() {
             ) => {
                 assert_eq!(id, "p-interject");
                 assert_eq!(expected_version, 2);
-                assert_eq!(owner.as_deref(), Some("grok-tui"));
+                assert_eq!(owner.as_deref(), Some("deepseek-build-tui"));
                 assert_eq!(new_text.as_deref(), Some("now"));
             }
             ("deepseek-build/queue/hold_edit", SessionCommand::HoldEdit { id }) => {
@@ -5981,7 +5981,7 @@ fn project_roles_personas_gated_via_resolve_and_record_chain() {
     let home = tempfile::tempdir().unwrap();
     let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
-    let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+    let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
     let repo = tempfile::tempdir().unwrap();
     git2::Repository::init(repo.path()).unwrap();
     write_project_subagent_definitions(repo.path());
@@ -6066,7 +6066,7 @@ fn interactive_trust_prompt_grant_reloads_project_mcp() {
     let home = tempfile::tempdir().unwrap();
     let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
-    let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+    let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
     let repo_path = repo.path().to_path_buf();
     let remote = folder_trust_on();
@@ -6147,7 +6147,7 @@ fn interactive_trust_prompt_reject_keeps_gated() {
     let home = tempfile::tempdir().unwrap();
     let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
-    let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+    let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
     let repo_path = repo.path().to_path_buf();
     let remote = folder_trust_on();
@@ -6184,7 +6184,7 @@ fn interactive_trust_prompt_dormant_when_feature_off() {
     let home = tempfile::tempdir().unwrap();
     let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
-    let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+    let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
     let repo_path = repo.path().to_path_buf();
     let remote = crate::util::config::RemoteSettings {
@@ -6214,7 +6214,7 @@ fn interactive_trust_prompt_no_request_without_capability() {
     let home = tempfile::tempdir().unwrap();
     let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
-    let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+    let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
     let repo_path = repo.path().to_path_buf();
     let remote = folder_trust_on();
@@ -6242,7 +6242,7 @@ fn interactive_trust_prompt_client_error_fails_closed() {
     let home = tempfile::tempdir().unwrap();
     let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
-    let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+    let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
     let repo_path = repo.path().to_path_buf();
     let remote = folder_trust_on();
@@ -6283,7 +6283,7 @@ fn interactive_trust_prompt_dedups_same_workspace() {
     let home = tempfile::tempdir().unwrap();
     let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
-    let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+    let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
     let repo_path = repo.path().to_path_buf();
     let remote = folder_trust_on();
@@ -6357,7 +6357,7 @@ fn interactive_trust_prompt_reloads_all_same_workspace_sessions() {
     let home = tempfile::tempdir().unwrap();
     let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
-    let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+    let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
     let root = repo.path().to_path_buf();
     let subdir = root.join("sub");
@@ -6419,7 +6419,7 @@ fn interactive_trust_prompt_reprompts_after_untrust() {
     let home = tempfile::tempdir().unwrap();
     let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
     let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0-sim");
-    let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+    let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
     let repo = repo_with_project_mcp_server();
     let repo_path = repo.path().to_path_buf();
     let remote = folder_trust_on();

@@ -21,7 +21,7 @@
 //! ## Feature Flag
 //!
 //! Resolve enablement through `MemoryConfig::resolve_settings`.
-//! `GROK_MEMORY`, `[memory] enabled`, and `[memory_v2] enabled` all participate.
+//! `DEEPSEEK_BUILD_MEMORY`, `[memory] enabled`, and `[memory_v2] enabled` all participate.
 //! When disabled, this crate is not initialized by the host.
 
 #![deny(clippy::indexing_slicing)]

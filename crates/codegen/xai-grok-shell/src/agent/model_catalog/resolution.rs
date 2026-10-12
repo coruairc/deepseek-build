@@ -85,7 +85,7 @@ pub(crate) fn resolve_default_model(
 
     let model_pref = config::resolve_string_flag(
         cfg.default_model_override.as_deref(),
-        "GROK_DEFAULT_MODEL",
+        "DEEPSEEK_BUILD_DEFAULT_MODEL",
         cfg.models.default.as_deref(),
         None,
     );

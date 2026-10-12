@@ -104,7 +104,7 @@ pub struct AskUserQuestionToolConfig {
 #[serde(default)]
 pub struct WebFetchToolConfig {
     /// When set, all HTTP requests are routed through this URL.
-    /// Resolution: TOML > `GROK_WEB_FETCH_PROXY` env > remote settings > None.
+    /// Resolution: TOML > `DEEPSEEK_BUILD_WEB_FETCH_PROXY` env > remote settings > None.
     pub proxy_endpoint: Option<String>,
     /// When set, it overrides the built-in default allowlist.
     /// An explicit empty list blocks all fetches.
@@ -112,7 +112,7 @@ pub struct WebFetchToolConfig {
     pub allowed_domains: Option<Vec<String>>,
     /// Allow fetches to explicit loopback hosts only (`localhost` / `127.0.0.0/8` / `::1`).
     /// Private and metadata ranges stay blocked.
-    /// Resolution: TOML > `GROK_WEB_FETCH_ALLOW_LOCAL` env > false.
+    /// Resolution: TOML > `DEEPSEEK_BUILD_WEB_FETCH_ALLOW_LOCAL` env > false.
     pub allow_local: Option<bool>,
 }
 
@@ -132,7 +132,7 @@ impl WebFetchToolConfig {
             .proxy_endpoint
             .as_ref()
             .cloned()
-            .or_else(|| env_string("GROK_WEB_FETCH_PROXY"))
+            .or_else(|| env_string("DEEPSEEK_BUILD_WEB_FETCH_PROXY"))
             .or_else(|| remote_proxy.map(|s| s.to_owned()));
 
         let allowed_domains = self
@@ -143,7 +143,7 @@ impl WebFetchToolConfig {
 
         let allow_local = self
             .allow_local
-            .or_else(|| xai_grok_config::env_bool("GROK_WEB_FETCH_ALLOW_LOCAL"));
+            .or_else(|| xai_grok_config::env_bool("DEEPSEEK_BUILD_WEB_FETCH_ALLOW_LOCAL"));
 
         xai_grok_tools::implementations::grok_build::web_fetch::WebFetchParams {
             proxy_endpoint,

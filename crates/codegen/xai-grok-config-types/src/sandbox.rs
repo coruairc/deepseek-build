@@ -83,7 +83,7 @@ mod tests {
         );
     }
 
-    /// The file accepts what `GROK_SANDBOX_MODE` accepts: any case, surrounding whitespace.
+    /// The file accepts what `DEEPSEEK_BUILD_SANDBOX_MODE` accepts: any case, surrounding whitespace.
     #[test]
     fn mode_is_read_in_any_case() {
         for (text, mode) in [

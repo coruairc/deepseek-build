@@ -5,7 +5,7 @@
 //! This module re-exports them and hosts the shell-specific gateway-bridge env vars.
 //!
 //! # Gateway-bridge mode (env-only)
-//! - `GROK_GATEWAY_URL` — when set to a valid URL, `MvpAgent` spawns a
+//! - `DEEPSEEK_BUILD_GATEWAY_URL` — when set to a valid URL, `MvpAgent` spawns a
 //!   per-session gateway bridge actor and routes prompts through it.
 //!   When unset, sessions created in gateway mode fall back to [`GrokBuildEnvironment::gateway_ws_url`] and everything else stays in local mode.
 #[cfg(any(test, feature = "test-support"))]
@@ -17,7 +17,7 @@ pub use xai_grok_env::{
 /// Env var that opts a process into gateway-bridge mode.
 /// When set to a parseable URL, `session/new` / `session/load` spawns a per-session `gateway_bridge` actor in the shell.
 /// When unset the process stays in local mode.
-pub const GROK_GATEWAY_URL_ENV: &str = "GROK_GATEWAY_URL";
+pub const GROK_GATEWAY_URL_ENV: &str = "DEEPSEEK_BUILD_GATEWAY_URL";
 /// Client kill switch for the gateway-bridge custom-method passthrough. Set to `1` / `true` to force every `custom_method` call back onto agent-local dispatch regardless of the routing table or negotiated capability.
 /// That gives an instant revert without a redeploy if the channel misbehaves. Unset, `0`, or `false` keeps normal routing.
 pub const GROK_DISABLE_CUSTOM_BRIDGE_ENV: &str = "GROK_DISABLE_CUSTOM_BRIDGE";
@@ -31,7 +31,7 @@ pub fn custom_bridge_disabled() -> bool {
         })
         .unwrap_or(false)
 }
-/// Parse `GROK_GATEWAY_URL` into a [`url::Url`].
+/// Parse `DEEPSEEK_BUILD_GATEWAY_URL` into a [`url::Url`].
 ///
 /// This build ignores the variable and stays in local mode (warns if set).
 pub fn parse_gateway_url() -> Option<url::Url> {
@@ -41,7 +41,7 @@ pub fn parse_gateway_url() -> Option<url::Url> {
     }
     tracing::warn!(
         env = GROK_GATEWAY_URL_ENV,
-        "GROK_GATEWAY_URL is set but this build does not support gateway-bridge mode; staying in local mode"
+        "DEEPSEEK_BUILD_GATEWAY_URL is set but this build does not support gateway-bridge mode; staying in local mode"
     );
     None
 }

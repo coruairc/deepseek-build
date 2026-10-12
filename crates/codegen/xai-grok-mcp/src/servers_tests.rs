@@ -4903,13 +4903,16 @@ async fn session_spawn_sends_zero_network_requests() {
 #[test]
 fn apply_stdio_env_session_id_cannot_be_shadowed() {
     let mut cmd = Command::new("true");
-    let env = vec![acp::EnvVariable::new("GROK_SESSION_ID", "spoofed")];
+    let env = vec![acp::EnvVariable::new(
+        "DEEPSEEK_BUILD_SESSION_ID",
+        "spoofed",
+    )];
     apply_stdio_env(&mut cmd, &env, Some("sess-real"));
 
     let value = cmd
         .as_std()
         .get_envs()
-        .find(|(k, _)| *k == "GROK_SESSION_ID")
+        .find(|(k, _)| *k == "DEEPSEEK_BUILD_SESSION_ID")
         .and_then(|(_, v)| v)
         .map(|v| v.to_string_lossy().into_owned());
     assert_eq!(value.as_deref(), Some("sess-real"));

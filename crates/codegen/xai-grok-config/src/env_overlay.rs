@@ -1,4 +1,4 @@
-//! `GROK_CONFIG` / `GROK_CONFIG_PATH` config overlay resolution.
+//! `DEEPSEEK_BUILD_CONFIG` / `DEEPSEEK_BUILD_CONFIG_PATH` config overlay resolution.
 
 use std::path::{Path, PathBuf};
 
@@ -7,12 +7,12 @@ use crate::loader::{
 };
 
 /// Inline config overlay: a JSON object.
-pub const GROK_CONFIG_ENV: &str = "GROK_CONFIG";
+pub const GROK_CONFIG_ENV: &str = "DEEPSEEK_BUILD_CONFIG";
 
 /// Path to an additional JSON or TOML config-overlay file (read by extension).
-pub const GROK_CONFIG_PATH_ENV: &str = "GROK_CONFIG_PATH";
+pub const GROK_CONFIG_PATH_ENV: &str = "DEEPSEEK_BUILD_CONFIG_PATH";
 
-/// Hard cap on a `GROK_CONFIG_PATH` overlay read.
+/// Hard cap on a `DEEPSEEK_BUILD_CONFIG_PATH` overlay read.
 /// A huge file, or a special node like `/dev/zero`, must never stall or OOM the agent, so the read is bounded.
 const MAX_OVERLAY_BYTES: u64 = 4 * 1024 * 1024;
 
@@ -42,7 +42,7 @@ fn env_overlay_inputs() -> (Option<String>, Option<PathBuf>) {
         Some(raw) => match raw.into_string() {
             Ok(s) => Some(s),
             Err(_) => {
-                tracing::warn!("GROK_CONFIG is not valid UTF-8; ignoring the overlay");
+                tracing::warn!("DEEPSEEK_BUILD_CONFIG is not valid UTF-8; ignoring the overlay");
                 None
             }
         },
@@ -64,7 +64,7 @@ pub(crate) fn load_env_overlay() -> Option<toml::Value> {
     tracing::trace!(
         source = source_label,
         ?sections,
-        "resolved GROK_CONFIG overlay"
+        "resolved DEEPSEEK_BUILD_CONFIG overlay"
     );
     Some(overlay)
 }
@@ -84,7 +84,7 @@ fn resolve_overlay_detailed(
     inline: Option<&str>,
     path: Option<&Path>,
 ) -> Option<(toml::Value, OverlaySource, Vec<String>)> {
-    // Inline (`GROK_CONFIG`) wins only when it fully succeeds
+    // Inline (`DEEPSEEK_BUILD_CONFIG`) wins only when it fully succeeds
     // When it is absent, empty, or rejected at any stage (parse, `$VAR` expand, version_overrides, normalize), fall through to the path candidate
     // That way a valid file is never skipped because of a bad inline value
     if let Some(inline) = inline
@@ -112,7 +112,7 @@ fn resolve_inline_overlay(inline: &str) -> Option<(toml::Value, OverlaySource, V
     finalize_overlay(overlay, GROK_CONFIG_ENV, OverlaySource::Inline)
 }
 
-/// Read, parse, and run the full pipeline for the `GROK_CONFIG_PATH` candidate.
+/// Read, parse, and run the full pipeline for the `DEEPSEEK_BUILD_CONFIG_PATH` candidate.
 fn resolve_path_overlay(path: &Path) -> Option<(toml::Value, OverlaySource, Vec<String>)> {
     let raw = read_capped_overlay_file(path)?;
     let format = match path.extension() {
@@ -127,7 +127,7 @@ fn resolve_path_overlay(path: &Path) -> Option<(toml::Value, OverlaySource, Vec<
     )
 }
 
-/// Read `GROK_CONFIG_PATH` with a hard byte cap ([`MAX_OVERLAY_BYTES`]).
+/// Read `DEEPSEEK_BUILD_CONFIG_PATH` with a hard byte cap ([`MAX_OVERLAY_BYTES`]).
 /// The caller then falls through to no overlay.
 /// It never logs file content.
 fn read_capped_overlay_file(path: &Path) -> Option<String> {
@@ -136,19 +136,19 @@ fn read_capped_overlay_file(path: &Path) -> Option<String> {
     let file = match std::fs::File::open(path) {
         Ok(f) => f,
         Err(e) => {
-            tracing::warn!(path = %path.display(), error = %e, "GROK_CONFIG_PATH is unreadable; ignoring the overlay");
+            tracing::warn!(path = %path.display(), error = %e, "DEEPSEEK_BUILD_CONFIG_PATH is unreadable; ignoring the overlay");
             return None;
         }
     };
     // Reject special nodes (fifos, `/dev/zero`, ...) before reading: their reported length is meaningless and they can stream without end
     match file.metadata() {
         Ok(meta) if !meta.file_type().is_file() => {
-            tracing::warn!(path = %path.display(), "GROK_CONFIG_PATH is not a regular file; ignoring the overlay");
+            tracing::warn!(path = %path.display(), "DEEPSEEK_BUILD_CONFIG_PATH is not a regular file; ignoring the overlay");
             return None;
         }
         Ok(_) => {}
         Err(e) => {
-            tracing::warn!(path = %path.display(), error = %e, "GROK_CONFIG_PATH is unreadable; ignoring the overlay");
+            tracing::warn!(path = %path.display(), error = %e, "DEEPSEEK_BUILD_CONFIG_PATH is unreadable; ignoring the overlay");
             return None;
         }
     }
@@ -156,11 +156,11 @@ fn read_capped_overlay_file(path: &Path) -> Option<String> {
     // `take` also guards a regular file that grows between the metadata check and the read
     let mut raw = String::new();
     if let Err(e) = file.take(MAX_OVERLAY_BYTES + 1).read_to_string(&mut raw) {
-        tracing::warn!(path = %path.display(), error = %e, "GROK_CONFIG_PATH is unreadable; ignoring the overlay");
+        tracing::warn!(path = %path.display(), error = %e, "DEEPSEEK_BUILD_CONFIG_PATH is unreadable; ignoring the overlay");
         return None;
     }
     if raw.len() as u64 > MAX_OVERLAY_BYTES {
-        tracing::warn!(path = %path.display(), max = MAX_OVERLAY_BYTES, "GROK_CONFIG_PATH exceeds the max overlay size; ignoring the overlay");
+        tracing::warn!(path = %path.display(), max = MAX_OVERLAY_BYTES, "DEEPSEEK_BUILD_CONFIG_PATH exceeds the max overlay size; ignoring the overlay");
         return None;
     }
     Some(raw)

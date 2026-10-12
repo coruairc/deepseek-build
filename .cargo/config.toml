@@ -7,6 +7,11 @@
 # rustflags are not additive. we have differing flags per arch,
 # so we must repeat flags in each target section
 
+[build]
+# Incremental caches are large and are not shared across profiles/sessions;
+# disable them for the workspace so debug/test artifacts stay bounded.
+incremental = false
+
 [target.x86_64-apple-darwin]
 rustflags = [
     "-C",
@@ -32,6 +37,9 @@ rustflags = [
 ]
 
 [target.x86_64-unknown-linux-gnu]
+# Use the repo's fallback-aware linker wrapper: it prefers lld when present and
+# silently falls back to cc, so machines without lld still build.
+linker = "scripts/cargo-linker.sh"
 rustflags = ["-C", "force-unwind-tables=yes"]
 
 [target.aarch64-unknown-linux-gnu]

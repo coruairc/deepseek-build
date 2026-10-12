@@ -1,4 +1,4 @@
-//! Leader-follower IPC architecture for grok-shell.
+//! Leader-follower IPC architecture for deepseek-build.
 //!
 //! This module implements a single-leader-per-machine architecture where one leader
 //! process manages the agent state while multiple clients (TUI, IDE extensions, headless)

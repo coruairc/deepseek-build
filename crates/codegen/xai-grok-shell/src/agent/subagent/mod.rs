@@ -500,7 +500,7 @@ impl SubagentSpawnContext {
     /// Env > parent config features > this context's remote settings > default.
     pub(crate) fn resolve_compaction_mode(&self) -> xai_chat_state::CompactionMode {
         crate::agent::config::resolve_compaction_mode_from(
-            crate::agent::config::env_string("GROK_COMPACTION_MODE").as_deref(),
+            crate::agent::config::env_string("DEEPSEEK_BUILD_COMPACTION_MODE").as_deref(),
             self.agent_config
                 .as_ref()
                 .and_then(|c| c.features.compaction_mode.as_deref()),
@@ -509,7 +509,7 @@ impl SubagentSpawnContext {
                 .and_then(|r| r.compaction_mode.as_deref()),
         )
         .with_segment_detail(crate::agent::config::resolve_compaction_detail_from(
-            crate::agent::config::env_string("GROK_COMPACTION_DETAIL").as_deref(),
+            crate::agent::config::env_string("DEEPSEEK_BUILD_COMPACTION_DETAIL").as_deref(),
             self.agent_config
                 .as_ref()
                 .and_then(|c| c.features.compaction_detail.as_deref()),

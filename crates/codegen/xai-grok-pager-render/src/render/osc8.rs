@@ -1820,7 +1820,7 @@ mod tests {
     #[test]
     fn scan_detects_tilde_file_path() {
         // The user's example: a `~/Desktop/…md` path in agent output.
-        let raw = "~/Desktop/grok-pager-retention-findings-2026-06-06.md";
+        let raw = "~/Desktop/deepseek-build-pager-retention-findings-2026-06-06.md";
         // Skip when no home directory is resolvable (e.g. minimal sandbox): the tilde stays unexpanded and cannot form an absolute file URL.
         let Ok(expected) = url::Url::from_file_path(shellexpand::tilde(raw).as_ref()) else {
             return;

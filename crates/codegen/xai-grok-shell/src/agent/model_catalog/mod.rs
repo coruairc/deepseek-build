@@ -42,7 +42,7 @@ pub(crate) fn resolve_deployment_id(deployment_key: Option<&str>) -> Option<Stri
         .or_else(|| Some(xai_grok_telemetry::config::deployment_id_from_key(key)))
 }
 
-/// The GROK_DEPLOYMENT_KEY env beats the config file. A blank value is unset.
+/// The DEEPSEEK_BUILD_DEPLOYMENT_KEY env beats the config file. A blank value is unset.
 pub(crate) fn resolve_deployment_key() -> Option<String> {
     let config_val = xai_grok_config::effective_config::load_effective_config()
         .map_err(|e| tracing::warn!("failed to load config files for deployment key: {e}"))
@@ -53,8 +53,13 @@ pub(crate) fn resolve_deployment_key() -> Option<String> {
                 .as_str()
                 .map(str::to_owned)
         });
-    xai_grok_config::resolve_string_flag(None, "GROK_DEPLOYMENT_KEY", config_val.as_deref(), None)
-        .map(|resolved| resolved.value)
+    xai_grok_config::resolve_string_flag(
+        None,
+        "DEEPSEEK_BUILD_DEPLOYMENT_KEY",
+        config_val.as_deref(),
+        None,
+    )
+    .map(|resolved| resolved.value)
 }
 
 /// Deterministic so the same key matches its marker; the raw key is never written to disk.

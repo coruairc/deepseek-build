@@ -518,12 +518,12 @@ impl SessionFlags {
     }
     /// In practice always `Some`: the permission seeds (`yoloMode` / `autoMode`) are emitted unconditionally.
     /// An absent key is not the same as off; see the emit-site comment below.
-    /// `--no-ask-user` always forces `askUserQuestion: false` into the meta, even when paired with `GROK_AGENT`.
+    /// `--no-ask-user` always forces `askUserQuestion: false` into the meta, even when paired with `DEEPSEEK_BUILD_AGENT`.
     pub(crate) fn to_meta(&self) -> Option<acp::Meta> {
         let mut meta = serde_json::Map::new();
         if self.chat_mode {
             if self.plan_mode || self.agent_override.is_some()
-                || std::env::var("GROK_AGENT").ok().is_some_and(|s| !s.trim().is_empty())
+                || std::env::var("DEEPSEEK_BUILD_AGENT").ok().is_some_and(|s| !s.trim().is_empty())
             {
                 tracing::warn!(
                     "chat mode active: omitting Build agentProfile (plan/agent override ignored)"
@@ -531,7 +531,7 @@ impl SessionFlags {
             }
         } else if let Some(ref profile) = self.agent_override {
             meta.insert("agentProfile".into(), profile.clone());
-        } else if std::env::var("GROK_AGENT").ok().is_some_and(|s| !s.trim().is_empty())
+        } else if std::env::var("DEEPSEEK_BUILD_AGENT").ok().is_some_and(|s| !s.trim().is_empty())
         {} else if let Some(profile) = self.agent_profile() {
             meta.insert("agentProfile".into(), serde_json::json!(profile));
         }

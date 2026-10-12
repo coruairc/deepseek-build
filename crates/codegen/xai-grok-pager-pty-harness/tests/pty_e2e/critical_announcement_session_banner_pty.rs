@@ -662,7 +662,7 @@ async fn promo_cta_click_opens_link_and_hide_roundtrip() {
     // OSC 8 emission is gated on a Native-capable brand (`hyperlink_route`)
     // Pin WezTerm like the file-path hyperlink test so the byte-level OSC 8 assert below is meaningful
     let extra_env = [
-        ("GROK_TEST_OPEN_URL_FILE", url_file_str.as_str()),
+        ("DEEPSEEK_BUILD_TEST_OPEN_URL_FILE", url_file_str.as_str()),
         ("TERM_PROGRAM", "WezTerm"),
     ];
     let mut harness = spawn_polling_session_with_env(&content, "pty-announce-cta", &extra_env);
@@ -867,7 +867,7 @@ fn pinned_promo_override_json() -> String {
     )
 }
 
-/// [`spawn_with_announcements`] with extra env pairs appended (e.g. `GROK_TEST_OPEN_URL_FILE` and a `TERM_PROGRAM` pin for OSC 8).
+/// [`spawn_with_announcements`] with extra env pairs appended (e.g. `DEEPSEEK_BUILD_TEST_OPEN_URL_FILE` and a `TERM_PROGRAM` pin for OSC 8).
 fn spawn_with_announcements_and_env(
     content: &ContentController,
     override_json: &str,
@@ -898,7 +898,7 @@ async fn pinned_promo_multi_surface_and_ctrl_o_open() {
     let url_file = content.home().join("opened-urls.txt");
     let url_file_str = url_file.to_str().expect("utf8 url file path").to_owned();
     let extra_env = [
-        ("GROK_TEST_OPEN_URL_FILE", url_file_str.as_str()),
+        ("DEEPSEEK_BUILD_TEST_OPEN_URL_FILE", url_file_str.as_str()),
         ("TERM_PROGRAM", "WezTerm"),
     ];
     let mut harness =

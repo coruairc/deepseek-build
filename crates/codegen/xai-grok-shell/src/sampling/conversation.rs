@@ -1,4 +1,4 @@
-//! Conversation types: re-exports the canonical set from `xai_grok_sampling_types` plus grok-shell-specific additions.
+//! Conversation types: re-exports the canonical set from `xai_grok_sampling_types` plus deepseek-build-specific additions.
 
 use std::collections::HashSet;
 

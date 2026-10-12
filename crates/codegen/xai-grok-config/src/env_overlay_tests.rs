@@ -38,7 +38,7 @@ fn resolve_overlay_inline_finalizing_empty_falls_through_to_path() {
 
 #[test]
 fn resolve_overlay_over_cap_path_is_ignored() {
-    // A `GROK_CONFIG_PATH` file larger than the cap must be refused (no stall, no OOM) and fall through to no overlay, like an unreadable path
+    // A `DEEPSEEK_BUILD_CONFIG_PATH` file larger than the cap must be refused (no stall, no OOM) and fall through to no overlay, like an unreadable path
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("overlay.toml");
     let header = "[models]\ndefault = \"from-path\"\n";

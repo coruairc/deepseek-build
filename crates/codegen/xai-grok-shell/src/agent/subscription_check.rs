@@ -34,17 +34,12 @@ async fn fetch_user_info(
     http_client: &reqwest::Client,
     url: &str,
     auth: &xai_grok_login::GrokAuth,
-    auth_manager: &AuthManager,
     alpha_test_key: Option<&str>,
 ) -> Result<UserInfo, &'static str> {
     let request = http_client
         .get(url)
         .timeout(Duration::from_secs(10))
         .header("Authorization", format!("Bearer {}", auth.key))
-        .header(
-            "X-XAI-Token-Auth",
-            auth_manager.grok_com_config().token_header.as_str(),
-        )
         .header("x-deepseek-build-client-version", xai_grok_version::VERSION)
         .header(
             crate::http::CLIENT_MODE_HEADER,
@@ -77,15 +72,7 @@ pub(crate) async fn single_check(
     let user_url = format!("{}/user?include=subscription", proxy_base_url);
     let http_client = crate::http::shared_client();
     let auth = auth_manager.current()?;
-    let user_info = match fetch_user_info(
-        &http_client,
-        &user_url,
-        &auth,
-        &auth_manager,
-        alpha_test_key,
-    )
-    .await
-    {
+    let user_info = match fetch_user_info(&http_client, &user_url, &auth, alpha_test_key).await {
         Ok(ui) => ui,
         Err(kind) => {
             xai_grok_telemetry::unified_log::warn(

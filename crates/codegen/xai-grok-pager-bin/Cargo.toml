@@ -92,6 +92,9 @@ serial_test = { workspace = true }
 # `PagerArgs::try_parse_from` in the CLI-parsing unit tests (needs the
 # `clap::Parser` trait in scope).
 clap = { workspace = true, features = ["derive"] }
+# Headless-run harness: mock inference server + `run_headless` for the
+# header-capture wire test.
+xai-grok-test-support = { workspace = true }
 
 [features]
 default = [

@@ -58,7 +58,7 @@ Copy the most recent response's source markdown to the clipboard. Pass a number 
 /copy 2 ~/exports/last-reply.md
 ```
 
-Every copy is also written to a backup file — `~/.deepseek-build/last-copy.txt` by default, or `GROK_COPY_FILE` if set. Confirmed copies toast briefly (e.g. `Copied!`). Unverified OSC 52 deliveries and clipboard-unreachable fallbacks name the backup path so you can recover the text.
+Every copy is also written to a backup file — `~/.deepseek-build/last-copy.txt` by default, or `DEEPSEEK_BUILD_COPY_FILE` if set. Confirmed copies toast briefly (e.g. `Copied!`). Unverified OSC 52 deliveries and clipboard-unreachable fallbacks name the backup path so you can recover the text.
 
 ### `/export`
 
@@ -160,7 +160,7 @@ Open an external editor for the prompt, in either render mode. deepseek-build re
 
 ### `/minimal` and `/fullscreen`
 
-Switch the current session to the other render mode, in place. `/minimal` (offered while you're in fullscreen) switches to the experimental scrollback-native mode; `/fullscreen` (offered while you're in minimal; alias `/full`) switches back to standard fullscreen mode. The switch happens inside the running process — nothing restarts, so a running turn keeps streaming and your composer draft, queued prompts, and permission mode all carry over; a marker (committed line in minimal, toast in fullscreen) reminds you how to switch back. Both are session-scoped — they don't touch `config.toml` — and the `--minimal` / `--fullscreen` CLI flags are session-scoped the same way. To make plain `deepseek-build` open in a given mode by default, use `/settings` → **Default screen mode** or set `[ui] screen_mode`. (If the in-place transition misbehaves in an exotic terminal, `GROK_SCREEN_MODE_SWITCH=exec` restores the old behavior of relaunching the pager onto the same session.)
+Switch the current session to the other render mode, in place. `/minimal` (offered while you're in fullscreen) switches to the experimental scrollback-native mode; `/fullscreen` (offered while you're in minimal; alias `/full`) switches back to standard fullscreen mode. The switch happens inside the running process — nothing restarts, so a running turn keeps streaming and your composer draft, queued prompts, and permission mode all carry over; a marker (committed line in minimal, toast in fullscreen) reminds you how to switch back. Both are session-scoped — they don't touch `config.toml` — and the `--minimal` / `--fullscreen` CLI flags are session-scoped the same way. To make plain `deepseek-build` open in a given mode by default, use `/settings` → **Default screen mode** or set `[ui] screen_mode`. (If the in-place transition misbehaves in an exotic terminal, `DEEPSEEK_BUILD_SCREEN_MODE_SWITCH=exec` restores the old behavior of relaunching the pager onto the same session.)
 
 A handful of commands only work in one of the two modes, because the surface they drive doesn't exist in the other: `/find`, `/jump`, `/timeline`, `/theme`, `/tutorial`, and `/dashboard` are fullscreen-only, while `/expand` is minimal-only. (`/workflow runs` is different: it opens the run pane in fullscreen and degrades to a text overview in minimal rather than refusing.) Those are hidden from the command menu and the palette in the mode they can't run in. If you type one out anyway, deepseek-build says why — and points you at whichever is actually useful. When the other mode is the only way to get it, that's the mode switch: `/theme isn't available in minimal mode (minimal renders with your terminal's own palette). Run /fullscreen to switch this session.` When this mode already does the job another way, it names that instead: `/expand isn't available in fullscreen mode: press Tab to focus the scrollback, then → on the block.` Everything else works in both. Note that `--no-alt-screen` still counts as fullscreen here, so it keeps the fullscreen-only commands.
 
@@ -180,7 +180,7 @@ Open a preview of the current saved plan. Aliases: `/show-plan`, `/plan-view`.
 
 ## Memory
 
-`/flush` and `/dream` require memory enabled through `GROK_MEMORY=1` or `[memory] enabled = true`. `/memory` is available whenever a memory store is configured for the session, including when `[memory] enabled = false` turned memory off, so you can browse saved notes and turn memory on for the session from inside the modal. It is hidden only when no memory store is configured, or when `--no-memory` / `GROK_MEMORY=0` turned memory off for the whole process. `/remember` is always available.
+`/flush` and `/dream` require memory enabled through `DEEPSEEK_BUILD_MEMORY=1` or `[memory] enabled = true`. `/memory` is available whenever a memory store is configured for the session, including when `[memory] enabled = false` turned memory off, so you can browse saved notes and turn memory on for the session from inside the modal. It is hidden only when no memory store is configured, or when `--no-memory` / `DEEPSEEK_BUILD_MEMORY=0` turned memory off for the whole process. `/remember` is always available.
 
 ### `/memory`
 
@@ -189,7 +189,7 @@ turns memory on or off for the session, `x` deletes the selected note, and `s`
 shows content-free queue, lease, retention, and pinned-rollout diagnostics.
 The `t` toggle is session-scoped: it does not edit `config.toml`, and new
 sessions follow the config again. It cannot override `--no-memory` or
-`GROK_MEMORY=0`.
+`DEEPSEEK_BUILD_MEMORY=0`.
 
 ```
 /memory

@@ -79,18 +79,18 @@ pub unsafe fn isolate_grok_env(home: &Path) {
         std::env::set_var("GROK_TELEMETRY_MIXPANEL_TOKEN", "");
         std::env::set_var("GROK_TELEMETRY_EVENTS_URL", "");
         std::env::set_var("GROK_TELEMETRY_EVENTS_API_KEY", "");
-        std::env::set_var("GROK_FEEDBACK_ENABLED", "false");
+        std::env::set_var("DEEPSEEK_BUILD_FEEDBACK_ENABLED", "false");
         std::env::set_var("GROK_TRACE_UPLOAD", "false");
         for var in [
-            "GROK_AUTH",
+            "DEEPSEEK_BUILD_AUTH",
             "GROK_AUTH_PATH",
-            "GROK_DEPLOYMENT_KEY",
+            "DEEPSEEK_BUILD_DEPLOYMENT_KEY",
             "GROK_MANAGED_CONFIG",
-            "GROK_CONFIG",
-            "GROK_CONFIG_PATH",
-            "GROK_CLI_CHAT_PROXY_BASE_URL",
-            "GROK_MODELS_BASE_URL",
-            "GROK_MODELS_LIST_URL",
+            "DEEPSEEK_BUILD_CONFIG",
+            "DEEPSEEK_BUILD_CONFIG_PATH",
+            "DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL",
+            "DEEPSEEK_BUILD_MODELS_BASE_URL",
+            "DEEPSEEK_BUILD_MODELS_LIST_URL",
             "XAI_API_KEY",
             "DEEPSEEK_API_KEY",
             "DEEPSEEK_BUILD_API_KEY",

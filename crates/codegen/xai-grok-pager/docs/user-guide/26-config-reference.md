@@ -9,8 +9,8 @@ deepseek-build reads its settings as a layered merge; later layers win:
 1. Compiled defaults.
 2. `$DEEPSEEK_BUILD_HOME/config.toml` (your settings; `/settings` writes here). Default `$DEEPSEEK_BUILD_HOME` is `~/.deepseek-build`.
 3. Project `.grok/config.toml`: only `[mcp_servers]`, `[plugins]`, `[permission]`, and `[mcp] max_output_bytes`.
-4. `GROK_CONFIG` (inline JSON) or `GROK_CONFIG_PATH` (JSON or TOML file). Allowlisted keys only.
-5. `GROK_*` environment variables.
+4. `DEEPSEEK_BUILD_CONFIG` (inline JSON) or `DEEPSEEK_BUILD_CONFIG_PATH` (JSON or TOML file). Allowlisted keys only.
+5. `DEEPSEEK_BUILD_*` environment variables.
 6. CLI flags such as `--model`, `--sandbox`, `--yolo`.
 
 Run `deepseek-build inspect` or `deepseek-build inspect --json` to see which files and values won.
@@ -26,7 +26,7 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
 | `agent.definition` | `string (path)` | `yes` | `user` | Path to an agent definition markdown file with YAML frontmatter. |
-| `agent.name` | `string` | `yes` | `user` | Built-in or discovered agent definition name. Also GROK_AGENT and `--agent-profile`. |
+| `agent.name` | `string` | `yes` | `user` | Built-in or discovered agent definition name. Also DEEPSEEK_BUILD_AGENT and `--agent-profile`. |
 | `agent.system_prompt_label` | `string` | `yes` | `user` | Global system-prompt identity; per-model override wins. |
 
 ### `announcements`
@@ -45,17 +45,17 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `cli.auto_update` | `boolean` | `pin` | `user` | Check for CLI updates on launch. Also GROK_DISABLE_AUTOUPDATER to suppress. |
+| `cli.auto_update` | `boolean` | `pin` | `user` | Check for CLI updates on launch. Also DEEPSEEK_BUILD_DISABLE_AUTOUPDATER to suppress. |
 | `cli.channel` | `stable / alpha` | `pin` | `user` | Release channel preference. |
-| `cli.grove` | `boolean` or `grove` / `grove-fuse` / `grove-nfs` / `nfs` / `all` / `copy` / `true` / `false` / `1` / `0` / `on` / `off` | `yes` | `user` | Convenience that turns **both** `deepseek-build clone` and session / `-w` Grove on when the specific knobs are unset. Also `GROK_GROVE`. `false` / `copy` / `off` means enable-all is off (fall through); it does not force both surfaces off. `[cli] grove_worktree` and `GROK_WORKTREE_TYPE` still win for worktrees; `GROK_CLONE` still wins for clone. Remote `grove_worktree = false` still kills worktrees only. |
-| `cli.grove_worktree` | `boolean` or `grove` / `grove-fuse` / `grove-nfs` / `nfs` / `copy` / `true` / `false` / `1` / `0` / `on` / `off` | `yes` | `user` | Session / `-w` Grove vs copy. Default copy. Distinct from creation-mode `cli.worktree_type`. Also `GROK_WORKTREE_TYPE`. Resolution: request → env → local → enable-all (`GROK_GROVE` / `[cli] grove`). Does not enable `deepseek-build clone`. |
+| `cli.grove` | `boolean` or `grove` / `grove-fuse` / `grove-nfs` / `nfs` / `all` / `copy` / `true` / `false` / `1` / `0` / `on` / `off` | `yes` | `user` | Convenience that turns **both** `deepseek-build clone` and session / `-w` Grove on when the specific knobs are unset. Also `DEEPSEEK_BUILD_GROVE`. `false` / `copy` / `off` means enable-all is off (fall through); it does not force both surfaces off. `[cli] grove_worktree` and `DEEPSEEK_BUILD_WORKTREE_TYPE` still win for worktrees; `DEEPSEEK_BUILD_CLONE` still wins for clone. Remote `grove_worktree = false` still kills worktrees only. |
+| `cli.grove_worktree` | `boolean` or `grove` / `grove-fuse` / `grove-nfs` / `nfs` / `copy` / `true` / `false` / `1` / `0` / `on` / `off` | `yes` | `user` | Session / `-w` Grove vs copy. Default copy. Distinct from creation-mode `cli.worktree_type`. Also `DEEPSEEK_BUILD_WORKTREE_TYPE`. Resolution: request → env → local → enable-all (`DEEPSEEK_BUILD_GROVE` / `[cli] grove`). Does not enable `deepseek-build clone`. |
 | `cli.installer` | `string` | `—` | `user` | Which installer last set up this CLI, used to pick the update path. |
-| `cli.maximum_version` | `string` | `pin` | `user` | Highest CLI version that still runs without a hard block. Also GROK_MAXIMUM_VERSION. |
-| `cli.minimum_version` | `string` | `pin` | `user` | Lowest CLI version that still runs without a hard block. Also GROK_MINIMUM_VERSION. |
+| `cli.maximum_version` | `string` | `pin` | `user` | Highest CLI version that still runs without a hard block. Also DEEPSEEK_BUILD_MAXIMUM_VERSION. |
+| `cli.minimum_version` | `string` | `pin` | `user` | Lowest CLI version that still runs without a hard block. Also DEEPSEEK_BUILD_MINIMUM_VERSION. |
 | `cli.npm_registry` | `string` | `yes` | `user` | npm registry used by the auto-updater. |
 | `cli.nfs_worktree` | same as `cli.grove_worktree` | `yes` | `user` | Read alias of `cli.grove_worktree`. |
-| `cli.required_maximum_version` | `string` | `pin` | `user` | Hard maximum CLI version. Also GROK_REQUIRED_MAXIMUM_VERSION. |
-| `cli.required_minimum_version` | `string` | `pin` | `user` | Hard minimum CLI version. Also GROK_REQUIRED_MINIMUM_VERSION. |
+| `cli.required_maximum_version` | `string` | `pin` | `user` | Hard maximum CLI version. Also DEEPSEEK_BUILD_REQUIRED_MAXIMUM_VERSION. |
+| `cli.required_minimum_version` | `string` | `pin` | `user` | Hard minimum CLI version. Also DEEPSEEK_BUILD_REQUIRED_MINIMUM_VERSION. |
 | `cli.session_picker_grouped` | `boolean` | `yes` | `user` | Group sessions by repo in the picker and CLI listings. |
 | `cli.show_tips` | `boolean` | `pin` | `user` | Startup tips. |
 | `cli.use_leader` | `boolean` | `pin` | `user` | Use the leader process for config reload and MCP watches. |
@@ -65,18 +65,18 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `compat.claude.agents` | `boolean` | `yes` | `user` | Scan CLAUDE.md. Also GROK_CLAUDE_AGENTS_ENABLED. |
-| `compat.claude.hooks` | `boolean` | `yes` | `user` | Scan Claude hooks. Also GROK_CLAUDE_HOOKS_ENABLED. |
-| `compat.claude.mcps` | `boolean` | `yes` | `user` | Scan Claude MCP config. Also GROK_CLAUDE_MCPS_ENABLED. |
-| `compat.claude.rules` | `boolean` | `yes` | `user` | Scan Claude rules. Also GROK_CLAUDE_RULES_ENABLED. |
-| `compat.claude.skills` | `boolean` | `yes` | `user` | Scan Claude skills. Also GROK_CLAUDE_SKILLS_ENABLED. |
+| `compat.claude.agents` | `boolean` | `yes` | `user` | Scan CLAUDE.md. Also DEEPSEEK_BUILD_CLAUDE_AGENTS_ENABLED. |
+| `compat.claude.hooks` | `boolean` | `yes` | `user` | Scan Claude hooks. Also DEEPSEEK_BUILD_CLAUDE_HOOKS_ENABLED. |
+| `compat.claude.mcps` | `boolean` | `yes` | `user` | Scan Claude MCP config. Also DEEPSEEK_BUILD_CLAUDE_MCPS_ENABLED. |
+| `compat.claude.rules` | `boolean` | `yes` | `user` | Scan Claude rules. Also DEEPSEEK_BUILD_CLAUDE_RULES_ENABLED. |
+| `compat.claude.skills` | `boolean` | `yes` | `user` | Scan Claude skills. Also DEEPSEEK_BUILD_CLAUDE_SKILLS_ENABLED. |
 | `compat.codex.hooks` | `boolean` | `yes` | `user` | Scan Codex hooks when present. |
 | `compat.codex.skills` | `boolean` | `yes` | `user` | Scan Codex skills directories when present. |
-| `compat.cursor.agents` | `boolean` | `yes` | `user` | Scan agent definitions from Cursor compat sources. Also GROK_CURSOR_AGENTS_ENABLED. |
-| `compat.cursor.hooks` | `boolean` | `yes` | `user` | Scan Cursor hooks. Also GROK_CURSOR_HOOKS_ENABLED. |
-| `compat.cursor.mcps` | `boolean` | `yes` | `user` | Scan Cursor mcp.json. Also GROK_CURSOR_MCPS_ENABLED. |
-| `compat.cursor.rules` | `boolean` | `yes` | `user` | Scan `.cursor/rules/`. Also GROK_CURSOR_RULES_ENABLED. |
-| `compat.cursor.skills` | `boolean` | `yes` | `user` | Scan Cursor skills directories. Also GROK_CURSOR_SKILLS_ENABLED. |
+| `compat.cursor.agents` | `boolean` | `yes` | `user` | Scan agent definitions from Cursor compat sources. Also DEEPSEEK_BUILD_CURSOR_AGENTS_ENABLED. |
+| `compat.cursor.hooks` | `boolean` | `yes` | `user` | Scan Cursor hooks. Also DEEPSEEK_BUILD_CURSOR_HOOKS_ENABLED. |
+| `compat.cursor.mcps` | `boolean` | `yes` | `user` | Scan Cursor mcp.json. Also DEEPSEEK_BUILD_CURSOR_MCPS_ENABLED. |
+| `compat.cursor.rules` | `boolean` | `yes` | `user` | Scan `.cursor/rules/`. Also DEEPSEEK_BUILD_CURSOR_RULES_ENABLED. |
+| `compat.cursor.skills` | `boolean` | `yes` | `user` | Scan Cursor skills directories. Also DEEPSEEK_BUILD_CURSOR_SKILLS_ENABLED. |
 
 ### `dashboard`
 
@@ -95,7 +95,7 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `diagnostics.crash_handler` | `boolean` | `yes` | `user` | Write a panic report under `$DEEPSEEK_BUILD_HOME/crash/`. Also GROK_CRASH_HANDLER. |
+| `diagnostics.crash_handler` | `boolean` | `yes` | `user` | Write a panic report under `$DEEPSEEK_BUILD_HOME/crash/`. Also DEEPSEEK_BUILD_CRASH_HANDLER. |
 
 ### `disable_web_search`
 
@@ -126,62 +126,62 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
 | `endpoints.cli_chat_proxy_base_url` | `string` | `pin` | `user` | Session-service API base URL. |
-| `endpoints.deployment_key` | `string` | `pin` | `user` | Management key for enterprise deployments. Also GROK_DEPLOYMENT_KEY. |
-| `endpoints.feedback_base_url` | `string` | `yes` | `user` | Where feedback submissions go. Also GROK_FEEDBACK_BASE_URL. |
-| `endpoints.models_base_url` | `string` | `pin` | `user` | Custom inference base URL; the model list is fetched from `{models_base_url}/models`. Also GROK_MODELS_BASE_URL. |
-| `endpoints.models_list_url` | `string` | `pin` | `user` | Override the model-list URL. Also GROK_MODELS_LIST_URL. Alias `models_endpoint`. |
-| `endpoints.trace_upload_bucket` | `string` | `yes` | `user` | Direct gs:// or s3:// bucket for traces; bypasses the proxy. Also GROK_TRACE_UPLOAD_BUCKET. |
+| `endpoints.deployment_key` | `string` | `pin` | `user` | Management key for enterprise deployments. Also DEEPSEEK_BUILD_DEPLOYMENT_KEY. |
+| `endpoints.feedback_base_url` | `string` | `yes` | `user` | Where feedback submissions go. Also DEEPSEEK_BUILD_FEEDBACK_BASE_URL. |
+| `endpoints.models_base_url` | `string` | `pin` | `user` | Custom inference base URL; the model list is fetched from `{models_base_url}/models`. Also DEEPSEEK_BUILD_MODELS_BASE_URL. |
+| `endpoints.models_list_url` | `string` | `pin` | `user` | Override the model-list URL. Also DEEPSEEK_BUILD_MODELS_LIST_URL. Alias `models_endpoint`. |
+| `endpoints.trace_upload_bucket` | `string` | `yes` | `user` | Direct gs:// or s3:// bucket for traces; bypasses the proxy. Also DEEPSEEK_BUILD_TRACE_UPLOAD_BUCKET. |
 | `endpoints.trace_upload_credentials` | `string` | `yes` | `user` | Inline GCS service-account JSON or AWS credentials for that bucket; wins over `trace_upload_credentials_file` and has no environment variable. |
-| `endpoints.trace_upload_credentials_file` | `string (path)` | `yes` | `user` | Path to a GCS service-account JSON or AWS credentials file for that bucket. Also GROK_TRACE_UPLOAD_CREDENTIALS_FILE. |
-| `endpoints.trace_upload_endpoint_url` | `string` | `yes` | `user` | Custom S3-compatible endpoint for s3:// bucket uploads. Also GROK_TRACE_UPLOAD_ENDPOINT_URL. |
-| `endpoints.trace_upload_region` | `string` | `yes` | `user` | AWS region for s3:// bucket uploads; default us-east-1. Also GROK_TRACE_UPLOAD_REGION. |
-| `endpoints.trace_upload_url` | `string` | `pin` | `user` | Proxy destination for traces when no direct bucket is set. Also GROK_TRACE_UPLOAD_URL. |
-| `endpoints.xai_api_base_url` | `string` | `pin` | `user` | Public DeepSeek API base. Also GROK_XAI_API_BASE_URL. |
+| `endpoints.trace_upload_credentials_file` | `string (path)` | `yes` | `user` | Path to a GCS service-account JSON or AWS credentials file for that bucket. Also DEEPSEEK_BUILD_TRACE_UPLOAD_CREDENTIALS_FILE. |
+| `endpoints.trace_upload_endpoint_url` | `string` | `yes` | `user` | Custom S3-compatible endpoint for s3:// bucket uploads. Also DEEPSEEK_BUILD_TRACE_UPLOAD_ENDPOINT_URL. |
+| `endpoints.trace_upload_region` | `string` | `yes` | `user` | AWS region for s3:// bucket uploads; default us-east-1. Also DEEPSEEK_BUILD_TRACE_UPLOAD_REGION. |
+| `endpoints.trace_upload_url` | `string` | `pin` | `user` | Proxy destination for traces when no direct bucket is set. Also DEEPSEEK_BUILD_TRACE_UPLOAD_URL. |
+| `endpoints.xai_api_base_url` | `string` | `pin` | `user` | Public DeepSeek API base. Also DEEPSEEK_BUILD_XAI_API_BASE_URL. |
 
 ### `features`
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `features.active_agent_messages` | `boolean` | `pin` | `user` | Enable or disable `active_agent_messages`. Default false. Also `GROK_ACTIVE_AGENT_MESSAGES`. |
-| `features.ask_user_question` | `boolean` | `pin` | `user` | Enable or disable `ask_user_question`. Default true. Also `GROK_ASK_USER_QUESTION`. |
-| `features.auto_wake` | `boolean` | `pin` | `user` | Enable or disable `auto_wake`. Default true. Also `GROK_AUTO_WAKE`. |
-| `features.backend_tools` | `boolean` | `pin` | `user` | Enable or disable `backend_tools`. Default true. Also `GROK_BACKEND_SEARCH`. |
-| `features.cancel_rewind` | `boolean` | `pin` | `user` | Enable or disable `cancel_rewind`. Default true. Also `GROK_CANCEL_REWIND`. |
+| `features.active_agent_messages` | `boolean` | `pin` | `user` | Enable or disable `active_agent_messages`. Default false. Also `DEEPSEEK_BUILD_ACTIVE_AGENT_MESSAGES`. |
+| `features.ask_user_question` | `boolean` | `pin` | `user` | Enable or disable `ask_user_question`. Default true. Also `DEEPSEEK_BUILD_ASK_USER_QUESTION`. |
+| `features.auto_wake` | `boolean` | `pin` | `user` | Enable or disable `auto_wake`. Default true. Also `DEEPSEEK_BUILD_AUTO_WAKE`. |
+| `features.backend_tools` | `boolean` | `pin` | `user` | Enable or disable `backend_tools`. Default true. Also `DEEPSEEK_BUILD_BACKEND_SEARCH`. |
+| `features.cancel_rewind` | `boolean` | `pin` | `user` | Enable or disable `cancel_rewind`. Default true. Also `DEEPSEEK_BUILD_CANCEL_REWIND`. |
 | `features.codebase_indexing` | `boolean / string[]` | `pin` | `user` | Codebase graph indexing; true indexes git repos, or pass include/exclude globs. |
-| `features.compaction_detail` | `none / minimal / balanced / verbose` | `yes` | `user` | Verbatim detail level for `segments` compaction. Also GROK_COMPACTION_DETAIL. |
-| `features.compaction_mode` | `summary / transcript / segments` | `yes` | `user` | Compaction strategy. Also GROK_COMPACTION_MODE. |
+| `features.compaction_detail` | `none / minimal / balanced / verbose` | `yes` | `user` | Verbatim detail level for `segments` compaction. Also DEEPSEEK_BUILD_COMPACTION_DETAIL. |
+| `features.compaction_mode` | `summary / transcript / segments` | `yes` | `user` | Compaction strategy. Also DEEPSEEK_BUILD_COMPACTION_MODE. |
 | `features.compaction_tool_choice` | `string` | `yes` | `user` | Tool-choice hint used during compaction. |
-| `features.compaction_verbatim_input` | `boolean` | `pin` | `user` | Enable or disable `compaction_verbatim_input`. Default true. Also `GROK_COMPACTION_VERBATIM_INPUT`. |
-| `features.dock` | `boolean` | `pin` | `user` | Enable or disable `dock`. Default false. Also `GROK_DOCK`. |
-| `features.feedback` | `boolean` | `pin` | `user` | Enable or disable `feedback`. Default true. Also `GROK_FEEDBACK_ENABLED`. |
-| `features.feedback_trace_card` | `boolean` | `pin` | `user` | Show a trace-upload consent question after `/feedback`. Default false. Also `GROK_FEEDBACK_TRACE_CARD`. |
-| `features.file_acceleration` | `boolean` | `pin` | `user` | Hand local sessions' file systems to a file accelerator when the build installs one. Default false. Also `GROK_FILE_ACCELERATION`. |
+| `features.compaction_verbatim_input` | `boolean` | `pin` | `user` | Enable or disable `compaction_verbatim_input`. Default true. Also `DEEPSEEK_BUILD_COMPACTION_VERBATIM_INPUT`. |
+| `features.dock` | `boolean` | `pin` | `user` | Enable or disable `dock`. Default false. Also `DEEPSEEK_BUILD_DOCK`. |
+| `features.feedback` | `boolean` | `pin` | `user` | Enable or disable `feedback`. Default true. Also `DEEPSEEK_BUILD_FEEDBACK_ENABLED`. |
+| `features.feedback_trace_card` | `boolean` | `pin` | `user` | Show a trace-upload consent question after `/feedback`. Default false. Also `DEEPSEEK_BUILD_FEEDBACK_TRACE_CARD`. |
+| `features.file_acceleration` | `boolean` | `pin` | `user` | Hand local sessions' file systems to a file accelerator when the build installs one. Default false. Also `DEEPSEEK_BUILD_FILE_ACCELERATION`. |
 | `features.image_edit_model_override` | `string` | `yes` | `user` | Imagine model id for image_edit. |
 | `features.image_gen` | `boolean` | `pin` | `user` | Enable image_gen / `/imagine`. |
 | `features.image_gen_model_override` | `string` | `yes` | `user` | Imagine model id for image_gen. Empty defers to the remotely configured default. |
-| `features.lsp_tools` | `boolean` | `pin` | `user` | Enable or disable `lsp_tools`. Default false. Also `GROK_LSP_TOOLS`. |
-| `features.mcp_auto_restart` | `boolean` | `yes` | `user` | Auto-restart stdio MCP servers after transport failure. Also GROK_MCP_AUTO_RESTART. |
+| `features.lsp_tools` | `boolean` | `pin` | `user` | Enable or disable `lsp_tools`. Default false. Also `DEEPSEEK_BUILD_LSP_TOOLS`. |
+| `features.mcp_auto_restart` | `boolean` | `yes` | `user` | Auto-restart stdio MCP servers after transport failure. Also DEEPSEEK_BUILD_MCP_AUTO_RESTART. |
 | `features.mcp_liveness_watchers` | `boolean` | `yes` | `user` | Poll MCP transports and push server_status updates. Emergency kill switch when false. |
-| `features.mcp_push_server_status` | `boolean` | `yes` | `user` | Pager subscribes to MCP server_status push. Process env GROK_MCP_PUSH_SERVER_STATUS wins at launch. |
+| `features.mcp_push_server_status` | `boolean` | `yes` | `user` | Pager subscribes to MCP server_status push. Process env DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS wins at launch. |
 | `features.mcp_recursive_config_watch` | `boolean` | `yes` | `user` | Watch `<cwd>/` and `<cwd>/.grok/` for project MCP config edits. Name is a misnomer; watches are non-recursive. |
 | `features.non_git_warning` | `boolean` | `yes` | `user` | Show a blocking warning when deepseek-build starts outside a Git repository. |
 | `features.remember_mode` | `boolean` | `—` | `—` | Remember the last permission mode across sessions. Read from user `config.toml` only. |
 | `features.remote_fetch` | `boolean` | `pin` | `fleet` | Allow optional online model-catalog and asset fetch. |
-| `features.session_recap` | `boolean` | `pin` | `user` | Enable or disable `session_recap`. Default true. Also `GROK_SESSION_RECAP`. |
-| `features.session_search` | `boolean` | `pin` | `user` | Enable or disable `session_search`. Default true. Also `GROK_SESSION_SEARCH`. |
-| `features.subagent_model_inheritance` | `boolean` | `pin` | `user` | Hide the subagent `model` argument when every model you can pick is an DeepSeek model, so subagents inherit the parent's model. Default false. Also `GROK_SUBAGENT_MODEL_INHERITANCE`. Read when a session starts; changing it requires a restart. |
-| `features.subagent_worktree_snapshot` | `boolean` | `pin` | `user` | Enable or disable `subagent_worktree_snapshot`. Default false. Also `GROK_SUBAGENT_WORKTREE_SNAPSHOT`. |
+| `features.session_recap` | `boolean` | `pin` | `user` | Enable or disable `session_recap`. Default true. Also `DEEPSEEK_BUILD_SESSION_RECAP`. |
+| `features.session_search` | `boolean` | `pin` | `user` | Enable or disable `session_search`. Default true. Also `DEEPSEEK_BUILD_SESSION_SEARCH`. |
+| `features.subagent_model_inheritance` | `boolean` | `pin` | `user` | Hide the subagent `model` argument when every model you can pick is an DeepSeek model, so subagents inherit the parent's model. Default false. Also `DEEPSEEK_BUILD_SUBAGENT_MODEL_INHERITANCE`. Read when a session starts; changing it requires a restart. |
+| `features.subagent_worktree_snapshot` | `boolean` | `pin` | `user` | Enable or disable `subagent_worktree_snapshot`. Default false. Also `DEEPSEEK_BUILD_SUBAGENT_WORKTREE_SNAPSHOT`. |
 | `features.support_permission` | `boolean` | `yes` | `user` | Allow the agent to ask permission for tool executions. |
 | `features.telemetry` | `boolean / session_metrics / off` | `pin` | `user` | Product telemetry mode. Enterprise default is off. |
-| `features.terminal_theme` | `boolean` | `pin` | `user` | Reveal the terminal-native `terminal` color theme during its rollout. Default false. Also `GROK_TERMINAL_THEME`. |
-| `features.title_refresh` | `boolean` | `pin` | `user` | Early-session auto-title refresh. Also GROK_TITLE_REFRESH. |
-| `features.turn_summary` | `boolean` | `pin` | `user` | Enable or disable `turn_summary`. Default true. Also `GROK_TURN_SUMMARY`. |
-| `features.two_pass_compaction` | `boolean` | `pin` | `user` | Enable or disable `two_pass_compaction`. Default true. Also `GROK_TWO_PASS_COMPACTION`. |
+| `features.terminal_theme` | `boolean` | `pin` | `user` | Reveal the terminal-native `terminal` color theme during its rollout. Default false. Also `DEEPSEEK_BUILD_TERMINAL_THEME`. |
+| `features.title_refresh` | `boolean` | `pin` | `user` | Early-session auto-title refresh. Also DEEPSEEK_BUILD_TITLE_REFRESH. |
+| `features.turn_summary` | `boolean` | `pin` | `user` | Enable or disable `turn_summary`. Default true. Also `DEEPSEEK_BUILD_TURN_SUMMARY`. |
+| `features.two_pass_compaction` | `boolean` | `pin` | `user` | Enable or disable `two_pass_compaction`. Default true. Also `DEEPSEEK_BUILD_TWO_PASS_COMPACTION`. |
 | `features.video_gen` | `boolean` | `pin` | `user` | Enable video tools / `/imagine-video`. |
-| `features.voice_mode` | `boolean` | `pin` | `user` | Enable or disable `voice_mode`. Default true. Also `GROK_VOICE_MODE`. |
-| `features.web_fetch` | `boolean` | `pin` | `user` | Enable or disable `web_fetch`. Default false. Also `GROK_WEB_FETCH`. |
-| `features.write_file` | `boolean` | `pin` | `user` | Enable or disable `write_file`. Default true. Also `GROK_WRITE_FILE`. |
-| `features.zdr_access_enabled` | `boolean` | `pin` | `user` | Advertise ZDR-incompatible tools when the team is on Zero Data Retention. Also `GROK_ZDR_ACCESS_ENABLED`. |
+| `features.voice_mode` | `boolean` | `pin` | `user` | Enable or disable `voice_mode`. Default true. Also `DEEPSEEK_BUILD_VOICE_MODE`. |
+| `features.web_fetch` | `boolean` | `pin` | `user` | Enable or disable `web_fetch`. Default false. Also `DEEPSEEK_BUILD_WEB_FETCH`. |
+| `features.write_file` | `boolean` | `pin` | `user` | Enable or disable `write_file`. Default true. Also `DEEPSEEK_BUILD_WRITE_FILE`. |
+| `features.zdr_access_enabled` | `boolean` | `pin` | `user` | Advertise ZDR-incompatible tools when the team is on Zero Data Retention. Also `DEEPSEEK_BUILD_ZDR_ACCESS_ENABLED`. |
 
 ### `feedback`
 
@@ -195,7 +195,7 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `file_acceleration.routes` | `string` | `yes` | `user` | Route override passed unparsed to the installed file accelerator; empty is unset. Also `GROK_FILE_ACCELERATION_ROUTES`. |
+| `file_acceleration.routes` | `string` | `yes` | `user` | Route override passed unparsed to the installed file accelerator; empty is unset. Also `DEEPSEEK_BUILD_FILE_ACCELERATION_ROUTES`. |
 
 ### `goal`
 
@@ -230,23 +230,23 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `long_reasoning_reminder.enabled` | `boolean` | `yes` | `user` | Inject a mid-turn reminder to reason briefly after a model call with long hidden reasoning. Default false. Also `GROK_LONG_REASONING_REMINDER` (a bool word, or a JSON object in this table's shape). |
-| `long_reasoning_reminder.tokens` | `integer` | `yes` | `user` | Reasoning tokens in one model call that count as long. Default 1000, clamped to 100–200000. Also `tokens` in the `GROK_LONG_REASONING_REMINDER` JSON object. |
-| `long_reasoning_reminder.delay` | `integer` | `yes` | `user` | Model calls to wait after the long call before the reminder. Default 1, clamped to 0–10. Also `delay` in the `GROK_LONG_REASONING_REMINDER` JSON object. |
+| `long_reasoning_reminder.enabled` | `boolean` | `yes` | `user` | Inject a mid-turn reminder to reason briefly after a model call with long hidden reasoning. Default false. Also `DEEPSEEK_BUILD_LONG_REASONING_REMINDER` (a bool word, or a JSON object in this table's shape). |
+| `long_reasoning_reminder.tokens` | `integer` | `yes` | `user` | Reasoning tokens in one model call that count as long. Default 1000, clamped to 100–200000. Also `tokens` in the `DEEPSEEK_BUILD_LONG_REASONING_REMINDER` JSON object. |
+| `long_reasoning_reminder.delay` | `integer` | `yes` | `user` | Model calls to wait after the long call before the reminder. Default 1, clamped to 0–10. Also `delay` in the `DEEPSEEK_BUILD_LONG_REASONING_REMINDER` JSON object. |
 
 ### `managed_mcps`
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `managed_mcps.enabled` | `boolean` | `pin` | `user` | Fetch managed MCP configs at startup. Also GROK_MANAGED_MCPS_ENABLED. |
-| `managed_mcps.gateway_tools_enabled` | `boolean` | `yes` | `user` | Expose managed MCP gateway tools. Also GROK_MANAGED_MCP_GATEWAY_TOOLS_ENABLED. |
+| `managed_mcps.enabled` | `boolean` | `pin` | `user` | Fetch managed MCP configs at startup. Also DEEPSEEK_BUILD_MANAGED_MCPS_ENABLED. |
+| `managed_mcps.gateway_tools_enabled` | `boolean` | `yes` | `user` | Expose managed MCP gateway tools. Also DEEPSEEK_BUILD_MANAGED_MCP_GATEWAY_TOOLS_ENABLED. |
 
 ### `marketplace`
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
 | `marketplace.sources` | `array of tables` | `yes` | `user` | `[[marketplace.sources]]` plugin marketplace repos. |
-| `marketplace.require_sha` | `boolean` | `yes` | `user` | Tighten-only: remote plugin installs and updates must pin a full commit sha. Also `GROK_MARKETPLACE_REQUIRE_SHA`. Neither this key nor the env var can turn the gate back off. |
+| `marketplace.require_sha` | `boolean` | `yes` | `user` | Tighten-only: remote plugin installs and updates must pin a full commit sha. Also `DEEPSEEK_BUILD_MARKETPLACE_REQUIRE_SHA`. Neither this key nor the env var can turn the gate back off. |
 
 ### `mcp`
 
@@ -282,7 +282,7 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `memory.enabled` | `boolean` | `pin` | `user` | Legacy memory switch. Also `GROK_MEMORY`; superseded when the v2 gate is enabled. |
+| `memory.enabled` | `boolean` | `pin` | `user` | Legacy memory switch. Also `DEEPSEEK_BUILD_MEMORY`; superseded when the v2 gate is enabled. |
 | `memory_v2.enabled` | `boolean` | `pin` | `user` | Primary memory-v2 switch. When true, v2 takes precedence over legacy `memory.enabled`. When false or absent, legacy enablement is resolved normally. Default: `false`. |
 | `memory_v2.rollout` | `"off"`, `"record_only"`, `"shadow"`, `"active"` | — | `user` | Advanced staged-rollout control for new v2 sessions. Default: `"active"` after enabling v2. Most users should leave this unset. |
 | `memory_v2.capture_status_enabled` | `boolean` | — | `user` | Shows memory-v2 capture lifecycle messages in the UI for debugging. Successful captures are expandable and include generated content plus links to committed observation files. Telemetry and debug logs are always recorded. Default: `false`. |
@@ -355,7 +355,7 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 | --- | --- | --- | --- | --- |
 | `models.agent_type` | `string` | `yes` | `user` | Fallback agent_type for models without a per-model override. |
 | `models.allowed_models` | `string[]` | `pin` | `user` | Glob allowlist for the model picker, default, and `-m`. Empty means no restriction. |
-| `models.default` | `string` | `pin` | `user` | Model used for new sessions. Also `GROK_DEFAULT_MODEL`, `--model`, `-m`. |
+| `models.default` | `string` | `pin` | `user` | Model used for new sessions. Also `DEEPSEEK_BUILD_DEFAULT_MODEL`, `--model`, `-m`. |
 | `models.default_reasoning_effort` | `string` | `yes` | `user` | Default reasoning effort for the default model when the model supports it. |
 | `models.disabled_models` | `string[]` | `yes` | `user` | Remove these model IDs from the catalog. Wins over `hidden_models`. |
 | `models.extra_headers` | `map<string,string>` | `yes` | `user` | Request headers applied to every model; per-model keys win. |
@@ -371,7 +371,7 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 | `models.subagent_rate_limit_max_attempts` | `number` | `yes` | `user` | Global default for subagent 429 wait-loop attempts when `rate_limit_retry_threshold` is unset; default 8, maximum 32, and `0` disables the wait loop. |
 | `models.temperature` | `number` | `yes` | `user` | Global sampling temperature default when a model leaves it unset. |
 | `models.top_p` | `number` | `yes` | `user` | Global top_p default when a model leaves it unset. |
-| `models.web_search` | `string` | `pin` | `user` | Model used by the client `web_search` tool. Also `GROK_WEB_SEARCH_MODEL`. |
+| `models.web_search` | `string` | `pin` | `user` | Model used by the client `web_search` tool. Also `DEEPSEEK_BUILD_WEB_SEARCH_MODEL`. |
 
 ### `path_not_found_hints`
 
@@ -413,7 +413,7 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `sandbox.auto_allow_bash` | `boolean` | `pin` | `user` | Skip bash permission prompts when a sandbox profile is active. Also GROK_SANDBOX_AUTO_ALLOW_BASH. |
+| `sandbox.auto_allow_bash` | `boolean` | `pin` | `user` | Skip bash permission prompts when a sandbox profile is active. Also DEEPSEEK_BUILD_SANDBOX_AUTO_ALLOW_BASH. |
 | `sandbox.profile` | `off / workspace / read-only / strict / string` | `pin` | `user` | Filesystem sandbox profile. Also `--sandbox` and DEEPSEEK_BUILD_SANDBOX. |
 
 ### `session`
@@ -450,7 +450,7 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `subagents.enabled` | `boolean` | `pin` | `user` | Subagent / task tool master switch, default true even when other `subagents.*` keys are set. Also GROK_SUBAGENTS or `--no-subagents`. |
+| `subagents.enabled` | `boolean` | `pin` | `user` | Subagent / task tool master switch, default true even when other `subagents.*` keys are set. Also DEEPSEEK_BUILD_SUBAGENTS or `--no-subagents`. |
 | `subagents.limit_behavior` | `queue / fail` | `yes` | `user` | What to do when the concurrent subagent cap is hit. |
 | `subagents.max_concurrent` | `integer` | `yes` | `user` | Max concurrent subagents. |
 | `subagents.max_depth` | `integer` | `yes` | `user` | Max nested subagent depth (clamped ≥1). |
@@ -461,7 +461,7 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `telemetry.otel_enabled` | `boolean` | `pin` | `user` | External OTEL master switch. Also GROK_EXTERNAL_OTEL. |
+| `telemetry.otel_enabled` | `boolean` | `pin` | `user` | External OTEL master switch. Also DEEPSEEK_BUILD_EXTERNAL_OTEL. |
 | `telemetry.otel_metrics_exporter` | `otlp / console / none` | `pin` | `user` | External OTEL metrics exporter. Also OTEL_METRICS_EXPORTER. |
 | `telemetry.otel_logs_exporter` | `otlp / console / none` | `pin` | `user` | External OTEL logs exporter. Also OTEL_LOGS_EXPORTER. |
 | `telemetry.otel_endpoint` | `string` | `pin` | `user` | External OTLP base endpoint. Also OTEL_EXPORTER_OTLP_ENDPOINT. |
@@ -492,10 +492,10 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `tools.disable_zdr_incompatible_tools` | `boolean` | `yes` | `user` | Restrict tools that need DeepSeek-hosted output under ZDR. Also GROK_DISABLE_ZDR_INCOMPATIBLE_TOOLS. |
-| `tools.media_gen.max_parallel_image_gen_calls` | `integer` | `yes` | `user` | Cap parallel image_gen/image_edit calls in one model step. Also GROK_MAX_PARALLEL_IMAGE_GEN_CALLS. |
-| `tools.media_gen.max_parallel_video_gen_calls` | `integer` | `yes` | `user` | Cap parallel video_gen calls in one model step. Also GROK_MAX_PARALLEL_VIDEO_GEN_CALLS. |
-| `tools.respect_gitignore` | `boolean` | `pin` | `user` | When true, search and read tools skip gitignored files. Also GROK_RESPECT_GITIGNORE. |
+| `tools.disable_zdr_incompatible_tools` | `boolean` | `yes` | `user` | Restrict tools that need DeepSeek-hosted output under ZDR. Also DEEPSEEK_BUILD_DISABLE_ZDR_INCOMPATIBLE_TOOLS. |
+| `tools.media_gen.max_parallel_image_gen_calls` | `integer` | `yes` | `user` | Cap parallel image_gen/image_edit calls in one model step. Also DEEPSEEK_BUILD_MAX_PARALLEL_IMAGE_GEN_CALLS. |
+| `tools.media_gen.max_parallel_video_gen_calls` | `integer` | `yes` | `user` | Cap parallel video_gen calls in one model step. Also DEEPSEEK_BUILD_MAX_PARALLEL_VIDEO_GEN_CALLS. |
+| `tools.respect_gitignore` | `boolean` | `pin` | `user` | When true, search and read tools skip gitignored files. Also DEEPSEEK_BUILD_RESPECT_GITIGNORE. |
 | `tools.zdr_video_output_s3` | `table` | `yes` | `user` | Team S3 bucket for ZDR video output. See ZDR Video Storage. |
 
 ### `toolset`
@@ -510,7 +510,7 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 | `toolset.bash.timeout_secs` | `number` | `yes` | `user` | Foreground bash command timeout in seconds. |
 | `toolset.file_toolset` | `standard / hashline` | `yes` | `user` | File edit tool scheme. |
 | `toolset.web_fetch.allowed_domains` | `string[]` | `yes` | `user` | Domain allowlist override for web_fetch. |
-| `toolset.web_fetch.proxy_endpoint` | `string` | `yes` | `user` | Egress proxy URL for web_fetch. Also GROK_WEB_FETCH_PROXY. |
+| `toolset.web_fetch.proxy_endpoint` | `string` | `yes` | `user` | Egress proxy URL for web_fetch. Also DEEPSEEK_BUILD_WEB_FETCH_PROXY. |
 | `toolset.web_search.allowed_domains` | `string[]` | `yes` | `user` | Domain allowlist for client web_search. Overlay-allowlisted. |
 | `toolset.web_search.excluded_domains` | `string[]` | `yes` | `user` | Domain denylist for client web_search. Overlay-allowlisted. |
 
@@ -522,7 +522,7 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 | `ui.auto_dark_theme` | `string` | `yes` | `user` | Theme when `theme = auto` and the OS is dark. |
 | `ui.auto_light_theme` | `string` | `yes` | `user` | Theme when `theme = auto` and the OS is light. |
 | `ui.cancel_subagents_on_turn_cancel` | `ask / always_stop / always_continue` | `yes` | `user` | What to do with running subagents when cancelling a parent turn. |
-| `ui.collapsed_edit_blocks` | `boolean` | `yes` | `user` | Show edits as one-line +N/-M summaries. Also GROK_COLLAPSED_EDIT_BLOCKS. |
+| `ui.collapsed_edit_blocks` | `boolean` | `yes` | `user` | Show edits as one-line +N/-M summaries. Also DEEPSEEK_BUILD_COLLAPSED_EDIT_BLOCKS. |
 | `ui.combine_queued_prompts` | `boolean` | `yes` | `user` | Merge consecutive plain follow-ups into one turn. |
 | `ui.compact_mode` | `boolean` | `yes` | `user` | Denser message padding. Also `/compact-mode`. |
 | `ui.confirm_before_rewind` | `boolean` | `yes` | `user` | Ask before rewinding conversation history. |
@@ -535,29 +535,29 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 | `ui.contextual_hints.undo` | `boolean` | `yes` | `user` | Ctrl+Z restores a wiped prompt draft tip. |
 | `ui.contextual_hints.word_select` | `boolean` | `yes` | `user` | After double-click with fold/nav selection, point at Word select in settings. |
 | `ui.cursor_blink` | `boolean` | `yes` | `user` | Force blinking (true) or steady (false) block cursor. Unset inherits the terminal. |
-| `ui.default_selected_permission` | `string` | `yes` | `user` | Preselected approval row on the first prompt of a session. Also GROK_DEFAULT_SELECTED_PERMISSION. |
-| `ui.display_refresh.auto_cadence_enabled` | `boolean` | `yes` | `user` | Match stream/scroll cadence to display refresh rate. Also GROK_DISPLAY_REFRESH_AUTO_CADENCE. |
+| `ui.default_selected_permission` | `string` | `yes` | `user` | Preselected approval row on the first prompt of a session. Also DEEPSEEK_BUILD_DEFAULT_SELECTED_PERMISSION. |
+| `ui.display_refresh.auto_cadence_enabled` | `boolean` | `yes` | `user` | Match stream/scroll cadence to display refresh rate. Also DEEPSEEK_BUILD_DISPLAY_REFRESH_AUTO_CADENCE. |
 | `ui.follow_up_behavior` | `queue / steer` | `yes` | `user` | Mid-turn follow-up routing. |
 | `ui.fork_secondary_model` | `string` | `yes` | `user` | Model for the secondary agent when forking. Defaults to the main default model. |
-| `ui.group_tool_verbs` | `boolean` | `yes` | `user` | Fold consecutive read/search/list tool rows. Also GROK_GROUP_TOOL_VERBS. |
-| `ui.hunk_tracker_mode` | `agent_only / all_dirty / off` | `yes` | `user` | File-change hunk tracking. Also GROK_HUNK_TRACKER and `--hunk-tracker-mode`. |
-| `ui.invert_scroll` | `boolean` | `yes` | `user` | Reverse vertical scroll direction. Also GROK_INVERT_SCROLL. |
+| `ui.group_tool_verbs` | `boolean` | `yes` | `user` | Fold consecutive read/search/list tool rows. Also DEEPSEEK_BUILD_GROUP_TOOL_VERBS. |
+| `ui.hunk_tracker_mode` | `agent_only / all_dirty / off` | `yes` | `user` | File-change hunk tracking. Also DEEPSEEK_BUILD_HUNK_TRACKER and `--hunk-tracker-mode`. |
+| `ui.invert_scroll` | `boolean` | `yes` | `user` | Reverse vertical scroll direction. Also DEEPSEEK_BUILD_INVERT_SCROLL. |
 | `ui.keep_text_selection` | `flash / hold / word_select` | `yes` | `user` | In-app selection: brief flash, hold, or double-click word select. |
 | `ui.max_thoughts_width` | `number` | `yes` | `user` | Column width for the thoughts panel (40–500). |
-| `ui.mouse_reporting_toggle` | `boolean` | `yes` | `user` | Ctrl+R in scrollback toggles terminal mouse capture. Also GROK_MOUSE_REPORTING_TOGGLE. |
+| `ui.mouse_reporting_toggle` | `boolean` | `yes` | `user` | Ctrl+R in scrollback toggles terminal mouse capture. Also DEEPSEEK_BUILD_MOUSE_REPORTING_TOGGLE. |
 | `ui.page_flip_on_send` | `boolean` | `yes` | `user` | Snap the sent prompt to the top of the viewport. |
 | `ui.permission_mode` | `default / ask / auto / always-approve` | `yes` | `user` | Default tool-permission behavior. See the permissions guide for modes and locks. |
-| `ui.prompt_suggestions` | `boolean` | `yes` | `user` | Next-prompt ghost text after each turn. Also GROK_PROMPT_SUGGESTIONS; a remote kill-switch can disable it fleet-wide. |
+| `ui.prompt_suggestions` | `boolean` | `yes` | `user` | Next-prompt ghost text after each turn. Also DEEPSEEK_BUILD_PROMPT_SUGGESTIONS; a remote kill-switch can disable it fleet-wide. |
 | `prompt_suggestions.max_output_tokens` | `number` | `yes` | `user` | Visible-output tokens for the suggestion call; clamped to 16–256, default 64, with a separate reserve for reasoning. Remote-overridable. |
 | `prompt_suggestions.temperature` | `number` | `yes` | `user` | Sampling temperature for the suggestion call (default 0.2). Remote-overridable. |
 | `prompt_suggestions.reasoning_effort` | `none / minimal / low / medium / high` | `yes` | `user` | Reasoning effort for the suggestion call; default and `none` disable reasoning, while other values use a supported model effort. Remote-overridable. |
-| `ui.remember_tool_approvals` | `boolean` | `yes` | `user` | Show per-tool Always allow options. Also GROK_REMEMBER_TOOL_APPROVALS. |
+| `ui.remember_tool_approvals` | `boolean` | `yes` | `user` | Show per-tool Always allow options. Also DEEPSEEK_BUILD_REMEMBER_TOOL_APPROVALS. |
 | `ui.render_mermaid` | `auto / on / off` | `yes` | `user` | How mermaid fences render: clickable open row or raw source. |
 | `ui.screen_mode` | `fullscreen / minimal` | `yes` | `user` | Default render mode for plain `deepseek-build`. Restart required. |
-| `ui.scroll_lines` | `integer` | `yes` | `user` | Lines per scroll tick (1–10). Also GROK_SCROLL_LINES. |
-| `ui.scroll_mode` | `auto / wheel / trackpad` | `yes` | `user` | Scroll input classification. Also GROK_SCROLL_MODE. |
-| `ui.scroll_speed` | `integer` | `yes` | `user` | Mouse/trackpad scroll speed multiplier (1–100). Also GROK_SCROLL_SPEED. |
-| `ui.show_thinking_blocks` | `boolean` | `yes` | `user` | Show thinking/reasoning blocks while streaming. Also GROK_SHOW_THINKING_BLOCKS. |
+| `ui.scroll_lines` | `integer` | `yes` | `user` | Lines per scroll tick (1–10). Also DEEPSEEK_BUILD_SCROLL_LINES. |
+| `ui.scroll_mode` | `auto / wheel / trackpad` | `yes` | `user` | Scroll input classification. Also DEEPSEEK_BUILD_SCROLL_MODE. |
+| `ui.scroll_speed` | `integer` | `yes` | `user` | Mouse/trackpad scroll speed multiplier (1–100). Also DEEPSEEK_BUILD_SCROLL_SPEED. |
+| `ui.show_thinking_blocks` | `boolean` | `yes` | `user` | Show thinking/reasoning blocks while streaming. Also DEEPSEEK_BUILD_SHOW_THINKING_BLOCKS. |
 | `ui.show_timeline` | `boolean` | `yes` | `user` | Per-turn tick rail instead of the scrollbar. |
 | `ui.show_timestamps` | `boolean` | `yes` | `user` | Clock time next to messages. Also `/timestamps`. |
 | `ui.simple_mode` | `boolean` | `yes` | `user` | Readline prompt editing when true; experimental vim prompt keys when false. |

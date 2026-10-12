@@ -112,7 +112,7 @@ fn dismiss_campaign_ids_at(
 /// The campaign switches a process reads from its environment.
 #[derive(Debug, Clone, Default)]
 pub struct CampaignEnv {
-    /// `GROK_CAMPAIGNS_OVERRIDE`: a JSON array of campaigns that replaces every other source and
+    /// `DEEPSEEK_BUILD_CAMPAIGNS_OVERRIDE`: a JSON array of campaigns that replaces every other source and
     /// beats the kill switch. Invalid JSON replaces them with none: the variable means "exactly
     /// these campaigns", so a typo must not fall back to the sources it was meant to replace.
     pub override_json: Option<String>,
@@ -123,7 +123,7 @@ pub struct CampaignEnv {
 impl CampaignEnv {
     pub fn from_process() -> CampaignEnv {
         CampaignEnv {
-            override_json: std::env::var("GROK_CAMPAIGNS_OVERRIDE").ok(),
+            override_json: std::env::var("DEEPSEEK_BUILD_CAMPAIGNS_OVERRIDE").ok(),
             is_kill_switch_set: crate::env_bool("GROK_CAMPAIGNS") == Some(false),
         }
     }
@@ -137,7 +137,7 @@ impl CampaignEnv {
                     .collect(),
             ),
             Err(e) => {
-                tracing::warn!(error = %e, "invalid GROK_CAMPAIGNS_OVERRIDE JSON; suppressing all campaigns");
+                tracing::warn!(error = %e, "invalid DEEPSEEK_BUILD_CAMPAIGNS_OVERRIDE JSON; suppressing all campaigns");
                 Some(Vec::new())
             }
         }

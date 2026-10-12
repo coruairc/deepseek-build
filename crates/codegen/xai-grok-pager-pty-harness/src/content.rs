@@ -125,7 +125,7 @@ impl ContentController {
 
         let mut sandbox = TestSandbox::builder().mock_url(server.url()).build();
         // Keep unrelated autocomplete work out of PTY timing assertions.
-        sandbox.set_env("GROK_PROMPT_SUGGESTIONS", "false");
+        sandbox.set_env("DEEPSEEK_BUILD_PROMPT_SUGGESTIONS", "false");
 
         Ok(Self { server, sandbox })
     }

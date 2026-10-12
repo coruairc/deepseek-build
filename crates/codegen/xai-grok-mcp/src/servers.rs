@@ -58,7 +58,7 @@ pub use crate::tool_name::{
 pub use xai_grok_workspace_types::MCP_TOOL_NAME_DELIMITER;
 
 /// Routing hint for first-party local app MCP endpoints: which agent/session a request belongs to. **Advisory only, never authentication** — any local process can set it, so receivers must not treat it as proof of identity.
-/// Caller-supplied configs cannot smuggle it: the header is stripped from every HTTP/SSE config and re-added only when the spawn context asks for it (mirroring the `GROK_SESSION_ID` env protection on stdio servers).
+/// Caller-supplied configs cannot smuggle it: the header is stripped from every HTTP/SSE config and re-added only when the spawn context asks for it (mirroring the `DEEPSEEK_BUILD_SESSION_ID` env protection on stdio servers).
 pub const GROK_AGENT_ID_HEADER: &str = "X-deepseek-build-Agent-ID";
 
 /// Reqwest 0.13 twin of the 0.12 adapters in `xai_grok_extra_ca`.
@@ -4773,7 +4773,7 @@ fn apply_stdio_env(cmd: &mut Command, env: &[acp::EnvVariable], session_id: Opti
         cmd.env(&env_variable.name, &env_variable.value);
     }
     if let Some(session_id) = session_id {
-        cmd.env("GROK_SESSION_ID", session_id);
+        cmd.env("DEEPSEEK_BUILD_SESSION_ID", session_id);
     }
 }
 
@@ -4943,7 +4943,7 @@ pub async fn start_mcp_server(
 
             let mut headers = expand_session_id_headers(headers, ctx.session_id);
             // Stripped unconditionally: the agent-id header identifies the session to first-party app endpoints, and a caller-supplied config must not be able to impersonate one (see
-            // [`GROK_AGENT_ID_HEADER`]). Re-added only from the spawn context, like `GROK_SESSION_ID` on stdio servers.
+            // [`GROK_AGENT_ID_HEADER`]). Re-added only from the spawn context, like `DEEPSEEK_BUILD_SESSION_ID` on stdio servers.
             headers.retain(|(name, _)| !name.eq_ignore_ascii_case(GROK_AGENT_ID_HEADER));
             let local_agent_endpoint = ctx.send_grok_agent_id_header;
             if local_agent_endpoint && let Some(session_id) = ctx.session_id {

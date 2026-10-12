@@ -6,7 +6,7 @@ use std::time::Duration;
 // The default covers the worst case, `arm` called from a signal before the loop unwinds:
 // joining the agent takes up to SESSION_FLUSH_GRACE plus slack (12s), and the rest is flushes and headroom
 const DEFAULT_EXIT_TIMEOUT: Duration = Duration::from_secs(20);
-const EXIT_TIMEOUT_ENV: &str = "GROK_EXIT_TIMEOUT_SECS";
+const EXIT_TIMEOUT_ENV: &str = "DEEPSEEK_BUILD_EXIT_TIMEOUT_SECS";
 const HARD_EXIT_GRACE: Duration = Duration::from_secs(5);
 const TEST_HOLD_TEARDOWN_ENV: &str = "GROK_TEST_HOLD_TEARDOWN_SECS";
 

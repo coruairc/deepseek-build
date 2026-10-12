@@ -17,6 +17,26 @@ or observable state.
 > (2026-10-07). Four surfaces have never been exercised: see
 > [Not exercised yet](#not-exercised-yet).
 
+## Disk budget
+
+- **One shared target dir.** In any worktree or parallel session, point
+  `CARGO_TARGET_DIR` at the main checkout's `target/` (for example
+  `export CARGO_TARGET_DIR="$HOME/Projects/deepseek-build/target"`) and remove a
+  worktree's own `target/` if one exists. Builds are not shared otherwise.
+- **Disk guard.** Before any workspace build run `scripts/disk-guard.sh` (exits
+  non-zero below 150 GB free). If it fails, stop and clean up first.
+- **Lean dev/test profile.** `.cargo/config.toml` sets `[build] incremental =
+  false`; `[profile.dev]` and `[profile.test]` use `debug = "line-tables-only"`,
+  with `debug = false` for third-party crates. Measured 2026-10-12: a fresh
+  `cargo build --workspace --tests` is ~24 GB in ~7 min; the same workspace had
+  accumulated 244 GB of `target/debug` under the old settings. Delete
+  `target/debug` after a gate run if space is tight.
+- **Routine.** During work use per-crate tests (`cargo test -p <crate>`); keep the
+  full `cargo test --workspace` for the final gate; then reclaim space with
+  `cargo clean` (or `rm -rf target/debug`).
+- **Emergency.** `ps aux | grep -E 'cargo|rustc'` for stray builds, then
+  `git worktree remove <stale>` and `cargo clean`.
+
 ## 0. Prerequisites (once)
 
 - Rust **1.94.0** via rustup (pinned by `rust-toolchain.toml`; do not bump) and

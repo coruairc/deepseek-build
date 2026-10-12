@@ -331,7 +331,7 @@ impl AuthManager {
                 "HOME": std::env::var("HOME").unwrap_or_else(|_| "(unset)".into()),
                 "DEEPSEEK_BUILD_HOME": std::env::var("DEEPSEEK_BUILD_HOME").unwrap_or_else(|_| "(unset)".into()),
                 "GROK_AUTH_PATH": std::env::var("GROK_AUTH_PATH").unwrap_or_else(|_| "(unset)".into()),
-                "GROK_AUTH": match std::env::var("GROK_AUTH") {
+                "DEEPSEEK_BUILD_AUTH": match std::env::var("DEEPSEEK_BUILD_AUTH") {
                     Err(_) => "(unset)",
                     Ok(_) if !Distribution::current().allows(Capability::AccountLogin) => "(ignored)",
                     Ok(_) => "(set)",
@@ -341,7 +341,7 @@ impl AuthManager {
         let path = auth_json_path(grok_home);
         let inline_auth = Distribution::current()
             .allows(Capability::AccountLogin)
-            .then(|| std::env::var("GROK_AUTH").ok())
+            .then(|| std::env::var("DEEPSEEK_BUILD_AUTH").ok())
             .flatten();
         if let Some(inline_json) = inline_auth {
             if let Ok(auth) = serde_json::from_str::<GrokAuth>(&inline_json) {
@@ -354,7 +354,9 @@ impl AuthManager {
                     None,
                 );
             }
-            tracing::warn!("GROK_AUTH set but failed to parse as JSON, falling back to file");
+            tracing::warn!(
+                "DEEPSEEK_BUILD_AUTH set but failed to parse as JSON, falling back to file"
+            );
         }
         let (auth, auth_read_detail, initial_disk_state) = match read_auth_json(&path) {
             Ok(map) => {
@@ -437,7 +439,7 @@ impl AuthManager {
         let _ = write_auth_json(path, &cleaned);
         tracing::debug!("auth: removed stale WebLogin scope from auth.json");
     }
-    /// Single field-assembly point for [`Self::new`]'s two construction paths (inline `GROK_AUTH` vs. on-disk `auth.json`), which differ only in the threaded fields. One literal means a newly added field can't be silently dropped from one branch.
+    /// Single field-assembly point for [`Self::new`]'s two construction paths (inline `DEEPSEEK_BUILD_AUTH` vs. on-disk `auth.json`), which differ only in the threaded fields. One literal means a newly added field can't be silently dropped from one branch.
     fn assemble(
         inner: Option<GrokAuth>,
         path: PathBuf,

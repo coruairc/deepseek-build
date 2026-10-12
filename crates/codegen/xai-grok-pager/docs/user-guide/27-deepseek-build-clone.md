@@ -2,28 +2,28 @@
 
 `deepseek-build clone` fetches a Git repository into a Grove content store and mounts a
 projected working tree (NFS on macOS, FUSE on Linux). Each invocation reads
-`GROK_CLONE` / `GROVE_CLONE` in this process, then deepseek-build enable-all
-(`GROK_GROVE` or `[cli] grove` in `~/.deepseek-build/config.toml`), then `[clone] enabled`
+`DEEPSEEK_BUILD_CLONE` / `GROVE_CLONE` in this process, then deepseek-build enable-all
+(`DEEPSEEK_BUILD_GROVE` or `[cli] grove` in `~/.deepseek-build/config.toml`), then `[clone] enabled`
 authorize Clone IPC.
 
 This does **not** enable Grove for session / `-w` worktrees. Those use a
-separate gate (`GROK_WORKTREE_TYPE` and `[cli] grove_worktree` in
+separate gate (`DEEPSEEK_BUILD_WORKTREE_TYPE` and `[cli] grove_worktree` in
 `~/.deepseek-build/config.toml`; see [Configuration reference](26-config-reference.md)).
-`GROK_WORKTREE_TYPE` and `[cli] grove_worktree` do **not** enable `deepseek-build clone`.
-`GROK_CLONE` / `GROVE_CLONE` / `[clone] enabled` do **not** enable session /
+`DEEPSEEK_BUILD_WORKTREE_TYPE` and `[cli] grove_worktree` do **not** enable `deepseek-build clone`.
+`DEEPSEEK_BUILD_CLONE` / `GROVE_CLONE` / `[clone] enabled` do **not** enable session /
 `-w` Grove.
 
 To turn **both** surfaces on without touching the specific knobs:
 
 ```bash
-export GROK_GROVE=1
+export DEEPSEEK_BUILD_GROVE=1
 # or in ~/.deepseek-build/config.toml:
 # [cli]
 # grove = true
 ```
 
-Specific knobs still win: `GROK_WORKTREE_TYPE=copy` keeps session worktrees on
-copy while clone can stay on; `GROK_CLONE=0` keeps `deepseek-build clone` off while
+Specific knobs still win: `DEEPSEEK_BUILD_WORKTREE_TYPE=copy` keeps session worktrees on
+copy while clone can stay on; `DEEPSEEK_BUILD_CLONE=0` keeps `deepseek-build clone` off while
 worktrees can stay on.
 
 ```bash

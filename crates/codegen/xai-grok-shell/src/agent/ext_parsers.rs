@@ -97,7 +97,11 @@ mod tests {
         let p = serde_json::json!({
             "sessionId": "s1", "id": "p7", "expectedVersion": 3
         });
-        match parse_queue_edit_command("deepseek-build/queue/remove", &p, Some("grok-tui".into())) {
+        match parse_queue_edit_command(
+            "deepseek-build/queue/remove",
+            &p,
+            Some("deepseek-build-tui".into()),
+        ) {
             Some(SessionCommand::RemoveQueuedPrompt {
                 id,
                 expected_version,
@@ -105,7 +109,7 @@ mod tests {
             }) => {
                 assert_eq!(id, "p7");
                 assert_eq!(expected_version, 3);
-                assert_eq!(owner.as_deref(), Some("grok-tui"));
+                assert_eq!(owner.as_deref(), Some("deepseek-build-tui"));
             }
             _ => panic!("expected RemoveQueuedPrompt"),
         }
@@ -132,10 +136,10 @@ mod tests {
         match parse_queue_edit_command(
             "deepseek-build/queue/clear",
             &serde_json::json!({ "sessionId": "s1" }),
-            Some("grok-tui".into()),
+            Some("deepseek-build-tui".into()),
         ) {
             Some(SessionCommand::ClearQueue { owner }) => {
-                assert_eq!(owner.as_deref(), Some("grok-tui"));
+                assert_eq!(owner.as_deref(), Some("deepseek-build-tui"));
             }
             _ => panic!("expected ClearQueue"),
         }
@@ -197,7 +201,7 @@ mod tests {
         match parse_queue_edit_command(
             "deepseek-build/queue/interject",
             &p,
-            Some("grok-tui".into()),
+            Some("deepseek-build-tui".into()),
         ) {
             Some(SessionCommand::InterjectQueuedPrompt {
                 id,
@@ -207,7 +211,7 @@ mod tests {
             }) => {
                 assert_eq!(id, "p10");
                 assert_eq!(expected_version, 2);
-                assert_eq!(owner.as_deref(), Some("grok-tui"));
+                assert_eq!(owner.as_deref(), Some("deepseek-build-tui"));
                 assert_eq!(new_text, None, "newText absent → None");
             }
             _ => panic!("expected InterjectQueuedPrompt"),

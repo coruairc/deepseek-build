@@ -789,7 +789,7 @@ pub fn default_settings() -> Vec<SettingMeta> {
             hidden_in_minimal: false,
         },
         // SHELL-owned: `[ui].prompt_suggestions` with a process-wide cache. Default ON.
-        // The `GROK_PROMPT_SUGGESTIONS` env var overrides at runtime.
+        // The `DEEPSEEK_BUILD_PROMPT_SUGGESTIONS` env var overrides at runtime.
         SettingMeta {
             key: "prompt_suggestions",
             category: SettingCategory::Editor,

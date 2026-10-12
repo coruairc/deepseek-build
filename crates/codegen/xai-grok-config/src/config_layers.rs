@@ -1,5 +1,5 @@
 //! The layer *files* are read by [`crate::loader`].
-//! This module owns how those layers combine into the effective config: layer precedence, the `GROK_CONFIG` overlay, and campaign resolution.
+//! This module owns how those layers combine into the effective config: layer precedence, the `DEEPSEEK_BUILD_CONFIG` overlay, and campaign resolution.
 
 use crate::loader::{
     deep_merge_toml, load_from_disk, load_managed_config, load_system_managed_config,
@@ -7,7 +7,7 @@ use crate::loader::{
 };
 use crate::validation::{load_requirements, load_system_requirements};
 
-/// Whether a layer merge includes the `GROK_CONFIG` overlay.
+/// Whether a layer merge includes the `DEEPSEEK_BUILD_CONFIG` overlay.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OverlayInclusion {
     Include,
@@ -20,7 +20,7 @@ pub struct ConfigLayers {
     pub system_managed: toml::Value,
     pub managed: toml::Value,
     pub user: toml::Value,
-    /// `GROK_CONFIG` / `GROK_CONFIG_PATH` overlay, above user but below requirements.
+    /// `DEEPSEEK_BUILD_CONFIG` / `DEEPSEEK_BUILD_CONFIG_PATH` overlay, above user but below requirements.
     /// Soft settings only; this doc is the canonical source of truth for what the overlay can and cannot reach.
     /// This is fail-closed: every code-exec, auth, egress, trust, or discovery table is absent from the allowlist and dropped by default.
     pub env_overlay: Option<toml::Value>,
@@ -112,14 +112,14 @@ impl ConfigLayers {
         })
     }
 
-    /// Layer merge (no campaigns), including the `GROK_CONFIG` overlay.
+    /// Layer merge (no campaigns), including the `DEEPSEEK_BUILD_CONFIG` overlay.
     /// Overlay-inclusive: security gates must not read this.
     /// Use [`Self::effective_config_base_without_overlay`] for any gate (the overlay-free set is enumerated on [`Self::env_overlay`]).
     pub fn effective_config_base(&self) -> toml::Value {
         self.merge(OverlayInclusion::Include)
     }
 
-    /// Layer merge excluding the `GROK_CONFIG` overlay, for security gates.
+    /// Layer merge excluding the `DEEPSEEK_BUILD_CONFIG` overlay, for security gates.
     pub fn effective_config_base_without_overlay(&self) -> toml::Value {
         self.merge(OverlayInclusion::Exclude)
     }
@@ -173,7 +173,7 @@ impl ConfigLayers {
     }
 
     /// Active campaigns against `base`: the kill switch, then the priority merge (first-id-wins), then dropping dismissed ids.
-    /// The environment-aware path is `effective_config::CampaignOverlay`, which also applies `GROK_CAMPAIGNS_OVERRIDE`.
+    /// The environment-aware path is `effective_config::CampaignOverlay`, which also applies `DEEPSEEK_BUILD_CAMPAIGNS_OVERRIDE`.
     pub fn resolve_campaigns(
         &self,
         base: &toml::Value,
@@ -206,7 +206,7 @@ impl ConfigLayers {
         }
     }
 
-    /// Apply campaign patches, re-apply the `GROK_CONFIG` overlay, then restore requirements.
+    /// Apply campaign patches, re-apply the `DEEPSEEK_BUILD_CONFIG` overlay, then restore requirements.
     pub fn apply_campaign_overrides(
         &self,
         merged: &mut toml::Value,
@@ -276,7 +276,7 @@ pub(crate) fn lock_grok_campaigns_env() -> std::sync::MutexGuard<'static, ()> {
 }
 
 /// Disk layers only (no remote, no env override).
-/// Prefer `xai_grok_shell::util::config::load_effective_config` when remote campaigns or `GROK_CAMPAIGNS_OVERRIDE` must be honored.
+/// Prefer `xai_grok_shell::util::config::load_effective_config` when remote campaigns or `DEEPSEEK_BUILD_CAMPAIGNS_OVERRIDE` must be honored.
 /// The name mirrors [`ConfigLayers::effective_config_disk_only`] so the divergence from the remote-aware loader is explicit at every call site.
 pub fn load_effective_config_disk_only() -> std::io::Result<toml::Value> {
     Ok(ConfigLayers::load()?.effective_config_disk_only())

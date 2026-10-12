@@ -504,7 +504,8 @@ fn build_proxy_headers(base_url: &str) -> indexmap::IndexMap<String, String> {
     );
     headers.insert(
         "x-deepseek-build-client-identifier".to_string(),
-        std::env::var("GROK_CLIENT_NAME").unwrap_or_else(|_| xai_grok_brand::NAME.to_string()),
+        std::env::var("DEEPSEEK_BUILD_CLIENT_NAME")
+            .unwrap_or_else(|_| xai_grok_brand::NAME.to_string()),
     );
     let _ = base_url;
     headers
@@ -517,16 +518,16 @@ fn build_web_fetch_config() -> xai_grok_tools::implementations::grok_build::web_
         return WebFetchConfig::Disabled;
     }
     let mut params = WebFetchParams::default();
-    if let Ok(proxy) = std::env::var("GROK_WEB_FETCH_PROXY") {
+    if let Ok(proxy) = std::env::var("DEEPSEEK_BUILD_WEB_FETCH_PROXY") {
         params.proxy_endpoint = Some(proxy);
     }
-    if xai_grok_config::env_bool("GROK_WEB_FETCH_ALLOW_LOCAL") == Some(true) {
+    if xai_grok_config::env_bool("DEEPSEEK_BUILD_WEB_FETCH_ALLOW_LOCAL") == Some(true) {
         params.allow_local = Some(true);
     }
     WebFetchConfig::Enabled { params }
 }
 fn default_web_search_model() -> String {
-    std::env::var("GROK_WEB_SEARCH_MODEL").unwrap_or_else(|_| "deepseek-4.5".to_string())
+    std::env::var("DEEPSEEK_BUILD_WEB_SEARCH_MODEL").unwrap_or_else(|_| "deepseek-4.5".to_string())
 }
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support {

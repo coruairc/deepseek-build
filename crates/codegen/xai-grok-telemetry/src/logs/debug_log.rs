@@ -5,7 +5,7 @@
 //!   firehose to `~/.grok/debug/<session_id>.txt` (one file per session), with a
 //!   `<role>-<pid>.txt` catch-all for events fired outside any session span, and
 //!   a `latest.txt` symlink pointing at the most-recently-opened session file.
-//! - SingleFile (explicit path via `GROK_LOG_FILE` or `GROK_DEBUG_LOG=<path>`): one flat `fmt` file, routing bypassed.
+//! - SingleFile (explicit path via `DEEPSEEK_BUILD_LOG_FILE` or `GROK_DEBUG_LOG=<path>`): one flat `fmt` file, routing bypassed.
 //!   Disk IO stays off the tracing hot path via `tracing_appender`'s non-blocking writer in both modes.
 
 use std::collections::HashMap;
@@ -34,7 +34,7 @@ pub(crate) enum DebugSource {
 impl DebugSource {
     fn label(self) -> &'static str {
         match self {
-            Self::GrokLogFile => "GROK_LOG_FILE",
+            Self::GrokLogFile => "DEEPSEEK_BUILD_LOG_FILE",
             Self::GrokDebugLog => "GROK_DEBUG_LOG",
         }
     }
@@ -69,8 +69,8 @@ fn firehose_filter() -> EnvFilter {
     EnvFilter::new(firehose_directives())
 }
 
-// RUST_LOG-respecting filter for the GROK_LOG_FILE source: DEBUG default, honor RUST_LOG, silence sampling_log
-// This preserves GROK_LOG_FILE back-compat
+// RUST_LOG-respecting filter for the DEEPSEEK_BUILD_LOG_FILE source: DEBUG default, honor RUST_LOG, silence sampling_log
+// This preserves DEEPSEEK_BUILD_LOG_FILE back-compat
 fn default_file_filter() -> EnvFilter {
     EnvFilter::builder()
         .with_default_directive(LevelFilter::DEBUG.into())
@@ -378,11 +378,11 @@ pub(crate) enum DebugTarget {
     SingleFile { path: PathBuf, src: DebugSource },
 }
 
-/// Resolve the debug target, honoring precedence: explicit GROK_LOG_FILE wins (single file, RUST_LOG filter); else
+/// Resolve the debug target, honoring precedence: explicit DEEPSEEK_BUILD_LOG_FILE wins (single file, RUST_LOG filter); else
 /// GROK_DEBUG_LOG — a truthy bool routes per session into `~/.grok/debug`, an explicit path writes a single file. Read
 /// via `var_os` (not `var`) so a non-UTF-8 path isn't silently dropped.
 pub(crate) fn resolve_debug_target() -> Option<DebugTarget> {
-    let grok_log_file = std::env::var_os("GROK_LOG_FILE");
+    let grok_log_file = std::env::var_os("DEEPSEEK_BUILD_LOG_FILE");
     let grok_debug_log = std::env::var_os("GROK_DEBUG_LOG");
     resolve_debug_target_inner(
         grok_log_file.as_deref(),
@@ -597,7 +597,7 @@ mod tests {
 
     #[test]
     fn resolve_target_empty_log_file_falls_through_to_debug_log() {
-        // Empty or whitespace GROK_LOG_FILE is treated as unset (mirrors GROK_DEBUG_LOG)
+        // Empty or whitespace DEEPSEEK_BUILD_LOG_FILE is treated as unset (mirrors GROK_DEBUG_LOG)
         for blank in ["", "   "] {
             let target = resolve_debug_target_inner(
                 Some(OsStr::new(blank)),

@@ -467,7 +467,7 @@ mod tests {
         let _sim = simulate_release_build();
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
         std::fs::create_dir_all(tmp.path().join(".grok").join("hooks")).unwrap();
         grant_folder_trust(tmp.path());
@@ -535,12 +535,12 @@ mod tests {
         let _sim = simulate_release_build();
         // cwd == $HOME (git-inited so `workspace_key` resolves the home root, which the store refuses to record)
         // Revoke must NOT seed a cache deny decide() always trusts an unrecordable root and no grant/store/prompt could ever lift the deny The gate must therefore keep allowing after an untrust click
-        // HOME overridden so workspace_key sees the tempdir as home; DEEPSEEK_BUILD_HOME-isolated store GROK_FOLDER_TRUST unset so the default-on flag applies.
+        // HOME overridden so workspace_key sees the tempdir as home; DEEPSEEK_BUILD_HOME-isolated store DEEPSEEK_BUILD_FOLDER_TRUST unset so the default-on flag applies.
         let home = tempfile::tempdir().unwrap();
         let _home = EnvGuard::set("HOME", home.path());
         let grok_home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", grok_home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         git2::Repository::init(home.path()).unwrap();
         // Repo-local code-exec config, so the final allow is the unrecordable-key rule at work
         // A recordable key with configs and an empty store would deny
@@ -565,10 +565,10 @@ mod tests {
     fn envrc_gate_drops_untrusted_then_loads_when_store_trusted() {
         let _sim = simulate_release_build();
         // The `.envrc` load sites gate on the folder-trust verdict An `.envrc`-only untrusted clone resolves false (so the call site loads an empty env) A store-trusted folder resolves true and the loader actually reads `.envrc`
-        // DEEPSEEK_BUILD_HOME-isolated so the trust store is empty; GROK_FOLDER_TRUST unset so the default-on feature flag applies
+        // DEEPSEEK_BUILD_HOME-isolated so the trust store is empty; DEEPSEEK_BUILD_FOLDER_TRUST unset so the default-on feature flag applies
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
         std::fs::write(tmp.path().join(".envrc"), "export GATED_ENVRC=1\n").unwrap();
 
@@ -596,11 +596,11 @@ mod tests {
         let _sim = simulate_release_build();
         // The `.claude/settings.json` env load site mirrors `load_claude_env_with_project(cwd, project_scope_allowed(cwd))`
         // An untrusted clone's repo-tree env (which would feed BASH_ENV / GIT_SSH_COMMAND / ... to every subprocess) is dropped. A store-trusted folder merges it
-        // DEEPSEEK_BUILD_HOME-isolated so the trust store is empty; GROK_FOLDER_TRUST unset so the default-on feature flag applies
+        // DEEPSEEK_BUILD_HOME-isolated so the trust store is empty; DEEPSEEK_BUILD_FOLDER_TRUST unset so the default-on feature flag applies
         use xai_grok_workspace::permission::claude_settings::load_claude_env_with_project;
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
         let claude = tmp.path().join(".claude");
         std::fs::create_dir_all(&claude).unwrap();
@@ -641,7 +641,7 @@ mod tests {
         use xai_grok_workspace::permission::claude_settings::load_claude_env_with_project;
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
         let subdir = tmp.path().join("sub");
         let claude = subdir.join(".claude");
@@ -687,7 +687,7 @@ mod tests {
         use xai_grok_agent::config::AgentScope;
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
         let agents = tmp.path().join(".grok").join("agents");
         std::fs::create_dir_all(&agents).unwrap();
@@ -732,11 +732,11 @@ mod tests {
     #[serial_test::serial]
     fn project_scope_allowed_denies_untrusted_repo_with_configs() {
         // Fail-closed (the dangerous case) The setup: a release-stamped build, the feature on by default, an untrusted folder shipping code-exec config (here `.grok/hooks`) With no store grant that must be DENIED
-        // That holds even though no verdict was recorded first (the gate re-resolves fail-closed rather than defaulting open) DEEPSEEK_BUILD_HOME-isolated (empty store); GROK_FOLDER_TRUST unset so the default-on flag applies
+        // That holds even though no verdict was recorded first (the gate re-resolves fail-closed rather than defaulting open) DEEPSEEK_BUILD_HOME-isolated (empty store); DEEPSEEK_BUILD_FOLDER_TRUST unset so the default-on flag applies
         let _sim = simulate_release_build();
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
         std::fs::create_dir_all(tmp.path().join(".grok").join("hooks")).unwrap();
         assert!(
@@ -753,7 +753,7 @@ mod tests {
         let _sim = simulate_release_build();
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
         assert!(
             project_scope_allowed(tmp.path()),
@@ -765,11 +765,11 @@ mod tests {
     #[serial_test::serial]
     fn project_scope_allowed_allows_store_trusted_repo() {
         // A folder the user explicitly trusted is ALLOWED even with repo-local configs present
-        // DEEPSEEK_BUILD_HOME-isolated so the seeded store is the temp one; GROK_FOLDER_TRUST unset so the default-on flag applies
+        // DEEPSEEK_BUILD_HOME-isolated so the seeded store is the temp one; DEEPSEEK_BUILD_FOLDER_TRUST unset so the default-on flag applies
         let _sim = simulate_release_build();
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
         std::fs::create_dir_all(tmp.path().join(".grok").join("hooks")).unwrap();
         let mut store = TrustStore::load();
@@ -804,11 +804,11 @@ mod tests {
     #[serial_test::serial]
     fn project_scope_allowed_denies_untrusted_plugin_only_repo() {
         // A plugin-only untrusted repo (just `.grok/plugins/<x>/`, no hooks/MCP/LSP, no store grant) is repo-controlled code-exec It must be DENIED
-        // That is the verdict the shell plugin call sites feed into discover_plugins/build_for_cwd/reload DEEPSEEK_BUILD_HOME-isolated (empty store); GROK_FOLDER_TRUST unset so the default-on flag applies
+        // That is the verdict the shell plugin call sites feed into discover_plugins/build_for_cwd/reload DEEPSEEK_BUILD_HOME-isolated (empty store); DEEPSEEK_BUILD_FOLDER_TRUST unset so the default-on flag applies
         let _sim = simulate_release_build();
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
         std::fs::create_dir_all(tmp.path().join(".grok").join("plugins").join("evil")).unwrap();
         assert!(
@@ -826,7 +826,7 @@ mod tests {
         let _sim = simulate_release_build();
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
         let grok = tmp.path().join(".grok");
         std::fs::create_dir_all(&grok).unwrap();
@@ -849,7 +849,7 @@ mod tests {
         let _sim = simulate_release_build();
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
         let workspace_user = tmp.path().join("x/alice");
         std::fs::create_dir_all(&workspace_user).unwrap();
@@ -929,11 +929,11 @@ mod tests {
     #[serial_test::serial]
     fn kill_switch_allows_untrusted_repo_after_authoritative_resolve() {
         // Regression (chat/load-path kill-switch) An untrusted folder WITH repo configs under a remote kill-switch (folder_trust_enabled = Some(false)) must resolve ALLOWED
-        // The session spawn path resolves once with the real RemoteSettings before any gate read, so the gate cache-hits that verdict DEEPSEEK_BUILD_HOME-isolated (empty store); GROK_FOLDER_TRUST unset so the kill-switch is the only signal
+        // The session spawn path resolves once with the real RemoteSettings before any gate read, so the gate cache-hits that verdict DEEPSEEK_BUILD_HOME-isolated (empty store); DEEPSEEK_BUILD_FOLDER_TRUST unset so the kill-switch is the only signal
         let _sim = simulate_release_build();
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let remote = RemoteSettings {
             folder_trust_enabled: Some(false),
             ..Default::default()
@@ -966,12 +966,12 @@ mod tests {
         let _sim = simulate_release_build();
         // Pins the SHELL plugin wiring end-to-end The call-site expression is `build_for_cwd(cwd, &cfg, dirs, <folder-trust verdict>)` It must keep an ENABLED project plugin OUT of `active_plugins()` while the folder is untrusted
         // It must let the plugin in after `grant_folder_trust` The verdict/discovery/registry unit tests alone do NOT catch a silent un-gating here
-        // DEEPSEEK_BUILD_HOME-isolated so both the folder-trust store and the plugin trust store start empty (deterministic untrusted) GROK_FOLDER_TRUST unset so the default-on flag applies; `#[serial]` because both are process-global
+        // DEEPSEEK_BUILD_HOME-isolated so both the folder-trust store and the plugin trust store start empty (deterministic untrusted) DEEPSEEK_BUILD_FOLDER_TRUST unset so the default-on flag applies; `#[serial]` because both are process-global
         use xai_grok_agent::plugins::discovery::DiscoveryConfig;
         use xai_grok_agent::plugins::{PluginRegistry, SharedPluginRegistryHandle};
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
         // A project plugin
         // Project scope is default-disabled, so name it in the `enabled` list to isolate the TRUST gate (not the enable gate)
@@ -1020,10 +1020,10 @@ mod tests {
         let _sim = simulate_release_build();
         // End-to-end load path: the folder-trust verdict threaded into `discover_hooks` excludes a repo-local project hook while untrusted
         // It includes the hook after the folder is granted trust, the path where the regression historically re-opened
-        // DEEPSEEK_BUILD_HOME-isolated so the grant writes to a temp store; GROK_FOLDER_TRUST unset so the default-on flag applies
+        // DEEPSEEK_BUILD_HOME-isolated so the grant writes to a temp store; DEEPSEEK_BUILD_FOLDER_TRUST unset so the default-on flag applies
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
         let hooks_dir = tmp.path().join(".grok").join("hooks");
         std::fs::create_dir_all(&hooks_dir).unwrap();
@@ -1349,7 +1349,7 @@ mod tests {
         // F5 regression: the "no repo configs means Trusted" verdict is PROVISIONAL, so it must NOT be cached as a durable grant
         // Otherwise a clone that is empty when first resolved, then gains a code-exec config (git pull / agent write), would ride the stale grant
         // The new hooks/plugins would then load and run ungated on the next /hooks reload or new session (TOCTOU) Drives the real `resolve_and_record` and `project_scope_allowed` Force the feature on via env (highest precedence) so the test does not depend on the host's folder-trust config
-        unsafe { std::env::set_var("GROK_FOLDER_TRUST", "1") };
+        unsafe { std::env::set_var("DEEPSEEK_BUILD_FOLDER_TRUST", "1") };
         // Simulate a release-stamped build
         // An unstamped local/dev build (as in CI, no GROK_VERSION) auto-trusts, so the gate would never engage without this
         unsafe { std::env::set_var(xai_grok_version::TEST_VERSION_ENV, "0.0.0-sim") };
@@ -1374,7 +1374,7 @@ mod tests {
         assert!(!project_scope_allowed(tmp.path()));
 
         unsafe { std::env::remove_var(xai_grok_version::TEST_VERSION_ENV) };
-        unsafe { std::env::remove_var("GROK_FOLDER_TRUST") };
+        unsafe { std::env::remove_var("DEEPSEEK_BUILD_FOLDER_TRUST") };
     }
 
     #[test]
@@ -1383,7 +1383,7 @@ mod tests {
         // `resolve_launch_dir_trust` derives the launch-dir verdict from one gather It must agree with `resolve_and_record(cwd, None, false)`
         // It must leave the provisional no-configs grant UNCACHED (the TOCTOU contract on the shared path) Force the gate on via env (highest precedence) so the test does not depend on the host config
         // Isolate DEEPSEEK_BUILD_HOME so the store is empty/seeded in temp; `#[serial]` because both vars are process-global
-        let _feature = EnvGuard::set("GROK_FOLDER_TRUST", "1");
+        let _feature = EnvGuard::set("DEEPSEEK_BUILD_FOLDER_TRUST", "1");
         let _sim = simulate_release_build();
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
@@ -1464,9 +1464,9 @@ mod tests {
         let tmp = repo_tmp();
         std::fs::write(tmp.path().join(".mcp.json"), "{}").unwrap();
         // Simulate a release-stamped build so the inert local-build gate is off and the remote `folder_trust_enabled` flag actually engages
-        // GROK_FOLDER_TRUST unset: env outranks the remote flag, so an ambient opt-out would otherwise false-fail the Prompt assertion
+        // DEEPSEEK_BUILD_FOLDER_TRUST unset: env outranks the remote flag, so an ambient opt-out would otherwise false-fail the Prompt assertion
         let _sim = EnvGuard::set(xai_grok_version::TEST_VERSION_ENV, "0.0.0-sim");
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let remote = RemoteSettings {
             folder_trust_enabled: Some(true),
             ..Default::default()
@@ -1478,10 +1478,10 @@ mod tests {
     #[serial_test::serial]
     fn prompt_warranted_false_when_feature_disabled() {
         // The remote kill-switch (folder_trust_enabled = Some(false)) disables the feature even on a release-stamped build So no prompt is warranted even with repo configs present
-        // Simulate a release build so the inert local-build path is not what's under test DEEPSEEK_BUILD_HOME-isolated and GROK_FOLDER_TRUST unset so the kill-switch is the only signal
+        // Simulate a release build so the inert local-build path is not what's under test DEEPSEEK_BUILD_HOME-isolated and DEEPSEEK_BUILD_FOLDER_TRUST unset so the kill-switch is the only signal
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let _sim = simulate_release_build();
         let tmp = repo_tmp();
         std::fs::write(tmp.path().join(".mcp.json"), "{}").unwrap();
@@ -1554,7 +1554,7 @@ mod tests {
         let _sim = simulate_release_build();
         let home = tempfile::tempdir().unwrap();
         let _env = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-        let _flag = EnvGuard::unset("GROK_FOLDER_TRUST");
+        let _flag = EnvGuard::unset("DEEPSEEK_BUILD_FOLDER_TRUST");
         let tmp = repo_tmp();
 
         let (allowed, scan) = gather_and_record(tmp.path(), None, false);

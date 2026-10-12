@@ -9,7 +9,7 @@
 //!
 //! Because terminal mouse scroll events do not encode magnitude (only direction), wheel-vs-trackpad detection is heuristic.
 //! We bias toward trackpad-like (avoids overshoot) and "promote" to wheel-like when the first tick-worth of events arrives quickly.
-//! A user can force wheel or trackpad behavior when the heuristic is wrong: `scroll_mode` (or `GROK_SCROLL_MODE`) pins [`ScrollInputMode`].
+//! A user can force wheel or trackpad behavior when the heuristic is wrong: `scroll_mode` (or `DEEPSEEK_BUILD_SCROLL_MODE`) pins [`ScrollInputMode`].
 //! `invert_scroll` / `scroll_lines` / `scroll_speed` tune direction and throughput; see [`ScrollConfigOverrides::from_settings_caches`].
 
 use crate::input::scroll_log::{

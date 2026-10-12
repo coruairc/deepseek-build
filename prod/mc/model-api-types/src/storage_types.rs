@@ -1,4 +1,4 @@
-//! Signed upload URL types shared between model-proxy (server) and grok-shell (client).
+//! Signed upload URL types shared between model-proxy (server) and deepseek-build (client).
 
 use serde::{Deserialize, Serialize};
 

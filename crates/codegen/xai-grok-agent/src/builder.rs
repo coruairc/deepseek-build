@@ -512,7 +512,7 @@ impl AgentBuilder {
         self.backend_search = enabled;
         self
     }
-    /// `Disabled` (default) does not register the tool; flagged via remote `web_fetch_enabled` and the `GROK_WEB_FETCH` env.
+    /// `Disabled` (default) does not register the tool; flagged via remote `web_fetch_enabled` and the `DEEPSEEK_BUILD_WEB_FETCH` env.
     pub fn with_web_fetch_config(
         mut self,
         config: xai_grok_tools::implementations::grok_build::web_fetch::WebFetchConfig,

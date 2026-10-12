@@ -1064,7 +1064,7 @@ pub(crate) struct SessionActor {
     /// `RefCell` so `load_session` reconnect can replace the set on the live actor (see `SessionCommand::SetClientHooks`).
     pub(crate) client_hooks: std::cell::RefCell<crate::extensions::hooks::ClientHooks>,
     /// Resolved workspace root for hooks: git worktree root if in a git repo, otherwise session cwd.
-    /// Used for hook child process cwd, envelope fields, and GROK_WORKSPACE_ROOT env var.
+    /// Used for hook child process cwd, envelope fields, and DEEPSEEK_BUILD_WORKSPACE_ROOT env var.
     pub(crate) hook_resolved_workspace_root: String,
     /// Errors from last hook config load (parse failures, etc.).
     pub(crate) hook_load_errors: std::cell::RefCell<Vec<String>>,

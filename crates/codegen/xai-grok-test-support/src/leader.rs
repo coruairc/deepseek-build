@@ -184,11 +184,11 @@ impl LeaderFixture {
         .stdout(std::process::Stdio::null());
         sandbox.apply_to_std_command(&mut cmd);
         cmd.envs(xai_tty_utils::pager_env())
-            .env("GROK_CLI_CHAT_PROXY_BASE_URL", base_url)
-            .env("GROK_XAI_API_BASE_URL", base_url)
-            .env("GROK_MODELS_BASE_URL", base_url)
-            .env("GROK_FEEDBACK_BASE_URL", base_url)
-            .env("GROK_TRACE_UPLOAD_URL", base_url)
+            .env("DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL", base_url)
+            .env("DEEPSEEK_BUILD_XAI_API_BASE_URL", base_url)
+            .env("DEEPSEEK_BUILD_MODELS_BASE_URL", base_url)
+            .env("DEEPSEEK_BUILD_FEEDBACK_BASE_URL", base_url)
+            .env("DEEPSEEK_BUILD_TRACE_UPLOAD_URL", base_url)
             .env("DEEPSEEK_API_KEY", "test-key-for-ci")
             .env("GROK_LEADER_SOCKET", &socket)
             .env("RUST_LOG", "xai_grok_shell=debug,xai_grok_login=debug");
@@ -567,11 +567,11 @@ impl LeaderStdioClient {
                 .label("grok leader stdio client")
                 .stdin(TestStdin::Piped)
                 .stdout(TestOutput::Piped)
-                .env("GROK_CLI_CHAT_PROXY_BASE_URL", base_url)
-                .env("GROK_XAI_API_BASE_URL", base_url)
-                .env("GROK_MODELS_BASE_URL", base_url)
-                .env("GROK_FEEDBACK_BASE_URL", base_url)
-                .env("GROK_TRACE_UPLOAD_URL", base_url)
+                .env("DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL", base_url)
+                .env("DEEPSEEK_BUILD_XAI_API_BASE_URL", base_url)
+                .env("DEEPSEEK_BUILD_MODELS_BASE_URL", base_url)
+                .env("DEEPSEEK_BUILD_FEEDBACK_BASE_URL", base_url)
+                .env("DEEPSEEK_BUILD_TRACE_UPLOAD_URL", base_url)
                 .env("DEEPSEEK_API_KEY", "test-key-for-ci")
                 .env("GROK_LEADER_SOCKET", leader_socket)
                 .env("RUST_LOG", "xai_grok_shell=debug,xai_grok_login=debug"),

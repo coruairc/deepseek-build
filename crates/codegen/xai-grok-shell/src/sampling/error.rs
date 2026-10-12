@@ -1,7 +1,7 @@
 //! Sampling error types.
 //!
 //! The canonical error types live in `xai_grok_sampling_types::error`.
-//! This module re-exports them and adds `map_sampling_err_to_acp`, which depends on `agent_client_protocol::Error` (a grok-shell dependency).
+//! This module re-exports them and adds `map_sampling_err_to_acp`, which depends on `agent_client_protocol::Error` (a deepseek-build dependency).
 
 pub use xai_grok_sampling_types::error::*;
 

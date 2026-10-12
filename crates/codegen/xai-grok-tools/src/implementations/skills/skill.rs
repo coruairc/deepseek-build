@@ -1019,7 +1019,8 @@ Step 2: Check for bugs.
 
     #[test]
     fn test_grok_plugin_aliases_substitution() {
-        let mut content = "Root ${GROK_PLUGIN_ROOT}, data ${GROK_PLUGIN_DATA}".to_string();
+        let mut content =
+            "Root ${DEEPSEEK_BUILD_PLUGIN_ROOT}, data ${DEEPSEEK_BUILD_PLUGIN_DATA}".to_string();
         apply_substitutions(
             &mut content,
             None,

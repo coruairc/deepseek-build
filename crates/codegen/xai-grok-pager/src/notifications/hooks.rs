@@ -15,13 +15,13 @@ fn execute_hook(
     let mut cmd = Command::new("sh");
     cmd.arg("-c")
         .arg(command)
-        .env("GROK_EVENT", event_str)
-        .env("GROK_MESSAGE", message)
+        .env("DEEPSEEK_BUILD_EVENT", event_str)
+        .env("DEEPSEEK_BUILD_MESSAGE", message)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
     if let Some(sid) = session_id {
-        cmd.env("GROK_SESSION_ID", sid);
+        cmd.env("DEEPSEEK_BUILD_SESSION_ID", sid);
     }
 
     xai_tty_utils::detach_std_command(&mut cmd);
@@ -134,8 +134,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let out = dir.path().join("env.txt");
         let command = format!(
-            "printf 'GROK_EVENT=%s\\nGROK_MESSAGE=%s\\nGROK_SESSION_ID=%s\\n' \
-             \"$GROK_EVENT\" \"$GROK_MESSAGE\" \"$GROK_SESSION_ID\" > {}",
+            "printf 'DEEPSEEK_BUILD_EVENT=%s\\nDEEPSEEK_BUILD_MESSAGE=%s\\nDEEPSEEK_BUILD_SESSION_ID=%s\\n' \
+             \"$DEEPSEEK_BUILD_EVENT\" \"$DEEPSEEK_BUILD_MESSAGE\" \"$DEEPSEEK_BUILD_SESSION_ID\" > {}",
             out.display()
         );
 
@@ -149,16 +149,16 @@ mod tests {
 
         let content = std::fs::read_to_string(&out).unwrap();
         assert!(
-            content.contains("GROK_EVENT=Turn complete"),
-            "missing GROK_EVENT: {content}"
+            content.contains("DEEPSEEK_BUILD_EVENT=Turn complete"),
+            "missing DEEPSEEK_BUILD_EVENT: {content}"
         );
         assert!(
-            content.contains("GROK_MESSAGE=hello world"),
-            "missing GROK_MESSAGE: {content}"
+            content.contains("DEEPSEEK_BUILD_MESSAGE=hello world"),
+            "missing DEEPSEEK_BUILD_MESSAGE: {content}"
         );
         assert!(
-            content.contains("GROK_SESSION_ID=sess-42"),
-            "missing GROK_SESSION_ID: {content}"
+            content.contains("DEEPSEEK_BUILD_SESSION_ID=sess-42"),
+            "missing DEEPSEEK_BUILD_SESSION_ID: {content}"
         );
     }
 
@@ -178,8 +178,8 @@ mod tests {
 
         let content = std::fs::read_to_string(&out).unwrap();
         assert!(
-            !content.contains("GROK_SESSION_ID"),
-            "GROK_SESSION_ID should not be set: {content}"
+            !content.contains("DEEPSEEK_BUILD_SESSION_ID"),
+            "DEEPSEEK_BUILD_SESSION_ID should not be set: {content}"
         );
     }
 
@@ -285,8 +285,8 @@ mod tests {
         let out = dir.path().join("env.txt");
         let hook = NotificationHook {
             command: format!(
-                "printf 'GROK_EVENT=%s\\nGROK_MESSAGE=%s\\nGROK_SESSION_ID=%s\\n' \
-                 \"$GROK_EVENT\" \"$GROK_MESSAGE\" \"$GROK_SESSION_ID\" > {}",
+                "printf 'DEEPSEEK_BUILD_EVENT=%s\\nDEEPSEEK_BUILD_MESSAGE=%s\\nDEEPSEEK_BUILD_SESSION_ID=%s\\n' \
+                 \"$DEEPSEEK_BUILD_EVENT\" \"$DEEPSEEK_BUILD_MESSAGE\" \"$DEEPSEEK_BUILD_SESSION_ID\" > {}",
                 out.display()
             ),
             events: vec![],
@@ -308,8 +308,8 @@ mod tests {
             );
             std::thread::sleep(Duration::from_millis(50));
         };
-        assert!(content.contains("GROK_EVENT=Turn complete"));
-        assert!(content.contains("GROK_MESSAGE=test body payload"));
-        assert!(content.contains("GROK_SESSION_ID=test-session-123"));
+        assert!(content.contains("DEEPSEEK_BUILD_EVENT=Turn complete"));
+        assert!(content.contains("DEEPSEEK_BUILD_MESSAGE=test body payload"));
+        assert!(content.contains("DEEPSEEK_BUILD_SESSION_ID=test-session-123"));
     }
 }

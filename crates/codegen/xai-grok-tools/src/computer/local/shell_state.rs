@@ -103,7 +103,7 @@ dump_bash_state() {
   _emit "$PWD"
 
   local env_vars
-  env_vars=$(builtin export -p 2>/dev/null | command grep -viE '_proxy=|DEEPSEEK_BUILD_SANDBOX|GROK_AGENT=|SUDO_ASKPASS|GROK_ASKPASS|ELECTRON_RUN_AS_NODE|SSH_AUTH_SOCK|DBUS_SESSION_BUS_ADDRESS|XDG_RUNTIME_DIR|WAYLAND_DISPLAY|GPG_TTY' || true)
+  env_vars=$(builtin export -p 2>/dev/null | command grep -viE '_proxy=|DEEPSEEK_BUILD_SANDBOX|DEEPSEEK_BUILD_AGENT=|SUDO_ASKPASS|GROK_ASKPASS|ELECTRON_RUN_AS_NODE|SSH_AUTH_SOCK|DBUS_SESSION_BUS_ADDRESS|XDG_RUNTIME_DIR|WAYLAND_DISPLAY|GPG_TTY' || true)
   _emit_encoded "$env_vars" "ENV_VARS_B64"
 
   # errexit/pipefail here are this function's own `set -euo pipefail` (set is
@@ -159,7 +159,7 @@ function dump_zsh_state() {
   _emit "$PWD"
 
   local env_vars
-  env_vars=$(builtin typeset -xp 2>/dev/null | command grep -viE '_proxy=|DEEPSEEK_BUILD_SANDBOX|GROK_AGENT=|SUDO_ASKPASS|GROK_ASKPASS|ELECTRON_RUN_AS_NODE|SSH_AUTH_SOCK|DBUS_SESSION_BUS_ADDRESS|XDG_RUNTIME_DIR|WAYLAND_DISPLAY|GPG_TTY' || true)
+  env_vars=$(builtin typeset -xp 2>/dev/null | command grep -viE '_proxy=|DEEPSEEK_BUILD_SANDBOX|DEEPSEEK_BUILD_AGENT=|SUDO_ASKPASS|GROK_ASKPASS|ELECTRON_RUN_AS_NODE|SSH_AUTH_SOCK|DBUS_SESSION_BUS_ADDRESS|XDG_RUNTIME_DIR|WAYLAND_DISPLAY|GPG_TTY' || true)
   _emit_encoded "$env_vars" "ENV_VARS_B64"
 
   # errreturn/pipefail here are this function's own `emulate -L` options
@@ -390,12 +390,12 @@ impl ShellState {
         let wrapper = match self.shell {
             ShellKind::Bash => format!(
                 // Merge the user command's stderr into its stdout via `2>&1` so the captured byte stream preserves chronological write order. Shell-level
-                // diagnostics (eval syntax errors, etc.) still land on the outer shell's stderr — those are unaffected. Re-export GROK_AGENT=1 after snapshot
+                // diagnostics (eval syntax errors, etc.) still land on the outer shell's stderr — those are unaffected. Re-export DEEPSEEK_BUILD_AGENT=1 after snapshot
                 // eval so agent-definition selectors (or other values) from prior shells cannot clear the agent sentinel (process env alone is insufficient).
                 "{dump_script} \
                  snap=$(command cat <&3) && builtin shopt -s extglob && builtin eval -- \"$snap\" && \
                  {{ builtin set +u 2>/dev/null || true; \
-                 builtin export GROK_AGENT=1; \
+                 builtin export DEEPSEEK_BUILD_AGENT=1; \
                  builtin export PWD=\"$(builtin pwd)\"; \
                  builtin shopt -s expand_aliases 2>/dev/null; {sudo_inject}{search_inject}\
                  builtin printf '%s' \"${{2:-}}\"; \
@@ -414,7 +414,7 @@ impl ShellState {
                  builtin eval \"$snap\" && \
                  {{ builtin unsetopt nounset 2>/dev/null || true; \
                  builtin setopt nonomatch 2>/dev/null || true; \
-                 builtin export GROK_AGENT=1; \
+                 builtin export DEEPSEEK_BUILD_AGENT=1; \
                  builtin export PWD=\"$(builtin pwd)\"; \
                  builtin setopt aliases 2>/dev/null; {sudo_inject}{search_inject}\
                  builtin printf '%s' \"${{2:-}}\"; \

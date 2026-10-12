@@ -6,7 +6,7 @@ use toml::Value as TomlValue;
 use xai_grok_config_types::DisplayRefreshSettings;
 
 pub const ENV_DISPLAY_REFRESH_PROBE_ENABLED: &str = "GROK_DISPLAY_REFRESH_PROBE_ENABLED";
-pub const ENV_DISPLAY_REFRESH_AUTO_CADENCE: &str = "GROK_DISPLAY_REFRESH_AUTO_CADENCE";
+pub const ENV_DISPLAY_REFRESH_AUTO_CADENCE: &str = "DEEPSEEK_BUILD_DISPLAY_REFRESH_AUTO_CADENCE";
 
 /// Default motion paint cadence (~60 Hz) when env and auto-cadence do not apply.
 pub const DISPLAY_REFRESH_DEFAULT_CADENCE_MS: u64 = 16;
