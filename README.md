@@ -36,7 +36,7 @@ See [`AGENTS.md`](AGENTS.md) for a precise resume-from-here handoff.
 > but they cannot run until the first `v*` tag is pushed. Build from source in
 > the meantime (see [Building from source](#building-from-source)); the installer
 > itself has been exercised against a local fake release
-> (`sh scripts/test-install.sh`, 25/25 assertions).
+> (`sh scripts/test-install.sh`, 39/39 assertions).
 
 Once a release exists:
 
@@ -60,11 +60,20 @@ The installer is plain POSIX `sh`. It:
 - downloads the release tarball and `SHA256SUMS` over HTTPS from GitHub
   Releases;
 - verifies the checksum **before** extracting anything;
-- installs the binary to `${INSTALL_DIR:-$HOME/.local/bin}` (no sudo), prints a
+- installs the binary to `${INSTALL_DIR:-$HOME/.local/bin}` (no sudo) as
+  `deepseek-build`, plus a `dsb` shortcut symlink in the same directory (an
+  existing unrelated file or symlink named `dsb` is never replaced), prints a
   PATH hint if needed, and supports `--uninstall`; rerunning it updates in
   place;
 - makes no network requests other than those two GitHub downloads - no
   telemetry.
+
+After installing, launch it with the short name `dsb` (the canonical name
+`deepseek-build` still works):
+
+```sh
+dsb
+```
 
 Pin a version with `VERSION`:
 
@@ -84,6 +93,8 @@ curl -fsSL .../install.sh | sh -s -- --uninstall
 sh install.sh --uninstall
 ```
 
+This removes both `deepseek-build` and the `dsb` shortcut it created.
+
 Manual install, if you prefer to drive every step:
 
 1. Download the tarball for your platform and `SHA256SUMS` from the
@@ -95,7 +106,8 @@ Manual install, if you prefer to drive every step:
    # macOS: grep <your-tarball> SHA256SUMS | shasum -a 256 -c -
    ```
 
-3. Extract and move `deepseek-build` somewhere on `PATH`.
+3. Extract and move `deepseek-build` somewhere on `PATH`. For the short
+   command, also link it: `ln -sf deepseek-build <same-dir>/dsb`.
 
 ### Supported platforms
 

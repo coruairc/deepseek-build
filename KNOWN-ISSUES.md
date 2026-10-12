@@ -192,29 +192,31 @@ real-use passes (2026-10-07), with the test state refreshed 2026-10-09.
 - **Live scripts on any machine but the author's: never.** `scripts/smoke-test.sh`
   (8/8) and `scripts/egress-check.sh` (`EGRESS_VIOLATIONS=0`) passed there on
   2026-10-07 and have not been reproduced elsewhere.
-- **`scripts/test-install.sh`: green locally** (25/25 assertions) against a
+- **`scripts/test-install.sh`: green locally** (39/39 assertions) against a
   loopback fake release; it never touches the real release pipeline.
 
 ## Rebrand / config
 
 - Binary (`deepseek-build`), config dir (`~/.deepseek-build`), ACP namespace
   (`deepseek-build/*`), theme, user-facing strings, and the shipped user-guide
-  docs' user-home paths are rebranded.
-- **User-visible env vars renamed** with legacy fallbacks:
-  `GROK_SANDBOX`→`DEEPSEEK_BUILD_SANDBOX`, `GROK_AGENT_DASHBOARD`→
-  `DEEPSEEK_BUILD_AGENT_DASHBOARD`. `DEEPSEEK_BUILD_HOME` is primary and
-  `GROK_HOME` is the legacy fallback. **Internal-only `GROK_*` names remain**
-  (~580 distinct identifiers at `e6b664cc`), per D2; these are not user-facing.
-- No automatic migration from `~/.grok`; set `GROK_HOME` (legacy) to reuse it.
-- **User-guide prose still has pre-removal content (counted 2026-10-09).** The
-  docs under `crates/codegen/xai-grok-pager/docs/user-guide/` (28 files, shipped
-  in the binary, extracted to `~/.deepseek-build/docs/user-guide/`) still describe
-  removed xAI OAuth/OIDC login flows (129 line hits across 14 files) and use
-  `grok <command>` examples where the binary is now `deepseek-build` (**304
-  occurrences of a `grok <word>` command across 25 of 28 files**, e.g. `grok -p`,
-  `grok inspect`, `grok mcp`, `grok login`). The home-dir paths are fixed; the
-  prose and command examples need a follow-up editing pass. Until then, read the
-  command examples as `deepseek-build <command>`.
+  docs' user-home paths are rebranded. `install.sh` additionally creates a `dsb`
+  shortcut symlink (install-time only — the binary name itself is unchanged, D1).
+- **Legacy env-var fallbacks are gone (2026-10-12).** Only the branded names
+  are read: `DEEPSEEK_BUILD_HOME`, `DEEPSEEK_BUILD_SANDBOX`,
+  `DEEPSEEK_BUILD_AGENT_DASHBOARD`, `DEEPSEEK_BUILD_THEME` /
+  `LC_DEEPSEEK_BUILD_THEME`, and `DEEPSEEK_BUILD_APPEARANCE` /
+  `LC_DEEPSEEK_BUILD_APPEARANCE`. The old `GROK_HOME`, `GROK_SANDBOX`,
+  `GROK_AGENT_DASHBOARD`, `GROK_THEME`, and `GROK_APPEARANCE` names (including
+  the `LC_` forms) are ignored, with tests pinning that. No automatic
+  migration from `~/.grok`: set `DEEPSEEK_BUILD_HOME` to reuse it.
+  **Most other `GROK_*` names remain primary internals** (~480 distinct
+  identifiers at `e6b664cc`), per D2; they are not fallbacks.
+- **User-guide swept (2026-10-12).** The shipped guide no longer uses
+  `grok <command>` examples, and the pages/sections describing removed flows
+  (OAuth/OIDC/login, external auth providers, remote settings, managed config,
+  external OpenTelemetry) are deleted (`02-authentication.md`,
+  `24-monitoring-usage.md`, plus pruned sections elsewhere). Remaining prose
+  reads `deepseek-build <command>`.
 
 ## Licensing
 

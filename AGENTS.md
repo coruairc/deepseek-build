@@ -6,6 +6,14 @@ decisions; wins on conflict), [`PLAN.md`](PLAN.md) (audit + phased plan),
 [`README.md`](README.md). Latest dated handoff:
 [`HANDOFF-2026-10-09.md`](HANDOFF-2026-10-09.md).
 
+`deepseek-build` is a personal, DeepSeek-first terminal coding agent forked from
+[xai-org/grok-build](https://github.com/xai-org/grok-build) (Apache-2.0): a
+full-screen TUI plus headless mode that reads and edits code, runs shell
+commands, and talks to DeepSeek through the OpenAI-compatible Chat Completions
+API. Internal crate/package names keep the upstream `xai-grok-*` prefix (D2);
+only the user-facing surface is `deepseek-build`. [`README.md`](README.md) is the
+public description; §7 maps the code and §8 lists the rules for changing it.
+
 ## 0. Snapshot
 
 - **Branch:** `dsb/integration` (the integration branch; all work merged here).
@@ -43,7 +51,7 @@ decisions; wins on conflict), [`PLAN.md`](PLAN.md) (audit + phased plan),
 - **Headless cost:** `--output-format json` emits `estimated_cost_usd` +
   `estimate: true` (local peak-rate estimate, D14) alongside usage.
 - **Release/container:** pipeline + installer + `docker/Dockerfile` exist and
-  `scripts/test-install.sh` is 25/25, but **no `v*` tag has been pushed, no release
+  `scripts/test-install.sh` is 39/39, but **no `v*` tag has been pushed, no release
   exists, and no container image has been built or pulled** (checked 2026-10-09).
   Dry-run procedure: §6.
 - **Status:** usable with a real `DEEPSEEK_API_KEY`. See `TESTING.md`,
@@ -51,7 +59,7 @@ decisions; wins on conflict), [`PLAN.md`](PLAN.md) (audit + phased plan),
   `KNOWN-ISSUES.md`. Remaining: confirm one full green workspace run (host-only
   sandbox failures excepted); exercise the release workflow + container via the §6
   dry run; interactive TUI driven only under a pty, never by a human; user-guide
-  prose stale (`grok <command>` examples, see `KNOWN-ISSUES.md`).
+  swept 2026-10-12 (removed-flow pages deleted, examples use the real binary name).
 
 ## 1. How to resume (another machine)
 
@@ -117,7 +125,8 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
 - **Rebrand (D1/D2) done** (`dsb/rebrand`, `8fcbff78`): brand constants in
   `crates/codegen/xai-grok-brand/`, binary `deepseek-build`, config dir `~/.deepseek-build`,
   ACP namespace `deepseek-build/*`, user-visible strings. `scripts/check-egress.sh --strict`
-  exits 0 (SOFT zero). Most `GROK_*` env vars still carry the old name (not gated).
+  exits 0 (SOFT zero). Legacy env-var fallbacks were removed 2026-10-12
+  (`255f17d0`); the remaining `GROK_*` names are primary internals (not gated).
 - **DeepSeek prompt guidance:** `crates/codegen/xai-grok-agent/templates/prompt.md` now includes a
   `<deepseek_model>` section (prefix-cache discipline, thinking budget, parallel-first tool use,
   verification, large-context guidance) and drops the obfuscated "released by xAI" line. The
@@ -134,11 +143,13 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
   - `install.sh` (repo root, also a release asset) — POSIX sh, `set -eu`, OS/arch detection,
     downloads tarball + `SHA256SUMS` from **github.com only** (no API host), verifies SHA-256
     **before** extracting, installs to `${INSTALL_DIR:-$HOME/.local/bin}` (no sudo), PATH hint,
-    `--uninstall`, rerun-to-update, prints the non-affiliation line. `shellcheck --shell=sh`
+    `--uninstall`, rerun-to-update, prints the non-affiliation line. Also creates a `dsb`
+    shortcut symlink to `deepseek-build` (never clobbering a real file). `shellcheck --shell=sh`
     clean; `dash -n` clean.
   - `scripts/test-install.sh` — local fake-release HTTP harness: success, latest-resolution,
-    checksum mismatch (installs nothing), unsupported OS, tarball 404, uninstall, rerun-update,
-    unwritable dir. **25/25 assertions pass.**
+    checksum mismatch (installs nothing), unsupported OS, tarball 404, uninstall (removes the
+    `dsb` symlink, preserves a foreign one), rerun-update, unwritable dir, pre-existing `dsb`
+    file or foreign `dsb` symlink. **39/39 assertions pass.**
   - `deny.toml` + `docs/LICENSE-AUDIT.md` + `docs/license-deny-report.txt` — cargo-deny
     `licenses/bans/sources` all `ok`. Copyleft: only vendored libgit2 (GPL-2.0-only WITH
     libgit2-linking-exception; full text in THIRD-PARTY-NOTICES, shipped in tarballs). Weak
@@ -152,9 +163,10 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
 ## 3. What is LEFT (ordered)
 
 1. ~~**Backend removal (D5)**~~ **DONE**: `ApiBackend` has only `ChatCompletions`.
-2. ~~**Rebrand (D1/D2) → SOFT gate zero**~~ **DONE** (`dsb/rebrand`, `8fcbff78`). Remaining
-   sub-item: rename the remaining `GROK_*` env vars to `DEEPSEEK_BUILD_*` (~580 distinct
-   identifiers at `e6b664cc`, `git grep -oE '\bGROK_[A-Z0-9_]+'`; not gated).
+2. ~~**Rebrand (D1/D2) → SOFT gate zero**~~ **DONE** (`dsb/rebrand`, `8fcbff78`). Legacy
+   `GROK_*` fallbacks were removed 2026-10-12 (`255f17d0`). Remaining sub-item: rename the
+   ~480 primary `GROK_*` env vars to `DEEPSEEK_BUILD_*` (counted 2026-10-12,
+   `git grep -oE '\bGROK_[A-Z0-9_]+'`; not gated).
 3. **Finish real deletion of Phase-1 stubs** (see §5): shell `src/upload/*`,
    `session/repo_changes`, `feedback_manager`, feedback UI, `share`, vendored
    `shell/src/cloud_config/**`, `xai-computer-hub-{core,sdk,mcp-adapter}` and consumers,
@@ -238,7 +250,7 @@ scripts/check-egress.sh --strict  # + branding (post-rebrand)
 # Step 5b release pipeline / installer
 actionlint .github/workflows/*.yml
 shellcheck --shell=sh install.sh scripts/test-install.sh
-sh scripts/test-install.sh        # 25/25 assertions
+sh scripts/test-install.sh        # 39/39 assertions
 cargo-deny check licenses bans sources
 ```
 
@@ -268,3 +280,74 @@ What to check on the run: all 4 build jobs succeed; each tarball contains
 then run the installer against the real release:
 `curl -fsSL https://github.com/coruairc/deepseek-build/releases/download/v0.0.1-rc1/install.sh | VERSION=v0.0.1-rc1 sh`
 and confirm `deepseek-build --version` prints the tag version.
+
+## 7. Codebase map
+
+95 workspace members: 81 product crates under `crates/codegen/`, 8 shared
+building blocks under `crates/common/`, 1 protobuf helper under `crates/build/`,
+the `prod/mc/model-api-types` types package, and 4 vendored crates under
+`third_party/`.
+
+| Layer | Crates | Role |
+|-------|--------|------|
+| Binary | `xai-grok-pager-bin` | The `deepseek-build` binary: CLI/subcommand dispatch, composition root |
+| TUI | `xai-grok-pager` | Fullscreen TUI, headless single turn (`src/headless.rs`), session/plan/permission surfaces |
+| TUI | `xai-grok-pager-minimal`, `xai-grok-pager-render` | Scrollback-native minimal mode (reached through the pager's fn-pointer seam) and render primitives |
+| Agent runtime | `xai-grok-shell`, `xai-grok-shell-base` | ACP stdio agent (`agent/app.rs`), session/turn loop (`session/acp_session_impl/`), tool-call execution, compaction wiring, persistence |
+| Conversation state | `xai-chat-state` | Actor owning message history and request assembly |
+| Prompts | `xai-grok-agent` | Agent definitions/discovery and the XOR-obfuscated system-prompt templates |
+| Model adapter | `xai-grok-sampler`, `xai-grok-sampling-types` | Chat Completions HTTP actor (SSE, retries, `reasoning_content` round-trip) and its wire types (`ThinkingConfig`, `TokenUsage`) |
+| Catalog & endpoints | `xai-grok-models`, `xai-grok-env`, `xai-grok-config` | Embedded model catalog (DeepSeek entries), endpoint presets (`endpoints.rs` → `https://api.deepseek.com`), layered config |
+| Tools | `xai-grok-tools`, `xai-tool-runtime` (+ `xai-grok-tools-api`, `xai-tool-protocol`, `xai-tool-types`) | Built-in tools and the `Tool` trait / dispatch runtime |
+| Workspace & permissions | `xai-grok-workspace`, `xai-grok-permission-rules` | FS/VCS ops, permission manager, modes/rules, dangerous-command detection |
+| Context | `xai-grok-compaction`, `xai-compaction-transcript` | Compaction engine and transcript store |
+| Sessions | `xai-grok-session-events`, `xai-grok-active-sessions`, `xai-grok-memory` | Typed session event log, active-session registry, memory |
+| Integrations | `xai-grok-mcp`, `xai-grok-hooks`, `xai-grok-plugin-marketplace` | MCP client, hook system, plugin marketplace |
+| Safety & platform | `xai-grok-sandbox`, `xai-grok-extra-ca`, `xai-dirs`, `xai-grok-brand` | OS sandbox, TLS client policy, home/path resolution, brand constants |
+| Auth | `xai-grok-login` | Credential plumbing; the live path is the `DEEPSEEK_API_KEY` env var |
+| Test infra | `xai-grok-test-support`, `xai-grok-pager-pty-harness` | Mock inference server, ACP client, headless runner, PTY e2e scenarios |
+
+`xai-tool-runtime`, `xai-tool-protocol`, `xai-tool-types`, and
+`xai-grok-compaction` live under `crates/common/`; every other crate named above
+is under `crates/codegen/`.
+
+Data flow: binary → TUI (or a headless single turn) → ACP session in
+`xai-grok-shell` → the turn loop assembles a request via `xai-chat-state` →
+`xai-grok-sampler` streams from `{base_url}/chat/completions` (default
+`https://api.deepseek.com`) → tool calls run through `xai-grok-tools` /
+`xai-grok-workspace` under the permission system, with user-configured MCP
+servers over stdio/HTTP alongside. [`PLAN.md`](PLAN.md) §1 is the long-form map,
+written 2026-10-02 before the backend removal and rebrand — where it conflicts
+with the code, trust the code.
+
+## 8. Rules for changing the code
+
+- **Toolchain:** Rust 1.94.0 is pinned (`rust-toolchain.toml`) — do not bump.
+  Keep `cargo fmt --all --check` clean and clippy at 0 errors; the tree carries
+  16 pre-existing warnings.
+- **Clippy bans** (repo-root `clippy.toml`): use `dunce::canonicalize` instead of
+  the `std`/`Path`/`tokio::fs` versions; build HTTP clients through
+  `xai_grok_extra_ca`; enroll child processes via `xai_tty_utils::ProcessScope`;
+  resolve home directories via `xai-dirs`. Tests may index/slice freely;
+  production crates opt in to `#![deny(clippy::indexing_slicing)]`.
+- **Egress invariants (D6/D10/D13):** delete exfil/telemetry code, never disable
+  it; the only outbound destinations are the configured model provider and
+  user-configured MCP servers; API keys never reach logs, saved sessions, panic
+  text, or commits. `scripts/check-egress.sh --strict` must stay exit 0 and
+  `scripts/key-leak-check.sh` green. A change that adds an outbound destination is
+  a stop-and-ask.
+- **Branding (D1/D2):** user-visible strings resolve through `xai-grok-brand`
+  constants; internal `xai-grok-*` names stay. After touching CLI help, version,
+  or other user-facing output, run the `branding_surface` integration test
+  (`crates/codegen/xai-grok-pager-bin/tests/`). Env vars: `DEEPSEEK_BUILD_*` /
+  `DEEPSEEK_API_KEY`; legacy `GROK_*` fallbacks were removed 2026-10-12 and are
+  ignored (tests pin this).
+- **Prompt templates:** the files under `crates/codegen/xai-grok-agent/templates/`
+  are XOR-obfuscated into `src/prompt/prompt_encrypted.rs`; after editing any
+  template run `python3 scripts/encrypt_templates.py` and keep
+  `test_encrypted_templates_not_stale` green.
+- **Commits and docs:** small, logical commits, one change each (DECISIONS C1);
+  keep build + tests green after every merge (C3); deletions must be real
+  deletions (C4). Update `KNOWN-ISSUES.md` when status changes and refresh this
+  file's §0 snapshot at session end. `DECISIONS.md` wins on conflict; its
+  execution rules list the stop-and-ask conditions.
