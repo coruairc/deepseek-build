@@ -3,7 +3,8 @@
 Honest list of what is incomplete or broken at this revision. Nothing here is
 hidden behind a "temporary" flag; where code remains it is called out. Claims are
 against the tree on `dsb/integration` after the live-smoke, egress, polish and
-real-use passes (2026-10-07), with the test state refreshed 2026-10-09.
+real-use passes (2026-10-07), with the test state refreshed 2026-10-09 and the
+rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
 
 ## Build & tests
 
@@ -220,6 +221,29 @@ real-use passes (2026-10-07), with the test state refreshed 2026-10-09.
   external OpenTelemetry) are deleted (`02-authentication.md`,
   `24-monitoring-usage.md`, plus pruned sections elsewhere). Remaining prose
   reads `deepseek-build <command>`.
+
+- **Project-level directory is still `.grok/` (2026-10-21).** Per-user state
+  is `~/.deepseek-build`, but per-repo config, skills, agents, hooks, plugins,
+  rules, sandbox profiles, and rewind checkpoints are still read from and
+  written to `<repo>/.grok/` (e.g. `xai-grok-sandbox/src/profiles.rs`,
+  `xai-grok-hooks/src/discovery.rs`, `xai-grok-workspace`). The user guide
+  documents `.grok/` because that is what the code does; renaming it is a code
+  change across several crates and has not been made.
+- **Version string.** `deepseek-build --version` prints the inherited crate
+  version `1.0.45` (`crates/codegen/xai-grok-pager-bin/Cargo.toml`), while the
+  first planned release tag is `v0.1.0` (`CHANGELOG.md`). They will disagree
+  until the crate version is reset or the tag is chosen to match.
+- **Leftover sign-in surface.** `login` / `logout` subcommands and the `/login`
+  slash command are still registered, and `login --help` still describes
+  OAuth via `api.deepseek.com`, although the OAuth/OIDC stack was deleted and
+  auth is env-only (D13). Use `DEEPSEEK_API_KEY`; do not rely on `login`.
+- **Grove/clone config keys documented but inert.** The `clone` subcommand and
+  `worktree redirect` commands do not exist (their guide pages were removed or
+  replaced 2026-10-21), but `26-config-reference.md` still lists `[cli] grove`
+  / `[clone]` keys and `DEEPSEEK_BUILD_CLONE` / `DEEPSEEK_BUILD_GROVE`.
+- **Building from source needs `make`.** `tikv-jemalloc-sys` compiles jemalloc
+  and its build script fails without `make` (observed 2026-10-21 on a host that
+  had `cc` but no `make`).
 
 ## Licensing
 
