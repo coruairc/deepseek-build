@@ -7,10 +7,10 @@ use std::sync::Arc;
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum SideCallBearerError {
     #[error(
-        "image, video, and voice side calls are not available in deepseek-build"
+        "no usable credential for image, video, or voice side calls in this session"
     )]
     ForeignSession,
-    #[error("no credential available for image, video, or voice side calls; these features are not available in deepseek-build")]
+    #[error("no credential configured for image, video, or voice side calls")]
     Missing,
 }
 
