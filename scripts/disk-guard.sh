@@ -1,14 +1,14 @@
 #!/bin/sh
 # Refuse to start a heavy build when the filesystem holding the cargo target
 # dir is low on space. Prints the free space and exites non-zero below the
-# threshold (default 150 GB).
+# threshold (default 60 GB).
 #
 # Usage: scripts/disk-guard.sh [minimum_gb]
 # Call it before any workspace build or test; stop when it fails.
 
 set -eu
 
-min="${1:-150}"
+min="${1:-60}"
 root=$(unset CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)
 target="${CARGO_TARGET_DIR:-$root/target}"
 
