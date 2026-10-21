@@ -19,7 +19,7 @@ You know enough to be productive. When you want more:
   where it's going.
 - Automate anything: `deepseek-build -p "summarize new TODOs" --output-format json`
   runs headless — great for scripts and CI.
-- Stay current with `deepseek-build update`; see what changed with `/release-notes`.
+- See what changed with `/release-notes`; to update, install a newer release.
 - Something feel off? `/feedback <text>` goes straight to the team, and bare
   `/feedback` opens a form with your saved drafts.
 
