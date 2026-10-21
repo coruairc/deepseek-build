@@ -207,6 +207,8 @@ To watch runtime egress, run the binary through
 - [`rustup`](https://rustup.rs) with the pinned toolchain (Rust 1.94.0, from
   `rust-toolchain.toml`). Do not bump it.
 - `protoc` on `PATH` (e.g. `/usr/bin/protoc`). `dotslash` is not needed.
+- A C toolchain (`cc`) and `make`: the bundled jemalloc (`tikv-jemalloc-sys`)
+  is compiled from source, and its build script fails without `make`.
 
 ## Building from source
 
@@ -245,6 +247,80 @@ Models: `deepseek-v4-pro` (default) and `deepseek-flash`, plus a hidden
 `deepseek-v4-flash` legacy alias; each offers `none`/`low`/`high`/`max`
 reasoning effort. A custom OpenAI-compatible `base_url` is supported via model
 config.
+
+## Quickstart
+
+```sh
+export DEEPSEEK_API_KEY=sk-...     # env only; there is no interactive key entry
+cd your-repo
+dsb                                # or: deepseek-build
+```
+
+Without a key, a headless run stops before any model request with
+`Not signed in: set DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) to authenticate.`
+and exit code 1. The TUI likewise cannot sign in; quit (`q`), export the key,
+and relaunch.
+
+First commands inside the TUI:
+
+| Command | What it does |
+|---------|--------------|
+| `/help` | list commands |
+| `/model` (`/m`) | switch between `deepseek-v4-pro` and `deepseek-flash` |
+| `/effort <level>` | reasoning effort `none` / `low` / `high` / `max` |
+| `/think` | fold or unfold every reasoning block (also `Ctrl+E`; `e` / `E` per entry / all) |
+| `/usage` (`/cost`) | token usage, cached input, reasoning tokens, and cost for the session |
+| `/resume` | reopen an earlier session (or launch with `-c` / `-r <id>`) |
+
+Headless (one prompt, then exit):
+
+```sh
+dsb -p "Reply with exactly: pong"
+dsb -p "summarize this repo" --output-format json   # adds usage + estimated_cost_usd
+dsb -m deepseek-flash --effort low -p "..."
+```
+
+**Sandbox: off by default.** Opt in per run with `--sandbox workspace`
+(write only to the cwd, `~/.deepseek-build/`, and temp dirs), `--sandbox
+read-only`, or `--sandbox strict`, or set `DEEPSEEK_BUILD_SANDBOX`. Kernel
+enforced (Landlock on Linux, Seatbelt on macOS); child-network blocking in
+`read-only` / `strict` is Linux-only. See the user guide's `18-sandbox.md`.
+
+**Permission modes.** The default mode asks before edits and non-read-only
+shell commands. Cycle modes in the TUI with `Shift+Tab`, or use `/auto` and
+`/always-approve`. On the command line: `--permission-mode
+default|acceptEdits|auto|dontAsk|bypassPermissions|plan`, `--always-approve`
+(alias `--yolo`), plus `--allow` / `--deny` rules. Headless runs cannot prompt,
+so a gated action is cancelled (non-zero exit) unless you pass
+`--always-approve` or a matching allow rule. Dangerous `rm -rf`-class commands
+keep a warning prompt.
+
+**Cost and cache display.** DeepSeek reports tokens but no price, so costs are
+**local estimates** from a peak-rate price table (`DECISIONS.md` D14),
+overridable under `[ui.status_line.pricing.<model>]`. `/usage` shows input
+tokens with the cached share, output with the reasoning share, and the cost.
+The optional status row (off by default) shows `cache` (prompt-cache hit rate)
+and `cost` among other items:
+
+```toml
+# ~/.deepseek-build/config.toml
+[ui.status_line]
+type = "builtin"
+items = ["model", "effort", "tokens", "cache", "cost", "context"]
+```
+
+Headless `--output-format json` carries `estimated_cost_usd` and
+`"estimate": true`.
+
+**`dsb` shortcut.** `install.sh` creates `dsb` as a symlink to `deepseek-build`
+in the install directory; it is never written over an unrelated file. A
+from-source build does not create it: `ln -s deepseek-build ~/.local/bin/dsb`
+(next to wherever you put the binary).
+
+**Uninstall.** `sh install.sh --uninstall` (honours `INSTALL_DIR`) removes
+`deepseek-build` and the `dsb` symlink it owns. Your config, sessions, and logs
+in `~/.deepseek-build/` are left in place; delete that directory yourself to
+remove them.
 
 ## Testing the binary safely
 
