@@ -56,7 +56,7 @@ impl GrokAuthCredentials {
         if self.deployment_key.is_some() {
             "Your DEEPSEEK_BUILD_DEPLOYMENT_KEY is invalid or expired. Please contact a team admin."
         } else if self.user_token.is_some() {
-            "Your auth token is invalid or expired. Run `grok login` to re-authenticate."
+            "Your auth token is invalid or expired."
         } else {
             "Not authenticated."
         }
