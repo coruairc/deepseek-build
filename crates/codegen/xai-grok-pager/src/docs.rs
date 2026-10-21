@@ -170,7 +170,7 @@ pub static USER_GUIDE: &[Doc] = &[
     Doc {
         filename: "27-deepseek-build-clone.md",
         title: "deepseek-build clone",
-        description: "Depth-1 Grove clone, --full-history, and safe deepen/switch commands",
+        description: "Not available in deepseek-build; use git clone or -w worktrees",
         content: include_str!("../docs/user-guide/27-deepseek-build-clone.md"),
     },
 ];

@@ -303,30 +303,6 @@ Resume a session in a fresh worktree with `deepseek-build -w -r <session-id>`.
 
 `deepseek-build worktree create [NAME]` creates the same worktree `deepseek-build -w [NAME]` would, without starting a session. It prints the directory the session would have opened in. That path is the only output on stdout, so `cd "$(deepseek-build worktree create my-fix)"` works. By default the worktree starts from HEAD with your uncommitted changes copied over. Pass `--ref <ref>` to start from a clean checkout of a branch, tag, or commit. If the new worktree lacks the directory you ran from, such as a `--ref` checkout that predates it or an ignored directory, the command prints the worktree root.
 
-### Manage Grove redirections
-
-A Grove worktree can redirect ignored artifact directories such as `target` and `node_modules` to storage outside the projected tree. The redirect commands take the mount path as their first argument.
-
-```bash
-deepseek-build worktree redirect list /path/to/worktree
-deepseek-build worktree redirect list /path/to/worktree --json
-deepseek-build worktree redirect add /path/to/worktree target bind
-deepseek-build worktree redirect del /path/to/worktree target
-deepseek-build worktree redirect fixup /path/to/worktree
-deepseek-build worktree redirect unmount /path/to/worktree target
-```
-
-`list` prints `repo_path`, `type`, `mechanism`, `target`, `source`, and `state`. Run `unmount` without a repo-relative path to take down every redirect on the mount. Use `fixup --force` to replace Grove-owned residue. Use `fixup --strict` to refuse a populated plain directory.
-
-
-```bash
-deepseek-build clone https://example.com/org/repo.git --redirect-ignored
-deepseek-build clone https://example.com/org/repo.git \
-  --redirect-ignored --redirect-dir build --redirect-dir '**/node_modules'
-deepseek-build clone https://example.com/org/repo.git --no-redirects
-```
-
-`GROVE_REDIRECTS=0` remains a runtime kill switch. deepseek-build does not save the kill switch as the clone's redirect choice.
 
 ### Checking Disk Usage
 
@@ -349,7 +325,7 @@ To reclaim space, run `deepseek-build worktree gc --max-age 7d --dry-run`, then 
 Untracked rows are not in the registry, so gc never visits them. Remove one with `deepseek-build worktree rm --dry-run <path>`, then without `--dry-run`.
 ```
 
-After the deepseek-build home table, `deepseek-build du` may print **Redirections**, **Orphaned redirections**, and **Unattributed redirect directories**. Those bytes live in Grove escape jails, not in the deepseek-build home total. An empty scan prints nothing. Reclaim a live jail with `deepseek-build worktree clean-artifacts`. Purge live jails plus proven orphans with `deepseek-build du --clean --yes`. Delete only proven orphans with `deepseek-build du --clean-orphaned --yes`.
+After the deepseek-build home table, `deepseek-build du` may print **Redirections**, **Orphaned redirections**, and **Unattributed redirect directories**. Those bytes live in Grove escape jails, not in the deepseek-build home total. An empty scan prints nothing. Purge live jails plus proven orphans with `deepseek-build du --clean --yes`. Delete only proven orphans with `deepseek-build du --clean-orphaned --yes`.
 
 `AGE` is the value `deepseek-build worktree gc` measures: time since the worktree was last accessed, or since it was created when that is more recent. Session and agent activity update it; a shell or editor left open in the directory does not. An untracked worktree has no registry entry, so its age comes from the newest file underneath it.
 

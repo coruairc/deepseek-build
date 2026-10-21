@@ -37,7 +37,7 @@ To block specific files (e.g. `.env` or credential paths) on top of a profile, d
 
 ### Profile Details
 
-**workspace** -- The recommended profile for everyday development. The agent can read any file on the system (for understanding dependencies, system libraries, etc.) but can only write to the current working directory, `~/.deepseek-build/`, and temp directories (`/tmp`, `/var/tmp`, plus the macOS temp dirs). Network access is allowed for tools like `web_search` and MCP servers.
+**workspace** -- The recommended profile for everyday development. The agent can read any file on the system (for understanding dependencies, system libraries, etc.) but can only write to the current working directory, `~/.deepseek-build/`, and temp directories (`/tmp`, `/var/tmp`, plus the macOS temp dirs). Network access is allowed for tools like `web_fetch` and MCP servers.
 
 **devbox** -- A reserved built-in profile for disposable development VMs. The agent can read everywhere and write to every top-level directory except `/data` and the virtual filesystems (`/proc`, `/sys`, `/dev`), including the home directory. Network access is allowed. `--sandbox devbox` runs the built-in profile, which shadows any `[profiles.devbox]` you define in `sandbox.toml`.
 

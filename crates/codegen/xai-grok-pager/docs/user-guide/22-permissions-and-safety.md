@@ -23,7 +23,6 @@ Modes set a baseline. Allow, ask, and deny [rules](#configuring-permissions) sti
 ```bash
 deepseek-build -p "Run the tests" --always-approve
 deepseek-build agent --always-approve stdio
-deepseek-build agent --always-approve serve --bind 127.0.0.1:2419 --secret <token>
 ```
 
 ACP clients can set `"_meta": { "yoloMode": true }` on `session/new`. See [Agent mode](15-agent-mode.md#automation-and-sdks).
@@ -50,7 +49,7 @@ ACP clients can set `"_meta": { "yoloMode": true }` on `session/new`. See [Agent
 ```bash
 deepseek-build --always-approve -p "Run the test suite"
 deepseek-build --permission-mode auto
-deepseek-build agent --always-approve serve --bind 127.0.0.1:2419 --secret <token>
+deepseek-build agent --always-approve stdio
 ```
 
 **Config:**
