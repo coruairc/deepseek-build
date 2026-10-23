@@ -163,14 +163,11 @@ fn is_xai_api_url_impl(url: &str, require_https: bool) -> bool {
         .and_then(|url| url.host_str().map(str::to_owned))
         .is_some_and(|host| is_first_party_api_host(&host))
 }
-/// First-party API hosts whose keys the product manages (legacy `x.ai` plus
-/// the DeepSeek build's own API host). Suffix-safe: `evil-x.ai.example` and
-/// `api.deepseek.com.evil.example` are not first-party.
+/// The only first-party API host: exactly `api.deepseek.com`.
+/// Every other host (xAI hosts, other `*.deepseek.com` subdomains, lookalikes)
+/// is NOT first-party, so the key/session bearer is never auto-attached (fail-closed).
 fn is_first_party_api_host(host: &str) -> bool {
-    host == "x.ai"
-        || host.ends_with(".x.ai")
-        || host == "deepseek.com"
-        || host.ends_with(".deepseek.com")
+    host == "api.deepseek.com"
 }
 fn is_loopback_host(parsed: &reqwest::Url) -> bool {
     match parsed.host() {
@@ -422,7 +419,11 @@ mod tests {
         assert!(is_xai_api_url(
             "https://api.deepseek.com/v1/chat/completions"
         ));
-        assert!(is_xai_api_url("https://x.ai"));
+        assert!(!is_xai_api_url("https://x.ai"));
+        assert!(!is_xai_api_url("https://api.x.ai/v1"));
+        assert!(!is_xai_api_url("https://grok.com"));
+        assert!(!is_xai_api_url("https://deepseek.com.evil.io"));
+        assert!(!is_xai_api_url("https://foo.deepseek.com"));
         assert!(is_xai_api_url(
             "https://api.deepseek.com/v1/chat/completions"
         ));
