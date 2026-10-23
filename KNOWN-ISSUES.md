@@ -221,6 +221,14 @@ real-use passes (2026-10-07), with the test state refreshed 2026-10-09.
   `24-monitoring-usage.md`, plus pruned sections elsewhere). Remaining prose
   reads `deepseek-build <command>`.
 
+## TUI (Step 2 checks, 2026-10-22)
+
+- **Esc leaves picker text in the prompt.** Closing a `/model` or `/effort`
+  picker with Esc keeps the typed command, so the next slash command is
+  appended to it (`/model /effort`). Clear the prompt by hand.
+- **No separate first-run notice.** A first launch shows only the welcome card
+  ("Thanks for trying deepseek-build"); there is no one-time setup notice.
+
 ## Licensing
 
 - `LICENSE`, `NOTICE`, `THIRD-PARTY-NOTICES`, and `third_party/NOTICE` are
