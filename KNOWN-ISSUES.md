@@ -245,6 +245,14 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   and its build script fails without `make` (observed 2026-10-21 on a host that
   had `cc` but no `make`).
 
+## TUI (Step 2 checks, 2026-10-22)
+
+- **Esc leaves picker text in the prompt.** Closing a `/model` or `/effort`
+  picker with Esc keeps the typed command, so the next slash command is
+  appended to it (`/model /effort`). Clear the prompt by hand.
+- **No separate first-run notice.** A first launch shows only the welcome card
+  ("Thanks for trying deepseek-build"); there is no one-time setup notice.
+
 ## Licensing
 
 - `LICENSE`, `NOTICE`, `THIRD-PARTY-NOTICES`, and `third_party/NOTICE` are
