@@ -184,8 +184,13 @@ const DEEPSEEK_API_HOST: &str = "api.deepseek.com";
 /// Headers a request to [`DEEPSEEK_API_HOST`] may carry. `Accept` selects SSE for
 /// streaming and `Content-Encoding` describes an optionally compressed body; both are
 /// transport-level, not identifying.
-const DEEPSEEK_ALLOWED_HEADERS: [HeaderName; 5] =
-    [AUTHORIZATION, CONTENT_TYPE, USER_AGENT, ACCEPT, CONTENT_ENCODING];
+const DEEPSEEK_ALLOWED_HEADERS: [HeaderName; 5] = [
+    AUTHORIZATION,
+    CONTENT_TYPE,
+    USER_AGENT,
+    ACCEPT,
+    CONTENT_ENCODING,
+];
 
 /// `deepseek-build/<version>`, the only User-Agent sent to DeepSeek.
 fn deepseek_user_agent() -> String {
@@ -1830,8 +1835,10 @@ mod tests {
         );
 
         let mut other = h.clone();
-        restrict_deepseek_headers(&reqwest::Url::parse("http://localhost/v1").unwrap(), &mut other);
+        restrict_deepseek_headers(
+            &reqwest::Url::parse("http://localhost/v1").unwrap(),
+            &mut other,
+        );
         assert_eq!(other.len(), h.len());
     }
-
 }
