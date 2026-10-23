@@ -795,7 +795,7 @@ pub fn render_welcome(
         AuthState::Pending { error } => {
             // Interactive (browser/device) sign-in is removed; `l` only retries the
             // non-interactive path (external auth provider command, cached credentials).
-            let menu = [("l", "Retry sign-in"), ("q", "Quit")];
+            let menu = [("l", "Retry sign-in (set DEEPSEEK_API_KEY)"), ("q", "Quit")];
             let msg = error.as_deref().map(|e| (e, theme.accent_error));
             let info = PromptInfo {
                 model_name: params.model_name,
