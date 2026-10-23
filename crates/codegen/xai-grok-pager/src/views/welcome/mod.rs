@@ -793,9 +793,9 @@ pub fn render_welcome(
 
     let mut result = match params.auth_state {
         AuthState::Pending { error } => {
-            let label = params.login_label.unwrap_or("deepseek-build");
-            let login_text = format!("Login with {}", label);
-            let menu = [("l", login_text.as_str()), ("q", "Quit")];
+            // Interactive (browser/device) sign-in is removed; `l` only retries the
+            // non-interactive path (external auth provider command, cached credentials).
+            let menu = [("l", "Retry sign-in"), ("q", "Quit")];
             let msg = error.as_deref().map(|e| (e, theme.accent_error));
             let info = PromptInfo {
                 model_name: params.model_name,
