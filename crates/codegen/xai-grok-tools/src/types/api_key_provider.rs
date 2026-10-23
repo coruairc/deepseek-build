@@ -7,10 +7,10 @@ use std::sync::Arc;
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum SideCallBearerError {
     #[error(
-        "this account's login is not an xAI credential; image, video, and voice need an xAI API key or an xAI login"
+        "no usable credential for image, video, or voice side calls in this session"
     )]
     ForeignSession,
-    #[error("no xAI credential available; run `grok login` or set XAI_API_KEY")]
+    #[error("no credential configured for image, video, or voice side calls")]
     Missing,
 }
 

@@ -9,10 +9,10 @@ or observable state.
 - **Live checks (§3) and installer/container/release (§5):** another ~25–40
   minutes; §3 needs a real key, §5 does not.
 
-> Status (2026-10-09): the release build is green and the binary runs; all test
-> targets compile, but a full `cargo test --workspace` run is **not green yet**
-> (`xai-grok-login --lib` currently 405 passed / 33 failed / 1 ignored under
-> investigation — see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). The live DeepSeek
+> Status (2026-10-21): the release build is green and the binary runs; all test
+> targets compile. The last full `cargo test --workspace` run (2026-10-09) was
+> 31,939 passed / 2 failed / 388 ignored; the 2 failures are host-only `bwrap`
+> sandbox e2e tests (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). The live DeepSeek
 > smoke test and the runtime egress audit were last green on the author's machine
 > (2026-10-07). Four surfaces have never been exercised: see
 > [Not exercised yet](#not-exercised-yet).
@@ -24,7 +24,8 @@ or observable state.
   `export CARGO_TARGET_DIR="$HOME/Projects/deepseek-build/target"`) and remove a
   worktree's own `target/` if one exists. Builds are not shared otherwise.
 - **Disk guard.** Before any workspace build run `scripts/disk-guard.sh` (exits
-  non-zero below 150 GB free). If it fails, stop and clean up first.
+  non-zero below its threshold; pass a lower one as the first argument, e.g.
+  `scripts/disk-guard.sh 60`, on a smaller disk). If it fails, stop and clean up first.
 - **Lean dev/test profile.** `.cargo/config.toml` sets `[build] incremental =
   false`; `[profile.dev]` and `[profile.test]` use `debug = "line-tables-only"`,
   with `debug = false` for third-party crates. Measured 2026-10-12: a fresh
@@ -41,6 +42,7 @@ or observable state.
 
 - Rust **1.94.0** via rustup (pinned by `rust-toolchain.toml`; do not bump) and
   `protoc` on `PATH` (e.g. `/usr/bin/protoc`).
+- `cc` and `make` (the bundled jemalloc is built from source and fails without `make`).
 - For the live egress script: a C compiler (`cc`) and `python3`.
 - For §5: Docker, and `git`/`gh` for the release dry run.
 - A real key, exported in your shell — **never** paste it into a prompt, a
@@ -116,17 +118,15 @@ Launch the binary and approve tool calls as prompted.
 
 ## 6. Test suite status
 
-- `cargo check --workspace --tests` is green (all test targets compile). A full
-  `cargo test --workspace` is **not green yet**: `xai-grok-login --lib` alone is
-  currently **405 passed / 33 failed / 1 ignored** (scratch `HOME`/`DEEPSEEK_BUILD_HOME`,
-  2026-10-08 23:54), clustered in `refresh::oidc_refresher` (16),
-  `manager::tests` (9), `flow`, `external_auth`, `storage` — the inert OAuth/OIDC
-  scaffolding; another workstream is investigating. The earlier four
-  `xai-fast-worktree` NFS/Grove failures were dropped (tests of a backend this
-  tree stubs off) — see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) and
-  `docs/DROPPED-TESTS.md` before quoting numbers.
-- Latest recorded per-crate runs, all 0 failures: `xai-grok-pager` 9876 (+4
-  ignored), `xai-grok-pager-minimal` 94, `xai-grok-shell` 6221,
-  `xai-grok-workspace` 1693, `xai-grok-sampler` 186, `xai-grok-config` 467,
-  `xai-chat-state` 391, `xai-grok-agent` 576, `xai-grok-status-line` 24.
+- `cargo check --workspace --tests` is green (all test targets compile). The
+  last full `cargo test --workspace --no-fail-fast -- --test-threads=4`
+  (2026-10-09) was **31,939 passed / 2 failed / 388 ignored across 307
+  targets**; the 2 failures are `xai-grok-sandbox --test deny_paths_e2e` and
+  come from this host's root-only `/run/containerd`, not code. `xai-grok-login`
+  is green (395 / 0 / 1) since the dead OIDC surface was deleted. See
+  [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) and `docs/DROPPED-TESTS.md` before
+  quoting numbers.
+- Branding gate: `cargo test -p xai-grok-pager-bin --test branding_surface`
+  runs the real binary's `--help`, `agent --help`, `--version`, `completions
+  bash`, and a keyless headless run, and fails on `grok` / `xai` / `x.ai`.
 - `scripts/smoke-test.sh` is the live end-to-end check.

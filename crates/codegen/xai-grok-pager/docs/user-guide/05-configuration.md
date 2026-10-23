@@ -563,14 +563,15 @@ required_maximum_version = "0.2.200" # refuse to start above this
 - `required_minimum_version` (`DEEPSEEK_BUILD_REQUIRED_MINIMUM_VERSION`) and
   `required_maximum_version` (`DEEPSEEK_BUILD_REQUIRED_MAXIMUM_VERSION`) are hard bounds. If
   the running version is outside the range, the CLI exits at startup and instructs
-  the user to install an approved version. `deepseek-build update` and `deepseek-build --version` keep
-  working so an out-of-range install can recover.
+  the user to install an approved version. `deepseek-build --version` keeps
+  working so you can check an out-of-range install.
 - Bounds resolve across config layers by tightening only: a floor takes the
   highest value and a ceiling the lowest, so a managed bound can't be loosened,
   and a user or environment bound can't cancel a managed hard bound. An invalid
   value is ignored so a bad policy can't block startup.
-- An explicit `deepseek-build update --version X` is allowed above the ceiling, to recover
-  from a too-new install, and rejected below the hard floor.
+- deepseek-build has no auto-updater and no `update` subcommand (DECISIONS D3), so
+  `minimum_version` / `maximum_version` have nothing to steer; to recover from an
+  out-of-range install, reinstall an approved version (`VERSION=vX.Y.Z sh install.sh`).
 
 ### Enterprise deployment
 
