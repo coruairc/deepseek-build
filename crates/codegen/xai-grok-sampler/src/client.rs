@@ -178,6 +178,41 @@ fn apply_env_http_headers(
     }
 }
 
+/// Host that gets the minimal header set (see [`restrict_deepseek_headers`]).
+const DEEPSEEK_API_HOST: &str = "api.deepseek.com";
+
+/// Headers a request to [`DEEPSEEK_API_HOST`] may carry. `Accept` selects SSE for
+/// streaming and `Content-Encoding` describes an optionally compressed body; both are
+/// transport-level, not identifying.
+const DEEPSEEK_ALLOWED_HEADERS: [HeaderName; 5] =
+    [AUTHORIZATION, CONTENT_TYPE, USER_AGENT, ACCEPT, CONTENT_ENCODING];
+
+/// `deepseek-build/<version>`, the only User-Agent sent to DeepSeek.
+fn deepseek_user_agent() -> String {
+    format!("{}/{}", xai_grok_brand::NAME, xai_grok_version::VERSION)
+}
+
+/// For requests to `api.deepseek.com`, drop every header outside
+/// [`DEEPSEEK_ALLOWED_HEADERS`] (client/session/telemetry ids, traceparent, extra and
+/// env headers) and pin the User-Agent. Other hosts are left untouched.
+fn restrict_deepseek_headers(url: &reqwest::Url, headers: &mut HeaderMap) {
+    if !url
+        .host_str()
+        .is_some_and(|h| h.eq_ignore_ascii_case(DEEPSEEK_API_HOST))
+    {
+        return;
+    }
+    let names: Vec<HeaderName> = headers.keys().cloned().collect();
+    for name in names {
+        if !DEEPSEEK_ALLOWED_HEADERS.contains(&name) {
+            headers.remove(&name);
+        }
+    }
+    if let Ok(v) = HeaderValue::from_str(&deepseek_user_agent()) {
+        headers.insert(USER_AGENT, v);
+    }
+}
+
 /// HTTP client for sampling. Cheap to clone.
 /// Carries an `Arc`-backed `reqwest::Client` and the default headers/request-defaults computed from a [`SamplerConfig`] at construction time.
 #[derive(Clone)]
@@ -622,11 +657,11 @@ impl SamplingClient {
             let auth_prefix = headers
                 .get(AUTHORIZATION)
                 .and_then(|v| v.to_str().ok())
-                .map(|s| s.chars().take(20).collect::<String>());
+                .map(|s| s.split(' ').next().unwrap_or_default().to_string());
             let x_api_key_prefix = headers
                 .get(HeaderName::from_static("x-api-key"))
                 .and_then(|v| v.to_str().ok())
-                .map(|s| s.chars().take(12).collect::<String>());
+                .map(|_| "present".to_string());
             tracing::info!(
                 target: crate::sampling_log::TARGET,
                 event = "client_post",
@@ -909,6 +944,8 @@ impl SamplingClient {
             json
         };
         *request.body_mut() = Some(reqwest::Body::from(body));
+        let url = request.url().clone();
+        restrict_deepseek_headers(&url, request.headers_mut());
         Ok(request)
     }
 
@@ -1761,4 +1798,40 @@ mod tests {
         assert_eq!(super::AGENT_PRODUCT, xai_grok_brand::NAME);
         assert_eq!(super::DEFAULT_CLIENT_IDENTIFIER, xai_grok_brand::NAME);
     }
+    #[test]
+    fn deepseek_requests_carry_only_auth_content_type_and_user_agent() {
+        let mut h = HeaderMap::new();
+        h.insert(AUTHORIZATION, HeaderValue::from_static("Bearer test-token"));
+        h.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+        h.insert(USER_AGENT, HeaderValue::from_static("grok-cli/1 (xai)"));
+        for n in [
+            "x-deepseek-build-client-version",
+            "x-deepseek-build-client-identifier",
+            "x-deepseek-build-session-id",
+            "x-deepseek-build-conv-id",
+            "x-deepseek-build-user-id",
+            "x-grok-conv-id",
+            "x-xai-client",
+            "traceparent",
+        ] {
+            h.insert(HeaderName::from_static(n), HeaderValue::from_static("v"));
+        }
+        let mut deepseek = h.clone();
+        restrict_deepseek_headers(
+            &reqwest::Url::parse("https://api.deepseek.com/v1/chat/completions").unwrap(),
+            &mut deepseek,
+        );
+        let mut names: Vec<&str> = deepseek.keys().map(|k| k.as_str()).collect();
+        names.sort_unstable();
+        assert_eq!(names, ["authorization", "content-type", "user-agent"]);
+        assert_eq!(
+            deepseek.get(USER_AGENT).unwrap(),
+            &format!("deepseek-build/{}", xai_grok_version::VERSION)
+        );
+
+        let mut other = h.clone();
+        restrict_deepseek_headers(&reqwest::Url::parse("http://localhost/v1").unwrap(), &mut other);
+        assert_eq!(other.len(), h.len());
+    }
+
 }
