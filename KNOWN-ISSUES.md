@@ -266,6 +266,39 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   - Retry thin or fat LTO on a machine with more RAM and cores, e.g. in CI via
     the existing `release-dist` profile (already thin LTO).
 
+## Test-suite failures on the build box (Step 3e, 2026-10-23)
+
+`cargo test --workspace -j 1` at `03393baa`: 31,901 passed, 8 failed, 388
+ignored. One failure is a real upstream bug (pager reset overlay, being fixed on
+`fe/fix-reset-overlay-dim`). The other 7 come from the box environment, not from
+our changes:
+
+- **3 `xai-grok-shell` credential tests fail when an API key is exported.**
+  `agent::config::tests::has_own_credentials_guards_session_vs_external_key`,
+  `agent::config::tests::process_key_from_model_env_key` and
+  `sampling::error::tests::forbidden_subscription_error_no_hint_without_api_key`
+  assume no key is set in the environment. They pass with the keys unset:
+  `env -u DEEPSEEK_API_KEY -u XAI_API_KEY cargo test -p xai-grok-shell --lib -j 1 -- has_own_credentials_guards_session_vs_external_key process_key_from_model_env_key forbidden_subscription_error_no_hint_without_api_key`
+- **`xai-grok-hooks` `runner::http::tests::validate_hook_url_accepts_and_rejects`
+  (`http.rs:972`).** The box's fake-IP DNS resolves `nonexistent.invalid` to
+  `198.18.0.1`, so the "unresolvable host" case resolves. Passes on normal DNS.
+  Repro: `cargo test -p xai-grok-hooks --lib -j 1 -- validate_hook_url_accepts_and_rejects`
+- **`xai-grok-sandbox` `devbox_genuine_reexec_applies_enforcement`.** bwrap
+  re-exec can't create namespaces inside this container. Repro:
+  `cargo test -p xai-grok-sandbox --test deny_paths_e2e -j 1 -- devbox_genuine_reexec_applies_enforcement`
+- **2 `xai-proto-build` tests:** `debug_redact::tests::classifies_marked_fields_by_oneof_membership`
+  and `debug_redact::tests::first_marked_field_finds_annotations_and_ignores_comments`.
+  They look for protoc via `dotslash`, which isn't installed; CI uses apt protoc.
+  Repro with system protoc:
+  `PROTOC=/usr/bin/protoc cargo test -p xai-proto-build --lib -j 1`
+
+### Ticket: SSRF guard does not block 198.18.0.0/15
+
+`is_blocked_ip` in `xai-grok-hooks` does not treat `198.18.0.0/15` (RFC 2544
+benchmarking range, used by fake-IP DNS resolvers) as blocked. A hook URL whose
+host resolves there is allowed. Not an rc2 blocker; add the range to the
+blocklist with a regression test in a follow-up.
+
 ## Licensing
 
 - `LICENSE`, `NOTICE`, `THIRD-PARTY-NOTICES`, and `third_party/NOTICE` are
