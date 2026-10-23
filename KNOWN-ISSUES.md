@@ -253,6 +253,19 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
 - **No separate first-run notice.** A first launch shows only the welcome card
   ("Thanks for trying deepseek-build"); there is no one-time setup notice.
 
+## Binary size (Step 3d, 2026-10-23)
+
+- **Release profile left unchanged; LTO does not fit this build box.** Baseline
+  `cargo build -j 2 --release --bin deepseek-build` at `61757a9c` (strip +
+  panic=abort, no LTO): 152,670,552 bytes, 28m 38s.
+  - `lto = "fat"` + `codegen-units = 1` at `-j 2`: rustc was killed by the OOM
+    killer compiling `xai-grok-shell` (16 GB box).
+  - `lto = "thin"` (default codegen-units) at `-j 1`: still compiling after the
+    40-minute timeout (reached the `xai-grok-pager` crates, never linked); no
+    size measured.
+  - Retry thin or fat LTO on a machine with more RAM and cores, e.g. in CI via
+    the existing `release-dist` profile (already thin LTO).
+
 ## Licensing
 
 - `LICENSE`, `NOTICE`, `THIRD-PARTY-NOTICES`, and `third_party/NOTICE` are
