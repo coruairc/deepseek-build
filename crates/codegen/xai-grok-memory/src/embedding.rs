@@ -130,7 +130,11 @@ impl EmbeddingProvider for ApiEmbeddingProvider {
                 let request = xai_grok_http::shared_client()
                     .post(format!("{}/embeddings", self.api_base))
                     .json(&body_json)
-                    .header("x-deepseek-build-client-version", xai_grok_version::VERSION);
+                    // DeepSeek-only fork: no client-identifying headers, just a plain product User-Agent.
+                    .header(
+                        reqwest::header::USER_AGENT,
+                        format!("deepseek-build/{}", xai_grok_version::VERSION),
+                    );
 
                 let req = match request.build() {
                     Ok(r) => r,
