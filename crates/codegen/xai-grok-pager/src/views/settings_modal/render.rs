@@ -159,6 +159,10 @@ pub fn render_settings_modal(
         // Confirmation overlay replaces the search bar; the row list renders dimmed underneath
         // Hit-rects reset so clicks only route to the y/n footer buttons
         render_reset_confirm_overlay(buf, content_area, state, &theme, o);
+        // y/n are the only actions here: keep their labels at full intensity (the terminal theme's muted() is DIM)
+        for hit in &state.window.shortcut_hits {
+            buf.set_style(hit.rect, Style::default().remove_modifier(Modifier::DIM));
+        }
         return true;
     }
 
