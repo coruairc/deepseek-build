@@ -6,9 +6,7 @@ use std::sync::Arc;
 /// an xAI API key or xAI OAuth2 token. Neither variant is a cue to fall back to another credential.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum SideCallBearerError {
-    #[error(
-        "no usable credential for image, video, or voice side calls in this session"
-    )]
+    #[error("no usable credential for image, video, or voice side calls in this session")]
     ForeignSession,
     #[error("no credential configured for image, video, or voice side calls")]
     Missing,
