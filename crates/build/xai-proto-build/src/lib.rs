@@ -155,7 +155,9 @@ impl XaiProtoBuilder {
             let mut command = Command::new(protoc.unwrap_or(Path::new("protoc")));
             command
                 .arg("--dependency_out=/dev/stdout")
-                .arg("--descriptor_set_out=/dev/null");
+                .arg("--descriptor_set_out=/dev/null")
+                // Same reason as in configure(): protoc 3.12 needs this for proto3 optional.
+                .arg("--experimental_allow_proto3_optional");
 
             // Add protoc's well-known types include directory first (if found).
             // This is needed for Bazel sandboxed builds where protoc and its
@@ -187,9 +189,17 @@ impl XaiProtoBuilder {
             let mut lines = output.lines();
             let first_line = lines.next().context("protoc command output is empty")?;
             let prefix = "/dev/null:";
-            let rem = first_line.strip_prefix(prefix).with_context(|| {
-                format!("protoc command output must start with /dev/null: {output:?}")
-            })?;
+            // protoc 3.12 omits the "/dev/null:" target and writes only the
+            // dependency list; newer protoc prefixes it. Accept both, nothing else.
+            let rem = match first_line.strip_prefix(prefix) {
+                Some(rem) => rem,
+                None if !first_line.contains(':') => first_line,
+                None => {
+                    return Err(anyhow::anyhow!(
+                        "protoc command output must start with /dev/null: {output:?}"
+                    ));
+                }
+            };
             for line in iter::once(rem).chain(lines) {
                 let line = line.trim();
                 let line = line.strip_suffix("\\").unwrap_or(line);
