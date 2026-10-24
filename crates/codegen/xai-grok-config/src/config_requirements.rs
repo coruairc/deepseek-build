@@ -134,29 +134,9 @@ pub struct EndpointRequirements {
     #[serde(default, deserialize_with = "de_string")]
     pub models_list_url: Option<String>,
     #[serde(default, deserialize_with = "de_string")]
-    pub trace_upload_url: Option<String>,
-    #[serde(default, deserialize_with = "de_string")]
     pub feedback_base_url: Option<String>,
     #[serde(default, deserialize_with = "de_string")]
     pub deployment_key: Option<String>,
-    #[serde(default, deserialize_with = "de_string")]
-    pub trace_upload_bucket: Option<String>,
-    #[serde(default, deserialize_with = "de_string")]
-    pub trace_upload_region: Option<String>,
-    #[serde(default, deserialize_with = "de_string")]
-    pub trace_upload_credentials_file: Option<String>,
-    #[serde(default, deserialize_with = "de_string")]
-    pub trace_upload_endpoint_url: Option<String>,
-    #[serde(default, deserialize_with = "de_string")]
-    pub trace_upload_credentials: Option<String>,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
-pub struct TelemetryRequirements {
-    #[serde(default, deserialize_with = "de_mixpanel_enabled")]
-    pub mixpanel_enabled: Option<bool>,
-    #[serde(default, deserialize_with = "de_string")]
-    pub mixpanel_token: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
@@ -175,8 +155,6 @@ pub struct RequirementsToml {
     pub managed_mcps: ManagedMcpsRequirements,
     #[serde(default, deserialize_with = "de_section")]
     pub endpoints: EndpointRequirements,
-    #[serde(default, deserialize_with = "de_section")]
-    pub telemetry: TelemetryRequirements,
 }
 
 impl RequirementsToml {
@@ -310,13 +288,6 @@ impl RequirementsToml {
         push: &mut impl FnMut(&'static str, String),
     ) {
         write_text(
-            pins.trace_upload_url,
-            self.endpoints.trace_upload_url.as_deref(),
-            "endpoints.trace_upload_url",
-            false,
-            push,
-        );
-        write_text(
             pins.feedback_base_url,
             self.endpoints.feedback_base_url.as_deref(),
             "endpoints.feedback_base_url",
@@ -327,54 +298,6 @@ impl RequirementsToml {
             pins.deployment_key,
             self.endpoints.deployment_key.as_deref(),
             "endpoints.deployment_key",
-            true,
-            push,
-        );
-        write_flag(
-            pins.mixpanel_enabled,
-            self.telemetry.mixpanel_enabled,
-            "telemetry.mixpanel_enabled",
-            push,
-        );
-        write_text(
-            pins.mixpanel_token,
-            self.telemetry.mixpanel_token.as_deref(),
-            "telemetry.mixpanel_token",
-            true,
-            push,
-        );
-        write_text(
-            pins.trace_upload_bucket,
-            self.endpoints.trace_upload_bucket.as_deref(),
-            "endpoints.trace_upload_bucket",
-            false,
-            push,
-        );
-        write_text(
-            pins.trace_upload_region,
-            self.endpoints.trace_upload_region.as_deref(),
-            "endpoints.trace_upload_region",
-            false,
-            push,
-        );
-        write_text(
-            pins.trace_upload_credentials_file,
-            self.endpoints.trace_upload_credentials_file.as_deref(),
-            "endpoints.trace_upload_credentials_file",
-            false,
-            push,
-        );
-        write_text(
-            pins.trace_upload_endpoint_url,
-            self.endpoints.trace_upload_endpoint_url.as_deref(),
-            "endpoints.trace_upload_endpoint_url",
-            false,
-            push,
-        );
-        write_text(
-            pins.trace_upload_credentials,
-            self.endpoints.trace_upload_credentials.as_deref(),
-            "endpoints.trace_upload_credentials",
             true,
             push,
         );
@@ -406,16 +329,8 @@ pub struct ServiceTogglePins<'a> {
 }
 
 pub struct UploadTelemetryPins<'a> {
-    pub trace_upload_url: &'a mut Option<String>,
     pub feedback_base_url: &'a mut Option<String>,
     pub deployment_key: &'a mut Option<String>,
-    pub mixpanel_enabled: &'a mut bool,
-    pub mixpanel_token: &'a mut Option<String>,
-    pub trace_upload_bucket: &'a mut Option<String>,
-    pub trace_upload_region: &'a mut Option<String>,
-    pub trace_upload_credentials_file: &'a mut Option<String>,
-    pub trace_upload_endpoint_url: &'a mut Option<String>,
-    pub trace_upload_credentials: &'a mut Option<String>,
 }
 
 fn write_opt(
@@ -612,12 +527,6 @@ de_bool!(
     de_managed_mcps_enabled,
     "managed_mcps",
     "enabled",
-    "requirements value is not a boolean; the constraint is not applied"
-);
-de_bool!(
-    de_mixpanel_enabled,
-    "telemetry",
-    "mixpanel_enabled",
     "requirements value is not a boolean; the constraint is not applied"
 );
 

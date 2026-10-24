@@ -130,12 +130,6 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 | `endpoints.feedback_base_url` | `string` | `yes` | `user` | Where feedback submissions go. Also DEEPSEEK_BUILD_FEEDBACK_BASE_URL. |
 | `endpoints.models_base_url` | `string` | `pin` | `user` | Custom inference base URL; the model list is fetched from `{models_base_url}/models`. Also DEEPSEEK_BUILD_MODELS_BASE_URL. |
 | `endpoints.models_list_url` | `string` | `pin` | `user` | Override the model-list URL. Also DEEPSEEK_BUILD_MODELS_LIST_URL. Alias `models_endpoint`. |
-| `endpoints.trace_upload_bucket` | `string` | `yes` | `user` | Direct gs:// or s3:// bucket for traces; bypasses the proxy. Also DEEPSEEK_BUILD_TRACE_UPLOAD_BUCKET. |
-| `endpoints.trace_upload_credentials` | `string` | `yes` | `user` | Inline GCS service-account JSON or AWS credentials for that bucket; wins over `trace_upload_credentials_file` and has no environment variable. |
-| `endpoints.trace_upload_credentials_file` | `string (path)` | `yes` | `user` | Path to a GCS service-account JSON or AWS credentials file for that bucket. Also DEEPSEEK_BUILD_TRACE_UPLOAD_CREDENTIALS_FILE. |
-| `endpoints.trace_upload_endpoint_url` | `string` | `yes` | `user` | Custom S3-compatible endpoint for s3:// bucket uploads. Also DEEPSEEK_BUILD_TRACE_UPLOAD_ENDPOINT_URL. |
-| `endpoints.trace_upload_region` | `string` | `yes` | `user` | AWS region for s3:// bucket uploads; default us-east-1. Also DEEPSEEK_BUILD_TRACE_UPLOAD_REGION. |
-| `endpoints.trace_upload_url` | `string` | `pin` | `user` | Proxy destination for traces when no direct bucket is set. Also DEEPSEEK_BUILD_TRACE_UPLOAD_URL. |
 | `endpoints.xai_api_base_url` | `string` | `pin` | `user` | Public DeepSeek API base. Also DEEPSEEK_BUILD_XAI_API_BASE_URL. |
 
 ### `features`
@@ -461,31 +455,6 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 
 | Key | Type / Values | Requirements | Managed | Details |
 | --- | --- | --- | --- | --- |
-| `telemetry.otel_enabled` | `boolean` | `pin` | `user` | External OTEL master switch. Also DEEPSEEK_BUILD_EXTERNAL_OTEL. |
-| `telemetry.otel_metrics_exporter` | `otlp / console / none` | `pin` | `user` | External OTEL metrics exporter. Also OTEL_METRICS_EXPORTER. |
-| `telemetry.otel_logs_exporter` | `otlp / console / none` | `pin` | `user` | External OTEL logs exporter. Also OTEL_LOGS_EXPORTER. |
-| `telemetry.otel_endpoint` | `string` | `pin` | `user` | External OTLP base endpoint. Also OTEL_EXPORTER_OTLP_ENDPOINT. |
-| `telemetry.otel_logs_endpoint` | `string` | `pin` | `user` | Logs-signal OTLP endpoint (verbatim). Also OTEL_EXPORTER_OTLP_LOGS_ENDPOINT. |
-| `telemetry.otel_metrics_endpoint` | `string` | `pin` | `user` | Metrics-signal OTLP endpoint (verbatim). Also OTEL_EXPORTER_OTLP_METRICS_ENDPOINT. |
-| `telemetry.otel_protocol` | `http/protobuf / grpc` | `pin` | `user` | External OTLP transport. Also OTEL_EXPORTER_OTLP_PROTOCOL. Pin strips per-signal protocol env and unlisted file siblings except listed. |
-| `telemetry.otel_logs_protocol` | `http/protobuf / grpc` | `pin` | `user` | Logs-signal OTLP protocol. Also OTEL_EXPORTER_OTLP_LOGS_PROTOCOL. |
-| `telemetry.otel_metrics_protocol` | `http/protobuf / grpc` | `pin` | `user` | Metrics-signal OTLP protocol. Also OTEL_EXPORTER_OTLP_METRICS_PROTOCOL. |
-| `telemetry.otel_timeout` | `number` | `pin` | `user` | Export timeout in milliseconds. Also OTEL_EXPORTER_OTLP_TIMEOUT. |
-| `telemetry.otel_metric_export_interval` | `number` | `pin` | `user` | Metric export interval in milliseconds. Also OTEL_METRIC_EXPORT_INTERVAL. |
-| `telemetry.otel_certificate` | `string` | `pin` | `user` | PEM path of extra CA certs for the collector. Also OTEL_EXPORTER_OTLP_CERTIFICATE. CA pin does **not** strip endpoints. |
-| `telemetry.otel_logs_certificate` | `string` | `pin` | `user` | Logs-signal CA PEM path. Also OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE. |
-| `telemetry.otel_metrics_certificate` | `string` | `pin` | `user` | Metrics-signal CA PEM path. Also OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE. |
-| `telemetry.otel_client_certificate` | `string` | `pin` | `user` | PEM path of the mTLS client certificate. Also OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE. Pin strips credential copies, developer endpoints, and unlisted file siblings. |
-| `telemetry.otel_client_key` | `string` | `pin` | `user` | PEM path of the mTLS client key. Tokens never live in this file. Also OTEL_EXPORTER_OTLP_CLIENT_KEY. |
-| `telemetry.otel_logs_client_certificate` | `string` | `pin` | `user` | Logs-signal mTLS client cert PEM path. Also OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE. |
-| `telemetry.otel_logs_client_key` | `string` | `pin` | `user` | Logs-signal mTLS client key PEM path. Also OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY. |
-| `telemetry.otel_metrics_client_certificate` | `string` | `pin` | `user` | Metrics-signal mTLS client cert PEM path. Also OTEL_EXPORTER_OTLP_METRICS_CLIENT_CERTIFICATE. |
-| `telemetry.otel_metrics_client_key` | `string` | `pin` | `user` | Metrics-signal mTLS client key PEM path. Also OTEL_EXPORTER_OTLP_METRICS_CLIENT_KEY. |
-| `telemetry.otel_metrics_include_session_id` | `boolean` | `pin` | `user` | Attach session.id to metrics. Also OTEL_METRICS_INCLUDE_SESSION_ID. |
-| `telemetry.otel_log_user_prompts` | `boolean` | `pin` | `user` | Content gate for prompt text on grok_code.user_prompt. Also OTEL_LOG_USER_PROMPTS. Pinning any content gate without listing a sibling defaults the omitted sibling off. |
-| `telemetry.otel_log_tool_details` | `boolean` | `pin` | `user` | Metadata gate for tool-arg preview, paths, and verbatim names. Recommended on for SIEM join. Also OTEL_LOG_TOOL_DETAILS. Does not include full bodies. |
-| `telemetry.otel_log_assistant_responses` | `boolean` | `pin` | `user` | Content gate for grok_code.assistant_response text. Unset follows otel_log_user_prompts. Env-only OTEL_LOG_USER_PROMPTS=1 must set this to 0 for a prompts-only stream. Also OTEL_LOG_ASSISTANT_RESPONSES. |
-| `telemetry.otel_log_tool_content` | `boolean` | `pin` | `user` | Body gate for tool_input, tool_output, full_command, and error_message. Independent of details; default off. CONTENT-only loses verbatim MCP names and paths. Also OTEL_LOG_TOOL_CONTENT. |
 | `telemetry.trace_upload` | `boolean` | `pin` | `user` | Upload session traces. Requirements pin beats user config. |
 
 ### `tools`

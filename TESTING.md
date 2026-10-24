@@ -56,7 +56,7 @@ or observable state.
 | 1 | `source "$HOME/.cargo/env"` | no output |
 | 2 | `cargo build --release -p xai-grok-pager-bin` | exit 0, ends `Finished release ...` (a cold first build takes 10+ min of compile time — not counted in the 20–30 min pass) |
 | 3 | `ls -lh target/release/deepseek-build` | an executable; last measured 147M (153,624,024 bytes) |
-| 4 | `./target/release/deepseek-build --version` | `deepseek-build 1.0.45 (<12-hex commit>)`, exit 0 |
+| 4 | `./target/release/deepseek-build --version` | `deepseek-build 0.0.1-rc5 (<12-hex commit>)`, exit 0 |
 
 ## 2. Key handling and first run (3 min)
 

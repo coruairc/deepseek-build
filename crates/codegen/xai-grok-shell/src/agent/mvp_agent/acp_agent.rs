@@ -1915,7 +1915,7 @@ impl acp::Agent for MvpAgent {
                 SessionNotification,
             >(args.params.get()) {
                 tracing::info!(
-                    "Storing xAI session notification: session_id={}",
+                    "Storing session notification: session_id={}",
                     notification.session_id.0
                 );
                 if let Some(handle) = self.resident_handle(&notification.session_id) {

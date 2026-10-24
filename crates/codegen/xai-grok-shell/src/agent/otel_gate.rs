@@ -49,7 +49,11 @@ pub(crate) fn policy_channel(remote_fetch_enabled: bool, proxy_is_xai: bool) -> 
 pub(crate) fn policy_channel_for(proxy_url: &str) -> PolicyChannel {
     policy_channel(
         crate::util::config::resolve_remote_fetch_enabled(),
-        crate::util::is_cli_chat_proxy_url(proxy_url),
+        // No xAI fleet-policy channel exists in deepseek-build; the model route never governs policy.
+        {
+            let _ = proxy_url;
+            false
+        },
     )
 }
 /// [`policy_channel_for`] against the effective config, for startup call sites that run before an `AgentConfig` exists.

@@ -333,8 +333,6 @@ fn baseline_env_from_parent(
     for (key, value) in [
         ("GROK_TELEMETRY_ENABLED", "false"),
         // A test that re-enables the mode must still have no production sink: the pager bakes in the analytics token and events URL.
-        ("GROK_TELEMETRY_MIXPANEL_ENABLED", "false"),
-        ("GROK_TELEMETRY_MIXPANEL_TOKEN", ""),
         ("GROK_TELEMETRY_EVENTS_URL", ""),
         ("GROK_TELEMETRY_EVENTS_API_KEY", ""),
         ("GROK_TELEMETRY_TRACE_UPLOAD", "false"),
@@ -813,8 +811,6 @@ mod tests {
             "GROK_AGENT_ID must be pinned so a fresh DEEPSEEK_BUILD_HOME never computes a machine id (WMI on Windows)"
         );
         for (sink, value) in [
-            ("GROK_TELEMETRY_MIXPANEL_ENABLED", "false"),
-            ("GROK_TELEMETRY_MIXPANEL_TOKEN", ""),
             ("GROK_TELEMETRY_EVENTS_URL", ""),
             ("GROK_TELEMETRY_EVENTS_API_KEY", ""),
         ] {

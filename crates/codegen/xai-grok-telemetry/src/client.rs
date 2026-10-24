@@ -10,8 +10,8 @@ use crate::http::OriginClientInfo;
 use crate::session_ctx::EmitterOrigin;
 use chrono::{Local, SecondsFormat};
 use serde_json::json;
-use std::sync::{Arc, Mutex, Once, OnceLock};
-use xai_grok_env::env_bool;
+use std::sync::{Arc, Mutex, OnceLock};
+
 /// Event property map shared by all telemetry modules.
 pub type Metadata = serde_json::Map<String, serde_json::Value>;
 /// Strips the [`EmitterOrigin`] prefix so shell events keep their historical `event_value` and workspace events collapse to the same bare suffix.
@@ -40,13 +40,9 @@ pub struct TelemetryClient {
     client_version: Option<String>,
     subscription_tier: Option<String>,
 }
-/// Opts a dev build (no `GROK_VERSION` at compile time) back into the baked production sinks.
-const ALLOW_DEV_BUILD_ENV: &str = "GROK_TELEMETRY_ALLOW_DEV_BUILD";
-/// `from_config` runs on every (re-)init, up to three times per process; the disarm is logged once.
-static DEV_BUILD_DISARM_LOGGED: Once = Once::new();
 impl TelemetryClient {
     pub fn from_config(
-        mut config: TelemetryConfig,
+        _config: TelemetryConfig,
         mode: TelemetryMode,
         user_id: Option<String>,
         team_id: Option<String>,
@@ -55,17 +51,6 @@ impl TelemetryClient {
         shell_version: String,
         subscription_tier: Option<String>,
     ) -> Self {
-        if xai_grok_version::IS_DEV_BUILD
-            && env_bool(ALLOW_DEV_BUILD_ENV) != Some(true)
-            && config.disarm_baked_sinks()
-        {
-            DEV_BUILD_DISARM_LOGGED
-                .call_once(|| {
-                    tracing::info!(
-                    "TELEMETRY_DEV_BUILD_SINKS_DISARMED: dev build; baked production telemetry sinks cleared (set {ALLOW_DEV_BUILD_ENV}=1 to opt in)"
-                );
-                });
-        }
         let deployment_id = deployment_key
             .filter(|s| !s.is_empty())
             .map(|k| deployment_id_from_key(&k));
@@ -389,11 +374,7 @@ mod tests {
             }
         }
         let _clear = ClearClient;
-        let cfg = TelemetryConfig {
-            mixpanel_enabled: true,
-            mixpanel_token: Some("test-token".into()),
-            ..TelemetryConfig::default()
-        };
+        let cfg = TelemetryConfig::default();
         init(
             cfg,
             TelemetryMode::SessionMetrics,

@@ -640,7 +640,7 @@ impl SessionActor {
             notification.update,
             XaiSessionUpdate::SubagentProgress { .. }
         ) {
-            tracing::debug!("storing xAI session notification");
+            tracing::debug!("storing session notification");
         }
         {
             let mut meta_map = notification.meta.take().and_then(|v| match v {

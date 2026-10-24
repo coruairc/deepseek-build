@@ -149,11 +149,7 @@ struct ResetTelemetry;
 
 impl Drop for ResetTelemetry {
     fn drop(&mut self) {
-        let config = xai_grok_telemetry::config::TelemetryConfig {
-            mixpanel_enabled: false,
-            mixpanel_token: None,
-            ..xai_grok_telemetry::config::TelemetryConfig::default()
-        };
+        let config = xai_grok_telemetry::config::TelemetryConfig::default();
         xai_grok_telemetry::init(
             config,
             TelemetryMode::Disabled,

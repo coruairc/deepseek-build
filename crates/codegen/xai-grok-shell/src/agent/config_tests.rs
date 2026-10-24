@@ -2678,83 +2678,23 @@ fn inference_idle_timeout_propagates_to_model_info() {
     let info = ModelInfo::from_config(&entry);
     assert_eq!(info.inference_idle_timeout_secs, Some(120));
 }
+/// Legacy `[telemetry]` sink keys (Mixpanel, OTLP) were deleted; old configs must still load.
 #[test]
-fn telemetry_config_parses_custom_values_from_toml() {
+fn telemetry_legacy_sink_keys_are_ignored() {
     let raw: toml::Value = toml::from_str(
         r#"
             [telemetry]
             mixpanel_token = "custom-token"
-            mixpanel_enabled = false
-            "#,
-    )
-    .unwrap();
-    let cfg = Config::new_from_toml_cfg(&raw).expect("should parse");
-    assert_eq!(
-        cfg.telemetry.mixpanel_token.as_deref(),
-        Some("custom-token")
-    );
-    assert!(!cfg.telemetry.mixpanel_enabled);
-}
-#[test]
-fn telemetry_otel_timeout_accepts_toml_integer_and_string() {
-    let as_int: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
+            mixpanel_enabled = true
+            otel_endpoint = "https://otel.example"
             otel_timeout = 10000
-            otel_metric_export_interval = 60000
+            trace_upload = false
             "#,
     )
     .unwrap();
-    let cfg = Config::new_from_toml_cfg(&as_int).expect("integer otel_timeout must parse");
-    assert_eq!(cfg.telemetry.otel_timeout.as_deref(), Some("10000"));
-    assert_eq!(
-        cfg.telemetry.otel_metric_export_interval.as_deref(),
-        Some("60000")
-    );
-    let as_str: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            otel_timeout = "10000"
-            otel_metric_export_interval = "60000"
-            "#,
-    )
-    .unwrap();
-    let cfg = Config::new_from_toml_cfg(&as_str).expect("string otel_timeout must parse");
-    assert_eq!(cfg.telemetry.otel_timeout.as_deref(), Some("10000"));
-    assert_eq!(
-        cfg.telemetry.otel_metric_export_interval.as_deref(),
-        Some("60000")
-    );
-}
-/// Empty/whitespace values must become `None`, not reach the HTTP client as empty strings.
-#[test]
-fn telemetry_empty_string_disables_sink() {
-    let raw: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            mixpanel_token = "\t"
-            "#,
-    )
-    .unwrap();
-    let cfg = Config::new_from_toml_cfg(&raw).expect("should parse");
-    assert!(cfg.telemetry.mixpanel_token.is_none());
-}
-#[test]
-fn telemetry_partial_override_retains_defaults() {
-    let raw: toml::Value = toml::from_str(
-        r#"
-            [telemetry]
-            mixpanel_token = "my-proxy-token"
-            "#,
-    )
-    .unwrap();
-    let cfg = Config::new_from_toml_cfg(&raw).expect("should parse");
-    assert_eq!(
-        cfg.telemetry.mixpanel_token.as_deref(),
-        Some("my-proxy-token")
-    );
-    let defaults = TelemetryConfig::default();
-    assert_eq!(cfg.telemetry.mixpanel_enabled, defaults.mixpanel_enabled);
+    let cfg =
+        Config::new_from_toml_cfg(&raw).expect("legacy telemetry keys must not fail config load");
+    assert_eq!(cfg.telemetry.trace_upload, Some(false));
 }
 #[test]
 fn auth_alias_maps_to_grok_com_config() {
@@ -6959,40 +6899,6 @@ fn mcp_recursive_config_watch_feature_flag_used_when_no_higher_layer() {
     assert!(!r.value);
     assert_eq!(r.source, ConfigSource::Remote);
 }
-#[test]
-#[serial_test::serial(remote_sig_disarm)]
-fn remote_settings_disarm_managed_config_signatures() {
-    let prod = crate::env::PROD_CLI_CHAT_PROXY_BASE_URL;
-    let _env = crate::env::EnvVarGuard::remove("DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL");
-    xai_grok_config::signed_policy::apply_remote_managed_config_signature_verification(
-        Some(true),
-        true,
-    );
-    assert!(xai_grok_config::signed_policy::verification_active());
-    let settings = crate::util::config::RemoteSettings {
-        managed_config_signature_verification: Some(false),
-        ..Default::default()
-    };
-    apply_remote_settings_side_effects(Some(&settings), prod);
-    assert!(!xai_grok_config::signed_policy::verification_active());
-    let settings = crate::util::config::RemoteSettings {
-        managed_config_signature_verification: Some(true),
-        ..Default::default()
-    };
-    apply_remote_settings_side_effects(Some(&settings), prod);
-    assert!(xai_grok_config::signed_policy::verification_active());
-    xai_grok_config::signed_policy::apply_remote_managed_config_signature_verification(
-        Some(false),
-        true,
-    );
-    apply_remote_settings_side_effects(None, prod);
-    assert!(!xai_grok_config::signed_policy::verification_active());
-    xai_grok_config::signed_policy::apply_remote_managed_config_signature_verification(
-        Some(true),
-        true,
-    );
-    assert!(xai_grok_config::signed_policy::verification_active());
-}
 /// A pass with no payload must keep the last applied policy (a cancelled
 /// first bootstrap followed by an offline fallback pass must not wipe it);
 /// a real payload still rewrites the caches, clearing omitted fields.
@@ -7071,42 +6977,6 @@ fn sampling_config_compresses_only_toward_the_advertising_proxy() {
         compression_for(proxy),
         RequestCompression::None,
         "a payload without the advertisement disarms compression; the env cannot force it on"
-    );
-}
-/// Keyed path: prod proxy origin can disarm; env override cannot.
-#[test]
-#[serial_test::serial(remote_sig_disarm)]
-fn remote_settings_disarm_requires_prod_proxy_when_keys_embedded() {
-    let prod = crate::env::PROD_CLI_CHAT_PROXY_BASE_URL;
-    xai_grok_config::signed_policy::apply_remote_managed_config_signature_verification(
-        Some(true),
-        true,
-    );
-    assert!(xai_grok_config::signed_policy::verification_active());
-    let settings = crate::util::config::RemoteSettings {
-        managed_config_signature_verification: Some(false),
-        ..Default::default()
-    };
-    let env = crate::env::EnvVarGuard::remove("DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL");
-    apply_remote_settings_side_effects(Some(&settings), prod);
-    assert!(
-        !xai_grok_config::signed_policy::verification_active(),
-        "prod proxy origin must allow disarm when keys are embedded"
-    );
-    xai_grok_config::signed_policy::apply_remote_managed_config_signature_verification(
-        Some(true),
-        true,
-    );
-    assert!(xai_grok_config::signed_policy::verification_active());
-    env.set_value("https://attacker.example/v1");
-    apply_remote_settings_side_effects(Some(&settings), prod);
-    assert!(
-        xai_grok_config::signed_policy::verification_active(),
-        "env-overridden proxy must not be able to disarm keyed verification"
-    );
-    xai_grok_config::signed_policy::apply_remote_managed_config_signature_verification(
-        Some(true),
-        true,
     );
 }
 #[test]

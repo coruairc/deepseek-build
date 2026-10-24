@@ -6,8 +6,7 @@ The user-facing configuration reference lives at
 `crates/codegen/xai-grok-pager/docs/user-guide/26-config-reference.md`.
 
 Edit it; do not regenerate it. When a key is added or removed from the live
-registries (`FEATURES`, `UNMIRRORED_BOOLEAN_FEATURES`, `KNOWN_MCP_SERVER_FIELDS`,
-`TELEMETRY_OTEL_KEYS`), update the page's rows by hand; the `config_docs` tests
+registries (`FEATURES`, `UNMIRRORED_BOOLEAN_FEATURES`, `KNOWN_MCP_SERVER_FIELDS`), update the page's rows by hand; the `config_docs` tests
 (check `src/config_docs/mod.rs`, enabled with `--features config-docs`) verify
 that the page and the registries stay in sync.
 

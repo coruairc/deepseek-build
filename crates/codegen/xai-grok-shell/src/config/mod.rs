@@ -1244,16 +1244,8 @@ fn apply_requirements_inner(
     }
     parsed.enforce_upload_and_telemetry(
         &mut xai_grok_config::UploadTelemetryPins {
-            trace_upload_url: &mut config.endpoints.trace_upload_url,
             feedback_base_url: &mut config.endpoints.feedback_base_url,
             deployment_key: &mut config.endpoints.deployment_key,
-            mixpanel_enabled: &mut config.telemetry.mixpanel_enabled,
-            mixpanel_token: &mut config.telemetry.mixpanel_token,
-            trace_upload_bucket: &mut config.endpoints.trace_upload_bucket,
-            trace_upload_region: &mut config.endpoints.trace_upload_region,
-            trace_upload_credentials_file: &mut config.endpoints.trace_upload_credentials_file,
-            trace_upload_endpoint_url: &mut config.endpoints.trace_upload_endpoint_url,
-            trace_upload_credentials: &mut config.endpoints.trace_upload_credentials,
         },
         &mut push,
     );

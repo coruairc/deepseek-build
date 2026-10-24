@@ -233,10 +233,16 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   `xai-grok-hooks/src/discovery.rs`, `xai-grok-workspace`). The user guide
   documents `.grok/` because that is what the code does; renaming it is a code
   change across several crates and has not been made.
-- **Version string.** `deepseek-build --version` prints the inherited crate
-  version `1.0.45` (`crates/codegen/xai-grok-pager-bin/Cargo.toml`), while the
-  first planned release tag is `v0.1.0` (`CHANGELOG.md`). They will disagree
-  until the crate version is reset or the tag is chosen to match.
+  **Decision (rc5, 2026-10-24): keep.** The `.grok/` project folder and the
+  internal-only `GROK_*` env vars (including `GROK_VERSION`, which the release
+  workflow uses to stamp `--version`) stay as they are for 0.0.1. Migrating
+  them touches the sandbox, hooks, workspace, skills and release workflow
+  together and would break existing per-repo setups without a migration
+  path; it is deferred to after the first stable release.
+- **Version string (fixed in rc5).** The workspace crates now carry version
+  `0.0.1-rc5` (was the inherited `1.0.45`). Release builds still take the
+  version from the tag via `GROK_VERSION`; a source build without it prints
+  `deepseek-build 0.0.1-rc5 (<commit>)`.
 - **Leftover sign-in surface.** `login` / `logout` subcommands and the `/login`
   slash command are still registered, and `login --help` still describes
   OAuth via `api.deepseek.com`, although the OAuth/OIDC stack was deleted and

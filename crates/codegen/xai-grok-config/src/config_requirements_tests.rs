@@ -137,7 +137,6 @@ mixpanel_token = \"mix-secret\"
     let mut memory_enabled = Some(true);
     let mut subagents_enabled = false;
     let mut managed_mcps_enabled = true;
-    let mut mixpanel_enabled = false;
     let mut channel = Some("other".to_owned());
     let mut minimum_version = Some("other".to_owned());
     let mut maximum_version = Some("other".to_owned());
@@ -146,15 +145,8 @@ mixpanel_token = \"mix-secret\"
     let mut web_search = Some("other".to_owned());
     let mut models_base_url = Some("other".to_owned());
     let mut models_list_url = Some("other".to_owned());
-    let mut trace_upload_url = Some("other".to_owned());
     let mut feedback_base_url = Some("other".to_owned());
     let mut deployment_key = Some("other".to_owned());
-    let mut mixpanel_token = Some("other".to_owned());
-    let mut trace_upload_bucket = Some("other".to_owned());
-    let mut trace_upload_region = Some("other".to_owned());
-    let mut trace_upload_credentials_file = Some("other".to_owned());
-    let mut trace_upload_endpoint_url = Some("other".to_owned());
-    let mut trace_upload_credentials = Some("other".to_owned());
 
     let mut pushes = Vec::new();
     let mut push = |path: &'static str, shown: String| pushes.push((path, shown));
@@ -182,16 +174,8 @@ mixpanel_token = \"mix-secret\"
     parsed.enforce_model_urls(&mut models_base_url, &mut models_list_url, &mut push);
     parsed.enforce_upload_and_telemetry(
         &mut UploadTelemetryPins {
-            trace_upload_url: &mut trace_upload_url,
             feedback_base_url: &mut feedback_base_url,
             deployment_key: &mut deployment_key,
-            mixpanel_enabled: &mut mixpanel_enabled,
-            mixpanel_token: &mut mixpanel_token,
-            trace_upload_bucket: &mut trace_upload_bucket,
-            trace_upload_region: &mut trace_upload_region,
-            trace_upload_credentials_file: &mut trace_upload_credentials_file,
-            trace_upload_endpoint_url: &mut trace_upload_endpoint_url,
-            trace_upload_credentials: &mut trace_upload_credentials,
         },
         &mut push,
     );
@@ -211,19 +195,8 @@ mixpanel_token = \"mix-secret\"
         ("cli.required_maximum_version", "1.9.0"),
         ("endpoints.models_base_url", "https://models.example"),
         ("endpoints.models_list_url", "https://models.example/list"),
-        ("endpoints.trace_upload_url", "https://traces.example"),
         ("endpoints.feedback_base_url", "https://feedback.example"),
         ("endpoints.deployment_key", "[redacted]"),
-        ("telemetry.mixpanel_enabled", "true"),
-        ("telemetry.mixpanel_token", "[redacted]"),
-        ("endpoints.trace_upload_bucket", "trace-bucket"),
-        ("endpoints.trace_upload_region", "us-east-1"),
-        ("endpoints.trace_upload_credentials_file", "/var/creds"),
-        (
-            "endpoints.trace_upload_endpoint_url",
-            "https://upload.example",
-        ),
-        ("endpoints.trace_upload_credentials", "[redacted]"),
     ]
     .map(|(path, shown)| (path, shown.to_owned()));
     assert_eq!(expected_pushes.as_slice(), pushes.as_slice());
@@ -236,7 +209,6 @@ mixpanel_token = \"mix-secret\"
             ("memory.enabled", Some(false)),
             ("subagents.enabled", Some(true)),
             ("managed_mcps.enabled", Some(false)),
-            ("telemetry.mixpanel_enabled", Some(true)),
         ],
         [
             ("cli.auto_update", auto_update),
@@ -245,7 +217,6 @@ mixpanel_token = \"mix-secret\"
             ("memory.enabled", memory_enabled),
             ("subagents.enabled", Some(subagents_enabled)),
             ("managed_mcps.enabled", Some(managed_mcps_enabled)),
-            ("telemetry.mixpanel_enabled", Some(mixpanel_enabled)),
         ]
     );
 
@@ -262,24 +233,11 @@ mixpanel_token = \"mix-secret\"
                 "endpoints.models_list_url",
                 Some("https://models.example/list")
             ),
-            ("endpoints.trace_upload_url", Some("https://traces.example")),
             (
                 "endpoints.feedback_base_url",
                 Some("https://feedback.example")
             ),
             ("endpoints.deployment_key", Some("deploy-secret")),
-            ("telemetry.mixpanel_token", Some("mix-secret")),
-            ("endpoints.trace_upload_bucket", Some("trace-bucket")),
-            ("endpoints.trace_upload_region", Some("us-east-1")),
-            (
-                "endpoints.trace_upload_credentials_file",
-                Some("/var/creds"),
-            ),
-            (
-                "endpoints.trace_upload_endpoint_url",
-                Some("https://upload.example"),
-            ),
-            ("endpoints.trace_upload_credentials", Some("upload-secret"),),
         ],
         [
             ("cli.channel", channel.as_deref()),
@@ -296,30 +254,8 @@ mixpanel_token = \"mix-secret\"
             ("models.web_search", web_search.as_deref()),
             ("endpoints.models_base_url", models_base_url.as_deref()),
             ("endpoints.models_list_url", models_list_url.as_deref()),
-            ("endpoints.trace_upload_url", trace_upload_url.as_deref()),
             ("endpoints.feedback_base_url", feedback_base_url.as_deref()),
             ("endpoints.deployment_key", deployment_key.as_deref()),
-            ("telemetry.mixpanel_token", mixpanel_token.as_deref()),
-            (
-                "endpoints.trace_upload_bucket",
-                trace_upload_bucket.as_deref(),
-            ),
-            (
-                "endpoints.trace_upload_region",
-                trace_upload_region.as_deref(),
-            ),
-            (
-                "endpoints.trace_upload_credentials_file",
-                trace_upload_credentials_file.as_deref(),
-            ),
-            (
-                "endpoints.trace_upload_endpoint_url",
-                trace_upload_endpoint_url.as_deref(),
-            ),
-            (
-                "endpoints.trace_upload_credentials",
-                trace_upload_credentials.as_deref(),
-            ),
         ]
     );
 }

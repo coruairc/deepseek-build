@@ -2890,10 +2890,6 @@ trace_upload_endpoint_url = "https://s3.acme-corp.example"
                 .resolve_managed_config_url()
                 .contains("acme-corp")
         );
-    assert_eq!(
-            cfg.endpoints.trace_upload_endpoint_url.as_deref(),
-            Some("https://s3.acme-corp.example")
-        );
     assert!(cfg.endpoints.deployment_key.is_some());
 }
 /// `[feedback.user]` in the managed layer must survive the layer merge into the resolved `Config` (its presence is the opt-in).
@@ -3106,19 +3102,9 @@ fn apply_requirements_value_overrides_user_settings() {
                 .iter()
                 .any(|e| e.path == "ui.yolo" && e.value == "--yolo blocked")
         );
-    assert_eq!(
-            Some("https://s3.custom.example.com"),
-            cfg.endpoints.trace_upload_endpoint_url.as_deref()
-        );
-    assert!(
-            cfg.endpoints.trace_upload_credentials.is_some(),
-            "trace_upload_credentials should be set"
-        );
-    assert!(
-            enforced
-                .iter()
-                .any(|e| e.path == "endpoints.trace_upload_credentials" && e.value == "[redacted]")
-        );
+    // `endpoints.trace_upload_*` requirement pins were deleted (rc5); requirements no longer set them.
+    assert!(cfg.endpoints.trace_upload_endpoint_url.is_none());
+    assert!(cfg.endpoints.trace_upload_credentials.is_none());
     assert_eq!(
             Some("enterprise-deploy-key-should-not-log"),
             cfg.endpoints.deployment_key.as_deref()
@@ -3135,16 +3121,6 @@ fn apply_requirements_value_overrides_user_settings() {
                 .all(|e| e.path != "endpoints.deployment_key"
                     || e.value != "enterprise-deploy-key-should-not-log"),
             "raw deployment_key must not appear in enforced audit entries"
-        );
-    assert!(!cfg.telemetry.mixpanel_enabled);
-    assert_eq!(
-            Some("enterprise-mp-token"),
-            cfg.telemetry.mixpanel_token.as_deref()
-        );
-    assert!(
-            enforced
-                .iter()
-                .any(|e| e.path == "telemetry.mixpanel_token" && e.value == "[redacted]")
         );
 }
 /// Strict precedence: requirement always wins (covers from-None and from-higher-user cases).

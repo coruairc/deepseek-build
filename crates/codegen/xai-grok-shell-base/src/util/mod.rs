@@ -93,35 +93,6 @@ pub fn matches_trusted_base_url(candidate: &str, trusted_base: &str) -> bool {
         && candidate.port_or_known_default() == trusted.port_or_known_default()
         && path_matches
 }
-/// Production model-proxy base only (compiled-in constant). Unlike [`is_cli_chat_proxy_url`], this rejects loopback and staging/dev hosts. Used for security-sensitive remote kill-switches.
-/// Those must not become env toggles via `DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL` (or similar) pointing at an attacker-controlled origin.
-pub fn is_prod_cli_chat_proxy_url(url: &str) -> bool {
-    matches_trusted_base_url(url, crate::env::PROD_CLI_CHAT_PROXY_BASE_URL)
-}
-/// True for configured first-party model-proxy routes, excluding arbitrary loopback URLs.
-/// Unlike [`is_cli_chat_proxy_url`], this only trusts the exact compiled or environment-selected route.
-/// It is suitable for xAI-only request extensions.
-pub fn is_trusted_cli_chat_proxy_url(url: &str) -> bool {
-    if is_prod_cli_chat_proxy_url(url) {
-        return true;
-    }
-    false
-}
-/// True for model-proxy URLs (production, plus local-dev hosts when the optional non-production feature is enabled).
-/// When that feature is on, runtime env overrides can extend this trust set.
-/// Loopback is always accepted (unit tests and local mock servers on arbitrary ports).
-pub fn is_cli_chat_proxy_url(url: &str) -> bool {
-    if is_trusted_cli_chat_proxy_url(url) {
-        return true;
-    }
-    if let Ok(u) = reqwest::Url::parse(url)
-        && let Some(h) = u.host_str()
-        && (h == "localhost" || h == "127.0.0.1" || h == "::1")
-    {
-        return true;
-    }
-    false
-}
 /// True for xAI-operated endpoints (`*.x.ai`, model-proxy, and optional non-production xAI hosts when that feature is enabled). `disable_api_key_auth` refuses keys only for these; other hosts are BYOK and exempt.
 /// Safe against invalid URLs and suffix attacks (`evil-x.ai.example`). Scheme-agnostic so credential *refusal* fails closed. To decide where to *attach* a credential, use [`is_xai_api_bearer_url`].
 pub fn is_xai_api_url(url: &str) -> bool {
@@ -146,16 +117,17 @@ pub fn is_trusted_xai_https_url(url: &str) -> bool {
     if is_loopback_host(&parsed) {
         return false;
     }
-    if is_trusted_cli_chat_proxy_url(url) {
-        return true;
-    }
     parsed.host_str().is_some_and(is_first_party_api_host)
 }
 fn is_xai_api_url_impl(url: &str, require_https: bool) -> bool {
     if require_https {
         return is_xai_api_bearer_url(url);
     }
-    if is_cli_chat_proxy_url(url) {
+    // Loopback (local mock servers on any port) counts as first-party for credential refusal.
+    if let Ok(u) = reqwest::Url::parse(url)
+        && let Some(h) = u.host_str()
+        && (h == "localhost" || h == "127.0.0.1" || h == "::1" || h == "[::1]")
+    {
         return true;
     }
     reqwest::Url::parse(url)
@@ -389,27 +361,25 @@ pub fn is_grok_process_strict(pid: u32) -> bool {
 mod tests {
     use super::*;
     #[test]
-    fn test_is_cli_chat_proxy_url_accepts_proxy_subpath() {
-        assert!(is_cli_chat_proxy_url(
+    fn test_first_party_url_accepts_proxy_subpath() {
+        assert!(is_xai_api_url(
             "https://api.deepseek.com/v1/chat/completions"
         ));
     }
     #[test]
-    fn test_is_cli_chat_proxy_url_rejects_foreign_api() {
+    fn test_first_party_url_rejects_foreign_api() {
         // The configured proxy origin is first-party; unrelated API hosts are not.
-        assert!(!is_cli_chat_proxy_url("https://api.openai.com/v1"));
-        assert!(!is_cli_chat_proxy_url("https://api.anthropic.com/v1"));
+        assert!(!is_xai_api_url("https://api.openai.com/v1"));
+        assert!(!is_xai_api_url("https://api.anthropic.com/v1"));
     }
     #[test]
-    fn test_is_cli_chat_proxy_url_rejects_spoofed_hostname() {
-        assert!(!is_cli_chat_proxy_url(
-            "https://api.deepseek.com.evil.example/v1"
-        ));
+    fn test_first_party_url_rejects_spoofed_hostname() {
+        assert!(!is_xai_api_url("https://api.deepseek.com.evil.example/v1"));
     }
     #[test]
-    fn test_is_cli_chat_proxy_url_rejects_origin_prefix_confusion() {
+    fn test_first_party_url_rejects_origin_prefix_confusion() {
         // `deepseek.com.attacker.example` must not be read as the first-party origin.
-        assert!(!is_cli_chat_proxy_url(
+        assert!(!is_xai_api_url(
             "https://deepseek.com.attacker.example/v1/chat/completions"
         ));
     }

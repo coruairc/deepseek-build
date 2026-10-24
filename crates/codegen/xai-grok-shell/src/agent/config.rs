@@ -1707,7 +1707,6 @@ impl Config {
         crate::util::config::set_remote_campaigns_from_settings(self.remote_settings.as_ref());
     }
     fn apply_env_overrides(&mut self) {
-        self.telemetry.apply_env_overrides();
         if let Some(mode) = env_telemetry_mode("GROK_TELEMETRY_ENABLED") {
             self.features.telemetry = Some(mode);
         }
@@ -2422,13 +2421,6 @@ pub fn apply_remote_settings_side_effects(
     origin: &str,
 ) {
     let Some(s) = settings else { return };
-    let origin_trusted = crate::util::is_prod_cli_chat_proxy_url(
-        &EndpointsConfig::from_effective_config().proxy_url(),
-    );
-    xai_grok_config::signed_policy::apply_remote_managed_config_signature_verification(
-        s.managed_config_signature_verification,
-        origin_trusted,
-    );
     crate::util::config::cache_remote_mcp_startup_timeout_secs(s.mcp_startup_timeout_secs);
     crate::util::config::cache_remote_max_mcp_output_bytes(s.max_mcp_output_bytes);
     crate::util::config::cache_remote_auto_mode(s.auto_mode.clone());
