@@ -312,7 +312,7 @@ impl ContentController {
         self.server.feedback_posts()
     }
 
-    /// Snapshot of every product-telemetry event posted to `/v1/events` (point `GROK_TELEMETRY_EVENTS_URL` at `{url()}/events`).
+    /// Snapshot of every product-telemetry event posted to `/v1/events`.
     pub fn telemetry_events(&self) -> Vec<serde_json::Value> {
         self.server.telemetry_events()
     }

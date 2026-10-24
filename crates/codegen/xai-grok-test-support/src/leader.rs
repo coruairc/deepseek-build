@@ -188,7 +188,6 @@ impl LeaderFixture {
             .env("DEEPSEEK_BUILD_XAI_API_BASE_URL", base_url)
             .env("DEEPSEEK_BUILD_MODELS_BASE_URL", base_url)
             .env("DEEPSEEK_BUILD_FEEDBACK_BASE_URL", base_url)
-            .env("DEEPSEEK_BUILD_TRACE_UPLOAD_URL", base_url)
             .env("DEEPSEEK_API_KEY", "test-key-for-ci")
             .env("GROK_LEADER_SOCKET", &socket)
             .env("RUST_LOG", "xai_grok_shell=debug,xai_grok_login=debug");
@@ -571,7 +570,6 @@ impl LeaderStdioClient {
                 .env("DEEPSEEK_BUILD_XAI_API_BASE_URL", base_url)
                 .env("DEEPSEEK_BUILD_MODELS_BASE_URL", base_url)
                 .env("DEEPSEEK_BUILD_FEEDBACK_BASE_URL", base_url)
-                .env("DEEPSEEK_BUILD_TRACE_UPLOAD_URL", base_url)
                 .env("DEEPSEEK_API_KEY", "test-key-for-ci")
                 .env("GROK_LEADER_SOCKET", leader_socket)
                 .env("RUST_LOG", "xai_grok_shell=debug,xai_grok_login=debug"),

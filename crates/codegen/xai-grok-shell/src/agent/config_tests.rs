@@ -2692,6 +2692,14 @@ fn telemetry_legacy_sink_keys_are_ignored() {
             trace_upload = false
 
             [endpoints]
+            otel_exporter_otlp_endpoint = "https://otel.example"
+            otel_exporter_otlp_traces_endpoint = "https://otel.example/v1/traces"
+            otel_exporter_otlp_headers = "k=v"
+            otel_exporter_otlp_timeout = 10000
+            grok_internal_otlp_traces_endpoint = "https://internal.example/traces"
+            grok_internal_otlp_headers = "ik=iv"
+            otel_traces_exporter = "none"
+            otel_traces_export_interval = 5000
             trace_upload_url = "https://traces.example"
             trace_upload_bucket = "gs://bucket"
             trace_upload_region = "us-east-1"
@@ -3138,16 +3146,12 @@ fn unset_endpoint_env_vars() {
         "DEEPSEEK_BUILD_CLI_CHAT_PROXY_BASE_URL",
         "DEEPSEEK_BUILD_XAI_API_BASE_URL",
         "DEEPSEEK_BUILD_FEEDBACK_BASE_URL",
-        "DEEPSEEK_BUILD_TRACE_UPLOAD_URL",
         "GROK_MANAGED_CONFIG_URL",
         "DEEPSEEK_BUILD_MODELS_BASE_URL",
         "DEEPSEEK_BUILD_MODELS_LIST_URL",
         "OTEL_EXPORTER_OTLP_ENDPOINT",
         "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
         "OTEL_EXPORTER_OTLP_HEADERS",
-        "GROK_INTERNAL_OTLP_TRACES_ENDPOINT",
-        "GROK_INTERNAL_OTLP_HEADERS",
-        "DEEPSEEK_BUILD_EXTERNAL_OTEL",
     ] {
         unsafe { std::env::remove_var(k) };
     }
@@ -3173,10 +3177,6 @@ fn aux_endpoints_resolve_to_proxy_never_inference() {
         format!("{proxy}/deployment/config")
     );
     assert_eq!(cfg.resolve_feedback_base_url(), proxy);
-    assert_eq!(
-        cfg.resolve_otlp_traces_endpoint(),
-        format!("{proxy}/traces")
-    );
     assert_eq!(cfg.xai_api_base_url, inference);
     let overridden = EndpointsConfig {
         cli_chat_proxy_base_url: Some("https://proxy.enterprise.example/v1".to_string()),
@@ -3189,10 +3189,6 @@ fn aux_endpoints_resolve_to_proxy_never_inference() {
     assert_eq!(
         overridden.proxy_url(),
         "https://proxy.enterprise.example/v1"
-    );
-    assert_eq!(
-        overridden.resolve_otlp_traces_endpoint(),
-        "https://proxy.enterprise.example/v1/traces"
     );
     assert_eq!(
         overridden.resolve_managed_config_url(),

@@ -35,36 +35,6 @@ pub struct EndpointsConfig {
     /// The default is `{proxy_url()}/deployment/config`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub managed_config_url: Option<String>,
-    /// Env: `OTEL_EXPORTER_OTLP_ENDPOINT`. The OTLP collector base URL, before `/v1/traces` is appended.
-    /// The internal trace pipeline uses it as a deprecated fallback.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub otel_exporter_otlp_endpoint: Option<String>,
-    /// Env: `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`. The full traces endpoint, used verbatim and preferred over `otel_exporter_otlp_endpoint`.
-    /// The internal trace pipeline treats it like `otel_exporter_otlp_endpoint`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub otel_exporter_otlp_traces_endpoint: Option<String>,
-    /// Env: `OTEL_EXPORTER_OTLP_HEADERS`. Extra export headers in the form `k=v,k2=v2`.
-    /// The internal trace pipeline treats it like `otel_exporter_otlp_endpoint`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub otel_exporter_otlp_headers: Option<String>,
-    /// Env: `GROK_INTERNAL_OTLP_TRACES_ENDPOINT`. The full internal traces endpoint, used verbatim and preferred over the legacy `OTEL_*` vars.
-    /// Developers set it to send internal spans elsewhere, for example to a local collector.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub grok_internal_otlp_traces_endpoint: Option<String>,
-    /// Env: `GROK_INTERNAL_OTLP_HEADERS`. Extra `k=v,k2=v2` debug headers for the internal export.
-    /// They are preferred over the legacy `OTEL_EXPORTER_OTLP_HEADERS`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub grok_internal_otlp_headers: Option<String>,
-    /// Env: `OTEL_TRACES_EXPORTER`. `otlp` (default) or `none` to disable spans.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub otel_traces_exporter: Option<String>,
-    /// Env: `OTEL_BSP_SCHEDULE_DELAY` (OTel) or `OTEL_TRACES_EXPORT_INTERVAL` (Claude alias).
-    /// Batch flush interval (ms).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub otel_traces_export_interval: Option<u64>,
-    /// Env: `OTEL_EXPORTER_OTLP_TIMEOUT`. Export HTTP timeout (ms).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub otel_exporter_otlp_timeout: Option<u64>,
     /// `load_management_api_key_sync()` reads this key.
     /// Declaring the field stops `serde_ignored` from reporting the key as unrecognized.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -128,66 +98,6 @@ impl EndpointsConfig {
             )
         })
     }
-    /// The traces endpoint for the internal pipeline, whose exports carry xAI auth.
-    /// The default stays on `proxy_url` even when inference goes to another host.
-    pub fn resolve_otlp_traces_endpoint(&self) -> String {
-        if let Some(full) = blank_as_unset(&self.grok_internal_otlp_traces_endpoint) {
-            return full.trim_end_matches('/').to_string();
-        }
-        if let Some(legacy) = self.legacy_internal_otlp_traces_endpoint() {
-            tracing::warn!(
-                "Repointing the internal trace pipeline via OTEL_EXPORTER_OTLP_ENDPOINT / \
-                 OTEL_EXPORTER_OTLP_TRACES_ENDPOINT is deprecated; use \
-                 GROK_INTERNAL_OTLP_TRACES_ENDPOINT instead — the standard OTEL_* vars will \
-                 route the external OTEL stream only in a future release"
-            );
-            return legacy;
-        }
-        format!("{}/traces", self.proxy_url().trim_end_matches('/'))
-    }
-    /// The internal traces endpoint from the standard `OTEL_*` vars, if any.
-    fn legacy_internal_otlp_traces_endpoint(&self) -> Option<String> {
-        if let Some(full) = blank_as_unset(&self.otel_exporter_otlp_traces_endpoint) {
-            return Some(full.trim_end_matches('/').to_string());
-        }
-        blank_as_unset(&self.otel_exporter_otlp_endpoint)
-            .map(|base| format!("{}/v1/traces", base.trim_end_matches('/')))
-    }
-    /// Extra headers for the internal export.
-    /// The fallback to `otel_exporter_otlp_headers` is kept for existing users.
-    pub fn resolve_otlp_headers(&self) -> Vec<(String, String)> {
-        if let Some(headers) = blank_as_unset(&self.grok_internal_otlp_headers) {
-            return parse_otlp_header_list(&headers);
-        }
-        parse_otlp_header_list(self.otel_exporter_otlp_headers.as_deref().unwrap_or(""))
-    }
-    /// Whether the internal pipeline took its endpoint or headers from the standard `OTEL_EXPORTER_OTLP_*` vars.
-    /// The external OTEL stream must refuse to start when this is true.
-    pub fn internal_otlp_consumed_standard_vars(&self) -> bool {
-        let endpoint_consumed = blank_as_unset(&self.grok_internal_otlp_traces_endpoint).is_none()
-            && self.legacy_internal_otlp_traces_endpoint().is_some();
-        let headers_consumed = blank_as_unset(&self.grok_internal_otlp_headers).is_none()
-            && blank_as_unset(&self.otel_exporter_otlp_headers).is_some();
-        endpoint_consumed || headers_consumed
-    }
-    /// The internal pipeline honors `OTEL_TRACES_EXPORTER=none`.
-    /// Turning off internal span export is always safe.
-    pub fn resolve_traces_export_enabled(&self) -> bool {
-        !matches!(
-            self.otel_traces_exporter.as_deref().map(str::trim),
-            Some("none")
-        )
-    }
-    /// The internal and external pipelines share this tuning value on purpose.
-    pub fn resolve_otlp_export_interval(&self) -> Option<std::time::Duration> {
-        self.otel_traces_export_interval
-            .map(std::time::Duration::from_millis)
-    }
-    /// The internal and external pipelines share this tuning value on purpose.
-    pub fn resolve_otlp_timeout(&self) -> Option<std::time::Duration> {
-        self.otel_exporter_otlp_timeout
-            .map(std::time::Duration::from_millis)
-    }
     pub fn resolve_models_list_url(&self) -> String {
         if let Some(ref url) = self.models_list_url {
             return url.clone();
@@ -198,16 +108,6 @@ impl EndpointsConfig {
             .unwrap_or_else(|| self.proxy_url());
         format!("{}/models", base)
     }
-}
-/// Parses a `k=v,k2=v2` header list, the format of `OTEL_EXPORTER_OTLP_HEADERS` and `GROK_INTERNAL_OTLP_HEADERS`.
-fn parse_otlp_header_list(raw: &str) -> Vec<(String, String)> {
-    raw.split(',')
-        .filter_map(|kv| {
-            let (k, v) = kv.split_once('=')?;
-            let k = k.trim();
-            (!k.is_empty()).then(|| (k.to_string(), v.trim().to_string()))
-        })
-        .collect()
 }
 /// Default OpenAI-compatible provider base URL. DeepSeek is the shipped default; users may
 /// override it via `[endpoints] xai_api_base_url` or the corresponding env var.
@@ -224,17 +124,6 @@ impl Default for EndpointsConfig {
             feedback_base_url: env_string("DEEPSEEK_BUILD_FEEDBACK_BASE_URL"),
             deployment_key: env_string("DEEPSEEK_BUILD_DEPLOYMENT_KEY"),
             managed_config_url: env_string("GROK_MANAGED_CONFIG_URL"),
-            otel_exporter_otlp_endpoint: env_string("OTEL_EXPORTER_OTLP_ENDPOINT"),
-            otel_exporter_otlp_traces_endpoint: env_string("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"),
-            otel_exporter_otlp_headers: env_string("OTEL_EXPORTER_OTLP_HEADERS"),
-            grok_internal_otlp_traces_endpoint: env_string("GROK_INTERNAL_OTLP_TRACES_ENDPOINT"),
-            grok_internal_otlp_headers: env_string("GROK_INTERNAL_OTLP_HEADERS"),
-            otel_traces_exporter: env_string("OTEL_TRACES_EXPORTER"),
-            otel_traces_export_interval: env_string("OTEL_BSP_SCHEDULE_DELAY")
-                .or_else(|| env_string("OTEL_TRACES_EXPORT_INTERVAL"))
-                .and_then(|s| s.parse().ok()),
-            otel_exporter_otlp_timeout: env_string("OTEL_EXPORTER_OTLP_TIMEOUT")
-                .and_then(|s| s.parse().ok()),
             management_api_key: None,
             gcs_service_account_key: None,
         }

@@ -281,7 +281,6 @@ fn apply_mock_url(env: &mut BTreeMap<OsString, OsString>, url: String) {
         "DEEPSEEK_BUILD_XAI_API_BASE_URL",
         "DEEPSEEK_BUILD_MODELS_BASE_URL",
         "DEEPSEEK_BUILD_FEEDBACK_BASE_URL",
-        "DEEPSEEK_BUILD_TRACE_UPLOAD_URL",
         "GROK_MANAGED_CONFIG_URL",
         "GROK_CODE_WEB_URL",
         "GROK_CONVERSATIONS_BASE_URL",
@@ -331,9 +330,6 @@ fn baseline_env_from_parent(
         env.insert(key.into(), value.as_os_str().to_owned());
     }
     for (key, value) in [
-        // A test that re-enables the mode must still have no production sink: the pager bakes in the analytics token and events URL.
-        ("GROK_TELEMETRY_EVENTS_URL", ""),
-        ("GROK_TELEMETRY_EVENTS_API_KEY", ""),
         ("DEEPSEEK_BUILD_FEEDBACK_ENABLED", "false"),
         ("GROK_TRACE_UPLOAD", "false"),
         ("GROK_INSTRUMENTATION", "disabled"),
@@ -804,16 +800,6 @@ mod tests {
             Some(OsStr::new("grok-e2e-sandbox")),
             "GROK_AGENT_ID must be pinned so a fresh DEEPSEEK_BUILD_HOME never computes a machine id (WMI on Windows)"
         );
-        for (sink, value) in [
-            ("GROK_TELEMETRY_EVENTS_URL", ""),
-            ("GROK_TELEMETRY_EVENTS_API_KEY", ""),
-        ] {
-            assert_eq!(
-                env_value(&sandbox, sink).as_deref(),
-                Some(OsStr::new(value)),
-                "{sink} must be pinned off so enabling telemetry cannot reach a production sink"
-            );
-        }
         assert_eq!(
             env_value(&sandbox, "NO_PROXY").as_deref(),
             Some(OsStr::new("127.0.0.1,localhost,::1"))

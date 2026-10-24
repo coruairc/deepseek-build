@@ -7,7 +7,6 @@ pub const FIRST_PARTY_CREDENTIAL_ENV_VARS: &[&str] = &[
     "GROK_EXTRA_AUTH_KEY",
     "DEEPSEEK_BUILD_TRACE_UPLOAD_CREDENTIALS_FILE",
     "OTEL_EXPORTER_OTLP_HEADERS",
-    "GROK_INTERNAL_OTLP_HEADERS",
 ];
 
 fn parse_bool(value: &str) -> Option<bool> {
