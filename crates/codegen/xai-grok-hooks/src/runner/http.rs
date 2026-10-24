@@ -973,11 +973,19 @@ mod tests {
             ("https://10.0.0.1/hook", "blocked"),
             ("https://169.254.169.254/latest/meta-data/", "blocked"),
             ("not a url", "invalid URL"),
-            ("https://nonexistent.invalid/hook", "DNS resolution failed"),
         ] {
             let err = validate_hook_url(url).await.expect_err("must reject");
             assert!(err.contains(needle), "for {url}, got: {err}");
         }
+        // Sandboxed resolvers can answer .invalid with a fake-IP (198.18.0.0/15)
+        // address instead of NXDOMAIN; either way the URL must be rejected.
+        let err = validate_hook_url("https://nonexistent.invalid/hook")
+            .await
+            .expect_err("must reject");
+        assert!(
+            err.contains("DNS resolution failed") || err.contains("blocked"),
+            "for nonexistent.invalid, got: {err}"
+        );
     }
 
     use crate::config::HookSpec;
