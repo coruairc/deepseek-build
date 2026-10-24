@@ -331,11 +331,9 @@ fn baseline_env_from_parent(
         env.insert(key.into(), value.as_os_str().to_owned());
     }
     for (key, value) in [
-        ("GROK_TELEMETRY_ENABLED", "false"),
         // A test that re-enables the mode must still have no production sink: the pager bakes in the analytics token and events URL.
         ("GROK_TELEMETRY_EVENTS_URL", ""),
         ("GROK_TELEMETRY_EVENTS_API_KEY", ""),
-        ("GROK_TELEMETRY_TRACE_UPLOAD", "false"),
         ("DEEPSEEK_BUILD_FEEDBACK_ENABLED", "false"),
         ("GROK_TRACE_UPLOAD", "false"),
         ("GROK_INSTRUMENTATION", "disabled"),
@@ -802,10 +800,6 @@ mod tests {
             Some(OsStr::new("1"))
         );
         assert_eq!(
-            env_value(&sandbox, "GROK_TELEMETRY_TRACE_UPLOAD").as_deref(),
-            Some(OsStr::new("false"))
-        );
-        assert_eq!(
             env_value(&sandbox, "GROK_AGENT_ID").as_deref(),
             Some(OsStr::new("grok-e2e-sandbox")),
             "GROK_AGENT_ID must be pinned so a fresh DEEPSEEK_BUILD_HOME never computes a machine id (WMI on Windows)"
@@ -817,7 +811,7 @@ mod tests {
             assert_eq!(
                 env_value(&sandbox, sink).as_deref(),
                 Some(OsStr::new(value)),
-                "{sink} must be pinned off so GROK_TELEMETRY_ENABLED=true cannot reach a production sink"
+                "{sink} must be pinned off so enabling telemetry cannot reach a production sink"
             );
         }
         assert_eq!(

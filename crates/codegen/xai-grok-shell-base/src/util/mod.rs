@@ -117,7 +117,7 @@ pub fn is_trusted_xai_https_url(url: &str) -> bool {
     if is_loopback_host(&parsed) {
         return false;
     }
-    parsed.host_str().is_some_and(is_first_party_api_host)
+    is_first_party_api_origin(&parsed)
 }
 fn is_xai_api_url_impl(url: &str, require_https: bool) -> bool {
     if require_https {
@@ -132,8 +132,14 @@ fn is_xai_api_url_impl(url: &str, require_https: bool) -> bool {
     }
     reqwest::Url::parse(url)
         .ok()
-        .and_then(|url| url.host_str().map(str::to_owned))
-        .is_some_and(|host| is_first_party_api_host(&host))
+        .is_some_and(|parsed| is_first_party_api_origin(&parsed))
+}
+/// `https://api.deepseek.com` on port 443 (explicit or implied) only.
+/// Any other scheme or port on the same host is not first-party, so the key is never sent there.
+fn is_first_party_api_origin(parsed: &reqwest::Url) -> bool {
+    parsed.scheme() == "https"
+        && parsed.host_str().is_some_and(is_first_party_api_host)
+        && parsed.port_or_known_default() == Some(443)
 }
 /// The only first-party API host: exactly `api.deepseek.com`.
 /// Every other host (xAI hosts, other `*.deepseek.com` subdomains, lookalikes)
@@ -361,6 +367,29 @@ pub fn is_grok_process_strict(pid: u32) -> bool {
 mod tests {
     use super::*;
     #[test]
+    fn first_party_requires_https_port_443() {
+        for ok in [
+            "https://api.deepseek.com",
+            "https://api.deepseek.com/v1/chat/completions",
+            "https://api.deepseek.com:443/v1",
+        ] {
+            assert!(is_xai_api_url(ok), "{ok}");
+            assert!(is_xai_api_bearer_url(ok), "{ok}");
+        }
+        for bad in [
+            "https://api.deepseek.com:8443/v1",
+            "https://api.deepseek.com:80/v1",
+            "http://api.deepseek.com/v1",
+            "http://api.deepseek.com:443/v1",
+        ] {
+            assert!(!is_xai_api_url(bad), "{bad}");
+            assert!(!is_xai_api_bearer_url(bad), "{bad}");
+        }
+        // Loopback mock servers stay first-party for refusal, never for bearer attachment.
+        assert!(is_xai_api_url("http://127.0.0.1:8080/v1"));
+        assert!(!is_xai_api_bearer_url("http://127.0.0.1:8080/v1"));
+    }
+    #[test]
     fn test_first_party_url_accepts_proxy_subpath() {
         assert!(is_xai_api_url(
             "https://api.deepseek.com/v1/chat/completions"
@@ -405,7 +434,8 @@ mod tests {
         assert!(!is_xai_api_url("https://prefixdeepseek-build/v1"));
         assert!(!is_xai_api_url("not-a-url"));
         assert!(!is_xai_api_url(""));
-        assert!(is_xai_api_url("http://api.deepseek.com/v1"));
+        // rc5: first-party means https on port 443 only; cleartext is not first-party.
+        assert!(!is_xai_api_url("http://api.deepseek.com/v1"));
         assert!(is_xai_api_url("http://localhost:11434/v1"));
     }
     #[test]

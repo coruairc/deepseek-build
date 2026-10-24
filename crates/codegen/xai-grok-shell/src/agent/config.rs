@@ -1707,9 +1707,6 @@ impl Config {
         crate::util::config::set_remote_campaigns_from_settings(self.remote_settings.as_ref());
     }
     fn apply_env_overrides(&mut self) {
-        if let Some(mode) = env_telemetry_mode("GROK_TELEMETRY_ENABLED") {
-            self.features.telemetry = Some(mode);
-        }
         self.grok_com_config.pin_login_team();
     }
     /// Whether product analytics may run. Every product analytics check calls this.
@@ -1747,9 +1744,6 @@ impl Config {
         if env_bool("DISABLE_TELEMETRY") == Some(true) {
             return Resolved::new(TelemetryMode::Disabled, ConfigSource::Env);
         }
-        if let Some(mode) = env_telemetry_mode("GROK_TELEMETRY_ENABLED") {
-            return Resolved::new(mode, ConfigSource::Env);
-        }
         if let Some(mode) = self.features.telemetry {
             return Resolved::new(mode, ConfigSource::Config);
         }
@@ -1780,7 +1774,7 @@ impl Config {
                 .as_ref()
                 .and_then(|s| s.trace_upload_enabled)
         };
-        BoolFlag::env("GROK_TELEMETRY_TRACE_UPLOAD")
+        BoolFlag::env_value(None)
             .requirement(self.requirements.trace_upload.pinned())
             .config(self.telemetry.trace_upload)
             .feature_flag(ff)
@@ -1798,8 +1792,6 @@ impl Config {
             "telemetry_source": telemetry.source.to_string(),
             "in_requirement_pin": req.pinned(),
             "in_requirement_src": req.source().map(|s| s.to_string()),
-            "in_env_trace_upload": std::env::var("GROK_TELEMETRY_TRACE_UPLOAD").ok(),
-            "in_env_telemetry_enabled": std::env::var("GROK_TELEMETRY_ENABLED").ok(),
             "in_env_disable_telemetry": std::env::var("DISABLE_TELEMETRY").ok(),
             "in_cfg_telemetry_trace_upload": self.telemetry.trace_upload,
             "in_cfg_features_telemetry": self.features.telemetry.map(|m| m.to_string()),
@@ -2358,7 +2350,6 @@ pub(crate) fn is_telemetry_disabled_sync() -> bool {
     !Distribution::current().allows(Capability::Telemetry)
         || !SyncBoolFlag::new(telemetry_enabled_from_toml)
             .disable_env("DISABLE_TELEMETRY")
-            .enable_env(grok_telemetry_env_enabled)
             .resolve()
 }
 /// Like [`is_telemetry_disabled_sync`] but only `true` when telemetry is *explicitly* off.
@@ -2367,7 +2358,6 @@ pub(crate) fn is_telemetry_explicitly_disabled_sync() -> bool {
     !Distribution::current().allows(Capability::Telemetry)
         || !SyncBoolFlag::new(telemetry_enabled_from_toml)
             .disable_env("DISABLE_TELEMETRY")
-            .enable_env(grok_telemetry_env_enabled)
             .default(true)
             .resolve()
 }
@@ -2399,10 +2389,6 @@ fn error_reporting_enabled_from_toml(root: &toml::Value) -> Option<bool> {
         .as_table()?
         .get("error_reporting")?
         .as_bool()
-}
-/// `GROK_TELEMETRY_ENABLED` resolved through `TelemetryMode::parse` so the extended string forms (e.g. `"session_metrics"`) are accepted.
-fn grok_telemetry_env_enabled() -> Option<bool> {
-    env_telemetry_mode("GROK_TELEMETRY_ENABLED").map(|m| !m.is_disabled())
 }
 /// Load `~/.grok/requirements.toml` standalone so the admin pin can beat
 /// env vars.

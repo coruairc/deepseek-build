@@ -2678,7 +2678,7 @@ fn inference_idle_timeout_propagates_to_model_info() {
     let info = ModelInfo::from_config(&entry);
     assert_eq!(info.inference_idle_timeout_secs, Some(120));
 }
-/// Legacy `[telemetry]` sink keys (Mixpanel, OTLP) were deleted; old configs must still load.
+/// Legacy `[telemetry]` sink keys (Mixpanel, OTLP) and `[endpoints] trace_upload_*` were deleted; old configs must still load.
 #[test]
 fn telemetry_legacy_sink_keys_are_ignored() {
     let raw: toml::Value = toml::from_str(
@@ -2688,7 +2688,16 @@ fn telemetry_legacy_sink_keys_are_ignored() {
             mixpanel_enabled = true
             otel_endpoint = "https://otel.example"
             otel_timeout = 10000
+            otel_enabled = true
             trace_upload = false
+
+            [endpoints]
+            trace_upload_url = "https://traces.example"
+            trace_upload_bucket = "gs://bucket"
+            trace_upload_region = "us-east-1"
+            trace_upload_credentials_file = "/var/creds"
+            trace_upload_credentials = "secret"
+            trace_upload_endpoint_url = "https://s3.example"
             "#,
     )
     .unwrap();
@@ -3164,7 +3173,6 @@ fn aux_endpoints_resolve_to_proxy_never_inference() {
         format!("{proxy}/deployment/config")
     );
     assert_eq!(cfg.resolve_feedback_base_url(), proxy);
-    assert_eq!(cfg.resolve_trace_upload_url(), proxy);
     assert_eq!(
         cfg.resolve_otlp_traces_endpoint(),
         format!("{proxy}/traces")
@@ -3176,7 +3184,6 @@ fn aux_endpoints_resolve_to_proxy_never_inference() {
             "https://control.enterprise.example/deployment/config".to_string(),
         ),
         feedback_base_url: Some("https://feedback.enterprise.example".to_string()),
-        trace_upload_url: Some("https://trace.enterprise.example".to_string()),
         ..Default::default()
     };
     assert_eq!(
@@ -3194,10 +3201,6 @@ fn aux_endpoints_resolve_to_proxy_never_inference() {
     assert_eq!(
         overridden.resolve_feedback_base_url(),
         "https://feedback.enterprise.example"
-    );
-    assert_eq!(
-        overridden.resolve_trace_upload_url(),
-        "https://trace.enterprise.example"
     );
 }
 /// REGRESSION: the managed-config URL never follows `xai_api_base_url` through the full loader `Config::new_from_toml_cfg`.
@@ -3963,8 +3966,6 @@ fn resolve_doom_loop_recovery_clamps_tunables() {
 #[test]
 #[serial]
 fn resolve_trace_upload_disabled_when_telemetry_off_despite_remote_flag() {
-    unsafe { std::env::remove_var("GROK_TELEMETRY_ENABLED") };
-    unsafe { std::env::remove_var("GROK_TELEMETRY_TRACE_UPLOAD") };
     let mut cfg = Config::default();
     cfg.features.telemetry = Some(TelemetryMode::Disabled);
     cfg.remote_settings = Some(crate::util::config::RemoteSettings {
@@ -3978,8 +3979,6 @@ fn resolve_trace_upload_disabled_when_telemetry_off_despite_remote_flag() {
 #[test]
 #[serial]
 fn resolve_trace_upload_explicit_config_wins_over_telemetry_off() {
-    unsafe { std::env::remove_var("GROK_TELEMETRY_ENABLED") };
-    unsafe { std::env::remove_var("GROK_TELEMETRY_TRACE_UPLOAD") };
     let mut cfg = Config::default();
     cfg.features.telemetry = Some(TelemetryMode::Disabled);
     cfg.telemetry.trace_upload = Some(true);
@@ -3998,8 +3997,6 @@ fn resolve_trace_upload_explicit_config_wins_over_telemetry_off() {
 #[test]
 #[serial]
 fn trace_upload_stays_off_under_a_requirements_pin_when_the_distribution_withholds_telemetry() {
-    unsafe { std::env::remove_var("GROK_TELEMETRY_ENABLED") };
-    unsafe { std::env::remove_var("GROK_TELEMETRY_TRACE_UPLOAD") };
     let mut cfg = Config::default();
     cfg.telemetry.trace_upload = Some(true);
     cfg.requirements
@@ -4022,8 +4019,6 @@ fn trace_upload_stays_off_under_a_requirements_pin_when_the_distribution_withhol
 #[test]
 #[serial]
 fn trace_upload_decision_debug_reports_winning_source() {
-    unsafe { std::env::remove_var("GROK_TELEMETRY_ENABLED") };
-    unsafe { std::env::remove_var("GROK_TELEMETRY_TRACE_UPLOAD") };
     let mut cfg = Config::default();
     cfg.features.telemetry = Some(TelemetryMode::Disabled);
     cfg.remote_settings = Some(crate::util::config::RemoteSettings {
@@ -4069,9 +4064,7 @@ fn trace_upload_decision_debug_reports_winning_source() {
 #[test]
 #[serial]
 fn resolve_trace_upload_honors_config_when_telemetry_on() {
-    unsafe { std::env::remove_var("GROK_TELEMETRY_ENABLED") };
     unsafe { std::env::remove_var("DISABLE_TELEMETRY") };
-    unsafe { std::env::remove_var("GROK_TELEMETRY_TRACE_UPLOAD") };
     let mut cfg = Config::default();
     cfg.features.telemetry = Some(TelemetryMode::Enabled);
     cfg.telemetry.trace_upload = Some(false);
@@ -5639,10 +5632,9 @@ telemetry = "garbage"
 #[test]
 #[serial]
 fn is_telemetry_explicitly_disabled_sync_env_signals() {
-    unsafe { std::env::set_var("GROK_TELEMETRY_ENABLED", "0") };
+    // `GROK_TELEMETRY_ENABLED` was deleted (D6): it must no longer move the gate.
     unsafe { std::env::remove_var("DISABLE_TELEMETRY") };
-    assert!(is_telemetry_explicitly_disabled_sync());
-    unsafe { std::env::set_var("GROK_TELEMETRY_ENABLED", "1") };
+    unsafe { std::env::set_var("GROK_TELEMETRY_ENABLED", "0") };
     assert!(!is_telemetry_explicitly_disabled_sync());
     unsafe { std::env::remove_var("GROK_TELEMETRY_ENABLED") };
     unsafe { std::env::set_var("DISABLE_TELEMETRY", "1") };
@@ -5654,14 +5646,13 @@ fn is_telemetry_explicitly_disabled_sync_env_signals() {
 fn resolve_telemetry_mode_disable_env_beats_opt_in_but_not_requirements_pin() {
     let home = tempfile::tempdir().unwrap();
     let _home = EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());
-    let _enable = EnvGuard::set("GROK_TELEMETRY_ENABLED", "true");
     let mut cfg = Config::default();
     cfg.features.telemetry = Some(TelemetryMode::Enabled);
     let _falsy = EnvGuard::set("DISABLE_TELEMETRY", "0");
     let resolved = cfg.resolve_telemetry_mode();
     assert_eq!(
         (resolved.value, resolved.source),
-        (TelemetryMode::Enabled, ConfigSource::Env)
+        (TelemetryMode::Enabled, ConfigSource::Config)
     );
     let _truthy = EnvGuard::set("DISABLE_TELEMETRY", "1");
     let resolved = cfg.resolve_telemetry_mode();
@@ -5687,7 +5678,6 @@ fn resolve_telemetry_mode_disable_env_beats_opt_in_but_not_requirements_pin() {
 #[serial]
 fn requirements_telemetry_pin_beats_user_config() {
     unsafe { std::env::remove_var("DISABLE_TELEMETRY") };
-    unsafe { std::env::remove_var("GROK_TELEMETRY_ENABLED") };
     let mut cfg = Config::default();
     cfg.features.telemetry = Some(TelemetryMode::Enabled);
     cfg.requirements.telemetry.pin(

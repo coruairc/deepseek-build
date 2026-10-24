@@ -35,8 +35,7 @@ impl TelemetryMode {
 #[cfg(test)]
 mod telemetry_mode_tests {
     use super::TelemetryMode;
-    /// A parent process hands its resolved mode to spawned children via `GROK_TELEMETRY_ENABLED={mode}` (Display).
-    /// Every Display output must parse back to the same mode.
+    /// `TelemetryMode` Display output (e.g. for logs and config writes) must parse back to the same mode.
     #[test]
     fn display_round_trips_through_parse() {
         for mode in [

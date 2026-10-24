@@ -3102,9 +3102,6 @@ fn apply_requirements_value_overrides_user_settings() {
                 .iter()
                 .any(|e| e.path == "ui.yolo" && e.value == "--yolo blocked")
         );
-    // `endpoints.trace_upload_*` requirement pins were deleted (rc5); requirements no longer set them.
-    assert!(cfg.endpoints.trace_upload_endpoint_url.is_none());
-    assert!(cfg.endpoints.trace_upload_credentials.is_none());
     assert_eq!(
             Some("enterprise-deploy-key-should-not-log"),
             cfg.endpoints.deployment_key.as_deref()

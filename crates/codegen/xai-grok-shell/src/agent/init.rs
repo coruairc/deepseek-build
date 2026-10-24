@@ -188,17 +188,12 @@ fn init_process(cfg: &AgentConfig, auth_manager: &AuthManager) {
         let trace_upload = cfg.resolve_trace_upload();
         let feedback = cfg.feature(config::Feature::Feedback);
         let feedback_url = cfg.endpoints.resolve_feedback_base_url();
-        let trace_upload_url = cfg.endpoints.resolve_trace_upload_url();
         tracing::info!(
             telemetry = %telemetry_mode,
             trace_upload = %trace_upload,
             feedback = %feedback,
             feedback_url = %feedback_url,
             feedback_url_custom = cfg.endpoints.feedback_base_url.is_some(),
-            trace_upload_url = %trace_upload_url,
-            trace_upload_url_custom = cfg.endpoints.trace_upload_url.is_some(),
-            trace_upload_bucket = cfg.endpoints.trace_upload_bucket.as_deref().unwrap_or("none"),
-            trace_upload_region = cfg.endpoints.trace_upload_region.as_deref().unwrap_or("none"),
             "data capture config resolved",
         );
         if telemetry_mode.value.is_disabled() && trace_upload.value {

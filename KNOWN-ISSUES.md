@@ -8,6 +8,16 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
 
 ## Build & tests
 
+- **Pre-existing flaky `xai-grok-shell` lib tests (checked 2026-10-24 on main
+  `a1b81d37`).** `cargo test -p xai-grok-shell --lib --features config-docs -j 1`
+  (with `DEEPSEEK_API_KEY` unset) failed
+  `agent::folder_trust::tests::record_and_lookup_round_trip` in 3 of 3 full
+  runs, and `util::config::consent::tests::set_consent_answer_is_monotonic_per_account`
+  in 1 of 3. Both pass when run on their own, so they depend on shared
+  process/home state from other tests, not on the rc5 changes. Separately,
+  three config tests fail when `DEEPSEEK_API_KEY` is exported in the test
+  environment; run the suite with it unset.
+
 - **A full `cargo test --workspace` run is green except for two host-only
   failures.** The last full run (`cargo test --workspace --no-fail-fast --
   --test-threads=4`, 2026-10-09) reported **31,939 passed / 2 failed / 388

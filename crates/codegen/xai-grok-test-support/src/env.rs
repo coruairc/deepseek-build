@@ -74,7 +74,6 @@ pub unsafe fn isolate_grok_env(home: &Path) {
     // SAFETY: forwarded to the caller.
     unsafe {
         std::env::set_var("DEEPSEEK_BUILD_HOME", home);
-        std::env::set_var("GROK_TELEMETRY_ENABLED", "false");
         std::env::set_var("GROK_TELEMETRY_EVENTS_URL", "");
         std::env::set_var("GROK_TELEMETRY_EVENTS_API_KEY", "");
         std::env::set_var("DEEPSEEK_BUILD_FEEDBACK_ENABLED", "false");

@@ -497,7 +497,6 @@ pub fn sweep_env_init() -> SweepEnv {
     unsafe {
         std::env::set_var("DEEPSEEK_BUILD_HOME", grok_home.path());
         std::env::set_var("DEEPSEEK_API_KEY", "test-key-for-ci");
-        std::env::set_var("GROK_TELEMETRY_ENABLED", "false");
         std::env::set_var("DEEPSEEK_BUILD_FEEDBACK_ENABLED", "false");
         std::env::set_var("GROK_TRACE_UPLOAD", "false");
     }
