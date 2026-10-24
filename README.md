@@ -25,7 +25,7 @@ OpenAI-compatible Chat Completions API. It is a work in progress (see
 | Phase 2 - DeepSeek adapter | Core done: Chat Completions-only backend (`Responses`/`Messages` deleted), `thinking` control, `reasoning_content` round-trip + sanitizer, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-v4-pro`), wiremock suite. Live smoke run 8/8 PASS (2026-10-07, author's machine). |
 | Phase 3 - TUI | Implemented: reasoning fold (`e`/`E`/`Ctrl+E`), collapsible thinking, optional status line (off by default; enable `[ui.status_line]` to show cwd, model, context), `/model` `/effort` `/think` `/theme`, Monokai default theme + whale logo. |
 | Phase 4 - harden existing features | Partial: runtime read-before-write guard and dangerous-command warnings are in; plan mode, permissions, resume, subagents, MCP, `AGENTS.md`, and checkpoints exist and need an end-to-end pass. A full `cargo test --workspace` run is **not green yet** (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). |
-| Phase 5 - testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. Release pipeline (CI tarballs + installer) and container definitions are added but **have never run**: no tag pushed, no release, no image. |
+| Phase 5 - testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. Linux-only prerelease [`v0.0.1-rc4`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc4) is published (x86_64 + aarch64 tarballs, installer); no macOS builds and no container image yet. |
 
 See [`AGENTS.md`](AGENTS.md) for a precise resume-from-here handoff.
 
@@ -136,8 +136,9 @@ Official releases also publish a multi-arch (linux/amd64, linux/arm64) image to
 GitHub Container Registry. It is **not affiliated with DeepSeek**.
 
 > **Not yet built or published.** The container job in the release workflow runs
-> only on a tag push, and no tag has been pushed, so there is no GHCR image to
-> pull and the `docker pull` commands below cannot work yet (checked 2026-10-09).
+> only on a tag push and needs every build target to succeed; on `v0.0.1-rc4` the
+> macOS build timed out, so the job was skipped and there is no GHCR image to
+> pull. The `docker pull` commands below cannot work yet (checked 2026-10-24).
 > The production image is assembled from a staged context containing the release
 > tarball's binary as `deepseek-build-amd64`/`deepseek-build-arm64` plus the
 > license files; see `docker/Dockerfile` and the container step in

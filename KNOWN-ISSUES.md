@@ -182,14 +182,18 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   scripted keystrokes (2026-10-07: welcome logo, `/model`, `/effort`, `/think`,
   status line), but no person has used it interactively. §4 items in
   [`TESTING.md`](TESTING.md) are the checklist for that pass.
-- **Release workflow in CI: never run.** `.github/workflows/release.yml` has
-  never executed; no `v*` tag has been pushed; no GitHub release exists
-  (`gh release list` empty, verified 2026-10-09). The test-tag procedure in
-  [`AGENTS.md`](AGENTS.md) §6 is untested end to end.
-- **Container image: never built or pulled.** Neither the production
-  `docker/Dockerfile` (needs staged release tarballs) nor
-  `docker/Dockerfile.localtest` has been exercised; the README's GHCR pull
-  examples cannot work until a release is published.
+- **Release workflow in CI: Linux only.** Tags `v0.0.1-rc2`/`rc3` failed on the
+  Linux protoc 3.12 build; `v0.0.1-rc4` (run 40111152104) built both Linux
+  targets, but `aarch64-apple-darwin` hit the 90-minute `timeout-minutes` and
+  cancelled the run before `publish`. The Linux-only prerelease
+  [`v0.0.1-rc4`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc4) was published by hand from that run's artifacts
+  (2026-10-24); the x86_64 installer was verified against it. macOS builds are
+  dropped for now (a per-target timeout change needs a token with the
+  `workflow` scope).
+- **Container image: never built or pulled.** The `container` job `needs` the
+  whole build matrix, so the rc4 macOS cancellation skipped it; there is no
+  GHCR package (checked 2026-10-24). Neither `docker/Dockerfile` nor
+  `docker/Dockerfile.localtest` has been exercised.
 - **Live scripts on any machine but the author's: never.** `scripts/smoke-test.sh`
   (8/8) and `scripts/egress-check.sh` (`EGRESS_VIOLATIONS=0`) passed there on
   2026-10-07 and have not been reproduced elsewhere.

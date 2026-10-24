@@ -50,10 +50,12 @@ public description; §7 maps the code and §8 lists the rules for changing it.
   won; nothing became a new default).
 - **Headless cost:** `--output-format json` emits `estimated_cost_usd` +
   `estimate: true` (local peak-rate estimate, D14) alongside usage.
-- **Release/container:** pipeline + installer + `docker/Dockerfile` exist and
-  `scripts/test-install.sh` is 39/39, but **no `v*` tag has been pushed, no release
-  exists, and no container image has been built or pulled** (checked 2026-10-09).
-  Dry-run procedure: §6.
+- **Release/container:** prerelease [`v0.0.1-rc4`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc4) (`b8b4fc20`) is
+  published, **Linux only** (x86_64 + aarch64 tarballs, `SHA256SUMS`, `install.sh`);
+  the x86_64 install was verified from the real release on 2026-10-24. macOS is
+  dropped for now: the aarch64-apple-darwin job hit the 90-minute job timeout and
+  cancelled the run, so the container job was skipped and **no GHCR image exists**
+  (checked 2026-10-24). Dry-run procedure: §6.
 - **Status:** usable with a real `DEEPSEEK_API_KEY`. See `TESTING.md`,
   `scripts/smoke-test.sh`, `scripts/egress-check.sh`, `scripts/sandbox-run.sh`,
   `KNOWN-ISSUES.md`. Remaining: confirm one full green workspace run (host-only
