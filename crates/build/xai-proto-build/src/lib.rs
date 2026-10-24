@@ -238,6 +238,9 @@ impl XaiProtoBuilder {
         } = self;
         let mut config = prost_build::Config::new();
         config.enable_type_names();
+        // Old system protoc (e.g. 3.12 on ubuntu-22.04) rejects proto3 optional
+        // fields unless this flag is passed; newer protoc accepts it as a no-op.
+        config.protoc_arg("--experimental_allow_proto3_optional");
 
         let protoc = find_protoc::find_protoc()?;
 
