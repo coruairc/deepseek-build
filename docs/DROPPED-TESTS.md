@@ -590,3 +590,49 @@ Test count: `xai-grok-login --lib` **413 passed / 0 failed / 1 ignored → 395
 passed / 0 failed / 1 ignored** (−18, ≈4% of the crate; well under the 25% cap).
 Retained coverage: `manager`, `credential_provider`, `api_key_probe`,
 `side_call_bearer`, `storage`, and the refresh state machine.
+
+## rc5 telemetry / trace-upload / proxy-trust removal (`4595181c`, `80f1103a`, `4b305bd0`)
+
+These tests asserted OTLP/OTEL trace export, trace/storage upload, Mixpanel
+product telemetry, or the xAI CLI chat proxy remote kill-switch. All of that
+behavior was removed in rc5; the first-party key check now allows only
+`https://api.deepseek.com` (port 443) plus loopback and is covered by
+`first_party_requires_https_port_443` and the `test_first_party_url_*` tests
+(the four `test_is_cli_chat_proxy_url_*` tests in `xai-grok-shell-base`
+were renamed to these, not dropped). Old configs carrying the removed keys
+are covered by `telemetry_legacy_sink_keys_are_ignored`.
+
+### `xai-grok-config` (`src/endpoints_tests.rs`)
+
+- `otlp_traces_endpoint_precedence` — `resolve_otlp_traces_endpoint` was deleted with the OTLP exporter.
+- `otlp_headers_trim_whitespace_and_skip_blank_keys` — tested `parse_otlp_header_list`, deleted with OTLP header resolution.
+- `internal_otlp_endpoint_grok_internal_wins_regardless_of_switch` — `GROK_INTERNAL_OTLP*` endpoint resolution was removed.
+- `internal_otlp_endpoint_legacy_fallback_when_switch_unset` — legacy internal OTLP endpoint fallback was removed.
+- `internal_otlp_ignores_legacy_vars_when_switch_set` — internal/external OTLP switch logic was removed.
+- `internal_otlp_consumed_standard_vars_cases` — `internal_otlp_consumed_standard_vars` was deleted.
+- `internal_otlp_headers_precedence` — `resolve_otlp_headers` was deleted.
+- `external_otel_master_switch_resolves_from_all_layers` — the external OTEL master switch (`DEEPSEEK_BUILD_EXTERNAL_OTEL`) was removed.
+
+### `xai-grok-shell`
+
+- `agent::config_tests::telemetry_config_parses_custom_values_from_toml` — the `otel_*`/`mixpanel_*`/`trace_upload_*` telemetry fields it parsed no longer exist.
+- `agent::config_tests::telemetry_otel_timeout_accepts_toml_integer_and_string` — OTEL timeout fields were deleted.
+- `agent::config_tests::telemetry_empty_string_disables_sink` — remote telemetry sinks were deleted; there is nothing to disable.
+- `agent::config_tests::telemetry_partial_override_retains_defaults` — asserted defaults for deleted sink fields.
+- `agent::config_tests::remote_settings_disarm_managed_config_signatures` — the remote kill-switch was deleted.
+- `agent::config_tests::remote_settings_disarm_requires_prod_proxy_when_keys_embedded` — the kill-switch and prod-proxy trust helpers were deleted.
+- `config_docs::tests::telemetry_otel_keys_have_rows` — the `telemetry.otel_*` config keys and their doc rows were removed.
+
+### `xai-grok-telemetry` (`src/config.rs`)
+
+- `tests::build_env_default_normalizes` — build-env baked sink defaults (`build_env_default`) were deleted.
+- `tests::disarm_baked_sinks_keeps_explicit_sink` — `disarm_baked_sinks` was deleted with the kill-switch.
+- `tests::default_is_build_env_layer_when_feature_off` — the build-env defaults layer was deleted.
+- `tests::otel_timeout_fields_accept_int_or_string` — OTEL timeout fields and their deserializer were deleted.
+
+### `xai-grok-pager-pty-harness` e2e
+
+- `storage_upload_parks_on_401_and_drains_after_recovery` (file deleted) — session storage/trace upload was removed, so there is no upload to park or drain.
+- `feedback_modal_pty::feedback_modal_trace_step_and_upload_ordering_pty` — asserted trace-step upload ordering on feedback submit; trace upload was removed.
+
+Count: 21 tests dropped.
