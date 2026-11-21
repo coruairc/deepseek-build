@@ -9,13 +9,15 @@ or observable state.
 - **Live checks (§3) and installer/container/release (§5):** another ~25–40
   minutes; §3 needs a real key, §5 does not.
 
-> Status (2026-10-21): the release build is green and the binary runs; all test
-> targets compile. The last full `cargo test --workspace` run (2026-10-09) was
-> 31,939 passed / 2 failed / 388 ignored; the 2 failures are host-only `bwrap`
-> sandbox e2e tests (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). The live DeepSeek
-> smoke test and the runtime egress audit were last green on the author's machine
-> (2026-10-07). Four surfaces have never been exercised: see
-> [Not exercised yet](#not-exercised-yet).
+> Status (2026-11-21): `scripts/test-gate.sh` is green on this tree — exit 0,
+> step 1 (workspace) PASS, step 2 (`config-docs`) PASS, leak scan PASS;
+> results 308 = binaries 219 + doctests 89, and the checked-in expected count is
+> 308. Evidence is under `docs/evidence/01-truth-baseline/test-gate/`. The live
+> DeepSeek smoke test and the runtime egress audit were last green on the
+> author's machine (2026-10-07). `scripts/check-egress.sh --strict` is red on
+> this tree for three pre-existing source strings (see
+> [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). Four surfaces have never been
+> exercised: see [Not exercised yet](#not-exercised-yet).
 
 ## Disk budget
 
@@ -118,14 +120,36 @@ Launch the binary and approve tool calls as prompted.
 
 ## 6. Test suite status
 
-- `cargo check --workspace --tests` is green (all test targets compile). The
-  last full `cargo test --workspace --no-fail-fast -- --test-threads=4`
-  (2026-10-09) was **31,939 passed / 2 failed / 388 ignored across 307
-  targets**; the 2 failures are `xai-grok-sandbox --test deny_paths_e2e` and
-  come from this host's root-only `/run/containerd`, not code. `xai-grok-login`
-  is green (395 / 0 / 1) since the dead OIDC surface was deleted. See
-  [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) and `docs/DROPPED-TESTS.md` before
-  quoting numbers.
+- **The gate is `scripts/test-gate.sh`; run it before any release claim.** On
+  2026-11-21 it exited 0: step 1 `cargo test --workspace --no-fail-fast --
+  --test-threads=4` PASS, step 2 `cargo test -p xai-grok-shell --lib --features
+  config-docs -j 1` PASS, and the leak scan over `docs/evidence` PASS. Counts:
+  `results=308`, `binaries=219`, `doctests=89`, `expected=308`. The verdict is
+  the arithmetic (`results == binaries + doctests == expected`), never the tail
+  of the log. `results` counts one top-level `test result:` line per cargo
+  target block; raw `test result:` lines are 309 because
+  `xai_tty_utils`'s `stderr_redirect_roundtrip_subprocess` re-runs its own test
+  binary with inherited stdout. Both cargo steps run with
+  `DEEPSEEK_API_KEY`, `DEEPSEEK_BUILD_API_KEY` and `XAI_API_KEY` unset.
+  Evidence: [`docs/evidence/01-truth-baseline/test-gate/`](docs/evidence/01-truth-baseline/test-gate/).
+- **The expected count is checked in** at `scripts/test-gate.expected`, with its
+  provenance header (refresh command, commit, UTC date, the three numbers). Only
+  a fully green `scripts/test-gate.sh --refresh-expected` rewrites it; edit it by
+  hand and the full-mode comparison fails.
+- **Determinism (2026-11-21).** The two process-global `xai-grok-shell` tests
+  (`agent::folder_trust::tests::record_and_lookup_round_trip` and
+  `util::config::consent::tests::set_consent_answer_is_monotonic_per_account`)
+  now share one bare `#[serial_test::serial]` key. Five consecutive
+  `cargo test -p xai-grok-workspace --lib -- --test-threads=4` runs each
+  reported `1694 passed; 0 failed`, so no `restore_fetch` band moved and no test
+  is quarantined. The `git_gate` waits were widened (root-cache sleep 100 → 500
+  ms; walk-timeout TTL 20 → 100 ms, sleep 40 → 250 ms; late-OK walk timeout
+  40 → 100 ms, sleep 50 → 250 ms; joiner TTL 500 ms → 5 s; sustained-invalidate
+  outer timeout ×3 → ×10); no assertion changed direction.
+- `cargo check --workspace --tests` is green (all test targets compile).
+  `xai-grok-login` is green (395 / 0 / 1) since the dead OIDC surface was
+  deleted. See [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) and
+  `docs/DROPPED-TESTS.md` before quoting numbers.
 - Branding gate: `cargo test -p xai-grok-pager-bin --test branding_surface`
   runs the real binary's `--help`, `agent --help`, `--version`, `completions
   bash`, and a keyless headless run, and fails on `grok` / `xai` / `x.ai`.

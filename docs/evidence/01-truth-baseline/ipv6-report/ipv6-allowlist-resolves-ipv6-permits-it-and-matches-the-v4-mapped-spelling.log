@@ -1,0 +1,1 @@
+PASS: ipv6-allowlist: resolves IPv6, permits it, and matches the v4-mapped spelling

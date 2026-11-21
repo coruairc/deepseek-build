@@ -1,0 +1,1 @@
+PASS: script: sandbox-run.sh runs end to end (BIN=/bin/echo)

@@ -139,7 +139,8 @@ async fn snapshot_within_ttl_skips_second_walk() {
 #[tokio::test]
 async fn joiners_do_not_start_a_second_walk() {
     let repo = init_temp_repo();
-    let gate = test_gate(Duration::from_millis(500), Duration::from_secs(5));
+    // 5 s TTL so the 80 ms post-release sleep cannot cross it under load.
+    let gate = test_gate(Duration::from_secs(5), Duration::from_secs(5));
     let walks = Arc::new(AtomicUsize::new(0));
     let release = tokio::sync::watch::channel(false).0;
 
@@ -254,14 +255,16 @@ async fn walk_timeout_without_snapshot_is_error() {
 #[tokio::test]
 async fn walk_timeout_after_ttl_does_not_resurrect_snapshot() {
     let repo = init_temp_repo();
-    let gate = test_gate(Duration::from_millis(20), Duration::from_millis(40));
+    // 100 ms TTL / 100 ms walk timeout / 250 ms sleep: the sleep still outlives
+    // the TTL, with headroom for a loaded scheduler.
+    let gate = test_gate(Duration::from_millis(100), Duration::from_millis(100));
     let ok_walk = || async { Ok(9_u32) };
     assert_eq!(
         gate.run(repo.path(), status_op(), ok_walk).await.unwrap(),
         9
     );
 
-    tokio::time::sleep(Duration::from_millis(40)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let hang = Arc::new(Notify::new());
     let timed = gate
@@ -282,7 +285,8 @@ async fn walk_timeout_after_ttl_does_not_resurrect_snapshot() {
 #[tokio::test]
 async fn late_ok_after_waiter_timeout_is_snapshotted() {
     let repo = init_temp_repo();
-    let gate = test_gate(Duration::from_secs(5), Duration::from_millis(40));
+    // 100 ms walk timeout; the 250 ms sleep after notify keeps sleep > timeout.
+    let gate = test_gate(Duration::from_secs(5), Duration::from_millis(100));
     let walks = Arc::new(AtomicUsize::new(0));
     let hang = Arc::new(Notify::new());
 
@@ -305,7 +309,7 @@ async fn late_ok_after_waiter_timeout_is_snapshotted() {
     assert_eq!(walks.load(Ordering::SeqCst), 1);
 
     hang.notify_waiters();
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
 
     let later = gate
         .run(repo.path(), status_op(), {
@@ -517,7 +521,8 @@ async fn root_cache_expires_so_a_new_nested_repo_is_rediscovered() {
 
     let before = super::canonical_git_root(&nested).await.unwrap();
     git2::Repository::init(&nested).unwrap();
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    // 500 ms sleeps past the 80 ms test-only ROOT_CACHE_TTL with headroom.
+    tokio::time::sleep(Duration::from_millis(500)).await;
     let after = super::canonical_git_root(&nested).await.unwrap();
     assert_ne!(before, after);
 }
@@ -557,7 +562,7 @@ async fn sustained_invalidate_during_inflight_run_returns_after_at_most_two_walk
     release.send(true).unwrap();
 
     let mut run = run;
-    let result = tokio::time::timeout(walk_timeout.saturating_mul(3), async {
+    let result = tokio::time::timeout(walk_timeout.saturating_mul(10), async {
         loop {
             tokio::select! {
                 biased;

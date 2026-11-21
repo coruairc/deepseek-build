@@ -1,0 +1,48 @@
+{
+  "item": "ipv6-report",
+  "requirements": [
+    "SBOX-02"
+  ],
+  "date": "2026-11-21T19:52:49Z",
+  "host": "Linux/x86_64",
+  "command": "sh scripts/test-sandbox-run.sh (captured with script -T)",
+  "steps": [
+    {
+      "name": "ipv6-refused: blocked line names 2001:db8::1",
+      "ok": true,
+      "detail": "exit 0: PASS: ipv6-refused: blocked line names 2001:db8::1"
+    },
+    {
+      "name": "ipv6-refused: no 'non-ip' placeholder",
+      "ok": true,
+      "detail": "exit 0: PASS: ipv6-refused: no 'non-ip' placeholder"
+    },
+    {
+      "name": "ipv6-loopback: ::1 and ::ffff:127.0.0.1 permitted",
+      "ok": true,
+      "detail": "exit 0: PASS: ipv6-loopback: ::1 and ::ffff:127.0.0.1 permitted"
+    },
+    {
+      "name": "ipv6-allowlist: resolves IPv6, permits it, and matches the v4-mapped spelling",
+      "ok": true,
+      "detail": "exit 0: PASS: ipv6-allowlist: resolves IPv6, permits it, and matches the v4-mapped spelling"
+    },
+    {
+      "name": "ipv4-refused: blocked line names 203.0.113.9",
+      "ok": true,
+      "detail": "exit 0: PASS: ipv4-refused: blocked line names 203.0.113.9"
+    },
+    {
+      "name": "script: sandbox-run.sh runs end to end (BIN=/bin/echo)",
+      "ok": true,
+      "detail": "exit 0: PASS: script: sandbox-run.sh runs end to end (BIN=/bin/echo)"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/01-truth-baseline/ipv6-report/ipv6-report.cast",
+      "sha256": "e18c867af907e1b341b34ae7adb6df30654eca4b8fdcee1ab9432d4b9005f636"
+    }
+  ],
+  "result": "ok"
+}

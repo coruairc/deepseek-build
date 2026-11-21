@@ -40,7 +40,7 @@ account = "other@example.com"
 }
 
 #[tokio::test]
-#[serial_test::serial(DEEPSEEK_BUILD_HOME)]
+#[serial_test::serial]
 async fn set_consent_answer_is_monotonic_per_account() {
     let home = tempfile::tempdir().expect("home");
     let _guard = xai_grok_test_support::env::EnvGuard::set("DEEPSEEK_BUILD_HOME", home.path());

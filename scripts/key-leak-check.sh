@@ -7,6 +7,13 @@
 # Usage:
 #   scripts/key-leak-check.sh
 #   BIN=target/debug/deepseek-build scripts/key-leak-check.sh
+#   scripts/key-leak-check.sh --scan docs/evidence [path...]
+#
+# `--scan <path>...` is an additive mode for committed evidence: it skips the
+# release-binary precheck and the live run, scans the given files/directories
+# for the canary and for any `sk-` key shape, prints file names only (never
+# matched lines), and exits 1 on a hit. With no arguments the script behaves
+# exactly as before.
 #
 # This is a bash script (see the shebang); pipefail is intentional. The repo
 # also lints scripts with `shellcheck --shell=sh` for consistency, so declare
@@ -20,6 +27,54 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 HOME_DIR="$WORK/home"; mkdir -p "$HOME_DIR"
 FAKE_KEY="sk-FAKE-LEAKCANARY-0000000000000000000000000000"
+
+scan=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --scan)
+      scan=1
+      shift
+      break
+      ;;
+    -h|--help)
+      echo "Usage: scripts/key-leak-check.sh [--scan <path>...]"
+      exit 0
+      ;;
+    *)
+      echo "FAIL  unknown argument: $1"
+      exit 2
+      ;;
+  esac
+done
+
+if [ "$scan" -eq 1 ]; then
+  if [ $# -eq 0 ]; then
+    echo "FAIL  --scan requires at least one path"
+    exit 2
+  fi
+  for path in "$@"; do
+    if [ ! -e "$path" ]; then
+      echo "FAIL  path not found: $path"
+      exit 2
+    fi
+  done
+  # File names only: grep -l never prints the matched line, and -I skips
+  # binaries (casts are text, but a future artifact may not be).
+  if grep -RIlE -- "sk-FAKE-LEAKCANARY-[A-Za-z0-9-]+|sk-[A-Za-z0-9]{20,}" "$@" \
+    >"$WORK/hits.txt" 2>/dev/null; then
+    hits=$(wc -l <"$WORK/hits.txt")
+    echo "FAIL  key-shaped string found in $hits file(s):"
+    cat "$WORK/hits.txt"
+    exit 1
+  fi
+  echo "PASS  no key-shaped string in: $*"
+  exit 0
+fi
+
+if [ $# -gt 0 ]; then
+  echo "FAIL  unexpected argument: $1"
+  exit 2
+fi
 
 if [ ! -x "$BIN" ]; then
   echo "FAIL  binary not found at $BIN"

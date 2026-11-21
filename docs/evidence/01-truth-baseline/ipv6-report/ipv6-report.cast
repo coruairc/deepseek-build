@@ -1,0 +1,9 @@
+{"version": 2, "width": 80, "height": 24}
+[0.090899, "o", "=== egress_guard.c harness ===\r\n"]
+[0.104965, "o", "PASS: ipv6-refused: blocked line names 2001:db8::1\r\n"]
+[0.104984, "o", "PASS: ipv6-refused: no 'non-ip' placeholder\r\n"]
+[0.134403, "o", "PASS: ipv6-loopback: ::1 and ::ffff:127.0.0.1 permitted\r\n"]
+[2.163989, "o", "PASS: ipv6-allowlist: resolves IPv6, permits it, and matches the v4-mapped spelling\r\n"]
+[2.17814, "o", "PASS: ipv4-refused: blocked line names 203.0.113.9\r\n"]
+[2.248524, "o", "PASS: script: sandbox-run.sh runs end to end (BIN=/bin/echo)\r\n\r\n"]
+[2.248538, "o", "ALL PASS (6 assertions)\r\n"]

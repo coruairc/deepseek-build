@@ -8,28 +8,50 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
 
 ## Build & tests
 
-- **Pre-existing flaky `xai-grok-shell` lib tests (checked 2026-10-24 on main
-  `a1b81d37`).** `cargo test -p xai-grok-shell --lib --features config-docs -j 1`
-  (with `DEEPSEEK_API_KEY` unset) failed
-  `agent::folder_trust::tests::record_and_lookup_round_trip` in 3 of 3 full
-  runs, and `util::config::consent::tests::set_consent_answer_is_monotonic_per_account`
-  in 1 of 3. Both pass when run on their own, so they depend on shared
-  process/home state from other tests, not on the rc5 changes. Separately,
-  three config tests fail when `DEEPSEEK_API_KEY` is exported in the test
-  environment; run the suite with it unset.
+- **`process_key_from_model_env_key` can print an exported `DEEPSEEK_API_KEY`
+  (pre-existing, found 2026-11-21).** With `DEEPSEEK_API_KEY` exported,
+  `agent::config::tests::process_key_from_model_env_key` resolves the exported
+  key where it expects the model's `env_key` token, so the `assert_eq!` failure
+  message prints the real key value. The gate (`scripts/test-gate.sh`) unset the
+  three key variables for every cargo step; a hand-run of the shell suite must do
+  the same (`env -u DEEPSEEK_API_KEY -u DEEPSEEK_BUILD_API_KEY -u XAI_API_KEY`).
+  Redacting the value in the assertion is a follow-up outside this phase.
 
-- **A full `cargo test --workspace` run is green except for two host-only
-  failures.** The last full run (`cargo test --workspace --no-fail-fast --
-  --test-threads=4`, 2026-10-09) reported **31,939 passed / 2 failed / 388
-  ignored across 307 targets**. The 2 failures are
-  `xai-grok-sandbox --test deny_paths_e2e` (`devbox_genuine_reexec_applies_enforcement`,
-  `read_deny_empty_set_verifies_inside_bwrap`): `bwrap` fails with
-  `Can't mkdir parents for /run/containerd/containerd.sock: Permission denied`
-  because this host's `/run/containerd` is root-only. The crate is byte-identical
-  to `last-known-good-2026-10-06`, and a bare `bwrap` with the same bind flags
-  reproduces the failure, so these are environment, not code — they should pass
-  where `/run/containerd` is readable. A full run on the final `cc6e6948` tree was
-  in flight at session end.
+- **`xai-grok-shell` env-global test rotation: fixed (2026-11-21).**
+  `agent::folder_trust::tests::record_and_lookup_round_trip` now carries
+  `#[serial_test::serial]`, and
+  `util::config::consent::tests::set_consent_answer_is_monotonic_per_account`
+  dropped its *named* key (`serial(DEEPSEEK_BUILD_HOME)`), so both share the same
+  serial key and exclude each other. The `config-docs` gate step then passed
+  inside `scripts/test-gate.sh`. Separately, three config tests fail when
+  `DEEPSEEK_API_KEY` is exported; the gate unsets it (see the entry above).
+
+- **The full workspace run is green under the gate (2026-11-21).**
+  `scripts/test-gate.sh` exits 0: step 1 `cargo test --workspace --no-fail-fast
+  -- --test-threads=4` PASS, step 2 `cargo test -p xai-grok-shell --lib
+  --features config-docs -j 1` PASS, leak scan PASS; `results=308`,
+  `binaries=219`, `doctests=89`, `expected=308` (checked in at
+  `scripts/test-gate.expected`). Completeness is asserted arithmetically —
+  `results` counts one top-level `test result:` line per cargo target block —
+  and never inferred from the log tail. Raw `test result:` lines are 309
+  because `xai_tty_utils`'s `stderr_redirect_roundtrip_subprocess` re-runs its
+  own test binary with inherited stdout. Evidence:
+  `docs/evidence/01-truth-baseline/test-gate/`. **The 2026-10-09 figure
+  "31,939 passed / 2 failed / 388 ignored across 307 targets" is stale** (a
+  different tree) and must not be quoted. Quarantined tests: none. **The
+  confirmation rerun (plan 01-05 step 3f) was interrupted by a pause and is
+  NOT RUN; re-run `scripts/test-gate.sh` once on resume before treating the
+  count as confirmed, and do not change the expected count if it differs.**
+  The `test-gate` evidence item is also partial (log only; no cast or
+  `report.json`).
+- **`xai-grok-sandbox --test deny_paths_e2e` is green: 14 passed / 0 failed /
+  1 ignored (2026-11-21).** The previously failing
+  `devbox_genuine_reexec_applies_enforcement` now runs a
+  `[profiles.genuine] extends = "devbox"` profile with an explicit `deny`, so
+  the genuine re-exec has a non-empty plan on a host with no `/data`; the single
+  ignored test is the pre-existing `subprocess_entry` harness entry point and no
+  new `#[ignore]` was added. `read_deny_empty_set_verifies_inside_bwrap` passes
+  here because `/run/containerd` is absent.
 - **`xai-grok-login`: green — 413 → 395 passed / 0 failed / 1 ignored.** The
   lane was red (405/33/1) because inert OAuth/OIDC scaffolding tests could never
   pass, and one e2e test deadlocked. Fixed 2026-10-09: the dead xAI login/OIDC
@@ -42,14 +64,18 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   6221; the 24-test drop is inside the deleted login surface). `xai-grok-pager`
   9876 / 0 / 4 and `xai-grok-pager-minimal` 94 / 0 unchanged.
 - **All test targets compile** (`cargo check --workspace --tests` green).
-- **`xai-grok-workspace` test target: compiles and passes** (1693 passed; a
-  pre-existing `session::git_gate` / `restore_fetch` timing flake rotates under
-  whole-suite saturation and passes in isolation). The last 25 failures were
-  tests of the deleted computer hub, not regressions. **Coverage gap to
-  re-home:** the local harness `SessionToolHandle`/`create_local_harness` runs
-  the toolset without the deleted hub pre-run/sandbox integration, so
-  equivalent local coverage must be re-established (see
-  `docs/DROPPED-TESTS.md`).
+- **`xai-grok-workspace` test target: compiles and passes** (1694 passed in
+  2026-11-21 runs; five consecutive `--lib -- --test-threads=4` runs each
+  reported `1694 passed; 0 failed`, so the `session::git_gate` /
+  `restore_fetch` timing flake did not rotate under repetition). The `git_gate`
+  waits were widened in plan 01-05 (root-cache sleep 100 → 500 ms; walk-timeout
+  TTL 20 → 100 ms with sleep 40 → 250 ms; late-OK walk timeout 40 → 100 ms with
+  sleep 50 → 250 ms; joiner TTL 500 ms → 5 s; sustained-invalidate outer timeout
+  ×3 → ×10). `restore_fetch`'s bands were left unchanged because no rotation was
+  observed. **Coverage gap to re-home:** the local harness
+  `SessionToolHandle`/`create_local_harness` runs the toolset without the
+  deleted hub pre-run/sandbox integration, so equivalent local coverage must be
+  re-established (see `docs/DROPPED-TESTS.md`).
 - **Per-crate test results (last recorded per-crate runs, 2026-10-08):**
   sampling-types 240, sampler 186, telemetry 156, status-line 24, brand 2,
   version 2, config 467, tools-api 15, chat-state 391, session-events 16,
@@ -75,8 +101,13 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
 
 ## Network / egress
 
-- **HARD and SOFT gates: green.** `scripts/check-egress.sh --strict` prints
-  `HARD egress gate: OK` and exits 0.
+- **`scripts/check-egress.sh --strict` is red on this tree (baseline, 2026-11-21).**
+  It exits 1 with 3 HARD hits, all pre-existing source/test strings:
+  `crates/codegen/xai-grok-shell-base/src/util/mod.rs:422-423` (`api.x.ai`,
+  `grok.com`) and `crates/codegen/xai-grok-shell/src/agent/config_tests.rs:2768`
+  (`gs://bucket`). Phase 1 does not fix the gate (out of scope); the red
+  baseline is recorded so the test gate's green cannot be mistaken for a green
+  egress gate. `scripts/egress-check.sh` (runtime audit) is unchanged.
 - **Extended runtime egress verified (2026-10-07)** with
   `scripts/egress-check.sh` — an LD_PRELOAD logger that allows-and-logs
   `connect`/`sendto`/`sendmsg`/`sendmmsg`/`getaddrinfo` from the binary and its
