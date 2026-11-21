@@ -90,9 +90,10 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   `EGRESS_VIOLATIONS=0`. Non-loopback public destinations must be on port 443.
 - **`scripts/sandbox-run.sh` is stricter**: it allows only the provider +
   loopback, so the `web_fetch` host is refused (the session still completes).
-  It has a cosmetic gap: its shim formats only AF_INET, so IPv6 refusals print as
-  `non-ip`, and the provider's IPv6 NAT64 attempt is refused before the client
-  falls back to the allowlisted IPv4 address.
+  Its shim resolves the allow host over both families and names IPv6 refusals by
+  destination (fixed in plan 01-02; `scripts/test-sandbox-run.sh` proves it
+  offline). `non-ip` remains only for a genuinely non-IP family such as
+  `AF_NETLINK`.
 - **LD_PRELOAD limits (inherent, not fixed):** raw `syscall(SYS_connect|sendto)`,
   `io_uring`, statically-linked or setuid children, and children that scrub
   `LD_PRELOAD` are not intercepted; allowlisting is by resolved IP, so another

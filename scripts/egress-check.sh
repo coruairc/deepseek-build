@@ -544,12 +544,13 @@ BLOCKED="${BLOCKED:-0}"
 note "sandbox-run.sh BLOCKED connect lines: $BLOCKED"
 grep 'sandbox-run: BLOCKED connect' "$WORK/sandbox.err" 2>/dev/null | sort | uniq -c || true
 note ""
-note "note: sandbox-run.sh formats only AF_INET destinations; its AF_INET6/other"
-note "      refusals print as 'non-ip'. The provider is reached over its IPv6"
-note "      NAT64 address (see the allow-log table), which sandbox-run.sh does not"
-note "      allowlist, so those IPv6 attempts are refused before falling back to"
-note "      the allowlisted IPv4 provider address. The web_fetch host is refused"
-note "      as expected, so the fetch fails while the session still completes."
+note "note: sandbox-run.sh formats both AF_INET and AF_INET6 destinations, so a"
+note "      refused address is named in its own family's notation and 'non-ip' only"
+note "      appears for a non-IP address family. Its allowlist is family-tagged and"
+note "      built from getaddrinfo(AF_UNSPEC), so it carries the IPv6 addresses the"
+note "      resolver returns for the provider as well as the IPv4 ones. The"
+note "      web_fetch host is not on that allowlist and is refused as expected, so"
+note "      the fetch fails while the session still completes."
 
 # ---------------------------------------------------------------------------
 # 7. Verdict.

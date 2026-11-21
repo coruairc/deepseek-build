@@ -1,7 +1,8 @@
 # scripts
 
 - `check-egress.sh` — HARD/SOFT network-egress grep gate.
-- `sandbox-run.sh` — run the binary with only the provider + loopback reachable.
+- `sandbox-run.sh` — run the binary with only the provider (IPv4 and IPv6) + loopback reachable.
+- `test-sandbox-run.sh` — offline IPv4/IPv6 refusal harness for `sandbox-run.sh`'s `LD_PRELOAD` guard.
 - `encrypt_templates.py` — regenerate the XOR-obfuscated agent prompt templates.
 - `smoke-test.sh` — live DeepSeek adapter smoke test (key required).
 - `egress-check.sh` — runtime egress audit (LD_PRELOAD connect/send logger).
