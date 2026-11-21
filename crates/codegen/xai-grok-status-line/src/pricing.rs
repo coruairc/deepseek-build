@@ -26,6 +26,15 @@ pub const DEFAULT_PRICING_MODEL: &str = "deepseek-v4-pro";
 /// The second DeepSeek model the shipped table names explicitly.
 pub const FLASH_PRICING_MODEL: &str = "deepseek-flash";
 
+/// The hidden legacy id for the same Flash model.
+///
+/// It is a separate entry in the shipped table, carrying identical rates, so a session that started on the
+/// catalog's hidden alias prices at Flash rates instead of inheriting the v4 Pro default. It stays a *separate*
+/// entry on purpose: [`PricingTable::with_overrides`] replaces entries outright, so an override written for
+/// `deepseek-flash` does not apply to this id, and neither id is aliased to the other inside
+/// [`PricingTable::for_model`]. Price both if you override either.
+pub const FLASH_ALIAS_PRICING_MODEL: &str = "deepseek-v4-flash";
+
 /// USD per 1,000,000 tokens for one model.
 ///
 /// A missing key in a `[ui.status_line.pricing.<model>]` table inherits the DeepSeek v4 Pro default rather than
@@ -74,11 +83,12 @@ pub struct PricingTable {
 }
 
 impl PricingTable {
-    /// The shipped default table: DeepSeek v4 Pro and Flash at peak rates.
+    /// The shipped default table: DeepSeek v4 Pro and both Flash ids at peak rates.
     pub fn deepseek_defaults() -> Self {
         let mut models = BTreeMap::new();
         models.insert(DEFAULT_PRICING_MODEL.to_string(), ModelPricing::default());
         models.insert(FLASH_PRICING_MODEL.to_string(), ModelPricing::flash());
+        models.insert(FLASH_ALIAS_PRICING_MODEL.to_string(), ModelPricing::flash());
         Self { models }
     }
 
@@ -157,6 +167,13 @@ mod tests {
         assert_eq!(flash.cache_hit, 0.006);
         assert_eq!(flash.cache_miss, 0.30);
         assert_eq!(flash.output, 1.20);
+
+        let alias = table
+            .for_model(FLASH_ALIAS_PRICING_MODEL)
+            .expect("flash alias");
+        assert_eq!(alias.cache_hit, 0.006);
+        assert_eq!(alias.cache_miss, 0.30);
+        assert_eq!(alias.output, 1.20);
     }
 
     #[test]
@@ -185,6 +202,17 @@ mod tests {
         let table = PricingTable::default();
         let cost = table
             .cost_usd(FLASH_PRICING_MODEL, &usage(0, 500, 1_000, 2_000))
+            .expect("cost");
+        assert!((cost - 0.001206).abs() < 1e-12, "{cost}");
+    }
+
+    /// The hidden alias prices at Flash rates rather than inheriting the v4 Pro default it used to fall through
+    /// to: Pro would charge 0.004664 for these buckets, Flash 0.001206.
+    #[test]
+    fn flash_alias_worked_example_is_exact() {
+        let table = PricingTable::default();
+        let cost = table
+            .cost_usd(FLASH_ALIAS_PRICING_MODEL, &usage(0, 500, 1_000, 2_000))
             .expect("cost");
         assert!((cost - 0.001206).abs() < 1e-12, "{cost}");
     }

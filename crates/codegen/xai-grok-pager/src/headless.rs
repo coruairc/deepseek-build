@@ -17,6 +17,7 @@ use crate::best_effort_stderr::eprint_line;
 use crate::client_identity::{HEADLESS_CLIENT_TYPE, PAGER_CLIENT_VERSION};
 use crate::headless::reducer::{
     Lifecycle, Reducer, SessionContext, StreamEvent, TurnEnd, map_session_update, reducer_for,
+    reducer_for_with_pricing,
 };
 use agent_client_protocol as acp;
 use anyhow::Result;
@@ -103,6 +104,8 @@ struct HeadlessEmitter {
     usage: Option<serde_json::Value>,
     /// The session's model id, latched at `begin_session` for the local cost estimate.
     session_model: Option<String>,
+    /// The resolved `[ui.status_line.pricing]` table the estimate is priced from, shared with the TUI's resolver.
+    pricing: xai_grok_status_line::PricingTable,
     /// Reducer for the streaming formats; `None` for `plain`/`json`.
     reducer: Option<Box<dyn Reducer>>,
     /// Set when the prompt is sent; `result.duration_ms` on the terminal line is measured from it.
@@ -115,6 +118,23 @@ struct HeadlessEmitter {
 }
 impl HeadlessEmitter {
     fn new(format: OutputFormat, parse_structured_output: bool) -> Self {
+        Self::new_with_pricing(
+            format,
+            parse_structured_output,
+            xai_grok_status_line::PricingTable::default(),
+        )
+    }
+
+    /// Build an emitter that prices its cost estimate from `pricing` instead of the shipped default table.
+    ///
+    /// `run_single_turn` resolves that table from the `[ui.status_line.pricing]` it already loaded, so the JSON
+    /// figure and the status row answer from one table.
+    fn new_with_pricing(
+        format: OutputFormat,
+        parse_structured_output: bool,
+        pricing: xai_grok_status_line::PricingTable,
+    ) -> Self {
+        let reducer = reducer_for_with_pricing(format, pricing.clone());
         Self {
             format,
             parse_structured_output,
@@ -123,7 +143,8 @@ impl HeadlessEmitter {
             structured_output: None,
             usage: None,
             session_model: None,
-            reducer: reducer_for(format),
+            pricing,
+            reducer,
             prompt_started: None,
             out: std::io::stdout(),
             output_closed: false,
@@ -307,9 +328,10 @@ impl HeadlessEmitter {
     }
     /// Attach the locally estimated cost (`estimated_cost_usd` + `estimate: true`) to a result/error object.
     ///
-    /// Mirrors the `streaming-messages-json` result: priced from the shipped DeepSeek table with the session model,
-    /// reading the already-projected `usage` buckets. Omitted when no tokens were recorded, so a no-usage payload
-    /// never shows a false `$0`; the ledger's provider-reported cost is left untouched.
+    /// Mirrors the `streaming-messages-json` result: priced from the emitter's resolved
+    /// `[ui.status_line.pricing]` table with the session model, reading the already-projected `usage` buckets.
+    /// Omitted when no tokens were recorded, so a no-usage payload never shows a false `$0`; the ledger's
+    /// provider-reported cost is left untouched.
     fn attach_cost_estimate(&self, target: &mut serde_json::Value) {
         let Some(usage) = target.get("usage") else {
             return;
@@ -328,9 +350,7 @@ impl HeadlessEmitter {
             reasoning_tokens: n("reasoning_tokens"),
         };
         let model = self.session_model.as_deref().unwrap_or("");
-        let Some(estimate) =
-            xai_grok_status_line::PricingTable::default().cost_usd(model, &session_usage)
-        else {
+        let Some(estimate) = self.pricing.cost_usd(model, &session_usage) else {
             return;
         };
         if let Some(obj) = target.as_object_mut() {
@@ -874,6 +894,22 @@ fn headless_materialize_ctx(
         restore_progress_on_stdout: false,
     }
 }
+/// The `[ui.status_line.pricing]` table this run prices from, resolved from the config it already loaded.
+///
+/// These are the same three steps `load_initial_ui_config` performs for the TUI — take `[ui]`, deserialize
+/// `UiConfig`, ask its status line for the table — minus the second file read: `run_single_turn` already owns the
+/// loaded copy. A missing or malformed `[ui]` falls back to the default, exactly as that helper does, so a bad
+/// table can never fail a headless run.
+fn status_line_pricing(raw_config: &toml::Value) -> xai_grok_status_line::PricingTable {
+    use xai_grok_shell::agent::config::UiConfig;
+    raw_config
+        .get("ui")
+        .cloned()
+        .and_then(|ui| ui.try_into::<UiConfig>().ok())
+        .unwrap_or_default()
+        .status_line
+        .pricing()
+}
 /// Run a headless single-turn prompt: spawn the agent, drive the ACP lifecycle, stream to stdout.
 pub async fn run_single_turn(
     prompt: Option<HeadlessPrompt>,
@@ -886,7 +922,6 @@ pub async fn run_single_turn(
         None => std::env::current_dir()?,
         Some(ref p) => dunce::canonicalize(p)?,
     };
-    let mut emitter = HeadlessEmitter::new(options.output_format, options.json_schema.is_some());
     if options.include_partial_messages
         && options.output_format != OutputFormat::StreamingMessagesJson
     {
@@ -897,6 +932,11 @@ pub async fn run_single_turn(
     let t_spawn = Instant::now();
     let raw_config = xai_grok_shell::config::load_effective_config()
         .map_err(|e| anyhow::anyhow!("Failed to load config: {e}"))?;
+    let mut emitter = HeadlessEmitter::new_with_pricing(
+        options.output_format,
+        options.json_schema.is_some(),
+        status_line_pricing(&raw_config),
+    );
     let mut agent_config = AgentConfig::new_from_toml_cfg(&raw_config)
         .map_err(|e| anyhow::anyhow!("Failed to create agent config: {e}"))?;
     if let Some(ref token) = options.reasoning_effort

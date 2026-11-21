@@ -234,7 +234,8 @@ pub(super) struct ResultLine {
     pub(super) stop_reason: Option<String>,
     #[serde(serialize_with = "serialize_finite_cost")]
     pub(super) total_cost_usd: f64,
-    /// Locally estimated USD from the shipped DeepSeek price table (peak rates), independent of `total_cost_usd`.
+    /// Locally estimated USD from the resolved price table — the shipped peak-rate defaults plus any
+    /// `[ui.status_line.pricing]` overrides — independent of `total_cost_usd`.
     /// Present only when the session recorded tokens; paired with `estimate: true`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) estimated_cost_usd: Option<f64>,

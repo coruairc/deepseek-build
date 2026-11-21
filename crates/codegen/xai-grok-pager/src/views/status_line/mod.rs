@@ -20,6 +20,7 @@ mod segments;
 
 use sanitize::CommandLink;
 pub use sanitize::{MAX_STATUS_LINE_LINES, SanitizedText};
+pub(crate) use segments::MIN_DISPLAYED_COST_USD;
 pub use segments::{SEGMENT_SEPARATOR, SegmentTone, StatusSegment, compose_builtin};
 
 /// The clusters ratatui paints; it drops control-bearing and zero-width ones.

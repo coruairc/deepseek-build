@@ -19,7 +19,7 @@ This renders, for example, `deepseek-build-shell-status-line │ deepseek-build 
 | `cwd` | Current directory (basename) |
 | `model` | Model display name |
 | `context` | Context-window percent, amber at the auto-compaction threshold or at 80% when the agent reports none |
-| `cost` | Session cost, hidden below $0.005 so it never shows a misleading `$0.00` |
+| `cost` | Session cost as an estimate: `~$0.37 est.`, or four decimals below one cent (`~$0.0042 est.`). Hidden below $0.0001 rather than shown as a zero. |
 | `effort` | Reasoning effort for the active model, e.g. `effort high`. Omitted when the model has no level set |
 | `tokens` | Session token buckets: `in 12.3k · cache 40.0k · out 4.5k · think 1.2k` |
 | `cache` | Session prompt-cache hit rate, e.g. `cache 87%`. Omitted before the first prompt |
@@ -59,12 +59,19 @@ DeepSeek's usage payload carries tokens but no price, so the `cost` segment fall
 stand-in, not a contract: prices change without a release, and a cost the provider reports always wins. Rates are USD
 per 1,000,000 tokens.
 
+Whatever the source, the row prints the figure as an estimate — `~$0.37 est.` — because it is a
+running sum of per-call charges rather than a bill; where the table supplied it, it also prices at
+peak and never under-estimates.
+
 The shipped defaults are DeepSeek's **peak** list prices (official pricing page, fetched 2026-10-07):
 
 | Model | `cache_hit` | `cache_miss` | `output` |
 | --- | --- | --- | --- |
 | `deepseek-v4-pro` | 0.044 | 1.32 | 3.96 |
-| `deepseek-flash` | 0.006 | 0.30 | 1.20 |
+| `deepseek-flash`, `deepseek-v4-flash` | 0.006 | 0.30 | 1.20 |
+
+`deepseek-v4-flash` is the hidden legacy id for the same Flash model and carries the same rates. It
+is a separate entry, so an override written for `deepseek-flash` does not apply to it.
 
 Peak hours are 01:00-04:00 and 06:00-10:00 UTC Mon-Fri, excluding Chinese public holidays; every other hour is
 off-peak, at exactly half these rates. The table has no clock, so it always prices at peak and never under-estimates.

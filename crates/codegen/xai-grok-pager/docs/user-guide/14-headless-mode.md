@@ -198,7 +198,9 @@ Usage notes:
   providers that report tokens but no price. It is omitted when no tokens were
   recorded (never a false `$0`), and any provider-reported `total_cost_usd` is
   left untouched beside it. Treat it as an upper bound: the table has no clock
-  and always prices at peak.
+  and always prices at peak. It honours `[ui.status_line.pricing]`, the same
+  table the [status line](25-status-line.md#pricing) uses, so an override there
+  moves the TUI figure and this field together.
 - When subagent usage could not be applied, nested subagent usage was incomplete,
   or the success-path drain timed out (up to 120s on the turn task),
   `usage_is_incomplete` is true and cost floats are omitted the same way

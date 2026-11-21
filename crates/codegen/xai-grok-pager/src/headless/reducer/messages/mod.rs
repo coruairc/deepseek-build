@@ -69,10 +69,17 @@ pub(crate) struct MessagesReducer {
     framing: PartialFraming,
     /// Monotonic counter for synthesized partial `message_start.id` placeholders.
     partial_msg_seq: u64,
+    /// The resolved `[ui.status_line.pricing]` table the result line's cost estimate is priced from.
+    pricing: xai_grok_status_line::PricingTable,
 }
 
 impl MessagesReducer {
     pub(crate) fn new() -> Self {
+        Self::new_with_pricing(xai_grok_status_line::PricingTable::default())
+    }
+
+    /// Build a reducer that prices its `estimated_cost_usd` from `pricing` instead of the shipped default table.
+    pub(crate) fn new_with_pricing(pricing: xai_grok_status_line::PricingTable) -> Self {
         Self {
             session: None,
             tools: Vec::new(),
@@ -96,6 +103,7 @@ impl MessagesReducer {
             last_text: String::new(),
             framing: PartialFraming::Idle,
             partial_msg_seq: 0,
+            pricing,
         }
     }
 

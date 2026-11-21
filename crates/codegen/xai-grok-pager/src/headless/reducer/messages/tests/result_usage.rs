@@ -169,6 +169,65 @@ fn messages_result_usage_splits_disjoint_buckets() {
     );
 }
 
+/// A `[ui.status_line.pricing.deepseek-flash]` override reaches the result line's estimate.
+///
+/// Same shape as the pro-default fallback above, but the session model is `deepseek-flash` and the table doubles
+/// its three rates, so an unchanged estimate would mean the override was ignored.
+#[test]
+fn messages_result_honours_status_line_pricing_override() {
+    let mut overrides = std::collections::BTreeMap::new();
+    overrides.insert(
+        xai_grok_status_line::pricing::FLASH_PRICING_MODEL.to_string(),
+        xai_grok_status_line::ModelPricing {
+            cache_hit: 0.012,
+            cache_miss: 0.60,
+            output: 2.40,
+        },
+    );
+    let mut r = MessagesReducer::new_with_pricing(
+        xai_grok_status_line::PricingTable::with_overrides(overrides),
+    );
+    r.begin(SessionContext {
+        session_id: "sess-1".into(),
+        model: Some(xai_grok_status_line::pricing::FLASH_PRICING_MODEL.into()),
+        cwd: "/repo".into(),
+        permission_mode: None,
+        mcp_servers: Vec::new(),
+        include_partial_messages: false,
+        api_key_auth: true,
+        context_window: None,
+    });
+    r.reduce(StreamEvent::AgentMessage("hi".into()));
+    let aggregate = json!({
+        "inputTokens": 100,
+        "outputTokens": 7,
+        "totalTokens": 107,
+        "cachedReadTokens": 10,
+        "cacheCreationTokens": 5,
+        "numTurns": 1,
+    });
+    let out = r.finish(&TurnEnd {
+        stop_reason: "end_turn",
+        session_id: "sess-1",
+        request_id: "req-1",
+        usage: Some(&aggregate),
+        structured_output: None,
+        result_text: "",
+        duration_ms: 0,
+    });
+    let result = out.last().expect("result line");
+    assert_eq!(at(result, "/estimate"), true);
+    let estimated = at(result, "/estimated_cost_usd")
+        .as_f64()
+        .expect("estimate");
+    // 85 fresh + 5 creation @ 0.60, 10 hit @ 0.012, 7 output @ 2.40 per 1M.
+    let expected = (90.0 * 0.60 + 10.0 * 0.012 + 7.0 * 2.40) / 1_000_000.0;
+    assert!(
+        (estimated - expected).abs() < 1e-15,
+        "{estimated} should price at the doubled Flash override, not the shipped default"
+    );
+}
+
 #[test]
 fn messages_result_omits_estimate_when_no_tokens_were_recorded() {
     let mut r = messages(false);

@@ -430,9 +430,21 @@ pub(crate) trait Reducer {
 
 /// The reducer for `format`, or `None` for `plain`/`json` (rendered directly).
 pub(crate) fn reducer_for(format: OutputFormat) -> Option<Box<dyn Reducer>> {
+    reducer_for_with_pricing(format, xai_grok_status_line::PricingTable::default())
+}
+
+/// The reducer for `format`, pricing any cost estimate from `pricing`.
+///
+/// Only `streaming-messages-json` carries a cost field; `streaming-json` has none, so `AcpReducer` takes no table.
+pub(crate) fn reducer_for_with_pricing(
+    format: OutputFormat,
+    pricing: xai_grok_status_line::PricingTable,
+) -> Option<Box<dyn Reducer>> {
     match format {
         OutputFormat::StreamingJson => Some(Box::new(AcpReducer)),
-        OutputFormat::StreamingMessagesJson => Some(Box::new(MessagesReducer::new())),
+        OutputFormat::StreamingMessagesJson => {
+            Some(Box::new(MessagesReducer::new_with_pricing(pricing)))
+        }
         OutputFormat::Plain | OutputFormat::Json => None,
     }
 }

@@ -1,0 +1,38 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": "v0.1.0",
+  "phases": [
+    {
+      "number": "1",
+      "name": "Truth Baseline",
+      "status": "pending"
+    },
+    {
+      "number": "2",
+      "name": "Loop-Item Verification",
+      "status": "pending"
+    },
+    {
+      "number": "3",
+      "name": "Pipeline Decoupling & Version",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "Distribution Proof",
+      "status": "pending"
+    },
+    {
+      "number": "5",
+      "name": "Documentation Truth & Freeze",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd-progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 1 of 5 · executing"
+  },
+  "updated_at": "2026-11-21T17:28:43.423Z"
+}

@@ -18,12 +18,12 @@ pub(super) struct ResultUsage {
     pub(super) num_turns: u64,
     pub(super) total_cost_usd: f64,
     pub(super) duration_api_ms: u64,
-    /// Estimated cost from the shipped DeepSeek price table, when any usage was recorded.
+    /// Estimated cost from the resolved price table, when any usage was recorded.
     ///
     /// This is a locally computed estimate, not a provider figure: DeepSeek's usage payload carries tokens but no
-    /// price, so it is filled from [`PricingTable`] at peak rates (see the `estimated_cost_usd` wire field). It is
-    /// always present alongside `estimate: true` when the session recorded tokens; the ledger's own
-    /// `total_cost_usd` is untouched.
+    /// price, so it is filled from the [`PricingTable`] the reducer was built with — the shipped peak-rate defaults
+    /// plus any `[ui.status_line.pricing]` overrides (see the `estimated_cost_usd` wire field). It is always present
+    /// alongside `estimate: true` when the session recorded tokens; the ledger's own `total_cost_usd` is untouched.
     pub(super) estimated_cost_usd: Option<f64>,
 }
 
@@ -94,7 +94,8 @@ impl MessagesReducer {
         }
     }
 
-    /// Price one completed turn's tokens with the shipped DeepSeek table, keyed by the session model.
+    /// Price one completed turn's tokens with the reducer's resolved `[ui.status_line.pricing]` table, keyed by
+    /// the session model.
     ///
     /// The buckets are the same disjoint split the `usage` block carries: `input_tokens` is already cache-miss
     /// (fresh) only, so cache creation is charged at the miss rate and cache reads at the hit rate. The session
@@ -113,7 +114,7 @@ impl MessagesReducer {
             cache_read_input_tokens: usage.cache_read_input_tokens,
             reasoning_tokens: 0,
         };
-        PricingTable::default().cost_usd(model, &session_usage)
+        self.pricing.cost_usd(model, &session_usage)
     }
 }
 

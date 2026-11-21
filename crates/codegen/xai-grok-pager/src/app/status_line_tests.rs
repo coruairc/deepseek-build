@@ -438,6 +438,11 @@ fn the_numbers_the_guide_states_are_pinned() {
         (1, 86_400),
         "the guide says refresh_interval runs from 1 to 86,400 seconds"
     );
+    assert_eq!(
+        crate::views::status_line::MIN_DISPLAYED_COST_USD,
+        0.0001,
+        "the guide says the segment hides below $0.0001"
+    );
 }
 
 /// Every key the section serializes must be a backticked cell in the guide's setup tables.

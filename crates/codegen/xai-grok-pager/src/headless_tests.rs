@@ -696,6 +696,131 @@ fn json_result_carries_local_cost_estimate_marked_estimate() {
     assert!(result.get("total_cost_usd").is_none());
 }
 
+/// A `[ui.status_line.pricing.deepseek-flash]` override reaches the `json` result's estimate.
+///
+/// Same usage as the shipped-table test above; the table doubles the Flash output rate, so an unchanged figure
+/// would mean the emitter ignored the table it was built with.
+#[test]
+fn json_result_honours_status_line_pricing_override() {
+    let mut overrides = std::collections::BTreeMap::new();
+    overrides.insert(
+        xai_grok_status_line::pricing::FLASH_PRICING_MODEL.to_string(),
+        xai_grok_status_line::ModelPricing {
+            cache_hit: 0.006,
+            cache_miss: 0.30,
+            output: 2.40,
+        },
+    );
+    let mut emitter = HeadlessEmitter::new_with_pricing(
+        OutputFormat::Json,
+        false,
+        xai_grok_status_line::PricingTable::with_overrides(overrides),
+    );
+    emitter.session_model = Some("deepseek-flash".to_string());
+    emitter.usage = Some(serde_json::json!({
+        "inputTokens": 5000,
+        "outputTokens": 500,
+        "totalTokens": 9500,
+        "cachedReadTokens": 4000,
+        "cacheCreationTokens": 0,
+        "reasoningTokens": 40,
+        "numTurns": 2
+    }));
+    let result = emitter.build_json_result("EndTurn", "sess-1", "req-1");
+    let got = result
+        .get("estimated_cost_usd")
+        .and_then(|v| v.as_f64())
+        .expect("estimated_cost_usd");
+    // 1000 miss @ 0.30 + 4000 hit @ 0.006 + 500 out @ 2.40 per 1M.
+    let expected = (1000.0 * 0.30 + 4000.0 * 0.006 + 500.0 * 2.40) / 1_000_000.0;
+    assert!((got - expected).abs() < 1e-15, "{got} != {expected}");
+    assert_eq!(result.get("estimate").and_then(|v| v.as_bool()), Some(true));
+}
+
+/// One usage, one `[ui.status_line.pricing]` override, one float: the TUI path and both headless paths agree.
+///
+/// The TUI's `AppView::fill_estimated_cost` reads exactly this `StatusLineConfig::pricing()` table, so the expected
+/// figure is derived the way the row derives it; the `json` emitter and the `streaming-messages-json` reducer must
+/// then report the same number. They run the same arithmetic on the same buckets, so the comparison is exact.
+#[test]
+fn tui_and_headless_report_the_same_cost_for_one_override() {
+    use xai_grok_status_line::{StatusLineConfig, StatusLineSessionUsage};
+
+    let config: StatusLineConfig = serde_json::from_value(serde_json::json!({
+        "type": "builtin",
+        "items": ["cost"],
+        "pricing": {
+            "deepseek-flash": {"cache_hit": 0.012, "cache_miss": 0.60, "output": 2.40}
+        }
+    }))
+    .expect("a status line with a Flash pricing override");
+    let table = config.pricing();
+
+    // What the status row prices: the same disjoint buckets the two headless projections carry.
+    let tui_usage = StatusLineSessionUsage {
+        input_tokens: 85,
+        output_tokens: 7,
+        cache_creation_input_tokens: 5,
+        cache_read_input_tokens: 10,
+        reasoning_tokens: 0,
+    };
+    let tui_cost = table
+        .cost_usd("deepseek-flash", &tui_usage)
+        .expect("tui cost");
+
+    // Raw `_meta.usage` (PromptUsage camelCase): `inputTokens` is the full prompt, so the projection below
+    // subtracts the cache reads and then the cache creations.
+    let aggregate = serde_json::json!({
+        "inputTokens": 100,
+        "outputTokens": 7,
+        "totalTokens": 107,
+        "cachedReadTokens": 10,
+        "cacheCreationTokens": 5,
+        "numTurns": 1,
+    });
+
+    let mut json_emitter =
+        HeadlessEmitter::new_with_pricing(OutputFormat::Json, false, table.clone());
+    json_emitter.session_model = Some("deepseek-flash".to_string());
+    json_emitter.usage = Some(aggregate.clone());
+    let json_result = json_emitter.build_json_result("EndTurn", "sess-1", "req-1");
+    let json_cost = json_result
+        .get("estimated_cost_usd")
+        .and_then(|v| v.as_f64())
+        .expect("json estimate");
+
+    let mut reducer = reducer_for_with_pricing(OutputFormat::StreamingMessagesJson, table)
+        .expect("a messages reducer");
+    reducer.begin(SessionContext {
+        session_id: "sess-1".into(),
+        model: Some("deepseek-flash".into()),
+        cwd: "/repo".into(),
+        permission_mode: None,
+        mcp_servers: Vec::new(),
+        include_partial_messages: false,
+        api_key_auth: true,
+        context_window: None,
+    });
+    reducer.reduce(StreamEvent::AgentMessage("hi".into()));
+    let lines = reducer.finish(&TurnEnd {
+        stop_reason: "end_turn",
+        session_id: "sess-1",
+        request_id: "req-1",
+        usage: Some(&aggregate),
+        structured_output: None,
+        result_text: "",
+        duration_ms: 0,
+    });
+    let stream_cost = lines
+        .last()
+        .and_then(|line| line.get("estimated_cost_usd"))
+        .and_then(serde_json::Value::as_f64)
+        .expect("streaming estimate");
+
+    assert_eq!(json_cost, tui_cost, "json and TUI disagree");
+    assert_eq!(stream_cost, tui_cost, "streaming-json and TUI disagree");
+}
+
 #[test]
 fn json_result_omits_estimate_when_no_tokens_recorded() {
     let mut emitter = HeadlessEmitter::new(OutputFormat::Json, false);
@@ -959,4 +1084,44 @@ async fn headless_plan_mode_sends_set_session_mode_only_for_plan() {
             .unwrap()
     );
     assert_eq!(seen.lock().unwrap().clone(), vec!["plan".to_string()]);
+}
+
+/// `status_line_pricing` is the config→table resolver COST-03 depends on: it must read
+/// `[ui.status_line.pricing]` out of the raw layered config, and must fall back to the shipped defaults rather than
+/// dropping the estimate when the `[ui]` section does not deserialize.
+#[test]
+fn status_line_pricing_reads_ui_overrides_and_falls_back_on_malformed_ui() {
+    use xai_grok_status_line::StatusLineSessionUsage;
+
+    let raw: toml::Value = toml::from_str(
+        r#"
+[ui.status_line]
+type = "builtin"
+items = ["cost"]
+
+[ui.status_line.pricing.deepseek-flash]
+cache_hit = 0.012
+cache_miss = 0.60
+output = 2.40
+"#,
+    )
+    .expect("valid toml");
+    let usage = StatusLineSessionUsage {
+        input_tokens: 85,
+        output_tokens: 7,
+        cache_creation_input_tokens: 5,
+        cache_read_input_tokens: 10,
+        reasoning_tokens: 0,
+    };
+    let table = status_line_pricing(&raw);
+    let got = table.cost_usd("deepseek-flash", &usage).expect("priced");
+    let expected = (85.0 * 0.60 + 5.0 * 0.60 + 10.0 * 0.012 + 7.0 * 2.40) / 1_000_000.0;
+    assert!((got - expected).abs() < 1e-15, "{got} != {expected}");
+
+    let malformed: toml::Value =
+        toml::from_str("[ui]\nstatus_line = \"nope\"\n").expect("valid toml");
+    let fallback = status_line_pricing(&malformed);
+    let flash = fallback.cost_usd("deepseek-flash", &usage).expect("priced");
+    let shipped = (85.0 * 0.30 + 5.0 * 0.30 + 10.0 * 0.006 + 7.0 * 1.20) / 1_000_000.0;
+    assert!((flash - shipped).abs() < 1e-15, "{flash} != {shipped}");
 }

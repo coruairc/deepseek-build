@@ -15,7 +15,9 @@ const CWD_COLS: usize = 40;
 const MODEL_COLS: usize = 30;
 const SESSION_NAME_COLS: usize = 40;
 
-const MIN_DISPLAYED_COST_USD: f64 = 0.005;
+// The smallest value four decimals can show as non-zero; below it the segment is omitted rather than shown as a
+// zero. Derived from the precision, not tuned.
+pub(crate) const MIN_DISPLAYED_COST_USD: f64 = 0.0001;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SegmentTone {
@@ -101,11 +103,9 @@ pub fn compose_builtin(
                 };
                 Some(StatusSegment::toned(format!("{pct}% ctx"), tone))
             }
-            StatusLineItem::Cost => ctx
-                .cost
-                .total_cost_usd
-                .filter(|usd| *usd >= MIN_DISPLAYED_COST_USD)
-                .map(|usd| StatusSegment::dim(format!("${usd:.2}"))),
+            StatusLineItem::Cost => {
+                Some(StatusSegment::dim(format_cost(ctx.cost.total_cost_usd?)?))
+            }
             StatusLineItem::Effort => {
                 let level = ctx.effort.as_ref()?.level.as_str();
                 let level = level.trim();
@@ -136,6 +136,24 @@ pub fn compose_builtin(
             }
         })
         .collect()
+}
+
+/// The cost segment's whole text: `~$0.37 est.` at or above one cent, four decimals below it, or nothing when the
+/// value is unknown, not finite, negative, or below the smallest figure four decimals can show.
+///
+/// Precision is fixed per branch, so the segment keeps a stable width as the number moves, and a value that rounds
+/// up to a full cent at four decimals (`0.00996`) promotes to the two-decimal form rather than reading `$0.0100`.
+/// The `~` and `est.` markers carry the imprecision; the figure is a running estimate, never a bill.
+fn format_cost(usd: f64) -> Option<String> {
+    if !usd.is_finite() || usd < MIN_DISPLAYED_COST_USD {
+        return None;
+    }
+    let sub_cent = (usd * 10_000.0).round() < 100.0;
+    Some(if sub_cent {
+        format!("~${usd:.4} est.")
+    } else {
+        format!("~${usd:.2} est.")
+    })
 }
 
 /// Session token buckets, compact enough for one row: `in 12.3k · cache 40.0k · out 4.5k · think 1.2k`.
