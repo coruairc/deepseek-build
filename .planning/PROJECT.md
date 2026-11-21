@@ -68,7 +68,9 @@ Building toward the Phase 1 freeze. Each is a hypothesis until shipped and verif
 - [ ] Every loop item carries committed evidence: an automated test where feasible plus a
   scripted pty/headless session transcript
 - [ ] `DECISIONS.md`, `TESTING.md`, and `KNOWN-ISSUES.md` are brought in line with the tree
-- [ ] A `deepseek` branch exists with tag `deepseek-v0.1-snapshot` on it, marking the freeze
+- [ ] A `deepseek` branch exists at the freeze commit, carrying a **non-triggering** freeze marker
+  tag; the pre-existing `deepseek-v0.1-snapshot` tag at `4b305bd0` is recorded as superseded rather
+  than moved
 
 ### Out of Scope
 
@@ -151,6 +153,16 @@ Building toward the Phase 1 freeze. Each is a hypothesis until shipped and verif
 | Manifests bump to `0.1.0` and `release.yml` learns the DeepSeek tag shape in Phase 1 | The author's publish becomes a rerun, not a code change | — Pending |
 | Evidence per loop item = automated test where feasible + committed scripted session transcript | A freeze is only defensible if each claim has an artifact | — Pending |
 | Phase 2 (open-build) branches from the freeze tag and is not planned in this roadmap | Keeps Phase 1 shippable; provider abstraction is a different product decision | — Pending |
+| Publish tag is `v0.1.0`; no `deepseek-*` trigger support is added | Today's `v*` trigger already handles it, so the release workflow needs no tag-shape surgery and a snapshot can never be classified stable | — Pending |
+| The pre-existing `deepseek-v0.1-snapshot` tag at `4b305bd0` is superseded in docs, not moved or deleted | Moving a published ref is destructive and rewrites history other clones may hold; the marker's job can be done by a new non-triggering name | — Pending |
+| Pin is whole-session (model + effort), one `Option<ModelRoute>` consumed as `manual_override` | Field-level pins would require synthesizing a full route from a partial one — a second derivation, which is the defect this milestone removes | — Pending |
+| Routing policy lives at `[models] routing`, beside `default` and `default_reasoning_effort` | Co-located with the config that already owns model selection; one doc page section to edit | — Pending |
+| A new status-line `Route` item renders the reason; `Model` renders the routed model | Reusing `Model` alone would discard the "why", which is the trust payload the milestone is buying | — Pending |
+| Evidence is an asciinema cast plus `report.json` under `docs/evidence/`, paths normalized | The pty harness already produces both; a cast alone has no machine-checkable assertions | — Pending |
+| No `ci.yml` in this milestone | The gate is a green run on the author's host, which needs no CI; a test workflow is new scope | — Pending |
+| Subagent turns follow the routing policy | They run the same turn funnel, so exempting them would need a special case and would cost the savings where research burns tokens | — Pending |
+| The container keeps the sandbox on, with documented run flags | The image is the artifact most likely to be tried first; shipping it sandbox-off would weaken the default where it is hardest to verify | — Pending |
+| All six researched differentiators (D1–D6) are in v1 | The author chose them explicitly; they raise v1 to 53 requirements and the roadmap must budget for them rather than treat them as free | — Pending |
 
 ## Evolution
 
