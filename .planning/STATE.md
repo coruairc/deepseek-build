@@ -68,6 +68,11 @@ Full log in PROJECT.md Key Decisions. Those shaping current work:
 - The freeze marker is non-triggering, and the author's signed acceptance note must be committed before branch `deepseek` or the marker tag exists.
 - Container keeps the sandbox on, with documented run flags; no new outbound destination anywhere.
 - The ~435 internal `GROK_*` env names and the `xai-grok-*` crate names are out of scope for this milestone (D2); renaming belongs to open-build.
+- **Parallel lanes from Phase 2 (user decision, 2026-11-21):** Phase 1 finishes as one sequential lane.
+  From Phase 2 onward, plans with disjoint `files_modified` may run in separate git worktrees under one
+  shared `CARGO_TARGET_DIR`, one `flock` build lock, and one merge step per wave. This overrides the
+  default "one implementer, one working tree" rule for this project; dependent plans (live-session
+  proof, artifact builds, freeze) stay sequential. No plan is parallelized with a direct dependency.
 
 ### Pending Todos
 
@@ -82,6 +87,14 @@ None yet.
 - **macOS time budget (MEDIUM):** measure the macOS job log before choosing between timeout, strip and LTO override. Both arches must fit the job timeout; one cache-warming run is allowed if cold cache is the cause.
 - **Dry-run side effects:** a dry run is a real push. `container` currently depends on the whole matrix and the metadata-action tag list has no empty-list guard, so Phase 3 must land before any throwaway tag, and the dispatch verification must create no release and move no `:latest`.
 - **No `ci.yml`:** the gate is a green run on the author's host, wrapped in the shared build lock with `scripts/disk-guard.sh` first.
+- **Egress gate is red at base (Phase 5 owner):** `scripts/check-egress.sh --strict` exits 1 on three
+  committed test fixtures — `crates/codegen/xai-grok-shell-base/src/util/mod.rs:422-423`
+  (`api.x.ai`, `grok.com`) and `crates/codegen/xai-grok-shell/src/agent/config_tests.rs:2768`
+  (`gs://bucket`). Not caused by Phase 1; it must be green for FREEZE-03.
+- **Credential test prints an exported key (hygiene):** with `DEEPSEEK_API_KEY` exported, an
+  `xai-grok-shell` credential assertion prints the key in its failure message. It reached only a local
+  log, which was redacted; nothing was committed. The gate now unsets the key vars; the assertion should
+  be redacted too, and the key rotated if it was shared.
 
 ## Deferred Items
 

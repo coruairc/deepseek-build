@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-11-21T22:33:37Z",
+  "phase": "01",
+  "phase_name": "Truth Baseline",
+  "phase_dir": ".planning/phases/01-truth-baseline",
+  "plan": 5,
+  "task": 3,
+  "total_tasks": 3,
+  "status": "paused",
+  "completed_tasks": [
+    { "id": 1, "name": "Gate script with completeness assertion", "status": "done", "commit": "uncommitted-wip" },
+    { "id": 2, "name": "Determinism fixes and serial keys", "status": "done", "commit": "uncommitted-wip" },
+    { "id": 3, "name": "Evidence convention and recorded gate run", "status": "in_progress", "progress": "ipv6-report complete; test-gate log only; cost-estimate not started; SUMMARY not written" }
+  ],
+  "remaining_tasks": [
+    { "id": 3, "name": "Finish test-gate and cost-estimate evidence, write 01-05-SUMMARY.md", "status": "in_progress" },
+    { "id": 4, "name": "Confirmation gate run (run #3) and clippy on touched crates", "status": "not_started" },
+    { "id": 5, "name": "Code review of the 01-05 diff, then commit", "status": "not_started" },
+    { "id": 6, "name": "Phase verification and transition to Phase 2", "status": "not_started" }
+  ],
+  "blockers": [
+    { "description": "Confirmation full-gate run was terminated by the pause; only run #2 (--refresh-expected) is green", "type": "technical", "workaround": "Re-run scripts/test-gate.sh once; do not edit the expected count unless the run is green" },
+    { "description": "scripts/check-egress.sh --strict is red at base on three committed test fixtures", "type": "technical", "workaround": "Phase 5 owns it (FREEZE-03); fixtures at xai-grok-shell-base/src/util/mod.rs:422-423 and xai-grok-shell/src/agent/config_tests.rs:2768" },
+    { "description": "xai-grok-shell credential test prints an exported DEEPSEEK_API_KEY on failure", "type": "technical", "workaround": "Gate unsets the key vars; redact the assertion as a follow-up; rotate the key if it was shared" },
+    { "description": "01-05 diff has no reviewer verdict", "type": "human_action", "workaround": "Run gsd-code-reviewer on the WIP diff before the final commit" }
+  ],
+  "async_jobs": [],
+  "human_actions_pending": [
+    { "action": "Decide whether to rotate DEEPSEEK_API_KEY", "context": "A pre-existing test assertion printed the exported key into a local log; the log was redacted and nothing was committed", "blocking": false },
+    { "action": "Confirm whether worktree-parallel lanes are allowed", "context": "User accepted them earlier; the refreshed team rules again say single working tree", "blocking": false }
+  ],
+  "decisions": [
+    { "decision": "Skip both non-traversable sandbox shapes; everything else fatal", "rationale": "canonicalize succeeds when the parent itself is unsearchable, so the first predicate missed the real shape", "phase": "01" },
+    { "decision": "Retarget the devbox e2e scenario to a devbox-extending profile with an explicit deny", "rationale": "no /data on this host means the plan is legitimately empty; no ignore or widened skip", "phase": "01" },
+    { "decision": "Make default_models.json authoritative in first_or_fallback", "rationale": "flipping the field alone did not change the session model; picker order stays unchanged", "phase": "01" },
+    { "decision": "Unconditional cost label with adaptive precision", "rationale": "the segment has no provenance input; Flash turns must not render nothing", "phase": "01" },
+    { "decision": "Asciinema v2 cast + fixed-key report.json + path normalization for evidence", "rationale": "the pty harness already writes the format; later phases append and a reader can re-run", "phase": "01" }
+  ],
+  "uncommitted_files": [
+    "M KNOWN-ISSUES.md",
+    "M TESTING.md",
+    "M crates/codegen/xai-grok-shell/src/agent/folder_trust.rs",
+    "M crates/codegen/xai-grok-shell/src/util/config/consent_tests.rs",
+    "M crates/codegen/xai-grok-workspace/src/session/git_gate_tests.rs",
+    "M scripts/README.md",
+    "M scripts/key-leak-check.sh",
+    "M .planning/STATE.md",
+    "?? docs/evidence/",
+    "?? scripts/evidence.py",
+    "?? scripts/test-gate.expected",
+    "?? scripts/test-gate.sh"
+  ],
+  "next_action": "Re-run scripts/test-gate.sh with the key vars unset under flock; confirm results == binaries + doctests == expected without editing the expected file; finish the test-gate and cost-estimate evidence items and write 01-05-SUMMARY.md.",
+  "context_notes": "Phase 1 is one task from done. The sandbox predicate and the cost/default changes are reviewed and committed; do not re-open them. The remaining risk is evidence plumbing plus one confirmation gate run."
+}
