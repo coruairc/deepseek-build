@@ -49,25 +49,33 @@ Shipped and confirmed valuable (from the codebase map, `.planning/codebase/`):
 
 Building toward the Phase 1 freeze. Each is a hypothesis until shipped and verified:
 
-- [ ] Model routing is wired, not latent — `route_turn`/`ModelRoutingPolicy` decides per turn
-  (Flash for simple turns, Pro for hard ones) from the real session path, and the decision is
-  visible on the status line
-- [ ] An explicit `/model` or `/effort` assignment pins the session, routing respects the pin
-  until it is cleared, and clearing returns to routing
 - [ ] Session resume, plan mode, permission prompts, and cost/cache display are verified against
   real sessions, fixed where broken, and polished where the verification exposes UX gaps
 - [ ] The sandbox profile decision lands: runtime-socket denies are materialized only where the
   parent path is traversable, fail-closed behavior stays everywhere else, sandbox stays on by
   default
-- [ ] `cargo test --workspace` exits 0 with zero failures on the author's host
+- [ ] `cargo test --workspace` exits 0 with zero failures on the author's host, with completeness
+  asserted rather than read from a tail line
+- [ ] Cost reporting is honest: `deepseek-v4-flash` is priced in the table instead of falling back
+  to Pro rates, the TUI figure is labelled an estimate, and headless honours the user's pricing
+  overrides so TUI and JSON agree
+- [ ] `deepseek-flash` is the default model, documented with the at-ceiling-benchmark caveat and
+  the revert path (`/model deepseek-v4-pro`, `-m`); `/model` is the manual switch until routing
+  exists
+- [ ] The product is proven on a real model-driven session with a throwaway key: live smoke passes,
+  runtime egress shows only the provider plus the `web_fetch` host plus AF_UNIX sockets, and the
+  key-leak scan is green — each with a committed artifact
 - [ ] The release workflow is green including both macOS arches, and produces tarballs that
   pass the installer checksum test
 - [ ] Installer and container image are proven from a throwaway pre-release tag, including
-  pulling the published image
-- [ ] Manifests are at `0.1.0` and `release.yml` fires on the DeepSeek tag shape
+  pulling the published image and running a real headless tool turn in it
+- [ ] Manifests are at `0.1.0` and `release.yml` is verified against the `v0.1.0` tag shape, with
+  no `deepseek-*` trigger added
 - [ ] Every loop item carries committed evidence: an automated test where feasible plus a
   scripted pty/headless session transcript
 - [ ] `DECISIONS.md`, `TESTING.md`, and `KNOWN-ISSUES.md` are brought in line with the tree
+- [ ] The author has used the TUI for 20–30 minutes on a clone of a real repo and signed off; the
+  freeze waits for that sign-off
 - [ ] A `deepseek` branch exists at the freeze commit, carrying a **non-triggering** freeze marker
   tag; the pre-existing `deepseek-v0.1-snapshot` tag at `4b305bd0` is recorded as superseded rather
   than moved
@@ -77,9 +85,14 @@ Building toward the Phase 1 freeze. Each is a hypothesis until shipped and verif
 - **Phase 2 "open-build"** — provider registry, bring-your-own-provider and key, native Anthropic
   and Responses backends, key-to-host binding, product rename. Explicitly deferred; this plan
   covers Phase 1 only. Phase 2 branches from the freeze tag.
+- **Automatic model routing of any kind** — `route_turn`/`ModelRoutingPolicy`, the `[models] routing`
+  key, session pins, the `Route` status-line item, `/route`, and per-model cost accounting. Cut from
+  this milestone by decision: routing is the first item after the freeze and is designed in the
+  open-build phase, where it generalizes across providers. `/model` is the manual switch until then.
 - **Renaming the ~435 internal `GROK_*` env names** (1,529 occurrences, 284 files,
-  `docs/INTERNAL-GROK-ENV-NAMES.md`) — Phase 2 work by decision. Renaming them here would churn
-  every adapter and config crate the freeze depends on.
+  `docs/INTERNAL-GROK-ENV-NAMES.md`) — **explicitly out of scope for this milestone.** Not a
+  requirement, not a phase, not a "while we're here" cleanup. Renaming them would churn every
+  adapter and config crate the freeze depends on.
 - **Renaming `xai-grok-*` crate and package names** — decision D2 keeps them; only the
   user-facing surface is `deepseek-build`.
 - **Restoring any deleted exfil, telemetry, upload, voice, or computer-hub path** — those
@@ -155,14 +168,13 @@ Building toward the Phase 1 freeze. Each is a hypothesis until shipped and verif
 | Phase 2 (open-build) branches from the freeze tag and is not planned in this roadmap | Keeps Phase 1 shippable; provider abstraction is a different product decision | — Pending |
 | Publish tag is `v0.1.0`; no `deepseek-*` trigger support is added | Today's `v*` trigger already handles it, so the release workflow needs no tag-shape surgery and a snapshot can never be classified stable | — Pending |
 | The pre-existing `deepseek-v0.1-snapshot` tag at `4b305bd0` is superseded in docs, not moved or deleted | Moving a published ref is destructive and rewrites history other clones may hold; the marker's job can be done by a new non-triggering name | — Pending |
-| Pin is whole-session (model + effort), one `Option<ModelRoute>` consumed as `manual_override` | Field-level pins would require synthesizing a full route from a partial one — a second derivation, which is the defect this milestone removes | — Pending |
-| Routing policy lives at `[models] routing`, beside `default` and `default_reasoning_effort` | Co-located with the config that already owns model selection; one doc page section to edit | — Pending |
-| A new status-line `Route` item renders the reason; `Model` renders the routed model | Reusing `Model` alone would discard the "why", which is the trust payload the milestone is buying | — Pending |
+| Routing is cut from this milestone entirely | Routing generalizes across providers, so designing it now would mean designing it twice; it is the first item after the freeze, inside open-build | — Pending |
+| `deepseek-flash` becomes the default model | 4.6× cheaper and 25% faster at equal measured pass rate; the author accepted that the 21-task set is at ceiling and therefore cannot prove sufficiency, so the caveat and the revert path are documented | — Pending |
 | Evidence is an asciinema cast plus `report.json` under `docs/evidence/`, paths normalized | The pty harness already produces both; a cast alone has no machine-checkable assertions | — Pending |
 | No `ci.yml` in this milestone | The gate is a green run on the author's host, which needs no CI; a test workflow is new scope | — Pending |
-| Subagent turns follow the routing policy | They run the same turn funnel, so exempting them would need a special case and would cost the savings where research burns tokens | — Pending |
 | The container keeps the sandbox on, with documented run flags | The image is the artifact most likely to be tried first; shipping it sandbox-off would weaken the default where it is hardest to verify | — Pending |
-| All six researched differentiators (D1–D6) are in v1 | The author chose them explicitly; they raise v1 to 53 requirements and the roadmap must budget for them rather than treat them as free | — Pending |
+| A human acceptance session gates the freeze | Automated checks cannot tell whether the TUI is pleasant or whether a real repo round-trips cleanly; the author's 20–30 minute session on a repo clone is the only evidence for that | — Pending |
+| The ~435 internal `GROK_*` names are explicitly out of scope | Recorded as a decision so no phase treats them as leftover work; the rename belongs to open-build | — Pending |
 
 ## Evolution
 

@@ -1,61 +1,23 @@
 # Requirements: deepseek-build
 
 **Defined:** 2026-11-21
+**Revised:** 2026-11-21 — routing and per-model cost cut from this milestone
 **Core Value:** One DeepSeek key in, a trustworthy daily coding agent out: the right model on every turn, zero traffic to any host you did not configure, and a release you can install with confidence.
 
-**Scope note:** Phase 1 only. This is a subsequent milestone on a mature tree — the adapter,
-rebrand, deletions, eval harness, and Linux release pipeline already exist and are not
-re-specified here. Phase 2 (open-build) is out of scope and branches from the freeze tag.
+**Scope note:** Phase 1 only — the freeze. This is a subsequent milestone on a mature tree: the
+adapter, rebrand, deletions, eval harness, and Linux release pipeline already exist and are not
+re-specified here.
+
+**Revision note:** Automatic routing (`route_turn`/`ModelRoutingPolicy`), the `[models] routing`
+key, session pins, the `Route` status-line item, `/route`, and per-model cost accounting were
+removed from v1 by decision. Routing is the first item after the freeze and is designed in the
+open-build phase, where it generalizes across providers. `/model` is the manual switch until then.
+What survives from the cost work is the honesty bug fix: Flash must be priced correctly and
+estimates must be labelled and consistent.
 
 ## v1 Requirements
 
 Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
-
-### Routing Core
-
-- [ ] **ROUT-01**: Routing is decided from the real session path (`SessionActor::run_turn_via_sampler` at turn entry), and the sampler-side routing entry point (`SamplingConfig.model_routing`, `ClientDefaults.model_routing`, `SamplingClient::route_turn`) is deleted so exactly one owner exists
-- [ ] **ROUT-02**: The routing policy is a documented user setting at `[models] routing`, present in the `FEATURES` registry and the hand-edited `26-config-reference.md`, with the `config_docs` tests green
-- [ ] **ROUT-03**: One routing decision is made per turn and held for every sampler round of that turn; a turn never sends two different models
-- [ ] **ROUT-04**: Escalation actually escalates — `route_turn` no longer overwrites `pro_model` with the session's configured model, so a Flash session can reach Pro
-- [ ] **ROUT-05**: Subagent turns follow the routing policy (no implicit exemption)
-
-### Pin And Override
-
-- [ ] **PIN-01**: `/model` or `/effort` sets a whole-session pin holding both model and effort, stored as one `Option<ModelRoute>` on the session and consumed as `ModelRoutingConfig.manual_override`
-- [ ] **PIN-02**: Routing never overrides a pin, and the pinned state is visible on the status line
-- [ ] **PIN-03**: A pin can be cleared, returning the session to routing, without changing the persisted new-session default model
-- [ ] **PIN-04**: A resumed session is deterministic under routing — a saved model is either treated as a pin or explicitly re-routed and shown, never silently swapped
-
-### Visibility And Control
-
-- [ ] **DISP-01**: A status-line `Route` item shows the model chosen for the current turn plus the reason (`auto`, `auto · pinned`, `policy low`)
-- [ ] **DISP-02**: The reason behind a routing decision ("why this model") is available from the same decision — on the status-line payload and in the turn log — with no extra inference
-- [ ] **DISP-03**: The route decision is recorded in persisted turn metadata, local-only, so a resumed or exported session shows what ran and why
-- [ ] **DISP-04**: `/route off|low|high|auto|status` controls the policy from one obvious place, leaving `/model` as the pin
-
-### Cost And Cache
-
-- [ ] **COST-01**: The TUI cost figure is labelled as an estimate
-- [ ] **COST-02**: Headless honours `[ui.status_line.pricing]` overrides instead of `PricingTable::default()`, so TUI and JSON agree
-- [ ] **COST-03**: Usage is priced per model when the ledger holds more than one model, using the existing `by_model` totals
-- [ ] **COST-04**: `deepseek-v4-flash` exists in the pricing table and no longer silently falls back to Pro rates
-- [ ] **COST-05**: An off-peak pricing switch applies the documented half rate, config-only, with no price fetch at runtime
-- [ ] **COST-06**: `/usage` reports per-model spend from the ledger's existing `by_model` totals
-- [ ] **COST-07**: Cache-hit and token buckets stay disjoint and correct after a routed turn
-
-### Permissions
-
-- [ ] **PERM-01**: The interactive permission prompt is exercised end to end and shows allow-once, allow-for-session, and reject, with the security warning on high-signal findings
-- [ ] **PERM-02**: Headless permission denial fails closed with an actionable hint naming `--always-approve` and `--permission-mode auto`, on both the stderr and JSON error paths
-- [ ] **PERM-03**: Permission mode is visible in the UI and matches after resume
-- [ ] **PERM-04**: `--permission-mode plan` is verified to arm plan mode headless, and `KNOWN-ISSUES.md` is corrected rather than the code being changed
-
-### Sessions And Plan Mode
-
-- [ ] **SESS-01**: Resume restores the session's model, reasoning effort, and plan state
-- [ ] **SESS-02**: Plan mode is read-only except the plan file in every permission mode, including `always-approve` and `auto`
-- [ ] **SESS-03**: A drafted plan survives quit and resume, promoted from the existing pty scenario into committed evidence
-- [ ] **SESS-04**: The provenance of each resumed setting is documented — what comes from the session versus from config
 
 ### Sandbox
 
@@ -72,6 +34,36 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 - [ ] **EVID-01**: Every loop item carries a committed asciinema cast plus `report.json` under `docs/evidence/`, with absolute artifact paths normalized out
 - [ ] **EVID-02**: The evidence convention is documented and referenced by each item's verification step, so a later reader can re-run it
+
+### Cost Honesty
+
+- [ ] **COST-01**: `deepseek-v4-flash` exists in the pricing table, so the default model no longer silently prices at Pro rates (~4× overstatement)
+- [ ] **COST-02**: The TUI cost figure is labelled as an estimate
+- [ ] **COST-03**: Headless honours `[ui.status_line.pricing]` overrides instead of `PricingTable::default()`, so the TUI and the JSON output report the same number
+
+### Default Model
+
+- [ ] **DEF-01**: `deepseek-flash` is the catalog default, documented with the at-ceiling-benchmark caveat (63/63 for both models, so the eval set cannot prove Flash sufficient for hard work) and the revert path (`/model deepseek-v4-pro`, `-m deepseek-v4-pro`)
+
+### Runtime Proof
+
+- [ ] **PROOF-01**: A live smoke run on a real model-driven session with a throwaway key passes, with the transcript committed as evidence
+- [ ] **PROOF-02**: Runtime egress on that same session is measured and shows only the configured provider, the `web_fetch` host, and AF_UNIX sockets — zero violations — with the measurement committed as evidence
+- [ ] **PROOF-03**: `scripts/key-leak-check.sh` is green over the tree and over the committed artifacts, no key material appears in logs, saved sessions, or evidence files, and the throwaway key is revoked afterwards
+
+### Permissions
+
+- [ ] **PERM-01**: The interactive permission prompt is exercised end to end and shows allow-once, allow-for-session, and reject, with the security warning on high-signal findings
+- [ ] **PERM-02**: Headless permission denial fails closed with an actionable hint naming `--always-approve` and `--permission-mode auto`, on both the stderr and JSON error paths
+- [ ] **PERM-03**: Permission mode is visible in the UI and matches after resume
+- [ ] **PERM-04**: `--permission-mode plan` is verified to arm plan mode headless, and `KNOWN-ISSUES.md` is corrected rather than the code being changed
+
+### Sessions And Plan Mode
+
+- [ ] **SESS-01**: Resume restores the session's model, reasoning effort, and plan state
+- [ ] **SESS-02**: Plan mode is read-only except the plan file in every permission mode, including `always-approve` and `auto`
+- [ ] **SESS-03**: A drafted plan survives quit and resume, promoted from the existing pty scenario into committed evidence
+- [ ] **SESS-04**: The provenance of each resumed setting is documented — what comes from the session versus from config
 
 ### Release Pipeline
 
@@ -95,42 +87,58 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 - [ ] **DOCS-01**: `DECISIONS.md` §E/§F is rewritten from the tree, keeping D9's personal-tool intent while recording that the release pipeline exists
 - [ ] **DOCS-02**: `TESTING.md` §2/§6 is corrected — no OIDC test counts, no stale sign-in line
 - [ ] **DOCS-03**: `KNOWN-ISSUES.md` is reconciled, including the superseded `deepseek-v0.1-snapshot` tag, `--permission-mode plan`, and the sandbox findings
-- [ ] **DOCS-04**: The user guide covers the routing key, the `Route` item, headless permission failure, container run flags, and off-peak pricing
+- [ ] **DOCS-04**: The user guide covers the Flash default with its caveat and revert path, the estimate labelling, headless permission failure, container run flags, and the measured cost levers (`/model`, `--effort low`)
+
+### Human Acceptance
+
+- [ ] **ACC-01**: The author uses the TUI for 20–30 minutes on a clone of a real repo, reports back, and signs off; the acceptance note is committed and the freeze does not proceed without it
 
 ### Freeze
 
 - [ ] **FREEZE-01**: Branch `deepseek` exists at the freeze commit on `main`
 - [ ] **FREEZE-02**: A non-triggering freeze marker tag sits on that commit, and the pre-existing `deepseek-v0.1-snapshot` tag at `4b305bd0` is recorded as superseded rather than moved
-- [ ] **FREEZE-03**: The pre-freeze checklist passes — clean suite, egress gate, branding surface, key-leak check, deny check, and the release dry run evidence
+- [ ] **FREEZE-03**: The pre-freeze checklist passes — clean suite, egress gate, branding surface, key-leak check, deny check, runtime proof artifacts, and the release dry-run evidence — after the author's sign-off
 
 ## v2 Requirements
 
 Deferred. Tracked but not in the current roadmap.
 
-### Routing
+### Routing (first item after the freeze, designed in open-build)
 
-- **ROUT-V2-01**: LLM-based turn-complexity classifier (rejected for v1: adds inference and makes routing unexplainable)
-- **ROUT-V2-02**: Mid-turn Flash→Pro escalation on failure (blocked on an eval set where Flash fails and Pro succeeds; `docs/TUNING.md` E3c found none)
-- **ROUT-V2-03**: Provider-agnostic routing registry (Phase 2)
+- **ROUT-V2-01**: Routing decided once per turn from the real session path, with the sampler-side entry point deleted
+- **ROUT-V2-02**: `[models] routing` as a documented user setting
+- **ROUT-V2-03**: Whole-session pin (model + effort) that routing respects, with a clear path
+- **ROUT-V2-04**: `Route` status-line item showing the model and the reason
+- **ROUT-V2-05**: `/route off|low|high|auto|status`
+- **ROUT-V2-06**: Route decision recorded in local-only persisted turn metadata
+- **ROUT-V2-07**: Escalation that actually escalates (the `pro_model` overwrite removed)
+- **ROUT-V2-08**: Subagent turns follow the policy
+- **ROUT-V2-09**: Resume deterministic under routing
+- **ROUT-V2-10**: Provider-agnostic routing registry (open-build)
 
-### Pipeline
+### Cost (follows routing)
+
+- **COST-V2-01**: Per-model pricing of a mixed session from the ledger's `by_model` totals
+- **COST-V2-02**: Per-model spend in `/usage`
+- **COST-V2-03**: Off-peak pricing switch
+- **COST-V2-04**: Cache/token bucket disjointness proof for routed turns
+
+### Pipeline And Product
 
 - **REL-V2-01**: A `ci.yml` running fmt/clippy/test on push
 - **REL-V2-02**: Debug symbol sidecars published alongside tarballs
-
-### Product
-
 - **PROD-V2-01**: A full undo/checkpoint product beyond the existing rewind behaviour
-- **PROD-V2-02**: A route picker modal or dedicated dashboard pane
-- **PROD-V2-03**: Automatic (rather than configured) Flash-for-research subagent coupling
+- **PROD-V2-02**: Automatic (rather than configured) Flash-for-research subagent coupling
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Phase 2 "open-build" — provider registry, BYO provider/key, native Anthropic and Responses backends, product rename | Explicitly deferred; Phase 2 branches from the freeze tag |
-| Renaming the ~435 internal `GROK_*` env names | Deferred by decision; would churn every adapter crate the freeze depends on |
+| Automatic model routing of any kind — `route_turn`, `[models] routing`, pins, `Route` item, `/route` | Cut by decision: routing generalizes across providers and is designed in open-build; `/model` is the manual switch until then |
+| Per-model cost accounting for a mixed session | Meaningless while only one model can run in a session |
+| **Renaming the ~435 internal `GROK_*` env names** | **Explicitly out of scope for this milestone** — not a requirement, not a phase, not a "while we're here" cleanup. Recorded in `PROJECT.md` §Out of Scope and §Key Decisions |
 | Renaming `xai-grok-*` crates and packages | Locked decision D2 |
+| Phase 2 "open-build" — provider registry, BYO provider/key, native Anthropic and Responses backends, product rename | Deferred; branches from the freeze tag |
 | Restoring deleted telemetry, upload, voice, or computer-hub paths | Those deletions are the egress guarantee |
 | Runtime pricing fetch or price scraping | New outbound destination — forbidden by D6/D10/D13 |
 | Any routing or usage telemetry to a remote endpoint | Violates the egress invariant and the product premise |
@@ -142,17 +150,69 @@ Deferred. Tracked but not in the current roadmap.
 
 ## Traceability
 
-Which phases cover which requirements. Populated during roadmap creation.
+Which phases cover which requirements. One phase per requirement, no duplicates, no orphans.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| *(pending roadmap)* | — | — |
+| SBOX-01 | Phase 1 — Truth Baseline | Pending |
+| SBOX-02 | Phase 1 — Truth Baseline | Pending |
+| TEST-01 | Phase 1 — Truth Baseline | Pending |
+| TEST-02 | Phase 1 — Truth Baseline | Pending |
+| TEST-03 | Phase 1 — Truth Baseline | Pending |
+| EVID-01 | Phase 1 — Truth Baseline | Pending |
+| EVID-02 | Phase 1 — Truth Baseline | Pending |
+| COST-01 | Phase 1 — Truth Baseline | Pending |
+| COST-02 | Phase 1 — Truth Baseline | Pending |
+| COST-03 | Phase 1 — Truth Baseline | Pending |
+| DEF-01 | Phase 1 — Truth Baseline | Pending |
+| PROOF-01 | Phase 2 — Loop-Item Verification | Pending |
+| PROOF-02 | Phase 2 — Loop-Item Verification | Pending |
+| PROOF-03 | Phase 2 — Loop-Item Verification | Pending |
+| PERM-01 | Phase 2 — Loop-Item Verification | Pending |
+| PERM-02 | Phase 2 — Loop-Item Verification | Pending |
+| PERM-03 | Phase 2 — Loop-Item Verification | Pending |
+| PERM-04 | Phase 2 — Loop-Item Verification | Pending |
+| SESS-01 | Phase 2 — Loop-Item Verification | Pending |
+| SESS-02 | Phase 2 — Loop-Item Verification | Pending |
+| SESS-03 | Phase 2 — Loop-Item Verification | Pending |
+| SESS-04 | Phase 2 — Loop-Item Verification | Pending |
+| REL-01 | Phase 3 — Pipeline Decoupling & Version | Pending |
+| REL-02 | Phase 3 — Pipeline Decoupling & Version | Pending |
+| REL-03 | Phase 3 — Pipeline Decoupling & Version | Pending |
+| REL-07 | Phase 3 — Pipeline Decoupling & Version | Pending |
+| REL-08 | Phase 3 — Pipeline Decoupling & Version | Pending |
+| PKG-01 | Phase 3 — Pipeline Decoupling & Version | Pending |
+| PKG-02 | Phase 3 — Pipeline Decoupling & Version | Pending |
+| PKG-03 | Phase 3 — Pipeline Decoupling & Version | Pending |
+| REL-04 | Phase 4 — Distribution Proof | Pending |
+| REL-05 | Phase 4 — Distribution Proof | Pending |
+| REL-06 | Phase 4 — Distribution Proof | Pending |
+| DOCS-01 | Phase 5 — Documentation Truth & Freeze | Pending |
+| DOCS-02 | Phase 5 — Documentation Truth & Freeze | Pending |
+| DOCS-03 | Phase 5 — Documentation Truth & Freeze | Pending |
+| DOCS-04 | Phase 5 — Documentation Truth & Freeze | Pending |
+| ACC-01 | Phase 5 — Documentation Truth & Freeze | Pending |
+| FREEZE-01 | Phase 5 — Documentation Truth & Freeze | Pending |
+| FREEZE-02 | Phase 5 — Documentation Truth & Freeze | Pending |
+| FREEZE-03 | Phase 5 — Documentation Truth & Freeze | Pending |
 
 **Coverage:**
-- v1 requirements: 53 total
-- Mapped to phases: 0
-- Unmapped: 53 ⚠️ (expected before roadmap creation)
+- v1 requirements: 41 total
+- Mapped to phases: 41
+- Unmapped: 0 ✓
+- Duplicates: 0 ✓
+
+**Per phase:**
+
+| Phase | Requirements | Count |
+|-------|--------------|-------|
+| 1 — Truth Baseline | SBOX-01, SBOX-02, TEST-01, TEST-02, TEST-03, EVID-01, EVID-02, COST-01, COST-02, COST-03, DEF-01 | 11 |
+| 2 — Loop-Item Verification | PROOF-01, PROOF-02, PROOF-03, PERM-01, PERM-02, PERM-03, PERM-04, SESS-01, SESS-02, SESS-03, SESS-04 | 11 |
+| 3 — Pipeline Decoupling & Version | REL-01, REL-02, REL-03, REL-07, REL-08, PKG-01, PKG-02, PKG-03 | 8 |
+| 4 — Distribution Proof | REL-04, REL-05, REL-06 | 3 |
+| 5 — Documentation Truth & Freeze | DOCS-01, DOCS-02, DOCS-03, DOCS-04, ACC-01, FREEZE-01, FREEZE-02, FREEZE-03 | 8 |
+| **Total** | | **41** |
 
 ---
 *Requirements defined: 2026-11-21*
-*Last updated: 2026-11-21 after initial definition*
+*Last updated: 2026-11-21 after cutting routing and per-model cost from the milestone*
