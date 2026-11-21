@@ -1,5 +1,5 @@
 {
-  "default": "deepseek-v4-pro",
+  "default": "deepseek-flash",
   "web_search": "deepseek-flash",
   "image_description": "deepseek-flash",
   "session_summary": "deepseek-flash",

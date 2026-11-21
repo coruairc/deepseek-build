@@ -22,7 +22,7 @@ OpenAI-compatible Chat Completions API. It is a work in progress (see
 |------|-------|
 | Phase 0 - audit & plan | Done (`PLAN.md`, `DECISIONS.md`) |
 | Phase 1 - cleanup | Done: upload/exfil, telemetry/Sentry/OTLP, xAI voice/Imagine/web_search, auto-update, announcements, cloud-config/remote control, session share/relay, and xAI model/endpoint strings are removed or neutralized. **HARD and SOFT egress gates are green**; rebrand (binary, config dir, ACP namespace, strings) done. |
-| Phase 2 - DeepSeek adapter | Core done: Chat Completions-only backend (`Responses`/`Messages` deleted), `thinking` control, `reasoning_content` round-trip + sanitizer, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-v4-pro`), wiremock suite. Live smoke run 8/8 PASS (2026-10-07, author's machine). |
+| Phase 2 - DeepSeek adapter | Core done: Chat Completions-only backend (`Responses`/`Messages` deleted), `thinking` control, `reasoning_content` round-trip + sanitizer, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-flash`), wiremock suite. Live smoke run 8/8 PASS (2026-10-07, author's machine). |
 | Phase 3 - TUI | Implemented: reasoning fold (`e`/`E`/`Ctrl+E`), collapsible thinking, optional status line (off by default; enable `[ui.status_line]` to show cwd, model, context), `/model` `/effort` `/think` `/theme`, Monokai default theme + whale logo. |
 | Phase 4 - harden existing features | Partial: runtime read-before-write guard and dangerous-command warnings are in; plan mode, permissions, resume, subagents, MCP, `AGENTS.md`, and checkpoints exist and need an end-to-end pass. A full `cargo test --workspace` run is **not green yet** (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). |
 | Phase 5 - testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. Linux-only prerelease [`v0.0.1-rc4`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc4) is published (x86_64 + aarch64 tarballs, installer); no macOS builds and no container image yet. |
@@ -244,10 +244,16 @@ export DEEPSEEK_API_KEY=sk-...          # preferred
 # or: export DEEPSEEK_BUILD_API_KEY=sk-...
 ```
 
-Models: `deepseek-v4-pro` (default) and `deepseek-flash`, plus a hidden
+Models: `deepseek-flash` (default) and `deepseek-v4-pro`, plus a hidden
 `deepseek-v4-flash` legacy alias; each offers `none`/`low`/`high`/`max`
 reasoning effort. A custom OpenAI-compatible `base_url` is supported via model
 config.
+
+Flash is the default because it is cheaper and faster. On the 21-task eval set
+both models pass 63/63, so that set is at its ceiling and cannot show Flash is
+sufficient for harder work. When a task needs more reasoning, switch to Pro with
+`/model deepseek-v4-pro` in the TUI or `-m deepseek-v4-pro` for a headless run.
+See [`docs/TUNING.md`](docs/TUNING.md) for the measurement.
 
 ## Quickstart
 
@@ -267,7 +273,7 @@ First commands inside the TUI:
 | Command | What it does |
 |---------|--------------|
 | `/help` | list commands |
-| `/model` (`/m`) | switch between `deepseek-v4-pro` and `deepseek-flash` |
+| `/model` (`/m`) | switch between `deepseek-flash` (default) and `deepseek-v4-pro` |
 | `/effort <level>` | reasoning effort `none` / `low` / `high` / `max` |
 | `/think` | fold or unfold every reasoning block (also `Ctrl+E`; `e` / `E` per entry / all) |
 | `/usage` (`/cost`) | token usage, cached input, reasoning tokens, and cost for the session |

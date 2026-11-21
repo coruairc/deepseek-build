@@ -48,7 +48,7 @@ auto_update = true                     # check for updates on launch
 # definition = "/path/to/agent.md"     # path wins over name if both are set
 
 [models]
-default = "deepseek-v4-pro"                   # model used for new sessions
+default = "deepseek-flash"                    # model used for new sessions
 web_search = "deepseek-v4-pro"                # model used by the web_search tool
 # Optional picker allowlist (globs on catalog key or model id). Empty = unrestricted.
 # A signed policy pin replaces this list (model id only) and cannot be widened from here.

@@ -17,8 +17,8 @@ impl SessionActor {
             return;
         };
         let info = self.build_session_info().await;
-        // `/tokenize-text` is the xAI tokenizer
-        // Always use the baked product default (deepseek-4.6 from `default_models.json`), not the session model
+        // `/tokenize-text` is the provider tokenizer
+        // Always use the baked catalog default (`default_models.json`), not the session model
         // The session model may be a third-party id the endpoint does not serve
         let model = crate::models::default_model();
         tracing::info!(model, "session_context_snapshot: tokenizing");
@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn tokenize_uses_baked_product_default_model() {
-        assert_eq!(crate::models::default_model(), "deepseek-v4-pro");
+        assert_eq!(crate::models::default_model(), "deepseek-flash");
     }
 
     #[test]

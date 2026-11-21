@@ -36,6 +36,24 @@ Findings:
 - Reasoning tokens are modest (75 Pro / 59 Flash per task averaged across
   turns).
 
+### Shipped default: `deepseek-flash` (DEF-01)
+
+The shipped catalog default is now `deepseek-flash`, not `deepseek-v4-pro`. The
+baseline table above is 63/63 for **both** models, so the pass rate is at its
+ceiling: this 21-task set cannot prove Flash is sufficient for hard work. It
+shows only that Flash is cheaper and faster on tasks both models already solve.
+Read the default as a cost decision, not a correctness claim.
+
+Revert per session when a task needs more reasoning:
+
+- TUI: `/model deepseek-v4-pro`
+- Headless: `-m deepseek-v4-pro`
+
+Provenance for the numbers quoted here is the measurement already recorded
+above: 21 tasks × 3 runs, measured 2026-10-08 with
+`scripts/evals/run-baseline.sh`. No new measurement was taken for the default
+change.
+
 ## Experiment log
 
 Each entry: date, hypothesis, the single variable changed, command, results,
@@ -164,9 +182,10 @@ per-task policy rather than a new default:
 | E3c effort | `--effort none` | −12% cost | floor; not a new default |
 | E3d verification | extra rules | +7% cost | rejected |
 
-The shipped defaults stay: the system prompt, the grok-build toolset, and
-`high` reasoning effort. The measured cost levers are documented for the user
-(`--effort low` / `-m deepseek-flash`), and no automatic routing was wired.
+The shipped defaults are the system prompt, the grok-build toolset, and the
+catalog default model `deepseek-flash` (which also moves the out-of-box
+reasoning effort to Flash's `low`). The measured cost levers are documented for
+the user (`--effort low` on Pro), and no automatic routing was wired.
 The task set is at ceiling (100% for every arm), so these results measure cost
 at fixed correctness; a harder task set is needed to tune for pass rate.
 

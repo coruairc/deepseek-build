@@ -71,7 +71,8 @@ pub(crate) fn selectable_catalog_key_for_persisted(
     resolve_catalog_key(models, id).filter(|key| available.contains_key(key))
 }
 
-/// Pick the default model: CLI > env > config, falling back to the first visible model, then [`fallback_model_id`].
+/// Pick the default model: CLI > env > config, then the catalog's own `default` when it is visible,
+/// then the first visible model, then [`fallback_model_id`].
 pub(crate) fn resolve_default_model(
     cfg: &config::Config,
     catalog: &IndexMap<String, ModelEntry>,
@@ -91,6 +92,14 @@ pub(crate) fn resolve_default_model(
     );
 
     let first_or_fallback = || -> (String, ModelEntry) {
+        // With no CLI/env/`[models] default` preference, `default_models.json`
+        // is the authority: prefer the catalog's declared default when it is
+        // visible and selectable. A hidden or disabled default deliberately
+        // falls through to the first visible entry, so an unselectable id is
+        // never returned. Picker order is unaffected.
+        if let Some((key, entry)) = visible.get_key_value(crate::models::default_model()) {
+            return (key.clone(), entry.clone());
+        }
         if let Some((key, first)) = visible.first() {
             return (key.clone(), first.clone());
         }

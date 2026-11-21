@@ -2518,6 +2518,70 @@ fn hidden_models_kept_in_catalog_but_not_in_acp() {
     assert!(catalog.get("to-hide").is_some_and(|c| c.info.hidden));
     assert!(!available.values().any(|m| m.name == "to-hide"));
 }
+/// With no CLI/env/config preference, the catalog's declared default wins even
+/// though `deepseek-v4-pro` is the first entry in `default_models.json`.
+#[test]
+#[serial]
+fn catalog_default_is_the_resolved_default() {
+    use crate::agent::model_catalog::{resolve_default_model, resolve_model_catalog};
+    let _env = EnvGuard::unset("DEEPSEEK_BUILD_DEFAULT_MODEL");
+    let raw: toml::Value = toml::from_str("[models]\n").unwrap();
+    let cfg = Config::new_from_toml_cfg(&raw).expect("config should parse");
+    let catalog = resolve_model_catalog(&cfg, None);
+    let (key, entry, source) = resolve_default_model(&cfg, &catalog, false);
+    assert_eq!(key, crate::models::default_model());
+    assert_eq!(key, "deepseek-flash");
+    assert_eq!(entry.info.model, "deepseek-flash");
+    assert_eq!(source, ConfigSource::Default);
+}
+/// A hidden catalog default must fall through to the first visible entry
+/// rather than return an id the picker cannot select.
+#[test]
+#[serial]
+fn hidden_catalog_default_falls_back_to_first_visible() {
+    use crate::agent::model_catalog::{resolve_default_model, resolve_model_catalog};
+    let _env = EnvGuard::unset("DEEPSEEK_BUILD_DEFAULT_MODEL");
+    let raw: toml::Value = toml::from_str(
+        r#"
+            [models]
+            hidden_models = ["deepseek-flash"]
+            "#,
+    )
+    .unwrap();
+    let cfg = Config::new_from_toml_cfg(&raw).expect("config should parse");
+    let catalog = resolve_model_catalog(&cfg, None);
+    assert!(
+        catalog.get("deepseek-flash").is_some_and(|c| c.info.hidden),
+        "deepseek-flash must be hidden for this case to prove anything"
+    );
+    let (key, _, source) = resolve_default_model(&cfg, &catalog, false);
+    assert_eq!(key, "deepseek-v4-pro");
+    assert_eq!(source, ConfigSource::Default);
+}
+/// A disabled catalog default is removed from the catalog entirely, so
+/// resolution falls through to the first visible entry.
+#[test]
+#[serial]
+fn absent_catalog_default_falls_back_to_first_visible() {
+    use crate::agent::model_catalog::{resolve_default_model, resolve_model_catalog};
+    let _env = EnvGuard::unset("DEEPSEEK_BUILD_DEFAULT_MODEL");
+    let raw: toml::Value = toml::from_str(
+        r#"
+            [models]
+            disabled_models = ["deepseek-flash"]
+            "#,
+    )
+    .unwrap();
+    let cfg = Config::new_from_toml_cfg(&raw).expect("config should parse");
+    let catalog = resolve_model_catalog(&cfg, None);
+    assert!(
+        !catalog.contains_key("deepseek-flash"),
+        "deepseek-flash must be absent for this case to prove anything"
+    );
+    let (key, _, source) = resolve_default_model(&cfg, &catalog, false);
+    assert_eq!(key, "deepseek-v4-pro");
+    assert_eq!(source, ConfigSource::Default);
+}
 #[test]
 fn allowed_models_marks_selectable_by_wildcard_key_or_model() {
     use crate::agent::model_catalog::resolve_model_catalog;

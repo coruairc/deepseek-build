@@ -6,7 +6,9 @@ deepseek-build connects to custom model endpoints for alternative providers, sel
 
 ## Default Models
 
-By default, deepseek-build uses models hosted by DeepSeek, and new sessions start with `deepseek-v4-pro`. Default models require no configuration. Set `DEEPSEEK_API_KEY`, then start a session.
+By default, deepseek-build uses models hosted by DeepSeek, and new sessions start with `deepseek-flash`. Default models require no configuration. Set `DEEPSEEK_API_KEY`, then start a session.
+
+`deepseek-flash` is the default because it is cheaper and faster. On the 21-task eval set both models pass 63/63, so that set is at its ceiling and cannot prove Flash is sufficient for harder work; switch to `deepseek-v4-pro` with `/model deepseek-v4-pro` or `-m deepseek-v4-pro` when a task needs more reasoning. Measurements are in `docs/TUNING.md`.
 
 List all available models:
 
@@ -48,7 +50,7 @@ Set a persistent default in `~/.deepseek-build/config.toml`:
 
 ```toml
 [models]
-default = "deepseek-v4-pro"
+default = "deepseek-flash"
 ```
 
 ---
