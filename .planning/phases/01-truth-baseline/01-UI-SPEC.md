@@ -1,10 +1,11 @@
 ---
 phase: "01"
 slug: "truth-baseline"
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: "2026-11-21"
+reviewed_at: "2026-11-21T16:40:15Z"
 ---
 
 # Phase 01 — UI Design Contract
