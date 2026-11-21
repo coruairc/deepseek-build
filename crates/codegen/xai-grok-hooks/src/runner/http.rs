@@ -55,6 +55,10 @@ fn is_blocked_ip(ip: &IpAddr) -> bool {
             if octets[0] == 100 && (64..=127).contains(&octets[1]) {
                 return true;
             }
+            // 198.18.0.0/15: benchmarking range (RFC 2544), also used by fake-DNS resolvers.
+            if octets[0] == 198 && (18..=19).contains(&octets[1]) {
+                return true;
+            }
             if v4.is_unspecified() {
                 return true;
             }
@@ -925,6 +929,8 @@ mod tests {
             "169.254.169.254",
             "100.64.0.1",
             "100.127.255.255",
+            "198.18.0.1",
+            "198.19.255.255",
             "0.0.0.0",
             "::",
             "fe80::1",
@@ -967,11 +973,19 @@ mod tests {
             ("https://10.0.0.1/hook", "blocked"),
             ("https://169.254.169.254/latest/meta-data/", "blocked"),
             ("not a url", "invalid URL"),
-            ("https://nonexistent.invalid/hook", "DNS resolution failed"),
         ] {
             let err = validate_hook_url(url).await.expect_err("must reject");
             assert!(err.contains(needle), "for {url}, got: {err}");
         }
+        // Sandboxed resolvers can answer .invalid with a fake-IP (198.18.0.0/15)
+        // address instead of NXDOMAIN; either way the URL must be rejected.
+        let err = validate_hook_url("https://nonexistent.invalid/hook")
+            .await
+            .expect_err("must reject");
+        assert!(
+            err.contains("DNS resolution failed") || err.contains("blocked"),
+            "for nonexistent.invalid, got: {err}"
+        );
     }
 
     use crate::config::HookSpec;

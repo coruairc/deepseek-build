@@ -19,9 +19,9 @@ public description; §7 maps the code and §8 lists the rules for changing it.
 - **Branch:** `main` is the mainline and carries the released lineage
   (`v0.0.1-rc5`). Work branches rebase onto `main` before review; do not treat a
   side branch as the integration point.
-- **HEAD (refreshed 2026-11-21):** `main` is at `221a1a59` — rc5 telemetry/proxy
-  removal, first-party `api.deepseek.com` host check, Linux-only prerelease docs.
-  The docs branch that carries this file is rebased on top of it.
+- **HEAD (refreshed 2026-11-21):** `main` is `221a1a59` (rc5 telemetry/proxy
+  removal, first-party `api.deepseek.com` host check, Linux-only prerelease docs)
+  plus the reviewed docs commits that carry this file and `.planning/codebase/`.
 - **Remote:** `origin git@github.com:coruairc/deepseek-build.git`.
 - **Toolchain:** Rust **1.94.0** via rustup (pinned in `rust-toolchain.toml`). Do not bump.
   `protoc` on PATH (`/usr/bin/protoc`); `dotslash` not needed. `strace` absent (use
@@ -72,7 +72,7 @@ public description; §7 maps the code and §8 lists the rules for changing it.
 ```sh
 git clone git@github.com:coruairc/deepseek-build.git
 cd deepseek-build
-git switch dsb/integration          # or: git switch -c dsb/integration origin/dsb/integration
+git switch main
 
 # toolchain
 rustup toolchain install 1.94.0 --component rustfmt clippy
@@ -83,13 +83,13 @@ cargo check -p xai-grok-pager-bin
 scripts/check-egress.sh
 ```
 
-Slice branches are pushed too (`dsb/telemetry`, `dsb/tools`, `dsb/autoupdate`,
-`dsb/exfil`, `dsb/auth`, `dsb/misc`, `dsb/cloud`, `dsb/hard`, `dsb/hard2`);
-they are already merged, so you normally stay on `dsb/integration`. To
-re-parallelize, create fresh worktrees off `dsb/integration`:
+The historical slice branches (`dsb/telemetry`, `dsb/tools`, `dsb/autoupdate`,
+`dsb/exfil`, `dsb/auth`, `dsb/misc`, `dsb/cloud`, `dsb/hard`, `dsb/hard2`) and the
+old `dsb/integration` branch were merged into `main` and deleted (2026-11-21), so
+work starts from `main`. To parallelize, create fresh worktrees off `main`:
 
 ```sh
-git worktree add ../wt/<name> -b dsb/<name> dsb/integration
+git worktree add ../wt/<name> -b dsb/<name> main
 ```
 
 The slice worktrees on the original machine live under `/home/cein_orourke/wt/dsb-*`
@@ -98,7 +98,7 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
 ## 2. What is DONE
 
 - **Phase 0:** `PLAN.md` audit + phased plan; `DECISIONS.md` locked decisions; `NOTICE`.
-- **Phase 1 (partial, committed via slice branches, merged on `dsb/integration`):**
+- **Phase 1 (partial, committed via slice branches, merged into the former `dsb/integration`, now in `main`):**
   - `mixpanel` crate deleted (`988bad45`).
   - Telemetry: xAI OTLP stack + `xai-grok-otel` deleted, Sentry sink deleted, external
     OTEL stream stubbed; `xai-mixpanel` gone (`dsb/telemetry`, `83d26ac7`).
@@ -140,7 +140,7 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
   runtime prompt is XOR-obfuscated: after editing any template run
   `python3 scripts/encrypt_templates.py` (restored) and verify with
   `test_encrypted_templates_not_stale` (needs a compiling test suite).
-- **Step 5b — release pipeline + installer (DONE, on `dsb/integration`):**
+- **Step 5b — release pipeline + installer (DONE, now in `main`):**
   - `.github/workflows/release.yml` — tag `v*` (and `workflow_dispatch`) builds 4 targets
     **natively** (`ubuntu-22.04`, `ubuntu-22.04-arm`, `macos-15`, `macos-15-intel`), packages
     `deepseek-build-<ver>-<target>.tar.gz` (binary + LICENSE + NOTICE + THIRD-PARTY-NOTICES +
