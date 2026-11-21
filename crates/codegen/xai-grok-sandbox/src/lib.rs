@@ -952,6 +952,13 @@ mod tests {
             &format!("[profiles.denytest]\nextends = \"workspace\"\ndeny = [{deny_toml}]\n"),
         )
     }
+
+    /// Root bypasses DAC, so a fixture the test `chmod 000`s cannot produce `EACCES` there.
+    #[cfg(all(feature = "enforce", target_os = "linux"))]
+    fn dac_enforced() -> bool {
+        // SAFETY: geteuid is always safe.
+        unsafe { libc::geteuid() != 0 }
+    }
     #[test]
     #[cfg(all(feature = "enforce", unix))]
     fn requires_read_deny_only_for_custom_profile_with_deny() {

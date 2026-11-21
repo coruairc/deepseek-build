@@ -243,6 +243,7 @@ fn subprocess_entry() {
         "read_deny_empty_set" => subprocess_read_deny_empty_set(workspace),
         "devbox_marker_spoof" => subprocess_devbox_marker_spoof(workspace),
         "devbox_genuine" => subprocess_devbox_genuine(workspace),
+        "socket_parent_unsearchable" => subprocess_socket_parent_unsearchable(workspace),
         other => {
             eprintln!("unknown scenario: {other}");
             std::process::exit(99);
@@ -605,10 +606,11 @@ fn subprocess_devbox_marker_spoof(workspace: &Path) {
     }
 }
 /// Genuine devbox re-exec: with the marker fast path removed, Landlock must now also apply inside the real bwrap without breaking startup.
+/// The scenario runs a devbox-extending profile with an explicit deny, so the plan has an obligation on every host (not only where `/data` exists).
 fn subprocess_devbox_genuine(workspace: &Path) {
-    let profile = xai_grok_sandbox::ProfileName::Devbox;
+    let profile = profile_from_env();
     subprocess_profile_and_bwrap_reexec(&profile, workspace);
-    let mut sandbox = xai_grok_sandbox::SandboxManager::new(profile, workspace);
+    let mut sandbox = xai_grok_sandbox::SandboxManager::new(profile.clone(), workspace);
     if let Err(e) = sandbox.apply(workspace) {
         eprintln!("sandbox apply failed: {e}");
         std::process::exit(3);
@@ -618,10 +620,7 @@ fn subprocess_devbox_genuine(workspace: &Path) {
         std::process::exit(4);
     }
     #[cfg(target_os = "linux")]
-    if let Err(e) = xai_grok_sandbox::verify_data_write_deny_enforced(
-        &xai_grok_sandbox::ProfileName::Devbox,
-        workspace,
-    ) {
+    if let Err(e) = xai_grok_sandbox::verify_data_write_deny_enforced(&profile, workspace) {
         eprintln!("FAIL: genuine devbox bwrap failed startup verification: {e}");
         std::process::exit(5);
     }
@@ -632,6 +631,38 @@ fn subprocess_devbox_genuine(workspace: &Path) {
         std::process::exit(5);
     }
     eprintln!("OK: devbox enforcement applied inside genuine bwrap");
+    std::process::exit(0);
+}
+/// A candidate under a non-traversable parent must not empty the plan: re-exec is still built and the
+/// skipped candidate is absent from both its arguments and the runtime-socket handoff.
+fn subprocess_socket_parent_unsearchable(workspace: &Path) {
+    let profile = profile_from_env();
+    let Some(command) = xai_grok_sandbox::bwrap_reexec_for_profile(&profile, workspace) else {
+        eprintln!("FAIL: reexec plan is empty with an unsearchable socket parent");
+        std::process::exit(2);
+    };
+    let args: Vec<String> = command
+        .get_args()
+        .map(|arg| arg.to_string_lossy().into_owned())
+        .collect();
+    if args.iter().any(|arg| arg.contains("/.docker/")) {
+        eprintln!("FAIL: skipped candidate leaked into the deny plan: {args:?}");
+        std::process::exit(1);
+    }
+    // Literal: the constant is crate-private and this is a black-box integration test.
+    if let Some((_, value)) = command
+        .get_envs()
+        .find(|(key, _)| *key == "__GROK_BWRAP_RUNTIME_SOCKET_DENY")
+    {
+        let handed = value
+            .map(|v| v.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        if handed.contains("/.docker/") {
+            eprintln!("FAIL: skipped candidate leaked into the handoff: {handed}");
+            std::process::exit(1);
+        }
+    }
+    eprintln!("OK: reexec survives an unsearchable socket parent");
     std::process::exit(0);
 }
 /// Workspace-profile Grok-owned hook write-deny probes (existing sources and first-run).
@@ -1137,6 +1168,8 @@ fn devbox_marker_spoof_does_not_skip_enforcement() {
     );
 }
 /// Genuine devbox startup still succeeds with the marker fast path removed: the re-exec happens, and Landlock applies inside the real bwrap.
+/// The devbox-extending profile carries an explicit deny, so the plan has an obligation on every host
+/// (a host without `/data` would otherwise build an empty plan and correctly return `None`).
 #[test]
 #[cfg(target_os = "linux")]
 fn devbox_genuine_reexec_applies_enforcement() {
@@ -1144,11 +1177,21 @@ fn devbox_genuine_reexec_applies_enforcement() {
         return;
     }
     let (home, grok, workspace, _ch, _cg, _cw) = fixture_homes("devbox-genuine");
+    fs::create_dir_all(workspace.join(".grok")).expect("mkdir .grok");
+    fs::write(
+        workspace
+            .join(".grok")
+            .join(xai_grok_config::SANDBOX_CONFIG_FILENAME),
+        "[profiles.genuine]\nextends = \"devbox\"\ndeny = [\"secret.pem\"]\n",
+    )
+    .expect("write sandbox.toml");
+    fs::write(workspace.join("secret.pem"), format!("SECRET={MARKER}")).expect("write deny target");
     let exe = std::env::current_exe().expect("current_exe");
     let mut cmd = Command::new(exe);
     apply_fixture_env(&mut cmd, &home, &grok, &workspace);
     let output = cmd
         .env(SCENARIO_ENV, "devbox_genuine")
+        .env(PROFILE_ENV, "genuine")
         .arg("--ignored")
         .arg("--exact")
         .arg("--nocapture")
@@ -1392,4 +1435,46 @@ impl Drop for TempDirGuard {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
     }
+}
+
+/// An automatic runtime-socket candidate under a parent the process cannot traverse must not empty the
+/// deny plan: the subprocess still builds a re-exec and omits the skipped candidate.
+#[test]
+#[cfg(target_os = "linux")]
+fn unsearchable_socket_parent_does_not_abort_reexec() {
+    use std::os::unix::fs::PermissionsExt;
+
+    if skip_if_enforcement_unavailable() {
+        return;
+    }
+    let (home, grok, workspace, _ch, _cg, _cw) = fixture_homes("socket-parent");
+    let config_dir = workspace.join(".grok");
+    fs::create_dir_all(&config_dir).expect("mkdir .grok");
+    fs::write(
+        config_dir.join(xai_grok_config::SANDBOX_CONFIG_FILENAME),
+        "[profiles.socketparent]\nextends = \"strict\"\ndeny = [\"secret.pem\"]\n",
+    )
+    .expect("write sandbox.toml");
+    fs::write(workspace.join("secret.pem"), format!("SECRET={MARKER}")).expect("write secret");
+    let docker = home.join(".docker");
+    fs::create_dir_all(&docker).expect("mkdir .docker");
+    fs::set_permissions(&docker, fs::Permissions::from_mode(0o000)).expect("chmod .docker");
+
+    let exe = std::env::current_exe().expect("current_exe");
+    let mut cmd = Command::new(exe);
+    apply_fixture_env(&mut cmd, &home, &grok, &workspace);
+    let output = cmd
+        .env(SCENARIO_ENV, "socket_parent_unsearchable")
+        .env(PROFILE_ENV, "socketparent")
+        .args(["--ignored", "--exact", "--nocapture", "subprocess_entry"])
+        .output()
+        .expect("failed to spawn subprocess");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    // Restore so the fixture guard can remove the tree regardless of the assertion below.
+    let _ = fs::set_permissions(&docker, fs::Permissions::from_mode(0o700));
+    assert!(
+        output.status.success()
+            && stderr.contains("OK: reexec survives an unsearchable socket parent"),
+        "a non-traversable automatic-socket parent must not abort the re-exec\nstderr: {stderr}"
+    );
 }

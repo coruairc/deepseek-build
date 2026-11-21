@@ -97,7 +97,48 @@ fn runtime_socket_deny_paths_for_context_with_policy(
     }
 }
 
-/// Missing candidates are skipped; every other resolution failure is returned.
+/// How an endpoint `lstat` failure is classified for the fail-closed policy.
+///
+/// Distinct from a blanket "`PermissionDenied` is absent": the parent-traversal probe decides, so an
+/// unreadable endpoint under a *traversable* parent (an LSM denial) stays [`EndpointError::Fatal`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum EndpointError {
+    /// The endpoint does not exist; there is nothing to mask.
+    Missing,
+    /// The endpoint cannot be inspected because its parent directory is not searchable.
+    UntraversableParent,
+    /// Anything else: keep the fail-closed error.
+    Fatal,
+}
+
+/// Pure classifier for an endpoint `symlink_metadata` error. Kept separate so the arm the
+/// filesystem cannot produce (a `PermissionDenied` under a traversable parent) is testable.
+pub(crate) fn classify_endpoint_error(
+    kind: io::ErrorKind,
+    parent_traversable: bool,
+) -> EndpointError {
+    match kind {
+        io::ErrorKind::NotFound => EndpointError::Missing,
+        io::ErrorKind::PermissionDenied if !parent_traversable => {
+            EndpointError::UntraversableParent
+        }
+        _ => EndpointError::Fatal,
+    }
+}
+
+/// Probe whether `parent` is searchable by the current process.
+///
+/// `lstat("parent/.")` requires execute permission on `parent`; any error is treated as "not
+/// traversable" (the only error this process can produce here is `EACCES`, but a conservative
+/// `is_ok()` keeps the probe total). `parent` is an intermediate component, so the kernel resolves
+/// any symlink in it before the lookup — which is what the caller needs. No dependency, and it is
+/// only consulted on the error path, so the happy path takes no extra syscall.
+pub(crate) fn parent_is_traversable(parent: &Path) -> bool {
+    std::fs::symlink_metadata(parent.join(".")).is_ok()
+}
+
+/// Missing candidates and candidates under a non-traversable parent are skipped; every other
+/// resolution failure is returned.
 pub(crate) fn materialize_runtime_socket_deny_paths_from(
     candidates: impl IntoIterator<Item = PathBuf>,
 ) -> io::Result<Vec<PathBuf>> {
@@ -126,6 +167,13 @@ pub(crate) fn materialize_runtime_socket_deny_paths_from(
         })?;
         let canonical_parent = match dunce::canonicalize(parent) {
             Ok(parent) => parent,
+            Err(error) if error.kind() == io::ErrorKind::PermissionDenied => {
+                tracing::debug!(
+                    path = %candidate.display(),
+                    "skipping runtime-socket deny: parent not traversable"
+                );
+                continue;
+            }
             Err(error) if error.kind() == io::ErrorKind::NotFound => {
                 match std::fs::symlink_metadata(&candidate) {
                     Err(metadata_error) if metadata_error.kind() == io::ErrorKind::NotFound => {
@@ -140,8 +188,19 @@ pub(crate) fn materialize_runtime_socket_deny_paths_from(
         let path = canonical_parent.join(file_name);
         let metadata = match std::fs::symlink_metadata(&path) {
             Ok(metadata) => metadata,
-            Err(error) if error.kind() == io::ErrorKind::NotFound => continue,
-            Err(error) => return Err(with_context(error)),
+            Err(error) => {
+                match classify_endpoint_error(error.kind(), parent_is_traversable(parent)) {
+                    EndpointError::Missing => continue,
+                    EndpointError::UntraversableParent => {
+                        tracing::debug!(
+                            path = %candidate.display(),
+                            "skipping runtime-socket deny: parent not traversable"
+                        );
+                        continue;
+                    }
+                    EndpointError::Fatal => return Err(with_context(error)),
+                }
+            }
         };
         if metadata.file_type().is_symlink() {
             return Err(with_context(io::Error::new(

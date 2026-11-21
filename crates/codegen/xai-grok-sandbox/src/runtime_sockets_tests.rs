@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[test]
+#[serial(bwrap_env)]
 fn deny_list_covers_system_rootless_and_per_user_endpoints() {
     let paths = runtime_socket_deny_paths();
     for literal in SYSTEM_SOCKETS {
@@ -113,6 +114,14 @@ fn temp_runtime_root(tag: &str) -> PathBuf {
     ));
     std::fs::create_dir_all(&root).unwrap();
     root
+}
+
+/// Whether DAC permissions are enforced for this process. Root bypasses them, so a `chmod 000`
+/// fixture cannot produce `EACCES`; those tests self-skip instead of asserting the wrong shape.
+#[cfg(unix)]
+fn dac_enforced() -> bool {
+    // SAFETY: geteuid is always safe.
+    unsafe { libc::geteuid() != 0 }
 }
 
 #[test]
@@ -505,4 +514,210 @@ fn materialized_dbus_candidates_skip_missing_keep_existing() {
     .unwrap();
     assert_eq!(paths, vec![present]);
     let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+#[cfg(unix)]
+fn unsearchable_parent_directory_is_skipped() {
+    use std::os::unix::fs::PermissionsExt;
+
+    if !dac_enforced() {
+        eprintln!("skipping unsearchable_parent_directory_is_skipped: DAC not enforced (euid 0)");
+        return;
+    }
+    let root = temp_runtime_root("unsearchable-parent");
+    let parent = root.join("p");
+    std::fs::create_dir(&parent).unwrap();
+    let socket = parent.join("x.sock");
+    let _listener = std::os::unix::net::UnixListener::bind(&socket).unwrap();
+    std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+    let paths = materialize_runtime_socket_deny_paths_from([socket.clone()]);
+
+    std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let paths = paths.expect("a candidate under an unsearchable parent must be skipped");
+    assert!(
+        !paths.contains(&socket),
+        "unsearchable-parent candidate must be absent: {paths:?}"
+    );
+    assert!(
+        paths.is_empty(),
+        "no other candidate was materializable: {paths:?}"
+    );
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+#[cfg(unix)]
+fn unsearchable_ancestor_is_skipped() {
+    use std::os::unix::fs::PermissionsExt;
+
+    if !dac_enforced() {
+        eprintln!("skipping unsearchable_ancestor_is_skipped: DAC not enforced (euid 0)");
+        return;
+    }
+    let root = temp_runtime_root("unsearchable-ancestor");
+    let hidden = root.join("hidden");
+    let parent = hidden.join("p");
+    std::fs::create_dir_all(&parent).unwrap();
+    let socket = parent.join("x.sock");
+    let _listener = std::os::unix::net::UnixListener::bind(&socket).unwrap();
+    std::fs::set_permissions(&hidden, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+    let paths = materialize_runtime_socket_deny_paths_from([socket.clone()]);
+
+    std::fs::set_permissions(&hidden, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let paths = paths.expect("a candidate under an unsearchable ancestor must be skipped");
+    assert!(
+        paths.is_empty(),
+        "the skipped candidate must be absent: {paths:?}"
+    );
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+#[cfg(unix)]
+fn missing_parent_is_skipped() {
+    let root = temp_runtime_root("missing-parent");
+    let candidate = root.join("missing/docker.sock");
+
+    let paths = materialize_runtime_socket_deny_paths_from([candidate])
+        .expect("a candidate whose parent is absent must be skipped, not fatal");
+    assert!(paths.is_empty(), "nothing exists to mask: {paths:?}");
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+#[cfg(unix)]
+fn unreadable_endpoint_under_traversable_parent_is_materialized() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let root = temp_runtime_root("traversable-unreadable");
+    let parent = root.join("p");
+    std::fs::create_dir(&parent).unwrap();
+    let socket = parent.join("x.sock");
+    std::fs::write(&socket, "").unwrap();
+    std::fs::set_permissions(&socket, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+    let paths = materialize_runtime_socket_deny_paths_from([socket.clone()])
+        .expect("an unreadable endpoint under a traversable parent stays materializable");
+    assert_eq!(
+        paths,
+        vec![dunce::canonicalize(&parent).unwrap().join("x.sock")],
+        "the endpoint path must still be masked"
+    );
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+#[cfg(unix)]
+fn symlink_endpoint_is_fatal() {
+    let root = temp_runtime_root("symlink-endpoint");
+    let target = root.join("target.sock");
+    let endpoint = root.join("docker.sock");
+    let _listener = std::os::unix::net::UnixListener::bind(&target).unwrap();
+    std::os::unix::fs::symlink(&target, &endpoint).unwrap();
+
+    let error = materialize_runtime_socket_deny_paths_from([endpoint])
+        .expect_err("an endpoint symlink must stay fatal");
+    assert!(
+        error.to_string().contains("endpoint is a symlink"),
+        "unexpected error: {error}"
+    );
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+#[cfg(unix)]
+fn unsearchable_sibling_does_not_drop_a_materializable_candidate() {
+    use std::os::unix::fs::PermissionsExt;
+
+    if !dac_enforced() {
+        eprintln!(
+            "skipping unsearchable_sibling_does_not_drop_a_materializable_candidate: \
+             DAC not enforced (euid 0)"
+        );
+        return;
+    }
+    let root = temp_runtime_root("unsearchable-sibling");
+    let blocked_parent = root.join("blocked");
+    std::fs::create_dir(&blocked_parent).unwrap();
+    let blocked = blocked_parent.join("docker.sock");
+    let _blocked_listener = std::os::unix::net::UnixListener::bind(&blocked).unwrap();
+    let open_parent = root.join("open");
+    std::fs::create_dir(&open_parent).unwrap();
+    let materializable = open_parent.join("docker.sock");
+    let _open_listener = std::os::unix::net::UnixListener::bind(&materializable).unwrap();
+    std::fs::set_permissions(&blocked_parent, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+    let paths =
+        materialize_runtime_socket_deny_paths_from([blocked.clone(), materializable.clone()]);
+
+    std::fs::set_permissions(&blocked_parent, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let paths = paths.expect("a skipped candidate must not abort the remaining candidates");
+    assert_eq!(
+        paths,
+        vec![
+            dunce::canonicalize(&open_parent)
+                .unwrap()
+                .join("docker.sock")
+        ],
+        "only the materializable candidate should be returned"
+    );
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+#[cfg(unix)]
+fn parent_alias_dedupe_survives_a_skipped_candidate() {
+    use std::os::unix::fs::PermissionsExt;
+
+    if !dac_enforced() {
+        eprintln!("skipping parent_alias_dedupe_survives_a_skipped_candidate: DAC not enforced");
+        return;
+    }
+    let root = temp_runtime_root("alias-with-skip");
+    let run = root.join("run");
+    let var = root.join("var");
+    std::fs::create_dir(&run).unwrap();
+    std::fs::create_dir(&var).unwrap();
+    std::os::unix::fs::symlink("../run", var.join("run")).unwrap();
+    let socket = run.join("docker.sock");
+    let alias = var.join("run/docker.sock");
+    let _listener = std::os::unix::net::UnixListener::bind(&socket).unwrap();
+    let blocked_parent = root.join("blocked");
+    std::fs::create_dir(&blocked_parent).unwrap();
+    let blocked = blocked_parent.join("docker.sock");
+    let _blocked_listener = std::os::unix::net::UnixListener::bind(&blocked).unwrap();
+    std::fs::set_permissions(&blocked_parent, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+    let paths = materialize_runtime_socket_deny_paths_from([alias, blocked, socket.clone()]);
+
+    std::fs::set_permissions(&blocked_parent, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let paths = paths.expect("a skipped candidate must not disturb alias dedupe");
+    assert_eq!(paths, vec![socket], "the alias must collapse to one path");
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+fn endpoint_error_classification_table() {
+    use io::ErrorKind;
+
+    for (kind, parent_traversable, expected) in [
+        (ErrorKind::NotFound, true, EndpointError::Missing),
+        (ErrorKind::NotFound, false, EndpointError::Missing),
+        (
+            ErrorKind::PermissionDenied,
+            false,
+            EndpointError::UntraversableParent,
+        ),
+        (ErrorKind::PermissionDenied, true, EndpointError::Fatal),
+        (ErrorKind::InvalidInput, true, EndpointError::Fatal),
+    ] {
+        assert_eq!(
+            classify_endpoint_error(kind, parent_traversable),
+            expected,
+            "classification mismatch for {kind:?} with parent_traversable={parent_traversable}"
+        );
+    }
 }
