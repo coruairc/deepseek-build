@@ -16,28 +16,31 @@ public description; §7 maps the code and §8 lists the rules for changing it.
 
 ## 0. Snapshot
 
-- **Branch:** `dsb/integration` (the integration branch; all work merged here).
-  `main` is a strict ancestor — fast-forward it after pushing.
+- **Branch:** `main` is the mainline and carries the released lineage
+  (`v0.0.1-rc5`). Work branches rebase onto `main` before review; do not treat a
+  side branch as the integration point.
+- **HEAD (refreshed 2026-11-21):** `main` is at `221a1a59` — rc5 telemetry/proxy
+  removal, first-party `api.deepseek.com` host check, Linux-only prerelease docs.
+  The docs branch that carries this file is rebased on top of it.
 - **Remote:** `origin git@github.com:coruairc/deepseek-build.git`.
 - **Toolchain:** Rust **1.94.0** via rustup (pinned in `rust-toolchain.toml`). Do not bump.
   `protoc` on PATH (`/usr/bin/protoc`); `dotslash` not needed. `strace` absent (use
   `scripts/egress-check.sh`).
 - **Binary:** release binary built via `cargo build --release -p xai-grok-pager-bin`
   (artifact `target/release/deepseek-build`; ~147 MiB on linux-x86_64; package
-  `xai-grok-pager-bin`, D2 keeps the internal package name). Installed on the
-  author's machine at `~/.local/bin/deepseek-build` as
-  `deepseek-build 1.0.45 (cc6e6948c8db)`. **Rebrand done**: config dir
-  `~/.deepseek-build`, ACP namespace `deepseek-build/*`, Monokai theme + DeepSeek
-  whale logo, brand constants in `crates/codegen/xai-grok-brand/`; prompt templates
-  carry no Grok Build strings.
-- **Egress gate:** `scripts/check-egress.sh --strict` → **exit 0** (HARD OK, SOFT zero).
-- **Build:** `cargo check -p xai-grok-pager-bin` and `cargo build --release` are green.
-  **All test targets compile**; the last full `cargo test --workspace --no-fail-fast`
-  was **31,939 passed / 2 failed / 388 ignored across 307 targets**. The 2 failures
-  are host-environment `xai-grok-sandbox --test deny_paths_e2e` bwrap failures
-  (root-owned `/run/containerd`), not code — the crate is byte-identical to the
-  `last-known-good-2026-10-06` tag. A full run on `cc6e6948` is in flight; see
-  `KNOWN-ISSUES.md`.
+  `xai-grok-pager-bin`, version `0.0.1-rc5`, D2 keeps the internal package name).
+  **Rebrand done**: config dir `~/.deepseek-build`, ACP namespace `deepseek-build/*`,
+  Monokai theme + DeepSeek whale logo, brand constants in
+  `crates/codegen/xai-grok-brand/`; prompt templates carry no Grok Build strings.
+- **Egress gate:** `scripts/check-egress.sh --strict` → **exit 0** (HARD OK, SOFT zero)
+  as of the last recorded run; re-run after network-touching changes.
+- **Build:** `cargo check -p xai-grok-pager-bin` and `cargo build --release` were green
+  at last record. **All test targets compile**; the last full
+  `cargo test --workspace --no-fail-fast` was **31,939 passed / 2 failed / 388 ignored
+  across 307 targets** (2026-10-09). The 2 failures are host-environment
+  `xai-grok-sandbox --test deny_paths_e2e` bwrap failures (root-owned `/run/containerd`),
+  not code. A follow-up full run on `cc6e6948` was described as in-flight then and
+  **was never recorded as finished** in `KNOWN-ISSUES.md`.
 - **Runtime egress (observed):** a real model-driven session (shell, edits, web_fetch,
   local MCP, compaction, resume) contacts only `api.deepseek.com:443`, the web_fetch
   host, and AF_UNIX sockets — `scripts/egress-check.sh` reports
@@ -50,18 +53,19 @@ public description; §7 maps the code and §8 lists the rules for changing it.
   won; nothing became a new default).
 - **Headless cost:** `--output-format json` emits `estimated_cost_usd` +
   `estimate: true` (local peak-rate estimate, D14) alongside usage.
-- **Release/container:** prerelease [`v0.0.1-rc4`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc4) (`b8b4fc20`) is
+- **Release/container:** prerelease [`v0.0.1-rc5`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc5) (`4b305bd0`, 2026-10-25) is
   published, **Linux only** (x86_64 + aarch64 tarballs, `SHA256SUMS`, `install.sh`);
-  the x86_64 install was verified from the real release on 2026-10-24. macOS is
+  rc4's x86_64 install was verified from the real release on 2026-10-24. macOS is
   dropped for now: the aarch64-apple-darwin job hit the 90-minute job timeout and
   cancelled the run, so the container job was skipped and **no GHCR image exists**
   (checked 2026-10-24). Dry-run procedure: §6.
 - **Status:** usable with a real `DEEPSEEK_API_KEY`. See `TESTING.md`,
   `scripts/smoke-test.sh`, `scripts/egress-check.sh`, `scripts/sandbox-run.sh`,
-  `KNOWN-ISSUES.md`. Remaining: confirm one full green workspace run (host-only
-  sandbox failures excepted); exercise the release workflow + container via the §6
-  dry run; interactive TUI driven only under a pty, never by a human; user-guide
-  swept 2026-10-12 (removed-flow pages deleted, examples use the real binary name).
+  `KNOWN-ISSUES.md`. Remaining: confirm one full green workspace run on a clean
+  host (the flaky shell tests and host-only sandbox failures are recorded in
+  `KNOWN-ISSUES.md`); no GHCR image and no macOS release yet; interactive TUI
+  driven only under a pty, never by a human; user-guide swept 2026-10-12
+  (removed-flow pages deleted, examples use the real binary name).
 
 ## 1. How to resume (another machine)
 
@@ -108,8 +112,9 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
     not fully deleted — see §5.
   - Auth: xAI OAuth/OIDC/device-code/JWKS/refresh network stack deleted; API-key path
     (`DEEPSEEK_API_KEY` / `DEEPSEEK_BUILD_API_KEY`) added (`dsb/auth`, `3f56baf7`).
-  - Misc: announcement banner UI + SuperGrok billing/upsell removed; computer-hub **not**
-    removed (`dsb/misc`, `ef7e4d89`).
+  - Misc: announcement banner UI + SuperGrok billing/upsell removed (`dsb/misc`,
+    `ef7e4d89`). Computer-hub crates were still present at that slice; they are
+    **gone from the tree as of 2026-10-16** (no `xai-computer-hub-*` members).
   - `xai-grok-cloud-config` crate deleted, code vendored inert into
     `xai-grok-shell/src/cloud_config/` (`dsb/cloud`, `02a551c0`).
   - **HARD egress gate cleared to zero** across production + tests
@@ -158,9 +163,11 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
     copyleft MPL-2.0 crates listed in the audit. No GPL-3/AGPL/LGPL/CDDL.
   - README `## Install` section: curl one-liner, download-inspect-run alternative, VERSION
     pinning, uninstall, manual verify, supported-platform table, attribution + non-affiliation.
-  - **Not yet done:** no tag has been pushed, so no release exists yet. The release
-    workflow has never run in CI, and the container image has never been built or
-    pulled. See §6 for the test-tag procedure.
+  - **Release status:** `v0.0.1-rc2` through `v0.0.1-rc5` are published as prereleases.
+    rc5 (2026-10-25) ships Linux x86_64 + aarch64 tarballs, `SHA256SUMS`, and
+    `install.sh`. The release workflow has run in CI. The macOS legs still time out,
+    so no macOS artifact exists, the container job is skipped, and no GHCR image has
+    been built or pulled. See §6 for the test-tag procedure.
 
 ## 3. What is LEFT (ordered)
 
@@ -171,12 +178,13 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
    (2026-10-12). Remaining sub-item: the ~435 internal-only `GROK_*` names (1,529
    occurrences across 284 files; listed in [`docs/INTERNAL-GROK-ENV-NAMES.md`](docs/INTERNAL-GROK-ENV-NAMES.md))
    can be renamed in the open-build branch.
-3. **Finish real deletion of Phase-1 stubs** (see §5): shell `src/upload/*`,
-   `session/repo_changes`, `feedback_manager`, feedback UI, `share`, vendored
-   `shell/src/cloud_config/**`, `xai-computer-hub-{core,sdk,mcp-adapter}` and consumers,
-   shell `src/remote/**` relay clients, `agent/relay.rs`. All inert (no network); this is
-   cleanup, not security. The dead **xAI login/OIDC surface was deleted** 2026-10-09
-   (`cc6e6948`, −1,352 lines).
+3. ~~**Finish real deletion of Phase-1 stubs**~~ **DONE as of 2026-10-16 for the
+   listed paths** (see §5): `upload/`, `repo_changes`, `feedback_manager`,
+   `cloud_config/`, `remote/`, `agent/relay.rs`, computer-hub crates, pager voice
+   and announcements stubs, telemetry OTEL no-op files. Do not treat those paths
+   as still present. Residual mentions (protocol comments, log-filter crate names)
+   are leftover naming, not live network. The dead **xAI login/OIDC surface was
+   deleted** 2026-10-09 (`cc6e6948`, −1,352 lines).
 4. ~~**Phase 2 proof**~~ **DONE** (wiremock suite in `xai-grok-sampler/tests/`, live smoke
    8/8 PASS; see `KNOWN-ISSUES.md` "Phase 2"). Live-verify items are recorded in
    `DECISIONS.md` O3.
@@ -186,9 +194,9 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
    read-before-write enforcement, cache-aware compaction, session resume, subagents (Flash for
    research), MCP client, AGENTS.md loading, checkpoints/undo, headless mode.
 7. ~~**Phase 5 quality bar**~~ release pipeline + installer + docs **DONE** (see §2). Still owed:
-   exercise the release workflow + container via the §6 dry run, and confirm one full
-   `cargo test --workspace` run green on a clean host (the only known failures are
-   host-environment bwrap ones; see §0).
+   publish a macOS artifact and build/pull the container image, and confirm one full
+   `cargo test --workspace` run green on a clean host (the flaky shell tests and
+   host-environment bwrap failures are recorded in `KNOWN-ISSUES.md`).
 8. ~~**Phase E (tuning/eval harness)**~~ **DONE**: `scripts/evals/` (21 auto-checked tasks),
    E2 baseline + E3a–d measured, results in `docs/TUNING.md`.
 
@@ -217,20 +225,17 @@ add an outbound destination, or the live smoke test needs a key not provided.
 
 - **All test targets compile.** The last full `cargo test --workspace` was 31,939 passed /
   2 failed / 388 ignored across 307 targets; the 2 are host-environment `xai-grok-sandbox`
-  bwrap failures (root-owned `/run/containerd`), not code. A full run on `cc6e6948` is in
-  flight. See `KNOWN-ISSUES.md`.
-- **Unexercised:** interactive TUI by a human (only pty-driven), the release workflow in CI
-  (no tag, no release), the container image (never built/pulled), and the live scripts on any
+  bwrap failures (root-owned `/run/containerd`), not code. See `KNOWN-ISSUES.md`.
+- **Unexercised:** interactive TUI by a human (only pty-driven), a macOS release,
+  the container image (never built/pulled), and the live scripts on any
   machine other than the author's. See `KNOWN-ISSUES.md` "Unexercised surfaces".
-- **Stubs left (no network, but present):** `xai-grok-telemetry/src/{external.rs,otel_layer.rs,
-  trace_context.rs}` (no-op OTEL), shell `src/file_utils_compat.rs`, shell
-  `session/repo_changes/mod.rs` (pure serde types), shell `session/feedback_manager.rs`,
-  shell `src/upload/**` (restored inert, routed to compat), pager voice stub
-  (`pager/src/xai_grok_voice.rs`), pager `views/announcements.rs` (no-op).
-- **Not removed:** `xai-computer-hub-{core,sdk,mcp-adapter}` + consumers; shell `src/remote/**`
-  relay/gateway clients; `agent/relay.rs`; vendored `shell/src/cloud_config/**`; remote
-  settings/campaigns types (fetch is inert).
-- **`xai-grok-cloud-config`** exists only as `xai-grok-shell/src/cloud_config/` now.
+- **Phase-1 stub paths listed in earlier handoffs are gone (checked 2026-10-16):**
+  telemetry `external.rs` / `otel_layer.rs` / `trace_context.rs`; shell
+  `file_utils_compat.rs`, `session/repo_changes/`, `session/feedback_manager.rs`,
+  `src/upload/**`, `src/cloud_config/**`, `src/remote/**`, `agent/relay.rs`; pager
+  `xai_grok_voice.rs` and `views/announcements.rs`; no `xai-computer-hub-*` crates.
+  Do not recreate them. `xai-tool-protocol` still mentions "computer hub" in comments
+  and handshake fields.
 - **`xai-grok-*` crate/package names remain** (decision D2); only the user-facing surface will
   be renamed.
 - Do not edit `xai-grok-env`, `xai-grok-config/src/endpoints.rs`, `xai-grok-models`,
@@ -251,6 +256,10 @@ cargo build --release -p xai-grok-pager-bin
 
 scripts/check-egress.sh           # HARD gate
 scripts/check-egress.sh --strict  # + branding (post-rebrand)
+cargo test -p xai-grok-pager-bin --test branding_surface
+# after editing crates/codegen/xai-grok-agent/templates/:
+python3 scripts/encrypt_templates.py
+cargo test -p xai-grok-agent --lib prompt::template::tests::test_encrypted_templates_not_stale
 
 # Step 5b release pipeline / installer
 actionlint .github/workflows/*.yml
@@ -350,17 +359,26 @@ with the code, trust the code.
 - **Prompt templates:** the files under `crates/codegen/xai-grok-agent/templates/`
   are XOR-obfuscated into `src/prompt/prompt_encrypted.rs`; after editing any
   template run `python3 scripts/encrypt_templates.py` and keep
-  `test_encrypted_templates_not_stale` green.
+  `cargo test -p xai-grok-agent --lib prompt::template::tests::test_encrypted_templates_not_stale`
+  green.
+- **Config reference:** `crates/codegen/xai-grok-pager/docs/user-guide/26-config-reference.md`
+  is hand-edited — do not regenerate it. When a key is added or removed from the
+  live registries (`FEATURES`, `UNMIRRORED_BOOLEAN_FEATURES`,
+  `KNOWN_MCP_SERVER_FIELDS`), update that page;
+  `config_docs` tests (`--features config-docs`) check it stays in sync. Keys for
+  removed flows go in `UNDOCUMENTED_REMOVED_FLOW_KEYS`, not the page.
 - **Commits and docs:** small, logical commits, one change each (DECISIONS C1);
   keep build + tests green after every merge (C3); deletions must be real
   deletions (C4). Update `KNOWN-ISSUES.md` when status changes and refresh this
   file's §0 snapshot at session end. `DECISIONS.md` wins on conflict; its
   execution rules list the stop-and-ask conditions.
-- **Disk budget:** `.cargo/config.toml` keeps dev/test lean (`[build] incremental =
-  false`; `[profile.dev]`/`[profile.test]` `debug = "line-tables-only"`, third-party
-  crates `debug = false`). Do not raise these without a disk plan — the old
-  settings accumulated 244 GB of `target/debug`; a fresh measured
-  `cargo build --workspace --tests` is now **~24 GB in ~7 min** (2026-10-12).
+- **Disk budget:** `.cargo/config.toml` sets `[build] incremental = false` (this
+  overrides `[profile.dev] incremental = true` in workspace `Cargo.toml` — do not
+  drop the `[build]` setting). `[profile.dev]` / `[profile.test]`
+  `debug = "line-tables-only"` and `[profile.dev.package."*"] debug = false` live
+  in workspace `Cargo.toml`, not `.cargo/config.toml`. Do not raise these without
+  a disk plan — the old settings accumulated 244 GB of `target/debug`; a fresh
+  measured `cargo build --workspace --tests` is now **~24 GB in ~7 min** (2026-10-12).
   Use ONE shared cargo target dir across worktrees/sessions: point
   `CARGO_TARGET_DIR` at the main checkout's `target/` (e.g. `export
   CARGO_TARGET_DIR="$HOME/Projects/deepseek-build/target"`) and remove a
