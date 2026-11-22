@@ -1,0 +1,14 @@
+{
+  "item": "cost-estimate",
+  "requirements": [
+    "COST-01",
+    "COST-02",
+    "COST-03"
+  ],
+  "date": "2026-11-22T05:06:42Z",
+  "host": "Linux/x86_64",
+  "command": "cargo test -p xai-grok-pager --lib status_line; cargo test -p xai-grok-pager --lib headless — DEFERRED (tests skipped by owner, 2026-11-22)",
+  "steps": [],
+  "artifacts": [],
+  "result": "skipped"
+}

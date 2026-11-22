@@ -9,8 +9,12 @@ or observable state.
 - **Live checks (§3) and installer/container/release (§5):** another ~25–40
   minutes; §3 needs a real key, §5 does not.
 
-> Status (2026-11-21): `scripts/test-gate.sh` is green on this tree — exit 0,
-> step 1 (workspace) PASS, step 2 (`config-docs`) PASS, leak scan PASS;
+> Status (2026-11-22): **test runs are DEFERRED — the owner directed on
+> 2026-11-22 that no test, gate or smoke run is performed for the remaining
+> milestone plans.** The figures below are the 2026-11-21 gate run on the
+> author's host, not re-confirmed here; treat them as the last recorded green
+> result, not a fresh certification. `scripts/test-gate.sh` is green there —
+> exit 0, step 1 (workspace) PASS, step 2 (`config-docs`) PASS, leak scan PASS;
 > results 308 = binaries 219 + doctests 89, and the checked-in expected count is
 > 308. Evidence is under `docs/evidence/01-truth-baseline/test-gate/`. The live
 > DeepSeek smoke test and the runtime egress audit were last green on the
@@ -120,10 +124,13 @@ Launch the binary and approve tool calls as prompted.
 
 ## 6. Test suite status
 
-- **The gate is `scripts/test-gate.sh`; run it before any release claim.** On
-  2026-11-21 it exited 0: step 1 `cargo test --workspace --no-fail-fast --
-  --test-threads=4` PASS, step 2 `cargo test -p xai-grok-shell --lib --features
-  config-docs -j 1` PASS, and the leak scan over `docs/evidence` PASS. Counts:
+- **The gate is `scripts/test-gate.sh`; run it before any release claim.**
+  **DEFERRED (tests skipped by owner, 2026-11-22):** the gate is not run for the
+  remaining milestone plans; re-run it before quoting counts for a release. On
+  2026-11-21 it exited 0 on the author's host: step 1 `cargo test --workspace
+  --no-fail-fast -- --test-threads=4` PASS, step 2 `cargo test -p xai-grok-shell
+  --lib --features config-docs -j 1` PASS, and the leak scan over
+  `docs/evidence` PASS. Counts:
   `results=308`, `binaries=219`, `doctests=89`, `expected=308`. The verdict is
   the arithmetic (`results == binaries + doctests == expected`), never the tail
   of the log. `results` counts one top-level `test result:` line per cargo

@@ -1,0 +1,18 @@
+{
+  "item": "test-gate",
+  "requirements": [
+    "TEST-01",
+    "TEST-02"
+  ],
+  "date": "2026-11-22T05:06:42Z",
+  "host": "Linux/x86_64",
+  "command": "scripts/test-gate.sh (full run) — DEFERRED (tests skipped by owner, 2026-11-22)",
+  "steps": [],
+  "artifacts": [
+    {
+      "path": "docs/evidence/01-truth-baseline/test-gate/test-gate.log",
+      "sha256": "803c1f6435df7aa126c06604a9419c2d87c8a10036f1bd1f3890f248bea1d340"
+    }
+  ],
+  "result": "skipped"
+}

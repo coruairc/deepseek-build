@@ -38,12 +38,24 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   own test binary with inherited stdout. Evidence:
   `docs/evidence/01-truth-baseline/test-gate/`. **The 2026-10-09 figure
   "31,939 passed / 2 failed / 388 ignored across 307 targets" is stale** (a
-  different tree) and must not be quoted. Quarantined tests: none. **The
-  confirmation rerun (plan 01-05 step 3f) was interrupted by a pause and is
-  NOT RUN; re-run `scripts/test-gate.sh` once on resume before treating the
-  count as confirmed, and do not change the expected count if it differs.**
-  The `test-gate` evidence item is also partial (log only; no cast or
-  `report.json`).
+  different tree) and must not be quoted. Quarantined tests: none.
+  **DEFERRED (tests skipped by owner, 2026-11-22):** the confirmation rerun
+  (plan 01-05 step 3f) was interrupted, and the owner then directed that all
+  test and gate runs stop for the remaining plans. The green figures above are
+  the 2026-11-21 run #2 on the author's host; they are **not re-confirmed** on
+  this host. The `test-gate` item holds that run's log plus a `report.json` with
+  `result: skipped`; the `cost-estimate` item is `skipped` with no cast. Re-run
+  `scripts/test-gate.sh` (and record a fresh `--refresh-expected` only on a green
+  run) before quoting the count for a release.
+
+- **Host tooling gaps seen on the skip-testing host (2026-11-22).** This
+  environment has no `pkg-config`, so `openssl-sys` (via `git2`) needs
+  `OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu` and
+  `OPENSSL_INCLUDE_DIR=/usr/include`; `shellcheck` and `actionlint` are also
+  absent, so the script-lint commands in `TESTING.md` / `AGENTS.md` §6 cannot
+  run here. `scripts/test-gate.sh` takes `TEST_GATE_MIN_GB` to lower its 150 GB
+  disk floor on a smaller host.
+
 - **`xai-grok-sandbox --test deny_paths_e2e` is green: 14 passed / 0 failed /
   1 ignored (2026-11-21).** The previously failing
   `devbox_genuine_reexec_applies_enforcement` now runs a
