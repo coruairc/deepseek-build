@@ -389,8 +389,12 @@ strip = "symbols"
 inherits = "release"
 lto = "thin"
 codegen-units = 1
-strip = false
-debug = 1
+# Distribution builds ship no DWARF: strip at codegen time (rustc applies it
+# before the final link, so the macOS ad-hoc signature stays valid) and emit no
+# debug info at all. No .debug/.dSYM sidecar is produced or expected;
+# split-debuginfo stays off so nothing is written beside the binary.
+strip = "symbols"
+debug = 0
 split-debuginfo = "off"
 
 # Production profile for latency-sensitive x-product services (VF, home-mixer).
