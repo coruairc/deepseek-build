@@ -62,8 +62,10 @@ scripts/evidence.py begin --item-dir "$ITEM" --item ipv6-report \
     --requirements SBOX-02 --command "sh scripts/test-sandbox-run.sh"
 
 # One step per assertion; each runs a real check and records its exit status.
+# A non-quiet grep keeps the matched line in the step log (the committed
+# ipv6-report step logs show the PASS line for this reason).
 scripts/evidence.py step --item-dir "$ITEM" --name "ipv6-refused: names the destination" \
-    -- sh -c "grep -qF 'PASS: ipv6-refused: blocked line names 2001:db8::1' <captured>"
+    -- sh -c "grep -F 'PASS: ipv6-refused: blocked line names 2001:db8::1' '$ITEM/run.typescript' >/dev/null && grep -F 'PASS: ipv6-refused: blocked line names 2001:db8::1' '$ITEM/run.typescript'"
 
 # A cast from script(1): -T writes the timing file the converter needs.
 script -qec 'sh scripts/test-sandbox-run.sh' -T "$ITEM/run.timing" "$ITEM/run.typescript"

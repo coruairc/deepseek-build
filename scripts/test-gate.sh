@@ -182,7 +182,7 @@ raw_results=$(awk '/^test result:/ { n++ } END { print n + 0 }' "$LOG_STEP1")
 results=$(
     awk '
         /^     Running / || /^   Doc-tests / {
-            if (open) { total++ }
+            if (open && got) { total++ }
             open = 1
             got = 0
             next
@@ -260,27 +260,9 @@ else
     fi
 fi
 
-# 7. Write the expected file only from a fully green run with the derived
-# equality intact. A red run never writes it.
-if [ "$REFRESH" -eq 1 ]; then
-    if [ "$fail" -ne 0 ]; then
-        echo "gate: --refresh-expected refused — the run is not green" >&2
-        exit 1
-    fi
-    {
-        echo "# refreshed by: scripts/test-gate.sh --refresh-expected"
-        echo "# commit: $(git -C "$root" rev-parse HEAD)"
-        echo "# date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        echo "# a green full run: results == binaries + doctests"
-        echo "results=$results"
-        echo "binaries=$binaries"
-        echo "doctests=$doctests"
-    } >"$EXPECTED_FILE"
-    echo "gate: wrote $EXPECTED_FILE"
-fi
-
-# 8. Leak scan over the committed evidence (no network). Runs after the count
-# assertions and is part of the exit code.
+# 7. Leak scan over the committed evidence (no network). Runs before the
+# refresh write so a red run — including a leak hit — can never rewrite the
+# expected count.
 if [ -d "$root/docs/evidence" ]; then
     echo "gate step 3: scripts/key-leak-check.sh --scan docs/evidence"
     set +e
@@ -296,6 +278,31 @@ if [ -d "$root/docs/evidence" ]; then
     fi
 else
     echo "gate step 3: SKIPPED (docs/evidence is missing)"
+fi
+
+# 8. Write the expected file only from a run that is green end to end. The
+# check is after every step, so a red run — including the leak scan — never
+# writes it. The provenance records whether the working tree was dirty, because
+# `git rev-parse HEAD` alone would name a commit that may not contain the gate.
+if [ "$REFRESH" -eq 1 ]; then
+    if [ "$fail" -ne 0 ]; then
+        echo "gate: --refresh-expected refused — the run is not green" >&2
+        exit 1
+    fi
+    dirty=""
+    if [ -n "$(git -C "$root" status --porcelain 2>/dev/null)" ]; then
+        dirty=" (working tree dirty; the count came from the tree, not this commit)"
+    fi
+    {
+        echo "# refreshed by: scripts/test-gate.sh --refresh-expected"
+        echo "# commit: $(git -C "$root" rev-parse HEAD)${dirty}"
+        echo "# date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        echo "# a green full run: results == binaries + doctests"
+        echo "results=$results"
+        echo "binaries=$binaries"
+        echo "doctests=$doctests"
+    } >"$EXPECTED_FILE"
+    echo "gate: wrote $EXPECTED_FILE"
 fi
 
 if [ "$fail" -ne 0 ]; then

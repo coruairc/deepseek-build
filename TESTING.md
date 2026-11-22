@@ -62,7 +62,7 @@ or observable state.
 | 1 | `source "$HOME/.cargo/env"` | no output |
 | 2 | `cargo build --release -p xai-grok-pager-bin` | exit 0, ends `Finished release ...` (a cold first build takes 10+ min of compile time — not counted in the 20–30 min pass) |
 | 3 | `ls -lh target/release/deepseek-build` | an executable; last measured 147M (153,624,024 bytes) |
-| 4 | `./target/release/deepseek-build --version` | `deepseek-build 0.0.1-rc5 (<12-hex commit>)`, exit 0 |
+| 4 | `./target/release/deepseek-build --version` | `deepseek-build 0.1.0 (<12-hex commit>)`, exit 0 |
 
 ## 2. Key handling and first run (3 min)
 
@@ -142,7 +142,10 @@ Launch the binary and approve tool calls as prompted.
 - **The expected count is checked in** at `scripts/test-gate.expected`, with its
   provenance header (refresh command, commit, UTC date, the three numbers). Only
   a fully green `scripts/test-gate.sh --refresh-expected` rewrites it; edit it by
-  hand and the full-mode comparison fails.
+  hand and the full-mode comparison fails. The header's commit is
+  `882ad0de`, which is a dirty-tree base: the gate script and the determinism
+  edits were uncommitted when the count was seeded (the script first landed in
+  `b0516ef1`). Re-derive the count on a green run before quoting it elsewhere.
 - **Determinism (2026-11-21).** The two process-global `xai-grok-shell` tests
   (`agent::folder_trust::tests::record_and_lookup_round_trip` and
   `util::config::consent::tests::set_consent_answer_is_monotonic_per_account`)

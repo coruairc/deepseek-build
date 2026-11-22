@@ -52,10 +52,12 @@ metrics:
 # Phase 1 Plan 5: Test gate and evidence convention Summary
 
 One gate that cannot be green by accident, and one evidence convention a later
-reader can re-run. The code is complete and committed. **Every test, gate and
-verification step in this plan is DEFERRED (tests skipped by owner,
-2026-11-22)** — the owner directed that no further test, gate or smoke run be
-performed for the rest of the milestone.
+reader can re-run. The code is complete and committed. The runs that produced
+the recorded numbers happened on 2026-11-21 (full gate run #2, the
+`ipv6-report` harness, five crate repetitions). **Every run after the owner's
+2026-11-22 decision is DEFERRED (tests skipped by owner, 2026-11-22)**: no
+further test, gate or smoke run is performed for the rest of the milestone, and
+none of the 2026-11-21 numbers was re-confirmed on this host.
 
 ## Per-task changes
 
@@ -104,9 +106,13 @@ performed for the rest of the milestone.
     outer timeout multiplier 3 → 10; walk-count assertion unchanged.
   - `status_and_diffs_never_overlap_odb_walks` and all `restore_fetch` bands
     left unchanged: no recorded rotation named them.
-- The five-run repetition and the `config-docs` suite are **DEFERRED (tests
-  skipped by owner, 2026-11-22)**. No test is quarantined: a quarantine needs a
-  named rotating test and a reproducer, and no repetition was run.
+- Five consecutive `cargo test -p xai-grok-workspace --lib --
+  --test-threads=4` runs each reported **1694 passed / 0 failed** on
+  2026-11-21 (recorded in `.continue-here.md`, `KNOWN-ISSUES.md` and
+  `TESTING.md`). They were **not re-confirmed on this host**, and re-running is
+  **DEFERRED (tests skipped by owner, 2026-11-22)**. No test is quarantined: a
+  quarantine needs a named rotating test and a reproducer, and no rotation was
+  seen.
 
 ### Task 3 — evidence convention and the recorded run
 
@@ -137,9 +143,28 @@ performed for the rest of the milestone.
 |---|---|
 | TEST-01 | Code complete; gate run **DEFERRED (tests skipped by owner, 2026-11-22)** |
 | TEST-02 | `config-docs` is a named gate step; run **DEFERRED** |
-| TEST-03 | Determinism fixes applied; five-run repetition **DEFERRED** |
+| TEST-03 | Determinism fixes applied; five green runs recorded 2026-11-21; re-run **DEFERRED** |
 | EVID-01 | Convention + `ipv6-report` complete; `test-gate` and `cost-estimate` **skipped** by owner decision |
 | EVID-02 | Complete: `docs/evidence/README.md` documents layout, keys, normalization and re-run recipes |
+
+## Review
+
+`01-05-REVIEW.md` returned **CHANGES_REQUIRED** on the first pass; all findings
+were fixed in the follow-up commit:
+
+- **WR-01 (truth):** the summary below now matches `.continue-here.md`,
+  `KNOWN-ISSUES.md` and `TESTING.md`: five green crate runs happened on
+  2026-11-21; only re-runs after the owner's decision are deferred.
+- **WR-02 (provenance):** `scripts/test-gate.expected` now records that the
+  refresh ran on a dirty tree at `882ad0de`; the writer stamps
+  "(working tree dirty …)" whenever `git status` is non-empty.
+- **WR-03 (red-run write):** the leak scan moved before the refresh write, so
+  `--refresh-expected` can only write after every step is green.
+- **WR-04 (arithmetic):** the block counter now requires `got` for every block,
+  including non-final ones.
+- **WR-05 / WR-06 (evidence docs):** the `test-gate` notes say the log is
+  step 1 only, and the evidence README recipe uses a non-quiet `grep -F` so a
+  re-run reproduces a non-empty step log.
 
 ## Deviations
 

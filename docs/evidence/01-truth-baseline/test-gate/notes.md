@@ -10,14 +10,16 @@ The owner directed on 2026-11-22 that all test and gate runs stop for the
 remaining milestone plans. This item is therefore **`result: skipped`**:
 `report.json` carries no steps and records no verdict.
 
-`test-gate.log` is the 2026-11-21 full run (run #2) on the author's host, kept
-as the last recorded green output. It reports `results=308`, `binaries=219`,
-`doctests=89` against `scripts/test-gate.expected`, with 309 raw `test result:`
-lines because `xai_tty_utils`'s `stderr_redirect_roundtrip_subprocess` re-runs
-its own test binary with inherited stdout. It is **not** a re-confirmation on
-this host: the confirmation run (task 3f) was interrupted and never finished.
-No cast was captured; the intended cast is a `script -T` recording of the
-subset-mode run.
+`test-gate.log` is the **step-1 workspace log** from the 2026-11-21 full gate
+run (run #2) on the author's host, kept as the last recorded green output. It
+reports `results=308`, `binaries=219`, `doctests=89` against
+`scripts/test-gate.expected`, with 309 raw `test result:` lines because
+`xai_tty_utils`'s `stderr_redirect_roundtrip_subprocess` re-runs its own test
+binary with inherited stdout. Step 2 (`config-docs`) and the leak-scan log were
+not kept, so this file alone does not show those steps passing. It is **not** a
+re-confirmation on this host: the confirmation run (task 3f) was interrupted and
+never finished. No cast was captured; the intended cast is a `script -T`
+recording of the subset-mode run.
 
 Do not upgrade this item to `ok` without a fresh green full run.
 
