@@ -20,6 +20,13 @@ Routing and per-model cost are **not** in this milestone. `/model` and `/effort`
 switches; automatic routing is designed in open-build after the freeze, where it generalizes across
 providers.
 
+**Status (2026-11-22):** all five phases have their code and documentation
+landed. Every execution proof is **DEFERRED (tests skipped by owner,
+2026-11-22)**. Three owner gates stop the milestone from being certified:
+ACC-01 (acceptance session), a throwaway API key for the live proofs, and
+tag-push permission for the distribution dry run. See
+`.planning/v0.1.0-MILESTONE-AUDIT.md` and STATE.md §Needs Human.
+
 Research base: `main` @ `221a1a59` (STACK/ARCHITECTURE read `221a1a59`; PITFALLS read `9e6780d9`).
 Re-verify `release.yml` edges and manifest versions before Phase 3. Design decisions are locked in
 `PROJECT.md` §Key Decisions.
