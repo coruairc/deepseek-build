@@ -542,6 +542,11 @@ deepseek-build -p "Format all files" --always-approve
 deepseek-build -p "Run the tests and fix any failures" --cwd ~/projects/my-app --always-approve
 ```
 
+Without an approval path, a permission-gated tool is never silently allowed: the
+turn fails closed with a one-line hint on **both** the stderr and the JSON error
+paths that names `--always-approve` and `--permission-mode auto`. Add `--deny`
+rules when always-approve is too broad; deny always wins.
+
 For agent servers and SDKs, see [Agent mode](15-agent-mode.md#automation-and-sdks).
 ---
 

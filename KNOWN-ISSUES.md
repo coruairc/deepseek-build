@@ -188,11 +188,14 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
 - **Worked:** simple edit; fixing a failing test (it ran `python3 test_calc.py`);
   a multi-file rename (`mul`→`multiply` across 4 files); session resume with
   context recall. Warm-turn cache hit rate 98–99%.
-- **Plan mode gap:** `--permission-mode plan` is read-only (no file changed) but
-  does not send `session/set_mode`, write `plan_mode.json`, or inject the
-  plan-mode reminder; a bare "change X" request therefore ends as a cancelled
-  turn with empty output instead of a plan. A prompt that explicitly asks for a
-  plan produces one.
+- **Plan mode is a session mode, not a permission mode (corrected 2026-11-22).**
+  `--permission-mode plan` is not recognised: it parses to `ask`, so it does not
+  arm plan mode, does not send `session/set_mode`, and does not write
+  `plan_mode.json`. Plan mode is entered in the TUI with `/plan` or `Shift+Tab`
+  and has no headless arming flag. This is documented in
+  `22-permissions-and-safety.md`; the code is unchanged (the safe fallback is
+  correct). A headless caller that wants a plan can ask for one in the prompt —
+  the agent writes the plan through the same plan-file contract.
 - **Headless cannot prompt:** a permission-gated action (e.g. `rm -rf`) ends as
   `permission_cancelled` with a one-line stderr message naming `--always-approve`
   and a non-zero exit (`d3a9c176`). `--always-approve` is required for unattended

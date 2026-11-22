@@ -100,6 +100,31 @@ Deny always wins over allow and over always-approve’s normal pass-through. See
 
 For automation that must run tools without interactive approval, use always-approve (and deny rules if you need hard blocks) rather than Auto-review alone.
 
+### Headless denial fails closed
+
+In headless mode (`-p`, or stdio with no client able to answer a prompt) a
+permission-gated tool cannot be approved, so the turn ends instead of being
+silently allowed. The one-line hint names both escape hatches on **both** the
+stderr path and the JSON error path:
+
+```
+Turn ended: a permission-gated tool was cancelled because headless mode cannot
+prompt for approval. Re-run with --always-approve, or choose a non-interactive
+permission mode such as --permission-mode auto.
+```
+
+The JSON result's error message carries the same two flags. The turn exits
+non-zero; nothing is auto-approved.
+
+### `--permission-mode plan` is not a permission mode
+
+There are three permission modes — `ask`, `auto`, `always-approve`. **Plan mode
+is a separate session mode**, entered in the TUI with `/plan` or `Shift+Tab`,
+and it has no headless arming flag. `--permission-mode plan` is not recognised
+as a permission mode and falls back to `ask` (the safe direction). If you pass
+it, expect normal permission prompts, not a plan-only session. See
+[Plan mode](19-plan-mode.md) for the read-only-except-plan-file contract.
+
 ---
 
 ## How a tool call is authorized

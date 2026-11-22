@@ -1536,7 +1536,7 @@ pub async fn run_single_turn(
                 emitter.on_end(&stop_reason, sid, rid);
                 eprint_line(hint);
                 Err(anyhow::anyhow!(
-                    "permission-gated tool cancelled; pass --always-approve to approve it"
+                    "permission-gated tool cancelled; re-run with --always-approve, or use --permission-mode auto"
                 ))
             } else {
                 emitter.on_end(&stop_reason, sid, rid);
