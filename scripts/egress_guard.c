@@ -77,10 +77,11 @@ static void store(int family, const void *src, size_t n) {
 }
 
 /* EGRESS_ALLOW_DEBUG=1: one line per resolved entry, in the same shape
- * egress_log.c logs, so the runtime audit can show what was allowlisted. */
+ * egress_log.c logs, so the runtime audit can show what was allowlisted.
+ * Only the literal "1" enables it; "0" stays quiet as documented. */
 static void debug_entry(const struct addrinfo *ai) {
   const char *env = getenv("EGRESS_ALLOW_DEBUG");
-  if (!env || !*env) return;
+  if (!env || strcmp(env, "1") != 0) return;
   if (ai->ai_family == AF_INET) {
     const struct sockaddr_in *s = (const struct sockaddr_in *)ai->ai_addr;
     char ip[INET_ADDRSTRLEN] = "?";

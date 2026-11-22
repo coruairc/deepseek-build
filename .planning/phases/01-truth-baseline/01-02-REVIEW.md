@@ -316,3 +316,7 @@ _Depth: deep_
   fragments and the legacy bucket value is `local-bucket`; the scan pattern was
   not relaxed. The gate re-run is **DEFERRED (tests skipped by owner,
   2026-11-22)**.
+- **IN-08** is fixed 2026-11-22: `EGRESS_ALLOW_DEBUG` enables debug output only
+  for the literal `1`, matching the documented spelling. No compile was run
+  (tests/builds deferred).
+

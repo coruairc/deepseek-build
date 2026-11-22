@@ -224,3 +224,7 @@ _Depth: deep_
   `[ui.status_line.pricing]` table, not "the shipped table".
 - No warning remains open; the suite itself is **DEFERRED (tests skipped by
   owner, 2026-11-22)**.
+- **IN-02** is narrowed in the user guide (2026-11-22): the estimate and the TUI
+  agree when both key the resolved model; a `--model` name/alias is priced on its
+  own key. The precedence in `headless.rs` was left unchanged without a run.
+
