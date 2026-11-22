@@ -7,6 +7,12 @@ they are listed so the orchestrator can route them.
 
 ### 1. `scripts/check-egress.sh --strict` fails on the base tree — not caused by 01-02
 
+**RESOLVED 2026-11-22.** The decision was the non-weakening option: the two
+rejected-URL fixtures in `xai-grok-shell-base/src/util/mod.rs` are now built from
+fragments at runtime, and the ignored legacy `trace_upload_bucket` value in
+`xai-grok-shell/src/agent/config_tests.rs` is `local-bucket`. No scan pattern was
+relaxed. The gate run itself is deferred (tests skipped by owner, 2026-11-22).
+
 The plan's verification expected `scripts/check-egress.sh --strict` to exit 0. On this
 host at base HEAD `0bf46c84` it exits **1** with three HARD hits, all in committed test
 code, all present in `git show HEAD:<file>`:
@@ -28,6 +34,8 @@ Owner: plan 01-05 (the gate/evidence plan) or a follow-up plan — **not** 01-02
 `files_modified` does not include these files.
 
 ### 2. `.planning/codebase/CONCERNS.md` still describes the v4-only shim
+
+**RESOLVED 2026-11-22:** the stale `non-ip` bullet was corrected in place.
 
 `CONCERNS.md:61-65` documents "`scripts/sandbox-run.sh` drops IPv6 provider addresses and
 prints them as `non-ip`", which 01-02 fixed. That file is a codebase-map snapshot outside

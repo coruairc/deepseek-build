@@ -113,13 +113,17 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
 
 ## Network / egress
 
-- **`scripts/check-egress.sh --strict` is red on this tree (baseline, 2026-11-21).**
-  It exits 1 with 3 HARD hits, all pre-existing source/test strings:
-  `crates/codegen/xai-grok-shell-base/src/util/mod.rs:422-423` (`api.x.ai`,
-  `grok.com`) and `crates/codegen/xai-grok-shell/src/agent/config_tests.rs:2768`
-  (`gs://bucket`). Phase 1 does not fix the gate (out of scope); the red
-  baseline is recorded so the test gate's green cannot be mistaken for a green
-  egress gate. `scripts/egress-check.sh` (runtime audit) is unchanged.
+- **`scripts/check-egress.sh --strict`: the three baseline HARD hits are fixed
+  in source (2026-11-22), re-verification deferred.** The gate used to exit 1 on
+  three *negative* fixtures: `api.x.ai` and `grok.com` in
+  `crates/codegen/xai-grok-shell-base/src/util/mod.rs` (assertions that
+  `is_xai_api_url` rejects them) and `gs://bucket` in
+  `crates/codegen/xai-grok-shell/src/agent/config_tests.rs` (an ignored legacy
+  key). The fix builds the two URLs from fragments at runtime and changes the
+  legacy bucket value to `local-bucket`; the scan itself was **not** weakened.
+  **DEFERRED (tests skipped by owner, 2026-11-22):** the gate was not re-run, so
+  a green result is expected, not observed. `scripts/egress-check.sh` (runtime
+  audit) is unchanged.
 - **Extended runtime egress verified (2026-10-07)** with
   `scripts/egress-check.sh` — an LD_PRELOAD logger that allows-and-logs
   `connect`/`sendto`/`sendmsg`/`sendmmsg`/`getaddrinfo` from the binary and its

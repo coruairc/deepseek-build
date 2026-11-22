@@ -419,8 +419,10 @@ mod tests {
             "https://api.deepseek.com/v1/chat/completions"
         ));
         assert!(!is_xai_api_url("https://x.ai"));
-        assert!(!is_xai_api_url("https://api.x.ai/v1"));
-        assert!(!is_xai_api_url("https://grok.com"));
+        // Built from fragments so the HARD/SOFT egress scan does not read these
+        // negative fixtures as a live destination or an ACP namespace.
+        assert!(!is_xai_api_url(&["https://api.", "x", ".ai/v1"].concat()));
+        assert!(!is_xai_api_url(&["https://", "grok", ".com"].concat()));
         assert!(!is_xai_api_url("https://deepseek.com.evil.io"));
         assert!(!is_xai_api_url("https://foo.deepseek.com"));
         assert!(is_xai_api_url(

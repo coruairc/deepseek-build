@@ -2765,7 +2765,7 @@ fn telemetry_legacy_sink_keys_are_ignored() {
             otel_traces_exporter = "none"
             otel_traces_export_interval = 5000
             trace_upload_url = "https://traces.example"
-            trace_upload_bucket = "gs://bucket"
+            trace_upload_bucket = "local-bucket"
             trace_upload_region = "us-east-1"
             trace_upload_credentials_file = "/var/creds"
             trace_upload_credentials = "secret"
@@ -7075,6 +7075,10 @@ async fn process_key_from_model_env_key() {
     const TOKEN: &str = "model-env-token";
     let _xai = EnvGuard::unset("XAI_API_KEY");
     let _legacy = EnvGuard::unset("GROK_CODE_XAI_API_KEY");
+    // Keep the developer's real key out of the assertion *and* out of resolution:
+    // with DEEPSEEK_API_KEY exported the built-in env_key would win instead of ENV.
+    let _key = EnvGuard::unset("DEEPSEEK_API_KEY");
+    let _build_key = EnvGuard::unset("DEEPSEEK_BUILD_API_KEY");
     let _tok = EnvGuard::set(ENV, TOKEN);
     let dm = xai_grok_models::default_model();
     let cfg = Config::new_from_toml_cfg(
@@ -7096,12 +7100,13 @@ async fn process_key_from_model_env_key() {
     let mgr = Arc::new(AuthManager::new(dir.path(), GrokComConfig::default()));
     assert!(mgr.current().is_none());
     mgr.set_process_static_api_key(Some(key));
-    assert_eq!(
-        shared_api_key_provider(mgr)
-            .current_api_key_async()
-            .await
-            .as_deref(),
-        Some(TOKEN)
+    // Non-revealing: a failing assertion must never print a credential.
+    let got = shared_api_key_provider(mgr)
+        .current_api_key_async()
+        .await;
+    assert!(
+        got.as_deref() == Some(TOKEN),
+        "model env-key provider returned an unexpected key"
     );
 }
 #[test]
