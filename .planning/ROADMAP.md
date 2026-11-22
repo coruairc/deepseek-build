@@ -32,7 +32,7 @@ Re-verify `release.yml` edges and manifest versions before Phase 3. Design decis
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Truth Baseline** - Sandbox stops aborting, cost and default model stop lying, and the suite is provably green
+- [x] **Phase 1: Truth Baseline** - Sandbox stops aborting, cost and default model stop lying, and the suite is provably green
 - [ ] **Phase 2: Loop-Item Verification** - Permissions, resume and plan mode proven against a real session, with the egress boundary measured
 - [ ] **Phase 3: Pipeline Decoupling & Version** - A slow macOS leg can no longer erase the image and the tag shape is settled
 - [ ] **Phase 4: Distribution Proof** - Image, installer and macOS artifacts proven from a throwaway tag
@@ -157,7 +157,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Truth Baseline | 0/5 | Not started | - |
+| 1. Truth Baseline | 5/5 | Complete — tests/gates DEFERRED (tests skipped by owner, 2026-11-22) | 2026-11-22 |
 | 2. Loop-Item Verification | 0/5 | Not started | - |
 | 3. Pipeline Decoupling & Version | 0/4 | Not started | - |
 | 4. Distribution Proof | 0/3 | Not started | - |

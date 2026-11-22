@@ -91,4 +91,4 @@ created: "2026-11-21"
 - [x] Feedback latency < 120 s for crate-local runs
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending — set to `approved` after `scripts/test-gate.sh` is green and the evidence is committed (plan 01-05 T3).
+**Approval:** DEFERRED (tests skipped by owner, 2026-11-22) — the gate and per-task runs are not executed; the code and evidence convention are committed, and `scripts/test-gate.sh` must be run before a release claim.
