@@ -3,7 +3,7 @@ phase: 02-loop-item-verification
 verified: 2026-11-22T05:55:00Z
 status: deferred
 verification_type: goal-backward
-score: "1/13 met by documentation; 12/13 execution proofs deferred"
+score: "1/11 met by documentation; 10/11 execution proofs deferred"
 requirements_verified: [SESS-04]
 requirements_code_and_doc_present: [PERM-02, PERM-03, PERM-04, SESS-02]
 requirements_deferred: [PROOF-01, PROOF-02, PROOF-03, PERM-01, SESS-01, SESS-03]

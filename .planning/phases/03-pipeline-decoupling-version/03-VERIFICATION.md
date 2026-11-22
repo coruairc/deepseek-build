@@ -3,7 +3,7 @@ phase: 03-pipeline-decoupling-version
 verified: 2026-11-22T06:20:00Z
 status: deferred
 verification_type: goal-backward
-score: "4/5 code/config met; CI proofs deferred"
+score: "5/8 met; 1 code present; 2 CI proofs deferred"
 requirements_verified: [REL-01, REL-07, REL-08, PKG-01]
 requirements_code_present: [PKG-02]
 requirements_deferred: [REL-02, REL-03, PKG-03]
@@ -38,7 +38,7 @@ tag contract is settled before any tag is pushed.
 | REL-08 | met (code): empty-tag guard |
 | PKG-01 | met statically (0.1.0 + lock) |
 | PKG-02 | assertion written in both legs; run DEFERRED |
-| PKG-03 | static verification; runtime tag run DEFERRED |
+| PKG-03 | met (static verification); runtime tag run DEFERRED |
 
 ## Deferred verification commands
 

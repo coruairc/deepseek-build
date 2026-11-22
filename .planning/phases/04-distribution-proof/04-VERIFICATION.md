@@ -3,7 +3,7 @@ phase: 04-distribution-proof
 verified: 2026-11-22T06:40:00Z
 status: blocked
 verification_type: goal-backward
-score: "0/4 execution proofs; 2/3 plans' docs written"
+score: "0/3 execution proofs; docs written, proof blocked"
 requirements_verified: []
 requirements_code_and_doc_present: [REL-05]
 requirements_blocked: [REL-04, REL-06]

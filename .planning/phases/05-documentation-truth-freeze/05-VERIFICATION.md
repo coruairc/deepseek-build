@@ -3,7 +3,7 @@ phase: 05-documentation-truth-freeze
 verified: 2026-11-22T07:00:00Z
 status: blocked
 verification_type: goal-backward
-score: "3/5 plans complete; 2 blocked on owner decisions"
+score: "4/8 requirements met; 4 blocked; 3/5 plans complete"
 requirements_verified: [DOCS-01, DOCS-02, DOCS-03, DOCS-04]
 requirements_blocked: [ACC-01, FREEZE-01, FREEZE-02, FREEZE-03]
 ---
