@@ -1,56 +1,48 @@
 {
   "version": "1.0",
-  "timestamp": "2026-11-21T22:33:37Z",
-  "phase": "01",
-  "phase_name": "Truth Baseline",
-  "phase_dir": ".planning/phases/01-truth-baseline",
+  "timestamp": "2026-11-22T08:15:00Z",
+  "phase": "05",
+  "phase_name": "Documentation Truth & Freeze",
+  "phase_dir": ".planning/phases/05-documentation-truth-freeze",
   "plan": 5,
-  "task": 3,
-  "total_tasks": 3,
-  "status": "paused",
+  "task": 5,
+  "total_tasks": 5,
+  "status": "blocked",
+  "superseded_snapshot": "This file replaces the 2026-11-21 pause snapshot; STATE.md is the authoritative state.",
   "completed_tasks": [
-    { "id": 1, "name": "Gate script with completeness assertion", "status": "done", "commit": "uncommitted-wip" },
-    { "id": 2, "name": "Determinism fixes and serial keys", "status": "done", "commit": "uncommitted-wip" },
-    { "id": 3, "name": "Evidence convention and recorded gate run", "status": "in_progress", "progress": "ipv6-report complete; test-gate log only; cost-estimate not started; SUMMARY not written" }
+    { "id": "01", "name": "Phase 1 Truth Baseline — code, gate, evidence convention", "status": "done", "commit": "58cc8ac3" },
+    { "id": "02", "name": "Phase 2 Loop-Item Verification — permission/headless fix, evidence scaffolding", "status": "done", "commit": "f875cac8" },
+    { "id": "03", "name": "Phase 3 Pipeline Decoupling & Version — split jobs, guards, 0.1.0", "status": "done", "commit": "30eb36d4" },
+    { "id": "04", "name": "Phase 4 Distribution Proof — headless-image and installer docs, blocked proof", "status": "done", "commit": "ab9f755b" },
+    { "id": "05", "name": "Phase 5 Documentation Truth — DECISIONS/TESTING/KNOWN-ISSUES/user guide", "status": "done", "commit": "43441472" },
+    { "id": "06", "name": "Non-owner close-out — review findings, egress fixtures, planning truth, audit", "status": "done", "commit": "see git log 2026-11-22" }
   ],
   "remaining_tasks": [
-    { "id": 3, "name": "Finish test-gate and cost-estimate evidence, write 01-05-SUMMARY.md", "status": "in_progress" },
-    { "id": 4, "name": "Confirmation gate run (run #3) and clippy on touched crates", "status": "not_started" },
-    { "id": 5, "name": "Code review of the 01-05 diff, then commit", "status": "not_started" },
-    { "id": 6, "name": "Phase verification and transition to Phase 2", "status": "not_started" }
+    { "id": "ACC-01", "name": "Owner acceptance session (20-30 min TUI, signed note)", "status": "blocked_owner" },
+    { "id": "PROOF", "name": "Live smoke, runtime egress and key-leak proof with a throwaway key", "status": "blocked_owner" },
+    { "id": "REL", "name": "Throwaway tag dry run, GHCR pull, installer proof", "status": "blocked_owner" },
+    { "id": "FREEZE", "name": "Pre-freeze checklist, deepseek branch, non-triggering marker tag", "status": "blocked_owner" },
+    { "id": "TESTS", "name": "Run the suite/gate, fmt, egress/branding/key-leak/deny gates", "status": "deferred_tests_skipped" }
   ],
   "blockers": [
-    { "description": "Confirmation full-gate run was terminated by the pause; only run #2 (--refresh-expected) is green", "type": "technical", "workaround": "Re-run scripts/test-gate.sh once; do not edit the expected count unless the run is green" },
-    { "description": "scripts/check-egress.sh --strict is red at base on three committed test fixtures", "type": "technical", "workaround": "Phase 5 owns it (FREEZE-03); fixtures at xai-grok-shell-base/src/util/mod.rs:422-423 and xai-grok-shell/src/agent/config_tests.rs:2768" },
-    { "description": "xai-grok-shell credential test prints an exported DEEPSEEK_API_KEY on failure", "type": "technical", "workaround": "Gate unsets the key vars; redact the assertion as a follow-up; rotate the key if it was shared" },
-    { "description": "01-05 diff has no reviewer verdict", "type": "human_action", "workaround": "Run gsd-code-reviewer on the WIP diff before the final commit" }
+    { "description": "ACC-01: the author's acceptance session and signed note do not exist", "type": "human_action", "workaround": "Use the checklist at .planning/phases/05-documentation-truth-freeze/05-04-ACCEPTANCE-CHECKLIST.md, then commit the note" },
+    { "description": "No throwaway DEEPSEEK_API_KEY is available", "type": "owner_secret", "workaround": "Provide a revocable key, run PROOF-01/02/03 and the egress measurement, then revoke it" },
+    { "description": "Tag-push permission is not granted; this run must never push or tag", "type": "owner_permission", "workaround": "Grant it, run the Phase-4 dry run, then create the freeze branch and marker tag" },
+    { "description": "Tests, gates, smoke/egress runs and release builds are deferred by the owner (2026-11-22)", "type": "owner_decision", "workaround": "Re-enable testing in a later pass; every command is recorded in the plan SUMMARYs" }
   ],
   "async_jobs": [],
   "human_actions_pending": [
-    { "action": "Decide whether to rotate DEEPSEEK_API_KEY", "context": "A pre-existing test assertion printed the exported key into a local log; the log was redacted and nothing was committed", "blocking": false },
-    { "action": "Confirm whether worktree-parallel lanes are allowed", "context": "User accepted them earlier; the refreshed team rules again say single working tree", "blocking": false }
+    { "action": "Commit an ACC-01 acceptance note after the TUI session", "context": "Blocks FREEZE-01..03 and the marker tag", "blocking": true },
+    { "action": "Provide and later revoke a throwaway API key", "context": "Blocks PROOF-01/02/03 and the runtime egress measurement", "blocking": true },
+    { "action": "Grant tag-push permission", "context": "Blocks REL-04/05/06 and the distribution dry run", "blocking": true }
   ],
   "decisions": [
-    { "decision": "Skip both non-traversable sandbox shapes; everything else fatal", "rationale": "canonicalize succeeds when the parent itself is unsearchable, so the first predicate missed the real shape", "phase": "01" },
-    { "decision": "Retarget the devbox e2e scenario to a devbox-extending profile with an explicit deny", "rationale": "no /data on this host means the plan is legitimately empty; no ignore or widened skip", "phase": "01" },
-    { "decision": "Make default_models.json authoritative in first_or_fallback", "rationale": "flipping the field alone did not change the session model; picker order stays unchanged", "phase": "01" },
-    { "decision": "Unconditional cost label with adaptive precision", "rationale": "the segment has no provenance input; Flash turns must not render nothing", "phase": "01" },
-    { "decision": "Asciinema v2 cast + fixed-key report.json + path normalization for evidence", "rationale": "the pty harness already writes the format; later phases append and a reader can re-run", "phase": "01" }
+    { "decision": "De-literalize the three egress fixtures instead of relaxing the scan", "rationale": "the gate must stay strict; the strings were negative fixtures, not destinations", "phase": "01" },
+    { "decision": "Redact the credential assertion and unset both key variables in that test", "rationale": "a failing test must never print a key; the sibling test was left alone to avoid a new env race", "phase": "01" },
+    { "decision": "Split build-linux/build-macos and gate the container on build-linux", "rationale": "a slow macOS leg must not erase the image", "phase": "03" },
+    { "decision": "release-dist strips at codegen time with debug=0", "rationale": "no DWARF, no sidecar, and the macOS ad-hoc signature stays valid", "phase": "03" }
   ],
-  "uncommitted_files": [
-    "M KNOWN-ISSUES.md",
-    "M TESTING.md",
-    "M crates/codegen/xai-grok-shell/src/agent/folder_trust.rs",
-    "M crates/codegen/xai-grok-shell/src/util/config/consent_tests.rs",
-    "M crates/codegen/xai-grok-workspace/src/session/git_gate_tests.rs",
-    "M scripts/README.md",
-    "M scripts/key-leak-check.sh",
-    "M .planning/STATE.md",
-    "?? docs/evidence/",
-    "?? scripts/evidence.py",
-    "?? scripts/test-gate.expected",
-    "?? scripts/test-gate.sh"
-  ],
-  "next_action": "Re-run scripts/test-gate.sh with the key vars unset under flock; confirm results == binaries + doctests == expected without editing the expected file; finish the test-gate and cost-estimate evidence items and write 01-05-SUMMARY.md.",
-  "context_notes": "Phase 1 is one task from done. The sandbox predicate and the cost/default changes are reviewed and committed; do not re-open them. The remaining risk is evidence plumbing plus one confirmation gate run."
+  "uncommitted_files": [],
+  "next_action": "Owner-gated. See .planning/v0.1.0-MILESTONE-AUDIT.md and STATE.md Needs Human; resume with /gsd-autonomous --from 05 after the acceptance note, --from 02 with a key, or --from 04 with tag permission.",
+  "context_notes": "All code and documentation that does not need the owner is landed on backend/gsd-auto. No push, tag, force, key print or new outbound destination occurred. Tests are deferred; no suite result was observed in the final pass."
 }

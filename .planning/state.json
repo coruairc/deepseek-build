@@ -6,33 +6,33 @@
     {
       "number": "1",
       "name": "Truth Baseline",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "2",
       "name": "Loop-Item Verification",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "3",
       "name": "Pipeline Decoupling & Version",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "4",
       "name": "Distribution Proof",
-      "status": "pending"
+      "status": "blocked"
     },
     {
       "number": "5",
       "name": "Documentation Truth & Freeze",
-      "status": "pending"
+      "status": "blocked"
     }
   ],
   "next": {
-    "command": "/gsd-progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 1 of 5 · executing"
+    "command": "/gsd-autonomous --from 05",
+    "label": "Owner gates: ACC-01, throwaway key, tag permission",
+    "reason": "All non-owner work is landed; see .planning/v0.1.0-MILESTONE-AUDIT.md"
   },
-  "updated_at": "2026-11-21T17:28:43.423Z"
+  "updated_at": "2026-11-22T08:15:00Z"
 }
