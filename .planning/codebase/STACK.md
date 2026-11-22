@@ -72,7 +72,7 @@ There is no Node, Go, or JVM application runtime in this repo.
 - `reqwest` 0.12 + `rustls` 0.23 + `xai-grok-extra-ca` — every outbound HTTPS client. Extra roots: `GROK_EXTRA_CA_BUNDLE`, fallback `SSL_CERT_FILE` (`crates/codegen/xai-grok-extra-ca/src/lib.rs`). A bad bundle is skipped; it must not fail client construction.
 - `async-openai` (patched) + `eventsource-stream` 0.2 — Chat Completions request/SSE parse in `crates/codegen/xai-grok-sampler/src/client.rs`. Endpoint path is `chat/completions` (joined onto the configured base URL).
 - `xai-grok-brand` — user-facing identity. Binary `deepseek-build`, config dir `.deepseek-build`, env prefix `DEEPSEEK_BUILD`, header prefix `x-deepseek-build` (`crates/codegen/xai-grok-brand/src/lib.rs`). Internal crate names stay `xai-grok-*`.
-- `xai-grok-models` catalog `default_models.json` — default model `deepseek-v4-pro`, plus `deepseek-flash` and hidden alias `deepseek-v4-flash`. All three set `base_url` to `https://api.deepseek.com` and `api_backend` to `chat_completions`.
+- `xai-grok-models` catalog `default_models.json` — default model `deepseek-flash` (the `default` field is authoritative in `first_or_fallback`), plus `deepseek-v4-pro` and hidden alias `deepseek-v4-flash`. All three set `base_url` to `https://api.deepseek.com` and `api_backend` to `chat_completions`.
 - `rmcp` 3.4 + `oauth2` 5 — user-configured MCP only. Do not use `oauth2` to recreate a first-party login against DeepSeek.
 - `rusqlite` 0.37 `bundled` — do not switch consumers to the system SQLite. Keep the pin aligned with `crates/codegen/xai-sqlite-journal`.
 - `git2` with `vendored-libgit2` where the crate already vendors it — the binary must not depend on a distro libgit2.
