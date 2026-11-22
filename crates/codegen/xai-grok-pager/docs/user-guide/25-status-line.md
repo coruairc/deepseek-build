@@ -94,6 +94,20 @@ cache_miss = 0.30
 output = 1.20
 ```
 
+### Cost levers
+
+The figure is a running estimate, so the levers act on what is actually spent:
+
+- **Model.** `deepseek-flash` is the catalog default and the cheapest DeepSeek
+  model. Switch per session with `/model deepseek-v4-pro` (TUI) or
+  `-m deepseek-v4-pro` (headless), and back with `/model deepseek-flash`.
+- **Reasoning effort.** `/effort low` or `--effort low`. In the eval batch
+  (`docs/TUNING.md`, E3) reducing reasoning effort was the only lever that
+  measured a win; the prompt cache was already hitting ~97%, so cache tweaks
+  did not move the score.
+- **Pricing override.** Halving the three rates under
+  `[ui.status_line.pricing.<model>]` prices off-peak instead of at peak.
+
 ## How it works
 
 - **Refresh.** The row updates when the session state changes (session start, turn end, a model or effort switch, a HEAD move, a compaction, a client attaching) and continuously while a turn runs, not on a timer. An idle session does not re-run your script, so a clock in it will not tick on its own — unless you set `refresh_interval`, which adds a timer on top of all of the above. These updates are debounced at a fixed 300 ms, so a busy turn cannot run your script every frame; a change that must show at once (a resize, a new snapshot, switching agents) waits only 100 ms. A run already going is never cancelled: the next change waits for it to finish. deepseek-build reads `[ui.status_line]` at startup, so changes to it take effect at the next launch.

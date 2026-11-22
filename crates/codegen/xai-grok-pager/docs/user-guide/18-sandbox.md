@@ -293,6 +293,25 @@ Sandbox events are logged to `~/.deepseek-build/sessions` for debugging. Events 
 
 ---
 
+## Running inside a container
+
+The published image is **headless-only** (see the README's Container section for
+mounts and examples). The sandbox is chosen by its confinement profile; there is
+no flag that turns it off. On Linux it needs `bubblewrap` and unprivileged user
+namespaces, which a container runtime can block. When that is the only obstacle,
+grant exactly what bwrap needs:
+
+```sh
+docker run --rm --security-opt seccomp=unconfined --cap-add SYS_ADMIN \
+  -e DEEPSEEK_API_KEY -v "$PWD":/work \
+  ghcr.io/<owner>/deepseek-build:latest -p "run the tests"
+```
+
+Prefer a runtime with unprivileged user namespaces enabled over `--privileged`.
+If a deny plan still cannot be bound, the process refuses to start rather than
+run with the denied paths exposed; do not work around that by removing the
+`deny` rule.
+
 ## Trade-offs
 
 | Aspect      | Without Sandbox            | With Sandbox                    |
