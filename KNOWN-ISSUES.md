@@ -233,6 +233,19 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
 - Compaction, MCP, resume, headless were exercised headlessly (Step 2). Plan
   mode and permission *prompts* were not exercised interactively.
 
+## Tags and release identity
+
+- **`deepseek-v0.1-snapshot` is superseded, not current.** The annotated tag
+  `deepseek-v0.1-snapshot` exists on `origin` at `4b305bd0` with the message
+  "Linux-only v0.0.1-rc5". It predates the `v0.1.0` version bump and is **not** the
+  freeze marker. Do not move, delete or reuse it: a remote ref change is
+  destructive, and the docs record it as superseded. The milestone's freeze
+  marker (when the author signs off) is a new, non-triggering tag on the freeze
+  commit — never this one.
+- **`v0.1.0` itself is not published by this milestone.** The author publishes it
+  after the freeze. The `v*` trigger already handles the shape, and no
+  `deepseek-*` trigger exists or should be added.
+
 ## Unexercised surfaces (no human, no CI)
 
 - **Interactive TUI by a human: never.** It has been driven under a pty with
