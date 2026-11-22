@@ -4,7 +4,9 @@
 # `config-docs` feature step and prove the run was complete.
 #
 # What it runs, in order:
-#   1. scripts/disk-guard.sh 150 (the tree's floor; stop below it)
+#   1. scripts/disk-guard.sh 150 (the tree's floor; stop below it). The floor
+#      can be lowered for a smaller host with TEST_GATE_MIN_GB; the default
+#      stays at the tree's 150 GB.
 #   2. the whole run inside flock -w 900 /tmp/team-build.lock
 #   3. step 1: cargo test --workspace --no-fail-fast -- --test-threads=4
 #   4. step 2: cargo test -p xai-grok-shell --lib --features config-docs -j 1
@@ -51,7 +53,9 @@ EOF
 }
 
 # 1. Refuse to start when the target filesystem is below the tree's floor.
-if ! "$root/scripts/disk-guard.sh" 150; then
+#    TEST_GATE_MIN_GB lowers the floor for a smaller host; the default is 150.
+MIN_GB="${TEST_GATE_MIN_GB:-150}"
+if ! "$root/scripts/disk-guard.sh" "$MIN_GB"; then
     echo "gate: refusing to run — disk guard failed" >&2
     exit 1
 fi
