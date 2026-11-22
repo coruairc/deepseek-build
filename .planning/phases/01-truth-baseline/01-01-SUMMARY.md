@@ -28,7 +28,8 @@ tech-stack:
     - "lstat(parent/.) as a no-dependency traversal probe, consulted only on the error path"
 
 key-files:
-  created: []
+  created:
+    - .planning/phases/01-truth-baseline/01-01-SUMMARY.md
   modified:
     - crates/codegen/xai-grok-sandbox/src/runtime_sockets.rs
     - crates/codegen/xai-grok-sandbox/src/runtime_sockets_tests.rs
@@ -118,11 +119,11 @@ status: complete
 | `parent_alias_dedupe_survives_a_skipped_candidate` | `run`/`var` symlink alias + skipped shape-A candidate | one canonical path | PASS |
 | `endpoint_error_classification_table` | `(NotFound,true/false)`, `(PermissionDenied,false)`, `(PermissionDenied,true)`, `(InvalidInput,true)` | Missing / Missing / UntraversableParent / Fatal / Fatal | PASS |
 
-The two DAC-dependent fixtures and the two filesystem fixtures above self-skip with a printed reason when `libc::geteuid() == 0`; on this host (euid 1000) they executed and passed. `read_deny_verify`'s suite was run without touching its source: **14 passed; 0 failed; 0 ignored**.
+The euid-guarded fixtures above (and the upper-layer `lib.rs` test) self-skip with a printed reason when `libc::geteuid() == 0`; on this host (euid 1000) they executed and passed. `read_deny_verify`'s suite was run without touching its source: **14 passed; 0 failed; 0 ignored**.
 
 Other fixtures present in the file and still green: `materialized_socket_path_is_stable_after_mode_zero_mask`, `materialized_socket_paths_reject_endpoint_symlinks`, `materialized_socket_paths_propagate_parent_resolution_errors`, the alias/handoff/dedupe tests, and the profile-level socket-deny tests.
 
-`#[serial(bwrap_env)]` was added on the call site of `deny_list_covers_system_rootless_and_per_user_endpoints` (it reads `home_dir()` twice around `runtime_socket_deny_paths()`); no skip condition was added anywhere.
+`#[serial(bwrap_env)]` was added on the call site of `deny_list_covers_system_rootless_and_per_user_endpoints` (it reads `home_dir()` twice around `runtime_socket_deny_paths()`); no skip condition was added to `deny_paths_e2e` — the euid guards live in the unit fixtures so a root CI host still reports the shape honestly.
 
 ## Verification (commands and actual results, this host, 2026-11-21)
 
