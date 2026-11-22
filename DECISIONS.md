@@ -69,20 +69,27 @@ Last updated: 2026-10-07.
 
 ## E. Open items
 
+Rewritten from the tree on 2026-11-22 (was: Phase-0 plan-time list).
+
 | ID | Item | Status |
 |----|------|--------|
-| O1 | Legal sign-off on re-licensing the aggregate as `deepseek-build` while preserving upstream Apache-2.0 attribution. | Open; not blocking engineering. Required before any public release. |
-| O2 | Toolchain install feasibility (rustup + Rust 1.94.0) in this environment; `dotslash` absent though `/usr/bin/protoc` exists. | Being resolved in Phase 1 setup. |
-| O3 | ~~DeepSeek exact model IDs and parameters.~~ **Resolved** against official docs (2026-10-02): base URL `https://api.deepseek.com`; models `deepseek-v4-pro` and `deepseek-flash` (legacy `deepseek-v4-flash` accepted but retired/billed as Flash); context 1M, max output 384K; `thinking: {type: enabled|disabled}`; `reasoning_effort: none|low|high|max` (`minimal`→low, `medium`/`xhigh`→high); usage `prompt_tokens_details.cached_tokens` == `prompt_cache_hit_tokens`, plus `prompt_cache_miss_tokens` and `completion_tokens_details.reasoning_tokens`; streaming deltas carry `reasoning_content`; `tool_choice` `required`/named is rejected in thinking mode. **Live-verified 2026-10-07** (`scripts/smoke-test.sh`, 8/8 PASS): `GET /models` returns exactly `deepseek-flash`, `deepseek-v4-pro`; plain + streamed chat OK; 3-turn thinking tool chain OK (`reasoning_tokens=57`); on a cache hit `cached_tokens == prompt_cache_hit_tokens` (2432) and `prompt_tokens == hit + miss`; `tool_choice=required` → HTTP 400 "Thinking mode does not support this tool_choice". **Adapter mapping confirmed, no mismatch:** the harness `usage.input_tokens` = DeepSeek `prompt_cache_miss_tokens`, `cache_read_input_tokens` = `prompt_cache_hit_tokens`, `reasoning_tokens` = `completion_tokens_details.reasoning_tokens`, `total_tokens` = input + cache_read + output. | Done. |
+| O1 | Legal sign-off on re-licensing the aggregate as `deepseek-build` while preserving upstream Apache-2.0 attribution. | **Open**; not blocking engineering. Required before any public release. |
+| O2 | Toolchain feasibility (rustup + Rust 1.94.0, `protoc`). | **Resolved**: `rust-toolchain.toml` pins 1.94.0; `/usr/bin/protoc` is present; `dotslash` is not needed. |
+| O3 | DeepSeek model IDs, parameters and usage mapping. | **Done.** Base URL `https://api.deepseek.com`; models `deepseek-v4-pro` and `deepseek-flash` (hidden legacy `deepseek-v4-flash`); `thinking: {type}`; `reasoning_effort: none|low|high|max`; usage cache fields and `reasoning_tokens`; `reasoning_content` in stream deltas; `tool_choice` required/named rejected in thinking mode. Live-verified 2026-10-07 (`scripts/smoke-test.sh`, 8/8). |
 | O4 | Whether to rename all internal `xai-grok-*` crates later. | Deferred by D2. |
+| O5 | macOS release artifacts and the GHCR image. | **Open.** `v0.0.1-rc5` is Linux-only; macOS legs time out and are now isolated in `build-macos`; the image is decoupled from macOS but has never been built or pulled. Phase 4's proof is blocked in this run (never push/tag). |
+| O6 | A clean-host confirmation of the whole-workspace suite. | **Deferred (tests skipped by owner, 2026-11-22).** Last recorded green: 2026-11-21 on the author's host (`results=308`); not re-confirmed elsewhere. |
+| O7 | The author's acceptance session (ACC-01) and the freeze marker. | **Open, owner decision.** The signed note must be committed before any `deepseek` branch or marker tag; this milestone publishes no tag. |
 
 ## F. Phase log
 
+Rewritten from the tree on 2026-11-22.
+
 | Phase | Status | Notes |
 |-------|--------|-------|
-| 0 — Audit & plan | Complete | `PLAN.md` written; audit done. |
-| 1 — Cleanup & rebrand | Partial | **HARD egress gate green.** Deleted/neutralized: mixpanel, telemetry OTLP + Sentry, `xai-grok-otel`, `xai-file-utils` upload stack, heap_profile, workspace upload, `xai-grok-update`, `xai-grok-announcements`, `xai-grok-bundle`, xAI voice/Imagine/web_search, xAI OAuth/OIDC network stack, `xai-grok-cloud-config` (vendored inert into shell), SuperGrok upsell, xAI model entries/endpoints. `prod/mc/cli-chat-proxy-types` → `prod/mc/model-api-types`. **Rebrand not done** (SOFT report 3452); some stubs and `xai-computer-hub`/shell `remote/**` remain. See `AGENTS.md` §5. |
-| 2 — DeepSeek adapter | Partial | Core committed (`cdbf5aa3`, `28296f7e`): thinking control, reasoning_content round-trip + sanitizer, quote repair, cache helpers, DeepSeek default models, endpoints foundation (`633d80df`). Not done: backend removal (Responses/Messages), wiremock suite, non-stream reasoning capture, cache-prefix test, live smoke (blocked on key). |
-| 3 — DeepSeek-native TUI | Not started | |
-| 4 — Adapt existing competitive features | Not started | |
-| 5 — Quality bar | Not started | Release build aborted; no binary yet. |
+| 0 — Audit & plan | Complete | `PLAN.md`, `DECISIONS.md`, `NOTICE`. |
+| 1 — Cleanup & rebrand | Complete | Mixpanel, the xAI OTLP/Sentry/OTel stack, `xai-file-utils` upload/exfil, heap_profile, auto-update, announcements, the subagent bundle, xAI voice/Imagine/`web_search`, the OAuth/OIDC network stack and cloud-config were deleted; shell upload/feedback, `remote/**`, `repo_changes` and the computer-hub crates are gone. **HARD and SOFT egress gates are zero**; rebrand done (binary `deepseek-build`, config `~/.deepseek-build`, ACP namespace, brand constants); legacy `GROK_*` env fallbacks removed (internal `GROK_*` names remain, D2). |
+| 2 — DeepSeek adapter | Complete | Chat-Completions-only backend; thinking control; `reasoning_content` round-trip and final-pass sanitizer; typographic-quote tool-call repair; cache-hit helpers; DeepSeek catalog with `deepseek-flash` default; wiremock suite; live smoke 8/8 PASS (2026-10-07, author's host). |
+| 3 — DeepSeek-native TUI | Complete | Reasoning fold, `/think` `/model` `/effort` `/theme`, configurable status line with the estimate-labelled `cost` item, Monokai theme and whale logo. |
+| 4 — Adapt existing features | Complete | Permission modes and dangerous-command detection, read-before-write guard, plan mode, resume, subagents, MCP client, `AGENTS.md` loading, checkpoints/undo and headless mode exist and were hardened through this milestone's Phase 1/2 work. |
+| 5 — Quality bar / release | **Present, not certified** | Release pipeline exists (native `build-linux`/`build-macos`, GHCR container job decoupled from macOS, empty-tag guard, `release-dist` ships no DWARF), `install.sh` plus a fake-tree harness, `docs/evidence/` with the Phase-1 convention, and the Linux-only prerelease `v0.0.1-rc5`. Not certified: no macOS artifact, no GHCR image pulled, container/installer proofs blocked (never push/tag), and the suite is deferred (tests skipped by owner, 2026-11-22). **D9's personal-tool intent stands**: none of this is required to use the tool; the pipeline is an author-run path, not a promise of hosted distribution. |

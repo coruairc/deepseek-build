@@ -70,7 +70,7 @@ or observable state.
 |---|-----|--------|
 | 5 | `[ -n "${DEEPSEEK_API_KEY:-}" ] && echo key-present` (or check `DEEPSEEK_BUILD_API_KEY`) | `key-present`; if nothing prints, export the key before continuing |
 | 6 | Missing-key path, no key involved: `T=$(mktemp -d); env -u DEEPSEEK_API_KEY -u DEEPSEEK_BUILD_API_KEY HOME="$T/home" DEEPSEEK_BUILD_HOME="$T/dbh" ./target/release/deepseek-build -p hi; echo "exit=$?"; rm -rf "$T"` | stderr `Not signed in: set DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) to authenticate.`; `exit=1`; fail-closed before any model request (verified 2026-10-09 against a release binary built at `46aef092`) |
-| 7 | Fresh first run: `BIN="$PWD/target/release/deepseek-build"; T=$(mktemp -d); (cd /tmp && HOME="$T/home" "$BIN"); rm -rf "$T"` | `$T/home/.deepseek-build/` (or `$DEEPSEEK_BUILD_HOME/`) is created with `sessions/`, `docs/user-guide/` (28 files), `config.toml`, `logs/`; the TUI starts with the DeepSeek whale welcome logo. With the key exported: "Logged in with API key" and the prompt accepts input. Without a key: stays on the welcome screen with a one-line sign-in error (last observed: `OIDC not configured`). There is **no interactive key entry** — quit and export the key instead. `q` quits cleanly. |
+| 7 | Fresh first run: `BIN="$PWD/target/release/deepseek-build"; T=$(mktemp -d); (cd /tmp && HOME="$T/home" "$BIN"); rm -rf "$T"` | `$T/home/.deepseek-build/` (or `$DEEPSEEK_BUILD_HOME/`) is created with `sessions/`, `docs/user-guide/` (28 files), `config.toml`, `logs/`; the TUI starts with the DeepSeek whale welcome logo. With the key exported: "Logged in with API key" and the prompt accepts input. Without a key: stays on the welcome screen with a one-line sign-in error (the headless path prints `Not signed in: set DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) to authenticate.`). There is **no interactive key entry** and no OIDC flow — quit and export the key instead. `q` quits cleanly. |
 
 ## 3. Live scripts (8–12 min; a real key needed for steps 8, 9 and 13)
 
@@ -156,10 +156,13 @@ Launch the binary and approve tool calls as prompted.
   ms; walk-timeout TTL 20 → 100 ms, sleep 40 → 250 ms; late-OK walk timeout
   40 → 100 ms, sleep 50 → 250 ms; joiner TTL 500 ms → 5 s; sustained-invalidate
   outer timeout ×3 → ×10); no assertion changed direction.
-- `cargo check --workspace --tests` is green (all test targets compile).
-  `xai-grok-login` is green (395 / 0 / 1) since the dead OIDC surface was
-  deleted. See [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) and
-  `docs/DROPPED-TESTS.md` before quoting numbers.
+- All test targets compile. The dead xAI OIDC/OAuth surface was deleted, so
+  there are **no OIDC test counts to quote**; `xai-grok-login` now covers only
+  the API-key path. See [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) and
+  `docs/DROPPED-TESTS.md` before quoting any number.
+- **DEFERRED (tests skipped by owner, 2026-11-22):** the suite, the gate and the
+  live scripts were not run for the remaining milestone plans; the last recorded
+  numbers are from 2026-11-21 and are not re-confirmed here.
 - Branding gate: `cargo test -p xai-grok-pager-bin --test branding_surface`
   runs the real binary's `--help`, `agent --help`, `--version`, `completions
   bash`, and a keyless headless run, and fails on `grok` / `xai` / `x.ai`.
