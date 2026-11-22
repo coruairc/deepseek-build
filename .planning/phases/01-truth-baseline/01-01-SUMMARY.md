@@ -217,3 +217,10 @@ No dependency changes, no new egress, no `#[ignore]`, no new condition in `skip_
 - **WR-02 resolved:** `parent_is_traversable`'s doc now states `is_ok()` semantics and that intermediate
   symlinks are resolved by the kernel.
 - Re-run: `cargo test -p xai-grok-sandbox --test deny_paths_e2e` → **14 passed; 0 failed; 1 ignored**.
+
+## Commit
+
+The frontmatter records `commits: 0` because the dispatch forbids committing;
+the reviewed change landed afterwards as `0bf46c84`. This note is the post-phase
+record, not a change to the plan's reported state.
+

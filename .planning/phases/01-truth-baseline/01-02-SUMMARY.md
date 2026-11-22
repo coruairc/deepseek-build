@@ -256,3 +256,10 @@ No dependency changes. No new egress destination. No `#[ignore]`. Nothing commit
   pre-freeze checklist; recorded in STATE.md blockers.
 - Re-run: `sh scripts/test-sandbox-run.sh` → `ALL PASS (6 assertions)`; `shellcheck --shell=sh` clean;
   guard compiles with `-Wall -Wextra`.
+
+## Commit
+
+The frontmatter records `commits: 0` because the dispatch forbids committing;
+the reviewed change landed afterwards as `882ad0de`. This note is the post-phase
+record, not a change to the plan's reported state.
+

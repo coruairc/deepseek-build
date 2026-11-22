@@ -127,3 +127,10 @@ M crates/codegen/xai-grok-shell/src/agent/model_catalog/resolution.rs
 M crates/codegen/xai-grok-shell/src/session/acp_session_impl/context_snapshot.rs
 M docs/TUNING.md
 ```
+
+## Commit
+
+The frontmatter records `commits: 0` because the dispatch forbids committing;
+the reviewed change landed afterwards as `6d3cfcb9`. This note is the post-phase
+record, not a change to the plan's reported state.
+

@@ -305,3 +305,10 @@ the plan's `files_modified`.
 ---
 *Phase: 01-truth-baseline*
 *Completed: 2026-11-21*
+
+## Commit
+
+The frontmatter records `commits: 0` because the dispatch forbids committing;
+the reviewed change landed afterwards as `e834f647`. This note is the post-phase
+record, not a change to the plan's reported state.
+
