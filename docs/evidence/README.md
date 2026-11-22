@@ -97,3 +97,20 @@ recorded as an artifact.
   the suite pins.
 
 After recording: `scripts/key-leak-check.sh --scan docs/evidence` must exit 0.
+
+## Items that are `skipped` today
+
+The 2026-11-22 pass was directed to skip tests, live runs, release builds and
+tags. These items exist so the recipe is committed, but they are **not**
+evidence of a run — `report.json` is `result: skipped` with no steps:
+
+| Item | Why skipped |
+|---|---|
+| `01-truth-baseline/test-gate` | gate confirmation run deferred (the log is the 2026-11-21 run, kept but unclaimed) |
+| `01-truth-baseline/cost-estimate` | no test run |
+| `02-loop-item-verification/{live-smoke,egress,key-leak}` | no throwaway key; live runs deferred |
+| `04-distribution-proof/{dry-run,installer}` | never push/tag; distribution proof blocked |
+
+Upgrade an item to `result: ok` only by running its recipe. A skipped item must
+not be cited as a pass.
+
