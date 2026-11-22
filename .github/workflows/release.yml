@@ -89,12 +89,11 @@ jobs:
             echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # One matrix job per target; every leg runs on a NATIVE runner for its target
-  # (no cross-compilation): linux gnu on ubuntu-22.04 (older glibc base),
-  # linux arm64 on the free-for-public-repos native arm runner, and both macOS
-  # targets on macOS 15 runners (macos-13 is retired; macos-15-intel still
-  # exists and runs natively on Intel hardware).
-  build:
+  # Linux build leg. Split from macOS so a slow macOS runner can never skip the
+  # container job or the publish job (the old single matrix meant one slow leg
+  # cancelled the whole run and the container was skipped). Every leg runs on a
+  # NATIVE runner for its target — no cross-compilation, no qemu.
+  build-linux:
     name: build (${{ matrix.target }})
     needs: version
     runs-on: ${{ matrix.runner }}
@@ -107,10 +106,6 @@ jobs:
             runner: ubuntu-22.04
           - target: aarch64-unknown-linux-gnu
             runner: ubuntu-22.04-arm
-          - target: aarch64-apple-darwin
-            runner: macos-15
-          - target: x86_64-apple-darwin
-            runner: macos-15-intel
     steps:
       # Tag ref -> HEAD is the tag commit, so `git rev-parse HEAD` in build.rs
       # stamps the commit correctly at the default shallow fetch-depth (1).
@@ -126,8 +121,23 @@ jobs:
       # absent and it would try a network fetch), so we set the PROTOC env var
       # explicitly to the real protoc path — find_protoc checks $PROTOC first
       # and never reaches the wrapper walk-up.
+      # PKG-02: the manifest version and the release tag must agree. The tag
+      # drives GROK_VERSION; a source build prints CARGO_PKG_VERSION, so a
+      # mismatch would ship a binary whose stamp and manifest disagree.
+      - name: Verify the manifest version matches the release tag
+        if: github.ref_type == 'tag'
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          manifest_version="$(awk '/^\[workspace.package\]/{f=1;next} /^\[/{f=0} f&&/^version/{gsub(/[",]/,"");sub(/^version[[:space:]]*=[[:space:]]*/,"");print;exit}' Cargo.toml)"
+          echo "manifest version: ${manifest_version}; release tag: ${RELEASE_VERSION}"
+          if [ "${manifest_version}" != "${RELEASE_VERSION}" ]; then
+            echo "::error::[workspace.package] version '${manifest_version}' != release tag '${RELEASE_VERSION}'; bump the manifests before tagging"
+            exit 1
+          fi
+
       - name: Install system dependencies (Linux)
-        if: runner.os == 'Linux'
         run: |
           set -euo pipefail
           sudo apt-get update
@@ -141,37 +151,17 @@ jobs:
           fi
           echo "PROTOC=${protoc_path}" >> "$GITHUB_ENV"
 
-      - name: Install system dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          set -euo pipefail
-          # cmake is preinstalled on macOS runners (needed by aws-lc-sys).
-          brew install protobuf
-          protoc_path="$(command -v protoc)"
-          if [ -z "${protoc_path}" ]; then
-            echo "::error::protoc was not installed by brew"
-            exit 1
-          fi
-          echo "PROTOC=${protoc_path}" >> "$GITHUB_ENV"
-
       # rust-toolchain.toml pins 1.94.0 and rustup picks it up automatically on
       # the first cargo call inside the repo; install it explicitly up front
       # (minimal profile, no components — a release build runs no clippy/fmt) so
       # the version is deterministic instead of lazily resolved.
       - name: Install Rust toolchain (Linux)
-        if: runner.os == 'Linux'
         run: |
           set -euo pipefail
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.94.0 --profile minimal
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
-      - name: Install Rust toolchain (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          set -euo pipefail
-          rustup toolchain install 1.94.0 --profile minimal
-
-      # Per-target cache key so the 4 matrix legs never thrash one cache.
+      # Per-target cache key so the build legs never thrash one cache.
       - name: Restore cargo cache
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
@@ -202,6 +192,22 @@ jobs:
           fi
           if ! printf '%s\n' "${out}" | grep -Eq '^deepseek-build [^ ]+ \([0-9a-f]{7,40}\)$'; then
             echo "::error::--version output has unexpected shape (name version (commit)): '${out}'"
+            exit 1
+          fi
+
+      # REL-07: the shipped binary carries no DWARF. `release-dist` sets
+      # strip=symbols + debug=0; this asserts the artifact the tarball ships.
+      - name: Assert the binary ships without DWARF
+        run: |
+          set -euo pipefail
+          bin=target/release-dist/deepseek-build
+          file "$bin"
+          if readelf -S "$bin" | grep -q '\.debug_'; then
+            echo "::error::shipped binary still contains DWARF debug sections"
+            exit 1
+          fi
+          if compgen -G "target/release-dist/*.dwp" >/dev/null || compgen -G "target/release-dist/*.debug" >/dev/null; then
+            echo "::error::a debug-info sidecar was produced; release-dist must ship none"
             exit 1
           fi
 
@@ -254,13 +260,165 @@ jobs:
           path: deepseek-build-*.tar.gz
           if-no-files-found: error
 
+  # macOS build leg. Split from Linux so a macOS runner that runs into the job
+  # timeout can only lose the macOS tarballs — the Linux tarballs, the GHCR
+  # image and the release still land. Both targets run natively on macOS 15
+  # runners (macos-13 is retired; macos-15-intel runs on Intel hardware).
+  build-macos:
+    name: build (${{ matrix.target }})
+    needs: version
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-15
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      # PKG-02: same manifest-vs-tag check as the Linux leg.
+      - name: Verify the manifest version matches the release tag
+        if: github.ref_type == 'tag'
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          manifest_version="$(awk '/^\[workspace.package\]/{f=1;next} /^\[/{f=0} f&&/^version/{gsub(/[",]/,"");sub(/^version[[:space:]]*=[[:space:]]*/,"");print;exit}' Cargo.toml)"
+          echo "manifest version: ${manifest_version}; release tag: ${RELEASE_VERSION}"
+          if [ "${manifest_version}" != "${RELEASE_VERSION}" ]; then
+            echo "::error::[workspace.package] version '${manifest_version}' != release tag '${RELEASE_VERSION}'; bump the manifests before tagging"
+            exit 1
+          fi
+
+      - name: Install system dependencies (macOS)
+        run: |
+          set -euo pipefail
+          # cmake is preinstalled on macOS runners (needed by aws-lc-sys).
+          brew install protobuf
+          protoc_path="$(command -v protoc)"
+          if [ -z "${protoc_path}" ]; then
+            echo "::error::protoc was not installed by brew"
+            exit 1
+          fi
+          echo "PROTOC=${protoc_path}" >> "$GITHUB_ENV"
+
+      - name: Install Rust toolchain (macOS)
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.94.0 --profile minimal
+
+      # Per-target cache key so the build legs never thrash one cache.
+      - name: Restore cargo cache
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          key: ${{ matrix.target }}
+          cache-on-failure: true
+
+      - name: Build release-dist binary
+        run: cargo build --profile release-dist -p xai-grok-pager-bin
+        env:
+          GROK_VERSION: ${{ needs.version.outputs.version }}
+
+      - name: Smoke-check the built binary
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          out="$(target/release-dist/deepseek-build --version)"
+          printf 'binary reports: %s\n' "${out}"
+          if ! printf '%s\n' "${out}" | grep -Fq "deepseek-build ${RELEASE_VERSION} ("; then
+            echo "::error::--version does not report the release version: wanted 'deepseek-build ${RELEASE_VERSION} (...)', got '${out}'"
+            exit 1
+          fi
+          if ! printf '%s\n' "${out}" | grep -Eq '^deepseek-build [^ ]+ \([0-9a-f]{7,40}\)$'; then
+            echo "::error::--version output has unexpected shape (name version (commit)): '${out}'"
+            exit 1
+          fi
+
+      # REL-03 / REL-07: ad-hoc signature is intact and no DWARF is embedded.
+      # `release-dist` strips at codegen time (before the linker signs), so the
+      # signature must still verify; debug=0 means no __DWARF segment.
+      - name: Assert signature intact and no DWARF
+        run: |
+          set -euo pipefail
+          bin=target/release-dist/deepseek-build
+          codesign --verify --strict --verbose=2 "$bin"
+          if otool -l "$bin" | grep -q '__DWARF'; then
+            echo "::error::shipped binary still carries a __DWARF segment"
+            exit 1
+          fi
+          file "$bin"
+
+      - name: Package tarball
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          RT: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          stage="$(mktemp -d)"
+          cp target/release-dist/deepseek-build "$stage/deepseek-build"
+          cp LICENSE NOTICE THIRD-PARTY-NOTICES "$stage/"
+          cat > "$stage/README.txt" <<'EOF'
+          deepseek-build
+          ==============
+
+          A terminal coding assistant for DeepSeek models (deepseek-v4-pro / deepseek-flash).
+
+          This binary is an independent project, not affiliated with DeepSeek.
+
+          It is built from source derived from xai-org/grok-build (Apache-2.0). The
+          LICENSE, NOTICE, and THIRD-PARTY-NOTICES files in this archive carry the
+          full license and attribution details, including the vendored libgit2
+          license (GPL-2.0-with-linking-exception).
+
+          Quick start:
+
+              export DEEPSEEK_API_KEY=...       # or DEEPSEEK_BUILD_API_KEY=...
+              ./deepseek-build
+
+          Configuration, sessions, and logs live under ~/.deepseek-build. At runtime
+          the binary only talks to api.deepseek.com over HTTPS.
+          Source and docs: https://github.com/coruairc/deepseek-build
+          EOF
+          tar -czf "deepseek-build-${RELEASE_VERSION}-${RT}.tar.gz" -C "$stage" deepseek-build LICENSE NOTICE THIRD-PARTY-NOTICES README.txt
+          printf '%s\n' "archive contents:"
+          tar -tzf "deepseek-build-${RELEASE_VERSION}-${RT}.tar.gz"
+
+      # REL-03: prove the artifact a user actually gets, not just the build-dir
+      # copy — extract the tarball, run it, and re-verify its signature.
+      - name: Verify the extracted tarball
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          RT: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          check="$(mktemp -d)"
+          tar -xzf "deepseek-build-${RELEASE_VERSION}-${RT}.tar.gz" -C "$check"
+          "$check/deepseek-build" --version
+          codesign --verify --strict --verbose=2 "$check/deepseek-build"
+
+      - name: Upload tarball as a job artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-${{ matrix.target }}
+          path: deepseek-build-*.tar.gz
+          if-no-files-found: error
+
   # Publish job: runs on ubuntu-22.04 (pinned, not ubuntu-latest, for
-  # consistency with the build matrix; it only hashes and re-uploads files, so
+  # consistency with the build jobs; it only hashes and re-uploads files, so
   # the base image age is irrelevant). Needs the least privilege that exists:
   # contents: write to create the release, nothing else.
   publish:
     name: Publish GitHub release
-    needs: [version, build]
+    needs: [version, build-linux, build-macos]
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     permissions:
@@ -346,7 +504,7 @@ jobs:
   # wrong (or a non-existent) GHCR namespace when a collaborator pushes a tag.
   container:
     name: Build and push container image
-    needs: [version, build]
+    needs: [version, build-linux]
     runs-on: ubuntu-22.04
     if: github.ref_type == 'tag'
     timeout-minutes: 30
@@ -408,6 +566,21 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=ref,event=tag
+
+      # REL-08: an empty tag list must fail loudly. Without this guard the
+      # manifest loop iterates zero times and the job goes green having pushed
+      # nothing — a silent no-op that looks like a published image.
+      - name: Guard — metadata produced at least one tag
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          tags_trimmed="$(printf '%s' "${TAGS}" | tr -d '\r\n')"
+          if [ -z "${tags_trimmed}" ]; then
+            echo "::error::docker/metadata-action produced an empty tag list; refusing to assemble a manifest"
+            exit 1
+          fi
+          printf 'image tags:\n%s\n' "${TAGS}"
 
       # Build each arch natively (no QEMU) and push by digest, then assemble the
       # multi-arch manifest. `file: Dockerfile` is the copy staged per context.
