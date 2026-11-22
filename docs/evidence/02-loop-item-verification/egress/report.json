@@ -1,0 +1,12 @@
+{
+  "item": "egress",
+  "requirements": [
+    "PROOF-02"
+  ],
+  "date": "2026-11-22T05:12:38Z",
+  "host": "Linux/x86_64",
+  "command": "DEFERRED (tests skipped by owner, 2026-11-22) — see notes.md for the exact rerun recipe",
+  "steps": [],
+  "artifacts": [],
+  "result": "skipped"
+}
