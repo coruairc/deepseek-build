@@ -1,0 +1,13 @@
+{
+  "item": "dry-run",
+  "requirements": [
+    "REL-04",
+    "REL-05"
+  ],
+  "date": "2026-11-22T05:34:01Z",
+  "host": "Linux/x86_64",
+  "command": "DEFERRED (tests skipped by owner, 2026-11-22; owner rule: never push/tag) — see notes.md",
+  "steps": [],
+  "artifacts": [],
+  "result": "skipped"
+}
