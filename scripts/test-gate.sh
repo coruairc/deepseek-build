@@ -55,6 +55,9 @@ EOF
 # 1. Refuse to start when the target filesystem is below the tree's floor.
 #    TEST_GATE_MIN_GB lowers the floor for a smaller host; the default is 150.
 MIN_GB="${TEST_GATE_MIN_GB:-150}"
+case "$MIN_GB" in
+    ''|*[!0-9]*|0) echo "gate: TEST_GATE_MIN_GB must be a positive whole number of GB (got '$MIN_GB')" >&2; exit 2 ;;
+esac
 if ! "$root/scripts/disk-guard.sh" "$MIN_GB"; then
     echo "gate: refusing to run — disk guard failed" >&2
     exit 1
