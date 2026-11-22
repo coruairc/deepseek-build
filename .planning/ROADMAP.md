@@ -161,4 +161,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Loop-Item Verification | 5/5 | Code/docs complete — runs DEFERRED (tests skipped by owner, 2026-11-22) | 2026-11-22 |
 | 3. Pipeline Decoupling & Version | 4/4 | Code complete — CI runs DEFERRED (tests skipped by owner, 2026-11-22) | 2026-11-22 |
 | 4. Distribution Proof | 3/3 | Code/docs complete — PROOF BLOCKED (never push/tag; tests skipped by owner, 2026-11-22) | - |
-| 5. Documentation Truth & Freeze | 0/5 | Not started | - |
+| 5. Documentation Truth & Freeze | 3/5 | Docs complete — 05-04/05-05 BLOCKED (ACC-01 owner session; never push/tag) | - |

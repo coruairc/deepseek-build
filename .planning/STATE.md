@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 milestone: v0.1.0
 current_phase: 05
 current_phase_name: Documentation Truth & Freeze
-status: executing
-stopped_at: Phases 1-4 plan work complete; Phase 4 proof blocked (never push/tag); Phase 5 in progress
-last_updated: "2026-11-22T06:45:00.000Z"
+status: blocked
+stopped_at: Milestone audit NOT CERTIFIED — ACC-01, throwaway key, and tag permission are owner-gated
+last_updated: "2026-11-22T07:10:00.000Z"
 last_activity: 2026-11-22
-last_activity_desc: Phase 04 docs complete, proof blocked; Phase 05 started
+last_activity_desc: Phase 05 docs complete; acceptance/freeze blocked; audit recorded
 state_head: 711524dd454225eeb2bcbbb3924f7d8a83f2268e
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 22
-  completed_plans: 17
+  completed_plans: 20
 ---
 
 # Project State
@@ -27,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 
 ## Current Position
 
-Phase: 05 (Documentation Truth & Freeze) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 05
-Last activity: 2026-11-22 — Phase 04 docs complete (proof blocked); Phase 05 started
+Phase: 05 (Documentation Truth & Freeze) — BLOCKED at 05-04
+Plan: 3 of 5 (05-01..03 complete; 05-04/05-05 blocked)
+Status: Blocked on owner decisions — see Needs Human
+Last activity: 2026-11-22 — docs complete; acceptance and freeze blocked
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -130,8 +130,16 @@ None yet.
 | Phase 4 tag dry run, GHCR pull, installer proof | BLOCKED | owner rule: never push or tag |
 | Phase 5 acceptance session, marker tag | BLOCKED | owner decision (ACC-01) + never tag |
 
+## Needs Human
+
+| Phase | State | Resume |
+|-------|-------|--------|
+| 05 | needs_human — ACC-01 (author's 20–30 min TUI session + signed note) | commit the note, then `/gsd-autonomous --from 05` |
+| 02/05 | needs_human — throwaway `DEEPSEEK_API_KEY` for PROOF-01/02/03 and the runtime egress measurement | provide a revocable key, then re-run Phase 2 |
+| 04 | blocked — tag-push permission for the distribution dry run (REL-04/05/06) | grant it, then `/gsd-autonomous --from 04` |
+
 ## Session Continuity
 
 Last session: 2026-11-22
-Stopped at: Phase 1 closed; Phase 2 in progress
+Stopped at: Milestone audit recorded (gaps_found); acceptance + freeze blocked
 Resume file: .planning/phases/01-truth-baseline/.continue-here.md (superseded by this file)
