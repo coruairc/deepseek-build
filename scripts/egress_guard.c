@@ -133,7 +133,8 @@ static int v4_allowed(const unsigned char b[4]) {
 }
 
 /* IPv6 policy: ::1, then the v6 allowlist by raw bytes. v4-mapped addresses
- * never reach here; connect() normalises them to the v4 path. */
+ * are rewritten to the v4 path by the connect interposer below before they
+ * reach this check. */
 static int v6_allowed(const unsigned char b[16]) {
   static const unsigned char loopback[16] = {0, 0, 0, 0, 0, 0, 0, 0,
                                              0, 0, 0, 0, 0, 0, 0, 1};
