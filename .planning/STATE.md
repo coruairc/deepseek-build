@@ -157,4 +157,4 @@ Remaining non-owner debt:
 
 Last session: 2026-11-22
 Stopped at: all non-owner work complete; three owner gates remain (ACC-01, throwaway key, tag permission)
-Resume file: .planning/phases/01-truth-baseline/.continue-here.md (superseded by this file)
+Resume file: none needed — this file plus `.planning/v0.1.0-MILESTONE-AUDIT.md` are authoritative. The 2026-11-21 `.continue-here.md` pause snapshot and the old `.planning/HANDOFF.json` are superseded.
