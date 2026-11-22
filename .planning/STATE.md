@@ -1,19 +1,19 @@
 ---
 gsd_state_version: "1.0"
 milestone: v0.1.0
-current_phase: 02
-current_phase_name: Loop-Item Verification
+current_phase: 03
+current_phase_name: Pipeline Decoupling & Version
 status: executing
-stopped_at: Phase 1 code complete (tests deferred by owner); Phase 2 plan work starting
-last_updated: "2026-11-22T05:40:00.000Z"
+stopped_at: Phases 1-2 code/docs complete; Phase 3 in progress (tests deferred)
+last_updated: "2026-11-22T06:00:00.000Z"
 last_activity: 2026-11-22
-last_activity_desc: Phase 01 complete; tests/gates deferred by owner
+last_activity_desc: Phase 02 complete (runs deferred); Phase 03 started
 state_head: 711524dd454225eeb2bcbbb3924f7d8a83f2268e
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 22
-  completed_plans: 5
+  completed_plans: 10
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-21)
 
 **Core value:** One DeepSeek key in, a trustworthy daily coding agent out: the right model on every turn, zero traffic to any host you did not configure, and a release you can install with confidence.
-**Current focus:** Phase 02 — Loop-Item Verification
+**Current focus:** Phase 03 — Pipeline Decoupling & Version
 
 ## Current Position
 
-Phase: 02 (Loop-Item Verification) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 02
-Last activity: 2026-11-22 — Phase 01 closed with tests deferred; Phase 02 started
+Phase: 03 (Pipeline Decoupling & Version) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 03
+Last activity: 2026-11-22 — Phase 02 closed (runs deferred); Phase 03 started
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Progress: [██░░░░░░░░] 20%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 Truth Baseline | 5 | 5 | long-running; tests deferred |
+| 02 Loop-Item Verification | 5 | 5 | scaffolding only; runs deferred |
 
 **Recent Trend:**
 - Last 5 plans: —
