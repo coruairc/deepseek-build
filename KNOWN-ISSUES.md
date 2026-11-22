@@ -2,9 +2,10 @@
 
 Honest list of what is incomplete or broken at this revision. Nothing here is
 hidden behind a "temporary" flag; where code remains it is called out. Claims are
-against the tree on `dsb/integration` after the live-smoke, egress, polish and
-real-use passes (2026-10-07), with the test state refreshed 2026-10-09 and the
-rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
+against the `v0.1.0` milestone tree on `backend/gsd-auto` (2026-11-22), built on
+the rc5 lineage. **Tests and gates are deferred (tests skipped by owner,
+2026-11-22)**: the last recorded suite result is 2026-11-21 (`results=308`), and
+the 2026-10-09 31,939/2 figure is stale.
 
 ## Build & tests
 

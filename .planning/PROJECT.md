@@ -122,11 +122,14 @@ Building toward the Phase 1 freeze. Each is a hypothesis until shipped and verif
   on and is not documented as a user setting.
 - **Release is Linux-only today:** `v0.0.1-rc4` and `rc5` shipped Linux tarballs. The macOS
   aarch64 job hit the 90-minute job timeout and cancelled the run, which skipped the container
-  job — so no GHCR image exists. rc4's x86_64 install was verified from the real release.
-- **Test reality:** last full workspace run was 31,939 passed / 2 failed / 388 ignored across 307
-  targets. Both failures are host-environment `xai-grok-sandbox --test deny_paths_e2e` bwrap
-  failures on a root-owned `/run/containerd`. A follow-up full run on `cc6e6948` was started and
-  never recorded as finished.
+  job — so no GHCR image exists. As of 2026-11-22 the workflow splits `build-linux`/`build-macos`,
+  `container` needs `build-linux` only, the tag list is guarded, and `release-dist` ships no DWARF;
+  the image and macOS artifact still do not exist.
+- **Test reality:** tests are **deferred (tests skipped by owner, 2026-11-22)** and no suite was
+  run in the final pass. The last recorded gate was 2026-11-21: `results=308`
+  (`binaries=219` + `doctests=89`), zero failures. The 2026-10-09
+  "31,939 passed / 2 failed / 388 ignored across 307 targets" figure is stale and must not be
+  quoted; the `deny_paths_e2e` bwrap pair was fixed product-side and last reported 14/0/1.
 - **Toolchain:** Rust 1.94.0 pinned in `rust-toolchain.toml`. `protoc` on PATH. `strace` absent,
   so runtime egress is measured with the `LD_PRELOAD` logger in `scripts/egress-check.sh`.
 - **Unexercised surfaces:** the interactive TUI has only ever been driven under a pty, never by a
