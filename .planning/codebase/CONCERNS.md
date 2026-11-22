@@ -52,6 +52,8 @@ Scope is `main` at `221a1a59` (the rc5 lineage), which this branch is rebased on
 ## Known Bugs
 
 **Sandbox e2e fails when `/run/containerd` is root-only (recorded; still the test's shape):**
+
+> **RESOLVED 2026-11-21** (`0bf46c84`): runtime-socket deny candidates whose parent is not traversable are skipped, the fail-closed path for traversable-but-unreadable denies is kept, and the devbox scenario has a real deny obligation. `deny_paths_e2e` reported 14 passed / 0 failed / 1 pre-existing harness ignore on the author's host; this map is a snapshot and was not re-run here.
 - Symptoms: `KNOWN-ISSUES.md` records `xai-grok-sandbox --test deny_paths_e2e` failures in `read_deny_empty_set_verifies_inside_bwrap` and `devbox_genuine_reexec_applies_enforcement`: bwrap `Can't mkdir parents for /run/containerd/containerd.sock: Permission denied`. Last full workspace run (2026-10-09) was 31,939 passed / 2 failed / 388 ignored. This mapping did not re-run that suite.
 - Files: `crates/codegen/xai-grok-sandbox/tests/deny_paths_e2e.rs`, `crates/codegen/xai-grok-sandbox/src/runtime_sockets.rs` (`/run/containerd/containerd.sock`), `crates/codegen/xai-grok-sandbox/src/lib.rs` (`bwrap_reexec_command_ex` `--ro-bind`s deny paths and refuses to start on a partial sandbox)
 - Trigger: Linux host where the containerd runtime directory exists and is not traversable by the test user. `skip_if_enforcement_unavailable` only skips missing bwrap or an unsupported sandbox, not `EACCES` on a deny-path parent.
@@ -59,6 +61,8 @@ Scope is `main` at `221a1a59` (the rc5 lineage), which this branch is rebased on
 - Fix approach: When materializing runtime-socket denies, skip candidates whose parent is not traversable (same as `NotFound`), and add a test that a root-only parent does not abort bwrap. Keep the fail-closed path for denies the process can see but cannot mask.
 
 **`scripts/sandbox-run.sh` drops IPv6 provider addresses and prints them as `non-ip`:**
+
+> **RESOLVED 2026-11-21** (`882ad0de`): `scripts/egress_guard.c` resolves `AF_UNSPEC`, allows the IPv6 answers and names the destination with `inet_ntop`. This map is a snapshot; the entry is kept for history.
 - Symptoms: The allowlist is built with `AF_INET` only. An `AF_INET6` connect is allowed only for `::1`. Blocked IPv6 destinations are reported as `non-ip` because the log path formats only `AF_INET`.
 - Files: `scripts/sandbox-run.sh`
 - Trigger: Provider resolved via NAT64/IPv6 first (observed in `KNOWN-ISSUES.md` for `api.deepseek.com`). The session can still complete after falling back to the allowlisted IPv4 address. `web_fetch` hosts are refused on purpose (stricter than `scripts/egress-check.sh`).
@@ -66,6 +70,8 @@ Scope is `main` at `221a1a59` (the rc5 lineage), which this branch is rebased on
 - Fix approach: Resolve `EGRESS_ALLOW_HOST` with `AF_UNSPEC`, allow the resulting IPv6 addresses, and `inet_ntop` `AF_INET6` in the blocked line.
 
 **`git_gate` / `restore_fetch` timing flake (recorded, not re-run):**
+
+> **ADDRESSED 2026-11-21** (`b0516ef1`): the `git_gate` waits were widened one-directionally and the two process-global shell tests now share one serial key; five crate runs were green on the author's host. A whole-suite re-run is deferred (tests skipped by owner, 2026-11-22).
 - Symptoms: `KNOWN-ISSUES.md` says `session::git_gate` / `restore_fetch` fails under whole-suite saturation and passes in isolation.
 - Files: `crates/codegen/xai-grok-workspace/src/session/git_gate.rs` (`SNAPSHOT_TTL` 1s; test `ROOT_CACHE_TTL` 80ms), `crates/codegen/xai-grok-workspace/src/restore_fetch.rs` (60s shared fetch budget)
 - Trigger: Workspace suite saturation, not a logic change.
