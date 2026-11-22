@@ -25,23 +25,26 @@ OpenAI-compatible Chat Completions API. It is a work in progress (see
 | Phase 2 - DeepSeek adapter | Core done: Chat Completions-only backend (`Responses`/`Messages` deleted), `thinking` control, `reasoning_content` round-trip + sanitizer, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-flash`), wiremock suite. Live smoke run 8/8 PASS (2026-10-07, author's machine). |
 | Phase 3 - TUI | Implemented: reasoning fold (`e`/`E`/`Ctrl+E`), collapsible thinking, optional status line (off by default; enable `[ui.status_line]` to show cwd, model, context), `/model` `/effort` `/think` `/theme`, Monokai default theme + whale logo. |
 | Phase 4 - harden existing features | Partial: runtime read-before-write guard and dangerous-command warnings are in; plan mode, permissions, resume, subagents, MCP, `AGENTS.md`, and checkpoints exist and need an end-to-end pass. A full `cargo test --workspace` run is **not green yet** (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). |
-| Phase 5 - testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. Linux-only prerelease [`v0.0.1-rc4`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc4) is published (x86_64 + aarch64 tarballs, installer); no macOS builds and no container image yet. |
+| Phase 5 - testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. Linux-only prerelease [`v0.0.1-rc5`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc5) is published (x86_64 + aarch64 tarballs, installer); no macOS builds and no container image yet. |
 
 See [`AGENTS.md`](AGENTS.md) for a precise resume-from-here handoff.
 
 ## Install
 
-> **No release has been published yet** (checked 2026-10-09): the `curl | sh`
-> and release-asset steps below describe the installer and the intended flow,
-> but they cannot run until the first `v*` tag is pushed. Build from source in
-> the meantime (see [Building from source](#building-from-source)); the installer
-> itself has been exercised against a local fake release
-> (`sh scripts/test-install.sh`, 39/39 assertions).
+> **Prereleases exist; `latest` does not.** `v0.0.1-rc2`-`rc5` are published as
+> pre-releases. GitHub's `/releases/latest/download/...` resolves the most recent
+> **non-prerelease** release, so while every tag is a pre-release that unpinned
+> path has no target. Use a pinned `VERSION=` (or the tag's own URL) until a
+> stable release is published. The real-URL check for both paths is recorded in
+> `KNOWN-ISSUES.md`; the installer itself is exercised against a local fake
+> release (`sh scripts/test-install.sh`, 39/39 assertions).
 
-Once a release exists:
+Pinned install (works with a pre-release tag):
 
 ```sh
-curl -fsSL https://github.com/coruairc/deepseek-build/releases/latest/download/install.sh | sh
+VERSION=v0.0.1-rc5 sh install.sh
+# or, without keeping a copy:
+curl -fsSL https://github.com/coruairc/deepseek-build/releases/download/v0.0.1-rc5/install.sh | VERSION=v0.0.1-rc5 sh
 ```
 
 Piping curl to `sh` executes whatever that URL serves, at download time, with no
@@ -49,9 +52,9 @@ chance to review it first. The slower, recommended alternative: download,
 inspect, then run.
 
 ```sh
-curl -fsSLO https://github.com/coruairc/deepseek-build/releases/latest/download/install.sh
+curl -fsSLO https://github.com/coruairc/deepseek-build/releases/download/v0.0.1-rc5/install.sh
 less install.sh        # inspect it
-sh install.sh
+VERSION=v0.0.1-rc5 sh install.sh
 ```
 
 The installer is plain POSIX `sh`. It:
