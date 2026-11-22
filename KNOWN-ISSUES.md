@@ -260,11 +260,13 @@ the 2026-10-09 31,939/2 figure is stale.
 - **Release workflow in CI: Linux only.** Tags `v0.0.1-rc2`/`rc3` failed on the
   Linux protoc 3.12 build; `v0.0.1-rc4` (run 40111152104) built both Linux
   targets, but `aarch64-apple-darwin` hit the 90-minute `timeout-minutes` and
-  cancelled the run before `publish`. The Linux-only prerelease
-  [`v0.0.1-rc4`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc4) was published by hand from that run's artifacts
-  (2026-10-24); the x86_64 installer was verified against it. macOS builds are
-  dropped for now (a per-target timeout change needs a token with the
-  `workflow` scope).
+  cancelled the run before `publish`. The Linux-only prereleases `v0.0.1-rc4`
+  and [`v0.0.1-rc5`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc5)
+  were published from those runs' artifacts. As of 2026-11-22 the workflow has
+  separate `build-linux`/`build-macos` jobs (a slow macOS leg can no longer
+  cancel the Linux legs) and `publish` needs both, so a missing macOS tarball
+  still fails that step; no run has happened since the split, and the macOS
+  timeout decision still needs a measured job log.
 - **Container image: never built or pulled.** As of 2026-11-22 `container` needs
   `build-linux` only, so a slow macOS leg can no longer skip it; no tag has been
   pushed since, so there is still no GHCR package (checked 2026-10-24). Neither
