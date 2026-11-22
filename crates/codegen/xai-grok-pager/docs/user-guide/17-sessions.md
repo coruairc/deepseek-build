@@ -111,6 +111,21 @@ Run `deepseek-build --resume` without a value to resume the most recent session 
 
 When you launch `deepseek-build`, the welcome screen lists recent sessions for the current directory. Select one to resume it.
 
+### What resume restores (provenance)
+
+Resumed settings come from two places: the session on disk, or the launch
+configuration. They are not interchangeable.
+
+| Setting | Source on resume | Detail |
+|---------|------------------|--------|
+| Conversation history | **session** | `updates.jsonl` / `chat_history.jsonl` are authoritative |
+| Model | **session** | `summary.json` → `current_model_id`; if that id is no longer selectable (hidden, disabled, removed from the catalog), the resolver falls back to the catalog default |
+| Reasoning effort | **session**, unless the new launch sets one | `summary.json` → `reasoning_effort`; an explicit `--effort` (or `[models] effort`) on the resuming launch is applied by the launch config |
+| TODO / task list | **session** | `plan.json` |
+| Permission mode | **config / launch flags** | `[ui] permission_mode`, `--always-approve` or `--permission-mode`; it is not stored in the session, so the displayed mode is always the mode in force for the resumed process |
+| Plan mode | **not restored** | Plan mode is a live TUI session action (`/plan`, `Shift+Tab`); it is not a permission mode and has no headless arming flag |
+| Tool definitions | **re-derived** | Built from the current config and catalog; a configured MCP server must be reachable again |
+
 ---
 
 ## Forking and Renaming Sessions
