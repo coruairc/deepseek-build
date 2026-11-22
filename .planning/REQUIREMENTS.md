@@ -33,7 +33,7 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 ### Evidence
 
 - [ ] **EVID-01**: Every loop item carries a committed asciinema cast plus `report.json` under `docs/evidence/`, with absolute artifact paths normalized out
-- [ ] **EVID-02**: The evidence convention is documented and referenced by each item's verification step, so a later reader can re-run it
+- [x] **EVID-02**: The evidence convention is documented and referenced by each item's verification step, so a later reader can re-run it
 
 ### Cost Honesty
 
@@ -56,38 +56,38 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 - [ ] **PERM-01**: The interactive permission prompt is exercised end to end and shows allow-once, allow-for-session, and reject, with the security warning on high-signal findings
 - [ ] **PERM-02**: Headless permission denial fails closed with an actionable hint naming `--always-approve` and `--permission-mode auto`, on both the stderr and JSON error paths
 - [ ] **PERM-03**: Permission mode is visible in the UI and matches after resume
-- [ ] **PERM-04**: `--permission-mode plan` is verified to arm plan mode headless, and `KNOWN-ISSUES.md` is corrected rather than the code being changed
+- [x] **PERM-04**: `--permission-mode plan` is verified to arm plan mode headless, and `KNOWN-ISSUES.md` is corrected rather than the code being changed
 
 ### Sessions And Plan Mode
 
 - [ ] **SESS-01**: Resume restores the session's model, reasoning effort, and plan state
 - [ ] **SESS-02**: Plan mode is read-only except the plan file in every permission mode, including `always-approve` and `auto`
 - [ ] **SESS-03**: A drafted plan survives quit and resume, promoted from the existing pty scenario into committed evidence
-- [ ] **SESS-04**: The provenance of each resumed setting is documented — what comes from the session versus from config
+- [x] **SESS-04**: The provenance of each resumed setting is documented — what comes from the session versus from config
 
 ### Release Pipeline
 
-- [ ] **REL-01**: The build matrix is split into `build-linux` and `build-macos`, and `container` depends on `build-linux` only, so a slow macOS leg can no longer skip the image
+- [x] **REL-01**: The build matrix is split into `build-linux` and `build-macos`, and `container` depends on `build-linux` only, so a slow macOS leg can no longer skip the image
 - [ ] **REL-02**: Both macOS targets (aarch64 and x86_64) produce tarballs inside the job timeout, including one cache-warming run if cold-cache is the cause
 - [ ] **REL-03**: The macOS binary passes a smoke check from the extracted tarball, and its signature remains valid after any strip or debug-profile change
 - [ ] **REL-04**: The GHCR image is built, published, and pulled from a throwaway pre-release tag
 - [ ] **REL-05**: The container image runs a real headless tool-executing turn with the documented run flags that keep the sandbox on, and the README states the image is headless-only with the mounts it needs
 - [ ] **REL-06**: `install.sh` is proven against a real pre-release tag, and the unpinned `latest` path's actual behaviour is established rather than assumed from the fake-tree harness
-- [ ] **REL-07**: `release-dist` ships no DWARF (`strip`/`debug` resolved, no `.debug`/`.dSYM` sidecar assumption), with the macOS signature risk verified
-- [ ] **REL-08**: The `docker/metadata-action` tag list is guarded so an empty list fails loudly instead of producing a silent no-op manifest
+- [x] **REL-07**: `release-dist` ships no DWARF (`strip`/`debug` resolved, no `.debug`/`.dSYM` sidecar assumption), with the macOS signature risk verified
+- [x] **REL-08**: The `docker/metadata-action` tag list is guarded so an empty list fails loudly instead of producing a silent no-op manifest
 
 ### Packaging And Versioning
 
-- [ ] **PKG-01**: Manifests report `0.1.0` via `[workspace.package] version` with the four remaining crates inheriting it, and `Cargo.lock` is regenerated
+- [x] **PKG-01**: Manifests report `0.1.0` via `[workspace.package] version` with the four remaining crates inheriting it, and `Cargo.lock` is regenerated
 - [ ] **PKG-02**: The version is asserted on both paths — the CI `GROK_VERSION` stamp and a source build's `CARGO_PKG_VERSION`
-- [ ] **PKG-03**: `release.yml` is verified against the `v0.1.0` tag shape (trigger, version parse, prerelease classification, `install.sh` validation) with no `deepseek-*` trigger added
+- [x] **PKG-03**: `release.yml` is verified against the `v0.1.0` tag shape (trigger, version parse, prerelease classification, `install.sh` validation) with no `deepseek-*` trigger added
 
 ### Documentation Truth
 
-- [ ] **DOCS-01**: `DECISIONS.md` §E/§F is rewritten from the tree, keeping D9's personal-tool intent while recording that the release pipeline exists
-- [ ] **DOCS-02**: `TESTING.md` §2/§6 is corrected — no OIDC test counts, no stale sign-in line
-- [ ] **DOCS-03**: `KNOWN-ISSUES.md` is reconciled, including the superseded `deepseek-v0.1-snapshot` tag, `--permission-mode plan`, and the sandbox findings
-- [ ] **DOCS-04**: The user guide covers the Flash default with its caveat and revert path, the estimate labelling, headless permission failure, container run flags, and the measured cost levers (`/model`, `--effort low`)
+- [x] **DOCS-01**: `DECISIONS.md` §E/§F is rewritten from the tree, keeping D9's personal-tool intent while recording that the release pipeline exists
+- [x] **DOCS-02**: `TESTING.md` §2/§6 is corrected — no OIDC test counts, no stale sign-in line
+- [x] **DOCS-03**: `KNOWN-ISSUES.md` is reconciled, including the superseded `deepseek-v0.1-snapshot` tag, `--permission-mode plan`, and the sandbox findings
+- [x] **DOCS-04**: The user guide covers the Flash default with its caveat and revert path, the estimate labelling, headless permission failure, container run flags, and the measured cost levers (`/model`, `--effort low`)
 
 ### Human Acceptance
 
@@ -154,47 +154,47 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SBOX-01 | Phase 1 — Truth Baseline | Pending |
-| SBOX-02 | Phase 1 — Truth Baseline | Pending |
-| TEST-01 | Phase 1 — Truth Baseline | Pending |
-| TEST-02 | Phase 1 — Truth Baseline | Pending |
-| TEST-03 | Phase 1 — Truth Baseline | Pending |
-| EVID-01 | Phase 1 — Truth Baseline | Pending |
-| EVID-02 | Phase 1 — Truth Baseline | Pending |
-| COST-01 | Phase 1 — Truth Baseline | Pending |
-| COST-02 | Phase 1 — Truth Baseline | Pending |
-| COST-03 | Phase 1 — Truth Baseline | Pending |
-| DEF-01 | Phase 1 — Truth Baseline | Pending |
-| PROOF-01 | Phase 2 — Loop-Item Verification | Pending |
-| PROOF-02 | Phase 2 — Loop-Item Verification | Pending |
-| PROOF-03 | Phase 2 — Loop-Item Verification | Pending |
-| PERM-01 | Phase 2 — Loop-Item Verification | Pending |
-| PERM-02 | Phase 2 — Loop-Item Verification | Pending |
-| PERM-03 | Phase 2 — Loop-Item Verification | Pending |
-| PERM-04 | Phase 2 — Loop-Item Verification | Pending |
-| SESS-01 | Phase 2 — Loop-Item Verification | Pending |
-| SESS-02 | Phase 2 — Loop-Item Verification | Pending |
-| SESS-03 | Phase 2 — Loop-Item Verification | Pending |
-| SESS-04 | Phase 2 — Loop-Item Verification | Pending |
-| REL-01 | Phase 3 — Pipeline Decoupling & Version | Pending |
-| REL-02 | Phase 3 — Pipeline Decoupling & Version | Pending |
-| REL-03 | Phase 3 — Pipeline Decoupling & Version | Pending |
-| REL-07 | Phase 3 — Pipeline Decoupling & Version | Pending |
-| REL-08 | Phase 3 — Pipeline Decoupling & Version | Pending |
-| PKG-01 | Phase 3 — Pipeline Decoupling & Version | Pending |
-| PKG-02 | Phase 3 — Pipeline Decoupling & Version | Pending |
-| PKG-03 | Phase 3 — Pipeline Decoupling & Version | Pending |
-| REL-04 | Phase 4 — Distribution Proof | Pending |
-| REL-05 | Phase 4 — Distribution Proof | Pending |
-| REL-06 | Phase 4 — Distribution Proof | Pending |
-| DOCS-01 | Phase 5 — Documentation Truth & Freeze | Pending |
-| DOCS-02 | Phase 5 — Documentation Truth & Freeze | Pending |
-| DOCS-03 | Phase 5 — Documentation Truth & Freeze | Pending |
-| DOCS-04 | Phase 5 — Documentation Truth & Freeze | Pending |
-| ACC-01 | Phase 5 — Documentation Truth & Freeze | Pending |
-| FREEZE-01 | Phase 5 — Documentation Truth & Freeze | Pending |
-| FREEZE-02 | Phase 5 — Documentation Truth & Freeze | Pending |
-| FREEZE-03 | Phase 5 — Documentation Truth & Freeze | Pending |
+| SBOX-01 | Phase 1 — Truth Baseline | Code/doc present — proof DEFERRED (tests skipped by owner, 2026-11-22) |
+| SBOX-02 | Phase 1 — Truth Baseline | Code/doc present — proof DEFERRED (tests skipped by owner, 2026-11-22) |
+| TEST-01 | Phase 1 — Truth Baseline | DEFERRED (tests skipped by owner, 2026-11-22) |
+| TEST-02 | Phase 1 — Truth Baseline | DEFERRED (tests skipped by owner, 2026-11-22) |
+| TEST-03 | Phase 1 — Truth Baseline | DEFERRED (tests skipped by owner, 2026-11-22) |
+| EVID-01 | Phase 1 — Truth Baseline | DEFERRED (tests skipped by owner, 2026-11-22) |
+| EVID-02 | Phase 1 — Truth Baseline | Met |
+| COST-01 | Phase 1 — Truth Baseline | Code/doc present — proof DEFERRED (tests skipped by owner, 2026-11-22) |
+| COST-02 | Phase 1 — Truth Baseline | Code/doc present — proof DEFERRED (tests skipped by owner, 2026-11-22) |
+| COST-03 | Phase 1 — Truth Baseline | Code/doc present — proof DEFERRED (tests skipped by owner, 2026-11-22) |
+| DEF-01 | Phase 1 — Truth Baseline | Code/doc present — proof DEFERRED (tests skipped by owner, 2026-11-22) |
+| PROOF-01 | Phase 2 — Loop-Item Verification | DEFERRED (tests skipped by owner, 2026-11-22) |
+| PROOF-02 | Phase 2 — Loop-Item Verification | DEFERRED (tests skipped by owner, 2026-11-22) |
+| PROOF-03 | Phase 2 — Loop-Item Verification | DEFERRED (tests skipped by owner, 2026-11-22) |
+| PERM-01 | Phase 2 — Loop-Item Verification | DEFERRED (tests skipped by owner, 2026-11-22) |
+| PERM-02 | Phase 2 — Loop-Item Verification | Code/doc present — proof DEFERRED (tests skipped by owner, 2026-11-22) |
+| PERM-03 | Phase 2 — Loop-Item Verification | Code/doc present — proof DEFERRED (tests skipped by owner, 2026-11-22) |
+| PERM-04 | Phase 2 — Loop-Item Verification | Met |
+| SESS-01 | Phase 2 — Loop-Item Verification | DEFERRED (tests skipped by owner, 2026-11-22) |
+| SESS-02 | Phase 2 — Loop-Item Verification | Code/doc present — proof DEFERRED (tests skipped by owner, 2026-11-22) |
+| SESS-03 | Phase 2 — Loop-Item Verification | DEFERRED (tests skipped by owner, 2026-11-22) |
+| SESS-04 | Phase 2 — Loop-Item Verification | Met |
+| REL-01 | Phase 3 — Pipeline Decoupling & Version | Met |
+| REL-02 | Phase 3 — Pipeline Decoupling & Version | DEFERRED (tests skipped by owner, 2026-11-22) |
+| REL-03 | Phase 3 — Pipeline Decoupling & Version | Code/doc present — proof DEFERRED (tests skipped by owner, 2026-11-22) |
+| REL-07 | Phase 3 — Pipeline Decoupling & Version | Met |
+| REL-08 | Phase 3 — Pipeline Decoupling & Version | Met |
+| PKG-01 | Phase 3 — Pipeline Decoupling & Version | Met |
+| PKG-02 | Phase 3 — Pipeline Decoupling & Version | Code/doc present — proof DEFERRED (tests skipped by owner, 2026-11-22) |
+| PKG-03 | Phase 3 — Pipeline Decoupling & Version | Met |
+| REL-04 | Phase 4 — Distribution Proof | BLOCKED (owner) |
+| REL-05 | Phase 4 — Distribution Proof | Code/doc present — proof DEFERRED (tests skipped by owner, 2026-11-22) |
+| REL-06 | Phase 4 — Distribution Proof | BLOCKED (owner) |
+| DOCS-01 | Phase 5 — Documentation Truth & Freeze | Met |
+| DOCS-02 | Phase 5 — Documentation Truth & Freeze | Met |
+| DOCS-03 | Phase 5 — Documentation Truth & Freeze | Met |
+| DOCS-04 | Phase 5 — Documentation Truth & Freeze | Met |
+| ACC-01 | Phase 5 — Documentation Truth & Freeze | BLOCKED (owner) |
+| FREEZE-01 | Phase 5 — Documentation Truth & Freeze | BLOCKED (owner) |
+| FREEZE-02 | Phase 5 — Documentation Truth & Freeze | BLOCKED (owner) |
+| FREEZE-03 | Phase 5 — Documentation Truth & Freeze | BLOCKED (owner) |
 
 **Coverage:**
 - v1 requirements: 41 total
