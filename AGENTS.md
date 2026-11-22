@@ -17,55 +17,49 @@ public description; §7 maps the code and §8 lists the rules for changing it.
 ## 0. Snapshot
 
 - **Branch:** `main` is the mainline and carries the released lineage
-  (`v0.0.1-rc5`). Work branches rebase onto `main` before review; do not treat a
-  side branch as the integration point.
-- **HEAD (refreshed 2026-11-21):** `main` is `221a1a59` (rc5 telemetry/proxy
-  removal, first-party `api.deepseek.com` host check, Linux-only prerelease docs)
-  plus the reviewed docs commits that carry this file and `.planning/codebase/`.
+  (`v0.0.1-rc5`). The `v0.1.0` milestone work lives on `backend/gsd-auto`; the
+  agent never pushes it — Backend pushes it for review. Do not treat a side
+  branch as the integration point.
+- **HEAD (refreshed 2026-11-22):** `main` is `221a1a59` plus the reviewed docs
+  commits. `backend/gsd-auto` carries phases 1–5 of the `v0.1.0` milestone; use
+  `git log -1` for the tip.
 - **Remote:** `origin git@github.com:coruairc/deepseek-build.git`.
 - **Toolchain:** Rust **1.94.0** via rustup (pinned in `rust-toolchain.toml`). Do not bump.
   `protoc` on PATH (`/usr/bin/protoc`); `dotslash` not needed. `strace` absent (use
-  `scripts/egress-check.sh`).
+  `scripts/egress-check.sh`). On hosts without `pkg-config`, `openssl-sys` needs
+  `OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu OPENSSL_INCLUDE_DIR=/usr/include`.
 - **Binary:** release binary built via `cargo build --release -p xai-grok-pager-bin`
-  (artifact `target/release/deepseek-build`; ~147 MiB on linux-x86_64; package
-  `xai-grok-pager-bin`, version `0.0.1-rc5`, D2 keeps the internal package name).
-  **Rebrand done**: config dir `~/.deepseek-build`, ACP namespace `deepseek-build/*`,
-  Monokai theme + DeepSeek whale logo, brand constants in
+  (artifact `target/release/deepseek-build`; package `xai-grok-pager-bin`,
+  version **`0.1.0`** inherited from `[workspace.package]`, D2 keeps the internal
+  package name). **Rebrand done**: config dir `~/.deepseek-build`, ACP namespace
+  `deepseek-build/*`, Monokai theme + DeepSeek whale logo, brand constants in
   `crates/codegen/xai-grok-brand/`; prompt templates carry no Grok Build strings.
-- **Egress gate:** `scripts/check-egress.sh --strict` → **exit 0** (HARD OK, SOFT zero)
-  as of the last recorded run; re-run after network-touching changes.
-- **Build:** `cargo check -p xai-grok-pager-bin` and `cargo build --release` were green
-  at last record. **All test targets compile**; the last full
-  `cargo test --workspace --no-fail-fast` was **31,939 passed / 2 failed / 388 ignored
-  across 307 targets** (2026-10-09). The 2 failures are host-environment
-  `xai-grok-sandbox --test deny_paths_e2e` bwrap failures (root-owned `/run/containerd`),
-  not code. A follow-up full run on `cc6e6948` was described as in-flight then and
-  **was never recorded as finished** in `KNOWN-ISSUES.md`.
+- **Egress gate:** the three baseline HARD hits (two rejected-URL fixtures and one
+  legacy bucket value) were fixed **in source** on 2026-11-22 without weakening the
+  scan; `--strict` is expected green but was **not re-run** (tests deferred).
+- **Build/tests: DEFERRED (tests skipped by owner, 2026-11-22).** No cargo command
+  ran in the 2026-11-22 pass. Last recorded green gate: 2026-11-21,
+  `results=308` (`binaries=219` + `doctests=89`). The 2026-10-09
+  "31,939 passed / 2 failed across 307 targets" figure is **stale**; do not quote it.
 - **Runtime egress (observed):** a real model-driven session (shell, edits, web_fetch,
   local MCP, compaction, resume) contacts only `api.deepseek.com:443`, the web_fetch
-  host, and AF_UNIX sockets — `scripts/egress-check.sh` reports
-  `EGRESS_VIOLATIONS=0`. Measured with an `LD_PRELOAD` connect/send logger
-  (`strace` absent). Last verified 2026-10-07 on the author's machine.
+  host, and AF_UNIX sockets — `EGRESS_VIOLATIONS=0`, measured with an `LD_PRELOAD`
+  logger. Last verified 2026-10-07 on the author's machine; not reproduced since.
 - **Eval harness (Phase E):** `scripts/evals/` — 21 auto-checked tasks, JSONL metrics,
-  comparison table, both-ways fixture validation. E2 baseline: both models 63/63,
-  Pro `$0.00702`/task vs Flash `$0.00154`/task at ~97% cache hit. E3 batch done;
-  results in [`docs/TUNING.md`](docs/TUNING.md) (only reasoning-effort reduction
-  won; nothing became a new default).
+  comparison table. E2 baseline: both models 63/63, Pro `$0.00702`/task vs Flash
+  `$0.00154`/task at ~97% cache hit. E3 results in [`docs/TUNING.md`](docs/TUNING.md)
+  (only reasoning-effort reduction won; nothing became a new default).
 - **Headless cost:** `--output-format json` emits `estimated_cost_usd` +
   `estimate: true` (local peak-rate estimate, D14) alongside usage.
-- **Release/container:** prerelease [`v0.0.1-rc5`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc5) (`4b305bd0`, 2026-10-25) is
-  published, **Linux only** (x86_64 + aarch64 tarballs, `SHA256SUMS`, `install.sh`);
-  rc4's x86_64 install was verified from the real release on 2026-10-24. macOS is
-  dropped for now: the aarch64-apple-darwin job hit the 90-minute job timeout and
-  cancelled the run, so the container job was skipped and **no GHCR image exists**
-  (checked 2026-10-24). Dry-run procedure: §6.
-- **Status:** usable with a real `DEEPSEEK_API_KEY`. See `TESTING.md`,
-  `scripts/smoke-test.sh`, `scripts/egress-check.sh`, `scripts/sandbox-run.sh`,
-  `KNOWN-ISSUES.md`. Remaining: confirm one full green workspace run on a clean
-  host (the flaky shell tests and host-only sandbox failures are recorded in
-  `KNOWN-ISSUES.md`); no GHCR image and no macOS release yet; interactive TUI
-  driven only under a pty, never by a human; user-guide swept 2026-10-12
-  (removed-flow pages deleted, examples use the real binary name).
+- **Release/container:** prerelease [`v0.0.1-rc5`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc5)
+  is published, **Linux only**. As of 2026-11-22 the workflow has separate
+  `build-linux`/`build-macos` jobs, `container` needs `build-linux` only, the
+  metadata tag list is guarded, and `release-dist` ships no DWARF. No GHCR image
+  and no macOS artifact exist yet.
+- **Status (2026-11-22): milestone `v0.1.0` is blocked on three owner gates** —
+  ACC-01 (acceptance session + signed note), a throwaway `DEEPSEEK_API_KEY`, and
+  tag-push permission. Everything else is landed; proofs are deferred. See
+  `.planning/v0.1.0-MILESTONE-AUDIT.md` and `.planning/STATE.md` §Needs Human.
 
 ## 1. How to resume (another machine)
 
@@ -202,13 +196,13 @@ The slice worktrees on the original machine live under `/home/cein_orourke/wt/ds
 
 ## 4. Gates (from the task) and current status
 
-1. `cargo build --release` — **PASS** (artifact `target/release/deepseek-build`, ~147 MiB
-   linux-x86_64). `cargo test --workspace` — all targets compile; last full run
-   31,939 passed / 2 failed / 388 ignored across 307 targets, the 2 being host-only
-   `xai-grok-sandbox` bwrap failures (see §0). `cargo fmt --all --check` clean;
-   clippy 0 errors on the touched crates (16 pre-existing warnings).
-2. HARD egress zero — **PASS**. SOFT zero after rebrand — **PASS**
-   (`scripts/check-egress.sh --strict` exits 0). `opentelemetry`/`aws-config`/
+1. `cargo build --release` — **last recorded PASS**; **no cargo command ran in the
+   2026-11-22 pass** (tests deferred by owner). Last recorded gate: 2026-11-21,
+   `results=308` with zero failures; the 2026-10-09 31,939/2 figure is stale (§0).
+   `cargo fmt --all --check` was clean before the 2026-11-22 hand edits; the edited
+   files were formatted by hand and not re-checked.
+2. HARD egress zero — **fixed in source 2026-11-22, not re-run**. SOFT zero after
+   rebrand — **PASS at the last run**. `opentelemetry`/`aws-config`/
    `google-cloud-storage` have zero dependents; `jsonschema`'s `$ref` fetch path closed.
 3. Runtime egress test via `strace -f -e trace=connect` — **NOT RUN** (`strace` absent; the
    `LD_PRELOAD` equivalent in `scripts/egress-check.sh` is used instead, last green
@@ -223,9 +217,10 @@ add an outbound destination, or the live smoke test needs a key not provided.
 
 ## 5. Known gotchas / incomplete (do not paper over)
 
-- **All test targets compile.** The last full `cargo test --workspace` was 31,939 passed /
-  2 failed / 388 ignored across 307 targets; the 2 are host-environment `xai-grok-sandbox`
-  bwrap failures (root-owned `/run/containerd`), not code. See `KNOWN-ISSUES.md`.
+- **Tests are deferred (2026-11-22).** The last recorded gate is 2026-11-21
+  (`results=308`, zero failures); the 2026-10-09 31,939/2 figure is stale. The
+  `deny_paths_e2e` bwrap pair was fixed product-side and last reported 14/0/1. Do
+  not quote a suite result you did not observe. See `KNOWN-ISSUES.md`.
 - **Unexercised:** interactive TUI by a human (only pty-driven), a macOS release,
   the container image (never built/pulled), and the live scripts on any
   machine other than the author's. See `KNOWN-ISSUES.md` "Unexercised surfaces".
