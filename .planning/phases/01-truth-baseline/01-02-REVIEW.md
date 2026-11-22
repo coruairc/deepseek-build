@@ -303,3 +303,16 @@ proof.
 _Reviewed: 2026-11-21T19:36:40Z_
 _Reviewer: gsd-code-reviewer (subagent)_
 _Depth: deep_
+
+## Resolution (2026-11-22)
+
+- **WR-01** (dlsym failure) is fixed in `scripts/egress_guard.c`: `call_real`
+  refuses with `ECONNREFUSED` and a `BLOCKED` line when the symbol is missing.
+- **WR-02** (silent abort) is fixed: the connector exits 77 on an unavailable
+  socket family and every IPv6 assertion reports `SKIP:`.
+- **WR-03** (stale prose) is fixed in `TESTING.md`/`KNOWN-ISSUES.md`; the
+  deferral record now carries the resolved egress-fixture entry.
+- **WR-04** is fixed in source: the two rejected-URL fixtures are built from
+  fragments and the legacy bucket value is `local-bucket`; the scan pattern was
+  not relaxed. The gate re-run is **DEFERRED (tests skipped by owner,
+  2026-11-22)**.

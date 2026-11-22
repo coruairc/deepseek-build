@@ -183,3 +183,12 @@ WR-04 (the dead `got` flag in the completeness awk) and WR-05/WR-06 (evidence sc
 _Reviewed: 2026-11-22T05:13:34Z_
 _Reviewer: gsd-code-reviewer (adversarial subagent, static-only)_
 _Depth: deep_
+
+## Resolution (2026-11-22)
+
+`CHANGES_REQUIRED` findings were fixed in `58cc8ac3`: summary truth (WR-01),
+dirty-tree provenance (WR-02), leak-scan-before-refresh (WR-03), a result line
+required per block (WR-04), and the evidence-doc corrections (WR-05/06).
+
+Still open and owner-gated: **W-1** (two evidence items are `result: skipped`)
+and **W-2** (the expected count is not re-confirmed on this host).

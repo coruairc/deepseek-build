@@ -272,3 +272,17 @@ it and the gate recipe only redacts the log, it deserves a follow-up ticket.
 _Reviewed: 2026-11-21T18:57:15Z_
 _Reviewer: gsd-code-reviewer (subagent)_
 _Depth: deep_
+
+## Resolution (2026-11-22)
+
+- **WR-01**: `docs/TUNING.md` records that the shipped default is Flash at its
+  catalog `low` effort and that `--effort low` was measured on Pro.
+- **WR-02**: the tokenizer comment names the catalog default, not a
+  non-existent model.
+- **WR-03**: `resolve_default_model`'s rustdoc includes the catalog-default step.
+- **WR-04**: fixed 2026-11-22 — `process_key_from_model_env_key` unsets
+  `DEEPSEEK_API_KEY`/`DEEPSEEK_BUILD_API_KEY` and its assertion no longer
+  debug-formats the key. The sibling test was left unchanged on purpose: it is a
+  non-`serial` test, so adding a process-global env mutation there would create a
+  new race.
+- **IN-05** verified fixed (blank line present).

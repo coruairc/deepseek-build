@@ -214,3 +214,13 @@ follow-ups, not merge conditions.
 _Reviewed: 2026-11-21T18:18:41Z_
 _Reviewer: gsd-code-reviewer_
 _Depth: deep_
+
+## Resolution (2026-11-22)
+
+- **WR-01**: `status_line_pricing_reads_ui_overrides_and_falls_back_on_malformed_ui`
+  exists in `headless_tests.rs`.
+- **WR-02**: the summary now says `0.00007092` in both places.
+- **WR-03**: both doc comments describe the resolved
+  `[ui.status_line.pricing]` table, not "the shipped table".
+- No warning remains open; the suite itself is **DEFERRED (tests skipped by
+  owner, 2026-11-22)**.

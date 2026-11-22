@@ -257,3 +257,11 @@ The uncommitted work is safe to commit once WR-01/WR-02 are addressed.
 _Reviewed: 2026-11-21T19:24:27Z_
 _Reviewer: gsd-code-reviewer (subagent)_
 _Depth: deep_
+
+## Resolution (2026-11-22)
+
+- **WR-02** is already correct in the tree: `parent_is_traversable`'s comment now
+  states that any `lstat("parent/.")` error means "not traversable" and that
+  `parent` is resolved as an intermediate component.
+- **WR-01** and the info items are test-only observation gaps. No suite was
+  re-run: **DEFERRED (tests skipped by owner, 2026-11-22)**.
