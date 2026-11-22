@@ -135,50 +135,63 @@ may need a right-click **Open**, or
 Official releases also publish a multi-arch (linux/amd64, linux/arm64) image to
 GitHub Container Registry. It is **not affiliated with DeepSeek**.
 
-> **Not yet built or published.** The container job in the release workflow runs
-> only on a tag push and needs every build target to succeed; on `v0.0.1-rc4` the
-> macOS build timed out, so the job was skipped and there is no GHCR image to
-> pull. The `docker pull` commands below cannot work yet (checked 2026-10-24).
-> The production image is assembled from a staged context containing the release
-> tarball's binary as `deepseek-build-amd64`/`deepseek-build-arm64` plus the
-> license files; see `docker/Dockerfile` and the container step in
-> `.github/workflows/release.yml`. To smoke-test locally with a binary you built,
-> use `docker/Dockerfile.localtest` (also not yet exercised — see
-> [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)).
+> **Not yet built or published.** The container job runs only on a tag push. On
+> `v0.0.1-rc5` it was skipped because the macOS leg had cancelled the run. Since
+> the build legs were split, `container` no longer depends on macOS, so the next
+> tag builds it even if a macOS leg is slow. Until a tag is published there is no
+> GHCR image to pull and the commands below cannot work. The production image is
+> assembled from a staged context containing the release tarball's binary as
+> `deepseek-build-amd64`/`deepseek-build-arm64` plus the license files; see
+> `docker/Dockerfile` and the container step in
+> `.github/workflows/release.yml`.
 
-Once a release exists:
+### The image is headless-only
+
+The image has no TUI story: it carries the binary and the runtime tools, not a
+terminal multiplexer or editor stack. Use it for scripted and server-side runs
+(`-p`, `--output-format json`, ACP/agent stdio), not for the interactive
+full-screen client.
 
 ```sh
-# Pull (replace <owner> with the GitHub account that published it)
-docker pull ghcr.io/<owner>/deepseek-build:latest
+# Version check
+docker run --rm ghcr.io/<owner>/deepseek-build:latest --version
 
-# Interactive session in a repo, key from your environment
-docker run -it --rm \
+# One headless turn against a mounted repo (key from your environment)
+docker run --rm \
   -e DEEPSEEK_API_KEY \
   -v "$PWD":/work \
-  ghcr.io/<owner>/deepseek-build:latest
+  ghcr.io/<owner>/deepseek-build:latest -p "summarise this repo"
 ```
 
-Host-owned files: the image runs as uid 1000; pass your own ids so files written
-into the mount stay yours.
+### Mounts
+
+| Mount | Purpose |
+|---|---|
+| `-v "$PWD":/work` | the repository the agent works on (the image's `WORKDIR`) |
+| `-v "$HOME/.deepseek-build":/home/app/.deepseek-build` | optional: reuse config, sessions and logs across runs |
+| `--user "$(id -u):$(id -g)"` | write into the mount as yourself instead of uid 1000 |
+
+The image contains no API key and bakes in nothing user-specific. Package
+visibility depends on the GHCR package settings (packages default to private for
+personal accounts).
+
+### Keeping the sandbox on
+
+The sandbox is selected by its confinement profile and **there is no flag that
+turns it off**. On Linux it needs `bubblewrap` and unprivileged user namespaces.
+A container runtime that blocks namespace creation will make the process refuse
+to start rather than silently drop a deny plan; when that is the only obstacle,
+grant exactly what bwrap needs:
 
 ```sh
-docker run -it --rm --user "$(id -u):$(id -g)" \
+docker run --rm --security-opt seccomp=unconfined --cap-add SYS_ADMIN \
   -e DEEPSEEK_API_KEY -v "$PWD":/work \
-  ghcr.io/<owner>/deepseek-build:latest
+  ghcr.io/<owner>/deepseek-build:latest -p "run the tests"
 ```
 
-`--version` / headless:
-
-```sh
-docker run --rm ghcr.io/<owner>/deepseek-build:latest --version
-docker run --rm -e DEEPSEEK_API_KEY ghcr.io/<owner>/deepseek-build:latest -p "say hi"
-```
-
-The image is built from the release tarballs (`docker/Dockerfile`, per-arch
-binary via `TARGETARCH`), contains no API key, and ships the license files in
-`/usr/share/doc/deepseek-build/`. Package visibility depends on the GHCR package
-settings (packages default to private for personal accounts).
+Prefer a runtime with unprivileged user namespaces enabled over `--privileged`.
+The image never needs host network access beyond the model provider and any MCP
+server you configure.
 
 ## Security & network
 

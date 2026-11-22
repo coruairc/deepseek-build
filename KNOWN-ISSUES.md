@@ -247,10 +247,18 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   (2026-10-24); the x86_64 installer was verified against it. macOS builds are
   dropped for now (a per-target timeout change needs a token with the
   `workflow` scope).
-- **Container image: never built or pulled.** The `container` job `needs` the
-  whole build matrix, so the rc4 macOS cancellation skipped it; there is no
-  GHCR package (checked 2026-10-24). Neither `docker/Dockerfile` nor
-  `docker/Dockerfile.localtest` has been exercised.
+- **Container image: never built or pulled.** As of 2026-11-22 `container` needs
+  `build-linux` only, so a slow macOS leg can no longer skip it; no tag has been
+  pushed since, so there is still no GHCR package (checked 2026-10-24). Neither
+  `docker/Dockerfile` nor `docker/Dockerfile.localtest` has been exercised. The
+  image is documented as headless-only, with its mounts and the sandbox flags
+  that keep bwrap working, in `README.md` — that documentation is unexercised.
+- **Installer `latest` path unresolved by observation.** GitHub resolves
+  `/releases/latest/download/...` to the most recent *non-prerelease* release;
+  only pre-releases exist (`v0.0.1-rc5` is the newest), so the unpinned path has
+  no target today. `README.md` now documents the pinned form and this
+  `latest` limitation. **DEFERRED (tests skipped by owner, 2026-11-22):** the
+  real-URL check for both the pinned and unpinned paths was not performed.
 - **Live scripts on any machine but the author's: never.** `scripts/smoke-test.sh`
   (8/8) and `scripts/egress-check.sh` (`EGRESS_VIOLATIONS=0`) passed there on
   2026-10-07 and have not been reproduced elsewhere.
