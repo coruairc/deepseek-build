@@ -178,6 +178,7 @@ Building toward the Phase 1 freeze. Each is a hypothesis until shipped and verif
 | The container keeps the sandbox on, with documented run flags | The image is the artifact most likely to be tried first; shipping it sandbox-off would weaken the default where it is hardest to verify | — Pending |
 | A human acceptance session gates the freeze | Automated checks cannot tell whether the TUI is pleasant or whether a real repo round-trips cleanly; the author's 20–30 minute session on a repo clone is the only evidence for that | — Pending |
 | The ~435 internal `GROK_*` names are explicitly out of scope | Recorded as a decision so no phase treats them as leftover work; the rename belongs to open-build | — Pending |
+| `release-dist` ships fully stripped binaries (`strip = "symbols"`, `debug = 0`, no sidecar) | Smaller artifacts and a valid macOS ad-hoc signature; the trade-off is that crash backtraces from released binaries are unsymbolized and must be reproduced on a debug build | — Accepted (Reviewer LOW, 2026-11-22) |
 
 ## Evolution
 
