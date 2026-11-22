@@ -8,12 +8,12 @@ shell commands, and manages long-running tasks, driven by DeepSeek's
 OpenAI-compatible Chat Completions API. It is a work in progress (see
 [Status](#status) and [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)).
 
-> A release pipeline is in place that builds binaries for linux-x86_64,
-> linux-aarch64, darwin-arm64, and darwin-x86_64, with a checksum file and an
-> installer script attached to each GitHub release. **No release has been
-> published yet** — no `v*` tag has been pushed, so
-> [Releases](https://github.com/coruairc/deepseek-build/releases) is currently
-> empty. Until the first tag, build from source (see
+> A release pipeline builds linux-x86_64, linux-aarch64, darwin-arm64 and
+> darwin-x86_64, with a checksum file and an installer script attached to each
+> GitHub release. Pre-releases `v0.0.1-rc2`–`rc5` are published, **Linux-only so
+> far** (the macOS legs have not completed inside the job timeout); there is no
+> stable `v0.1.0` yet and no container image. Install a pinned pre-release (see
+> [Install](#install)) or build from source (see
 > [Building from source](#building-from-source)).
 
 ## Status
