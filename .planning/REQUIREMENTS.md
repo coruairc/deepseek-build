@@ -21,29 +21,29 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 ### Sandbox
 
-- [ ] **SBOX-01**: Runtime-socket deny materialization skips candidates whose parent path is not traversable, while staying fail-closed for denies the process can see but cannot mask (traversable parent with unreadable endpoint still errors)
-- [ ] **SBOX-02**: A test proves a root-only deny-path parent does not abort bwrap startup, and `scripts/sandbox-run.sh` resolves and reports IPv6 destinations instead of `non-ip`
+- [x] **SBOX-01**: Runtime-socket deny materialization skips candidates whose parent path is not traversable, while staying fail-closed for denies the process can see but cannot mask (traversable parent with unreadable endpoint still errors)
+- [x] **SBOX-02**: A test proves a root-only deny-path parent does not abort bwrap startup, and `scripts/sandbox-run.sh` resolves and reports IPv6 destinations instead of `non-ip`
 
 ### Test Gate
 
-- [ ] **TEST-01**: `cargo test --workspace` exits 0 with zero failures on the author's host, asserted for completeness (target count) rather than read from a tail line
-- [ ] **TEST-02**: The test gate runs the `config-docs` feature tests, which `cargo test --workspace` does not reach today because `xai-grok-shell` has `default = []`
-- [ ] **TEST-03**: The recorded `git_gate`/`restore_fetch` timing flake is either made deterministic or explicitly quarantined, so "zero failures" is not a single lucky run
+- [x] **TEST-01**: `cargo test --workspace` exits 0 with zero failures on the author's host, asserted for completeness (target count) rather than read from a tail line
+- [x] **TEST-02**: The test gate runs the `config-docs` feature tests, which `cargo test --workspace` does not reach today because `xai-grok-shell` has `default = []`
+- [x] **TEST-03**: The recorded `git_gate`/`restore_fetch` timing flake is either made deterministic or explicitly quarantined, so "zero failures" is not a single lucky run
 
 ### Evidence
 
-- [ ] **EVID-01**: Every loop item carries a committed asciinema cast plus `report.json` under `docs/evidence/`, with absolute artifact paths normalized out
-- [ ] **EVID-02**: The evidence convention is documented and referenced by each item's verification step, so a later reader can re-run it
+- [x] **EVID-01**: Every loop item carries a committed asciinema cast plus `report.json` under `docs/evidence/`, with absolute artifact paths normalized out
+- [x] **EVID-02**: The evidence convention is documented and referenced by each item's verification step, so a later reader can re-run it
 
 ### Cost Honesty
 
-- [ ] **COST-01**: `deepseek-v4-flash` exists in the pricing table, so the default model no longer silently prices at Pro rates (~4× overstatement)
-- [ ] **COST-02**: The TUI cost figure is labelled as an estimate
-- [ ] **COST-03**: Headless honours `[ui.status_line.pricing]` overrides instead of `PricingTable::default()`, so the TUI and the JSON output report the same number
+- [x] **COST-01**: `deepseek-v4-flash` exists in the pricing table, so the default model no longer silently prices at Pro rates (~4× overstatement)
+- [x] **COST-02**: The TUI cost figure is labelled as an estimate
+- [x] **COST-03**: Headless honours `[ui.status_line.pricing]` overrides instead of `PricingTable::default()`, so the TUI and the JSON output report the same number
 
 ### Default Model
 
-- [ ] **DEF-01**: `deepseek-flash` is the catalog default, documented with the at-ceiling-benchmark caveat (63/63 for both models, so the eval set cannot prove Flash sufficient for hard work) and the revert path (`/model deepseek-v4-pro`, `-m deepseek-v4-pro`)
+- [x] **DEF-01**: `deepseek-flash` is the catalog default, documented with the at-ceiling-benchmark caveat (63/63 for both models, so the eval set cannot prove Flash sufficient for hard work) and the revert path (`/model deepseek-v4-pro`, `-m deepseek-v4-pro`)
 
 ### Runtime Proof
 
@@ -154,17 +154,17 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SBOX-01 | Phase 1 — Truth Baseline | Pending |
-| SBOX-02 | Phase 1 — Truth Baseline | Pending |
-| TEST-01 | Phase 1 — Truth Baseline | Pending |
-| TEST-02 | Phase 1 — Truth Baseline | Pending |
-| TEST-03 | Phase 1 — Truth Baseline | Pending |
-| EVID-01 | Phase 1 — Truth Baseline | Pending |
-| EVID-02 | Phase 1 — Truth Baseline | Pending |
-| COST-01 | Phase 1 — Truth Baseline | Pending |
-| COST-02 | Phase 1 — Truth Baseline | Pending |
-| COST-03 | Phase 1 — Truth Baseline | Pending |
-| DEF-01 | Phase 1 — Truth Baseline | Pending |
+| SBOX-01 | Phase 1 — Truth Baseline | Complete |
+| SBOX-02 | Phase 1 — Truth Baseline | Complete |
+| TEST-01 | Phase 1 — Truth Baseline | Complete |
+| TEST-02 | Phase 1 — Truth Baseline | Complete |
+| TEST-03 | Phase 1 — Truth Baseline | Complete |
+| EVID-01 | Phase 1 — Truth Baseline | Complete |
+| EVID-02 | Phase 1 — Truth Baseline | Complete |
+| COST-01 | Phase 1 — Truth Baseline | Complete |
+| COST-02 | Phase 1 — Truth Baseline | Complete |
+| COST-03 | Phase 1 — Truth Baseline | Complete |
+| DEF-01 | Phase 1 — Truth Baseline | Complete |
 | PROOF-01 | Phase 2 — Loop-Item Verification | Pending |
 | PROOF-02 | Phase 2 — Loop-Item Verification | Pending |
 | PROOF-03 | Phase 2 — Loop-Item Verification | Pending |
