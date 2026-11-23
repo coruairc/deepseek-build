@@ -80,7 +80,8 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   five-run sample quoted here was executor-reported (raw logs never committed)
   and is superseded: the Phase-1 verification's own 35-run repetition of
   `cargo test -p xai-grok-workspace --lib -- --test-threads=4` on `1308903a`
-  (this file is identical at `98c2f1b8`) caught **2 failures in 35** of
+  (this file is identical at `98c2f1b8`) caught **2 failures in 35**, and the
+  captured one is
   `restore_fetch::tests::fetch_timeout_sigkills_term_immune_grandchild` —
   `grandchild <pid> must not remain live` at `restore_fetch_tests.rs:731`. The
   test read `/proc/<pid>` immediately after teardown while SIGKILL delivery and

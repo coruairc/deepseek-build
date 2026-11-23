@@ -154,7 +154,7 @@ Launch the binary and approve tool calls as prompted.
   changed direction. The earlier five-run sample is superseded: the phase
   verification's 35-run repetition of `cargo test -p xai-grok-workspace --lib
   -- --test-threads=4` on `1308903a` (identical file also at `98c2f1b8`)
-  produced **2 failures in 35** of
+  produced **2 failures in 35**, and the captured one is
   `restore_fetch::tests::fetch_timeout_sigkills_term_immune_grandchild`
   (`grandchild <pid> must not remain live`, `restore_fetch_tests.rs:731`) — an
   instantaneous `/proc` read after an asynchronous SIGKILL. Plan 01-06 fixed it

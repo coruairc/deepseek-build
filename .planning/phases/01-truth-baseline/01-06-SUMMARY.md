@@ -79,7 +79,7 @@ coverage:
         ref: "docs/evidence/01-truth-baseline/determinism/repetition-35-runs.log — 35 headerless lines, every one `rc=0 named=ok` with `test result: ok. 1695 passed; 0 failed`, one distinct passed count"
         status: pass
       - kind: other
-        ref: "docs/evidence/01-truth-baseline/determinism/report.json — 8 keys, requirements [TEST-03], 7/7 steps ok, result ok; 4 artifact sha256 match; deterministic.cast valid asciinema v2 (3 events) and carries all 35 projection lines"
+        ref: "docs/evidence/01-truth-baseline/determinism/report.json — 8 keys, requirements [TEST-03], 7/7 steps ok, result ok; 4 artifact sha256 match; determinism.cast valid asciinema v2 (3 events) and carries all 35 projection lines"
         status: pass
       - kind: other
         ref: "scripts/key-leak-check.sh --scan docs/evidence — PASS exit 0 over the finished item; no /home path in the item"
