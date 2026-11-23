@@ -51,14 +51,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `docs/evidence/` holds a committed `.cast` plus `report.json` with absolute paths normalized out, and the convention is documented so later phases can append to it and a later reader can re-run it.
   4. A Flash turn prices at Flash rates instead of Pro rates, the TUI cost figure is labelled an estimate, and headless honours `[ui.status_line.pricing]` so the TUI and the JSON output report the same number.
   5. `deepseek-flash` is the catalog default, and the documentation that ships with it states the at-ceiling caveat (63/63 for both models, so the eval set cannot prove Flash sufficient for hard work) and the revert path (`/model deepseek-v4-pro`, `-m deepseek-v4-pro`).
-**Plans**: 5 plans
+**Plans**: 5/5 plans executed
 
 Plans:
-- [ ] 01-01: Sandbox deny materialization — skip candidates whose parent is not traversable, stay fail-closed everywhere else, fixture matrix, `deny_paths_e2e` green unmodified
-- [ ] 01-02: `scripts/sandbox-run.sh` resolves and reports IPv6 destinations instead of `non-ip`
-- [ ] 01-03: Cost honesty — `deepseek-v4-flash` in the pricing table, estimate label on the TUI figure, headless honours `[ui.status_line.pricing]`
-- [ ] 01-04: Default model flip to `deepseek-flash` with the at-ceiling caveat and the revert path documented
-- [ ] 01-05: Test gate — completeness assertion against the target count, the `--features config-docs` step, `git_gate`/`restore_fetch` determinism or quarantine, evidence convention under `docs/evidence/`, full workspace run recorded
+- [x] 01-01: Sandbox deny materialization — skip candidates whose parent is not traversable, stay fail-closed everywhere else, fixture matrix, `deny_paths_e2e` green unmodified
+- [x] 01-02: `scripts/sandbox-run.sh` resolves and reports IPv6 destinations instead of `non-ip`
+- [x] 01-03: Cost honesty — `deepseek-v4-flash` in the pricing table, estimate label on the TUI figure, headless honours `[ui.status_line.pricing]`
+- [x] 01-04: Default model flip to `deepseek-flash` with the at-ceiling caveat and the revert path documented
+- [x] 01-05: Test gate — completeness assertion against the target count, the `--features config-docs` step, `git_gate`/`restore_fetch` determinism or quarantine, evidence convention under `docs/evidence/`, full workspace run recorded
 
 ### Phase 2: Loop-Item Verification
 **Goal:** As the author, I want the daily loop — permissions, resume, plan mode — and the runtime egress boundary verified against a real model-driven session with a throwaway key, so that "it works" rests on committed artifacts rather than on a pty scenario I wrote myself.
@@ -157,7 +157,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Truth Baseline | 0/5 | Not started | - |
+| 1. Truth Baseline | 5/5 | In Progress | - |
 | 2. Loop-Item Verification | 0/5 | Not started | - |
 | 3. Pipeline Decoupling & Version | 0/4 | Not started | - |
 | 4. Distribution Proof | 0/3 | Not started | - |

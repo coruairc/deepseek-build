@@ -5,15 +5,15 @@ current_phase: 01
 current_phase_name: Truth Baseline
 status: executing
 stopped_at: Roadmap revised to 5 phases; Phase 1 ready to plan
-last_updated: "2026-11-21T17:28:43.410Z"
-last_activity: 2026-11-21
-last_activity_desc: Phase 01 execution started
-state_head: 711524dd454225eeb2bcbbb3924f7d8a83f2268e
+last_updated: "2026-11-23T12:58:34.619Z"
+last_activity: 2026-11-23
+last_activity_desc: Phase 01 execution resumed (wave continue)
+state_head: 00aebc866c375e7b0b6fc3f80483e81bd0ef1fc8
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 5
-  completed_plans: 0
+  completed_plans: 4
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 Phase: 01 (Truth Baseline) — EXECUTING
 Plan: 1 of 5
 Status: Executing Phase 01
-Last activity: 2026-11-21 — Phase 01 execution started
+Last activity: 2026-11-23 — Phase 01 execution resumed (wave continue)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -68,6 +68,11 @@ Full log in PROJECT.md Key Decisions. Those shaping current work:
 - The freeze marker is non-triggering, and the author's signed acceptance note must be committed before branch `deepseek` or the marker tag exists.
 - Container keeps the sandbox on, with documented run flags; no new outbound destination anywhere.
 - The ~435 internal `GROK_*` env names and the `xai-grok-*` crate names are out of scope for this milestone (D2); renaming belongs to open-build.
+- **Phase 2 live-proof key (user decision, 2026-11-23):** use the existing `DEEPSEEK_API_KEY` from the
+  environment for PROOF-01/02/03; the author rotates/revokes it on platform.deepseek.com after the run
+  (this also resolves the Phase-1 local-log exposure). The key is treated as compromised-by-policy:
+  no key material in any committed artifact, and PROOF-03's revocation step is satisfied by the
+  author's confirmed rotation, recorded as evidence.
 - **Parallel lanes from Phase 2 (user decision, 2026-11-21):** Phase 1 finishes as one sequential lane.
   From Phase 2 onward, plans with disjoint `files_modified` may run in separate git worktrees under one
   shared `CARGO_TARGET_DIR`, one `flock` build lock, and one merge step per wave. This overrides the
@@ -82,7 +87,9 @@ None yet.
 
 - **Acceptance gate (human, blocking):** ACC-01 needs a 20–30 minute TUI session on a real repo clone by the author. FREEZE-01/02/03 must not run until the signed note is committed — this is the milestone's only human-blocking dependency.
 - **Snapshot tag is public:** `deepseek-v0.1-snapshot` already exists on origin at `4b305bd0`. It must be recorded as superseded in docs and left untouched; moving or deleting it is destructive.
-- **Throwaway key required for Phase 2:** the live smoke, egress measurement and key-leak scan need a `DEEPSEEK_API_KEY` that is revoked after the run. Without it, PROOF-01/02/03 are blocked, not retried.
+- **Throwaway key for Phase 2 — RESOLVED (2026-11-23):** the author chose to use the existing env
+  `DEEPSEEK_API_KEY` and rotate it after the run (see Decisions). PROOF-01/02/03 are unblocked;
+  the rotation confirmation is a human action owed at the end of Phase 2.
 - **Research base drift:** STACK/ARCHITECTURE read `main` @ `221a1a59`, PITFALLS @ `9e6780d9`. Re-verify `release.yml` edges and manifest versions before Phase 3.
 - **macOS time budget (MEDIUM):** measure the macOS job log before choosing between timeout, strip and LTO override. Both arches must fit the job timeout; one cache-warming run is allowed if cold cache is the cause.
 - **Dry-run side effects:** a dry run is a real push. `container` currently depends on the whole matrix and the metadata-action tag list has no empty-list guard, so Phase 3 must land before any throwaway tag, and the dispatch verification must create no release and move no `:latest`.
@@ -109,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-21
-Stopped at: Roadmap revised to 5 phases; Phase 1 ready to plan
+Last session: 2026-11-23
+Stopped at: Session resumed; 01-06 (TEST-03 gap closure) complete but uncommitted — dispatched code reviewer on the 01-06 diff; on PASS, commit, re-verify Phase 01, transition to Phase 2. Stale HANDOFF.json and .continue-here.md (2026-11-21) deleted as superseded.
 Resume file: None
