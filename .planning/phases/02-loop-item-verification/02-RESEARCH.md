@@ -85,10 +85,18 @@ Three findings shape the plan more than anything else:
 - `report.json` keeps the Phase 1 fixed key set and order, paths normalized to `<REPO>`/`<HOME>`/`<TMP>`.
 
 #### Plan sequencing
-- 02-01 and 02-02 are one live session captured twice (smoke transcript, then the egress measurement) and
-  stay sequential; 02-03 scans what they produced. 02-04 and 02-05 touch different surfaces and may run
-  in parallel worktrees only if their `files_modified` sets are disjoint, per the Phase 2 parallel-lane
-  decision in STATE.md — dependent work stays sequential.
+- Six plans, four waves. Wave 1: `02-01` (PROOF-01, live) and `02-04` (PERM-01/02) — they share nothing in
+  `files_modified`, and the one shared artifact (`target/release/deepseek-build`) is pinned by copying it to a
+  per-plan path (`BIN=` in 02-01, `PAGER_BINARY=` in 02-04) while both cargo builds serialize on
+  `/tmp/team-build.lock`.
+- Wave 2: `02-02` (PROOF-02, reads 02-01's transcript) and `02-05` (SESS-01/03/04, resume). Wave 3: `02-06`
+  (PERM-03/04 + SESS-02 — the mode-chip and plan-gate surface, split out of the original 02-04/02-05 bundle to
+  keep each plan inside the smart-zone budget; it edits `headless_loop_items.rs`, which 02-05 also touches, so it
+  follows 02-05). Wave 4: `02-03` (PROOF-03) scans everything the earlier waves produced.
+- 02-01 and 02-02 are one live session captured twice (smoke transcript, then the egress measurement) and stay
+  sequential; 02-03 scans what they produced.
+- `scripts/test-gate.expected` is refreshed exactly once, by `02-04` — the only plan that adds a `[[test]]`
+  target. Later plans add tests inside existing targets, which leaves the target tally unchanged.
 
 #### Decided autonomously
 - [Evidence] Q: "New evidence tree or extend Phase 1?" → "New `docs/evidence/02-loop-item-verification/` tree; earlier items are never rewritten" — appending a directory is local and cheap to undo.
@@ -702,24 +710,43 @@ crate::agent::handlers::model_switch::apply(
 
 **If this table is empty:** not applicable — A1–A5 need confirmation or an observed run.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does `auto` mode in a headless run actually run?**
+All three questions below are closed; the adopted answer is in bold and is what the plans implement. Do not
+re-open them during execution — if a plan disagrees with an answer here, the plan is wrong.
+
+1. **Does `auto` mode in a headless run actually run?** **(RESOLVED: not claimed — the copy is the requirement,
+   the behaviour is recorded as an observation.)**
    - What we know: `default_auto_mode` is resolved from the flag (`headless.rs:965-970`,
      `permissions.rs:187-220`), and auto is feature-gated ON by default.
-   - What's unclear: whether the classifier completes without a TTY and answers before
-     `RequestPermission` is sent.
-   - Recommendation: verify with one mock-driven headless run in the PERM-02 task; if it cannot be proved
-     cheaply, keep the copy (UI-SPEC locks it) and record the copy as the requirement, not the behaviour.
+   - What stays unclear: whether the classifier completes without a TTY and answers before `RequestPermission` is
+     sent. Nothing on this host can settle it, and a wrong assertion would be a false proof.
+   - Adopted answer: **PERM-02 is the denial copy on both output paths** (UI-SPEC locks the wording). `02-04`
+     adds a third, explicitly non-asserting `auto` probe invocation that prints whether the gated call ran or was
+     denied, records it as a step named `perm-02: auto-mode behaviour observed (not asserted)`, and states the
+     distinction in `permission-prompt/notes.md`. A future phase may promote the observation to a requirement
+     once it has been seen to hold twice.
 
-2. **How should the "whole tree" leak scan be expressed?**
-   - What we know: `--scan` takes paths and fails closed; `grep -R .` would enter `target/`.
-   - Recommendation: `--scan docs/evidence` plus a tracked-file pass over `git ls-files` (file names
-     only). Record the exact command in `notes.md`.
+2. **How should the "whole tree" leak scan be expressed?** **(RESOLVED: `--scan` over explicit paths, plus one
+   recorded whole-tree measurement that is not a gate.)**
+   - What we know: `--scan` takes paths and fails closed (grep rc>=2 is a failure); `grep -R .` would enter
+     `target/`.
+   - Adopted answer: the gate is `scripts/key-leak-check.sh --scan docs/evidence` **and** `--scan docs
+     .planning/phases/02-loop-item-verification`. A tracked-file key-shape grep over `git ls-files` is recorded as
+     a **measurement** in `key-leak/report.json` and `notes.md`, never as an equality gate: on HEAD `1efb05ac` it
+     prints 2 files / 4 matching lines, all inside `#[cfg(test)]` modules of the two redaction crates
+     (`xai-grok-secrets/src/sanitizer.rs`, `xai-grok-telemetry/src/redact_common.rs`) — canaries and
+     over-redaction negative controls, not fixtures or scripts. A hard-coded count would only force the executor
+     to edit the gate when the tree legitimately moves.
 
-3. **One pty scenario or three for SESS-02?**
-   - Recommendation: one parameterized test looping `default`, `always-approve`, `auto`, each spawning the
-     harness in a fresh sandbox; one cast per mode (`plan-read-only-<mode>.cast`), one `report.json`.
+3. **One pty scenario or three for SESS-02?** **(RESOLVED: one parameterized test, fresh sandbox per iteration,
+   one cast per mode.)**
+   - Adopted answer: `plan_mode_read_only_in_every_permission_mode` loops `default`, `auto`, `always-approve`,
+     each iteration spawning the harness in a fresh sandbox so plan state cannot leak, writing
+     `plan-read-only-<mode>.cast`, and finishing into one `report.json`. Chip assertions follow the UI-SPEC's own
+     table: the `plan` chip in every iteration, a permission chip (`auto-review`, `always-approve`) only where the
+     seeded `ask` mode is not still in force — `Ask` renders no chip.
+
 
 ---
 
