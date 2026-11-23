@@ -1,10 +1,11 @@
 ---
 phase: "02"
 slug: "loop-item-verification"
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: "2026-11-23"
+reviewed_at: "2026-11-23T22:05:00Z"
 ---
 
 # Phase 02 — UI Design Contract
@@ -89,11 +90,12 @@ tone — two weights, not four sizes.
 | Option label (other rows) | 1 cell | normal, `fg(theme.text_primary)` | 1 terminal row |
 | Shortcut digit | 1 cell | normal, `fg(theme.accent_user)` | 1 terminal row |
 | Info-line chip (mode / permission) | 1 cell | normal, flag colour blended toward the prompt bg at the existing `flag_opacity` | 1 terminal row |
-| Hint text (`← → narrow scope`, `e edit pattern`, `... Ctrl-F to expand`) | 1 cell | normal, `fg(theme.text_secondary)` + `DIM` | 1 terminal row |
+| Hint text (`← → narrow scope`, `e edit pattern`, `... Ctrl-F to expand`) | 1 cell | normal, `fg(theme.text_secondary)` + `DIM` for the prose; the key glyphs and `... Ctrl-F to expand` use `fg(theme.gray)` with no `DIM` (`permission_view.rs:570-580, 1353-1361`) | 1 terminal row |
 | Headless denial (stderr) | the terminal's own | the terminal's own | one physical line per message; no wrapping is added by the product |
 
 - Every character the contract fixes is width-1 ASCII or one width-1 glyph: `⚠`, `·`, `●`, `○`, `←`, `→`,
-  `❯`, `…`. Keep it that way — the column math in `build_permission_option_line` assumes it.
+  `❯`, `…`, `✓` (three toasts), `✗` (the two pattern-editor strings). Keep it that way — the column math in
+  `build_permission_option_line` assumes it.
 - No italic, underline, reverse, or blink is added by this phase. Reverse video appears only through the
   existing `theme.selection_overlay()` / `block_cursor_over()` paths on the terminal-native palette.
 - The security warning is **not** bold and **not** larger. It is one row of ordinary cell text in the
@@ -112,16 +114,17 @@ Only existing `Theme` tokens. Values are the `DeepSeekMonokai` literals; every o
 | Dominant (60%) — the prompt surface | `bg_light` = `BG_HIGHLIGHT` `#2f2e27` | the permission panel fill (`buf.set_style(area, bg)`) |
 | Secondary (30%) — body text | `text_primary` = `FG` `#f8f8f2` | title, option labels |
 | Secondary (30%) — supporting text | `text_secondary` = `FG_DARK` `#cfcfc2`, `gray` = `COMMENT` `#75715e` | hints, provenance/subagent line, truncation indicator, the non-cursor `(○)` marker |
-| Accent (10%) | `accent_user` = `FG_DARK` `#cfcfc2` | the panel's left accent bar and the shortcut digits — nothing else |
+| Accent (10%) | `accent_user` = `FG_DARK` `#cfcfc2` | the panel's left accent bar and the shortcut digits, plus the `Ctrl-F` expand indicator, the `← →` / `e` key hints and the `❯` followup arrow (`permission_view.rs:570-580, 1353-1361, 1518`) |
 | Accent — plan | `accent_plan` = `YELLOW` `#e6db74` | the `plan` / `plan approval` chip, the status-bar `plan` chip, the plan-mode composer border tint |
 | Accent — ask | `accent_success` = `GREEN` `#a6e22e` | the `ask` chip only (keeps Ask distinct from the plan family) |
 | Accent — auto-review | `accent_system` = `CYAN` `#66d9ef` | the `auto-review` chip only |
 | Warning | `warning` = `YELLOW` `#e6db74` | the high-signal security warning row, and `⚠ very broad` in the pattern editor |
-| Destructive | `accent_error` = `PINK` `#f92672` | **not used in this phase** |
+| Destructive | `accent_error` = `PINK` `#f92672` | only `✗ matches everything, won't be saved` in the pattern editor (`permission_view.rs:800-803`); never the option rows |
 
-Accent reserved for: the panel accent bar + shortcut digits (`accent_user`); the plan chip and plan-mode rows
-(`accent_plan`); the `ask` chip (`accent_success`); the `auto-review` chip (`accent_system`); the security
-warning (`warning`). Nothing else.
+Accent reserved for: the panel accent bar, shortcut digits, `Ctrl-F` expand indicator, `← →` / `e` key hints and
+the `❯` followup arrow (`accent_user`); the plan chip and plan-mode rows (`accent_plan`); the `ask` chip
+(`accent_success`); the `auto-review` chip (`accent_system`); the security warning and `⚠ very broad`
+(`warning`); the pattern-editor `✗` line (`accent_error`). Nothing else.
 
 Hard rules:
 
@@ -242,7 +245,7 @@ Other indicator surfaces, same vocabulary:
 | Status-bar chip | `plan` (lowercase, `accent_plan`, after the background-task line) |
 | Scrollback row, agent-entered plan mode | `Agent entered plan mode · active permission mode: {ask\|auto-review\|always-approve} · file edits outside session plan.md blocked until plan mode exits` |
 | Scrollback row, plan review closed | `Plan approved · plan mode off · active permission mode: {…}` / `Plan abandoned · plan mode off · active permission mode: {…}` |
-| Shift+Tab banner | `Switched to mode: Ask` / `Plan` / `Auto-review` / `Always-Approve` / `Agent` |
+| Shift+Tab banner | `Switched to mode: Normal` / `Ask` / `Plan` / `Auto-review` / `Always-Approve` / `Agent` (`Normal` is the Default permission mode — `app/dispatch/modes.rs:752, 771, 788, 823`; the toast for the same state reads `✓ Permission mode: Default`) |
 | Permission-mode commit toast | `✓ Permission mode: Default` · `✓ Permission mode: Ask` · `✓ Permission mode: Auto-review` |
 | Always-approve on toast | `⚠ Always-approve ON: all tool actions auto-run` |
 | Always-approve on **under plan mode** | `⚠ Always-approve ON: plan mode still blocks file edits until you exit plan mode` |
