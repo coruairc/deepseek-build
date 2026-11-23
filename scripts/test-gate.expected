@@ -1,6 +1,7 @@
 # refreshed by: scripts/test-gate.sh --refresh-expected
-# commit: 882ad0de63781a7fac3c4aa371968d1cdf28f6ac
-# date: 2026-11-21T21:37:20Z
+# commit: c159a3e7cd64946a3c37a5a6c192756fbd89d9d2
+# tree: dirty (uncommitted changes present at refresh time)
+# date: 2026-11-23T16:08:34Z
 # a green full run: results == binaries + doctests
 results=308
 binaries=219

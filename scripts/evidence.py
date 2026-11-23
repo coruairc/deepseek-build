@@ -40,13 +40,25 @@ Usage:
 
 `step` runs the command, tees its merged stdout+stderr to
 `DIR/<name-slug>.log`, records the real exit status, and exits with that
-status. `finish` refuses `--result ok` when any step failed. `cast` converts
+status. A command that fails to launch (OSError) is recorded as a failed
+step, not an unrecorded crash. The step record is saved before the output
+is echoed, so a broken stdout pipe cannot lose the record of a completed
+run. `finish` refuses `--result ok` when any step failed, no steps were
+recorded, or a recorded artifact is missing from disk (a report cannot
+vouch for a file it cannot read); a non-ok result drops a missing artifact
+with a note instead of keeping a stale digest. It recomputes artifact
+sha256s after normalization so a digest recorded over a raw log cannot go
+stale. `cast` converts
 `script(1)`'s typescript plus its `-T` timing file into asciinema v2: one
 `{"version":2,"width":80,"height":24}` header line, then `[elapsed, "o", data]`
-records sliced from the timing file's `elapsed bytes` pairs (the per-write
-delays are accumulated into absolute elapsed seconds); the
-`Script started`/`Script done` framing lines are dropped and the data passes
-through the same normalization. `normalize` applies
+records derived from the timing file's `elapsed bytes` pairs (the per-write
+delays are accumulated into absolute elapsed seconds). The leading
+`Script started` line and any trailing `Script done` framing line are
+dropped explicitly; a missing timing file, or one with no positive-length
+pairs over a non-empty body, is an error (exit 2). Normalization runs over the
+assembled body with a partial-prefix carry between chunks, so an absolute
+path (or multi-byte UTF-8 sequence) split across two writes is still
+substituted. `normalize` applies
 the same substitution to a file produced outside `step` (for example a gate
 log copied into the item directory).
 """
@@ -157,13 +169,27 @@ def cmd_step(args):
         sys.stderr.write("evidence: step needs a command after `--`\n")
         raise SystemExit(2)
 
-    proc = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    try:
+        proc = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    except OSError as exc:
+        # A command that never launched is a failed step, not an unrecorded
+        # crash: record it so `finish --result ok` cannot succeed over it.
+        state["steps"].append(
+            {
+                "name": args.name,
+                "ok": False,
+                "detail": f"exit n/a: {exc}",
+            }
+        )
+        save_pending(item_dir, state)
+        sys.stderr.write(f"evidence: step failed to launch: {exc}\n")
+        raise SystemExit(1)
     output = proc.stdout.decode("utf-8", "replace")
     log_path = item_dir / f"{slug(args.name)}.log"
     log_path.write_text(output, encoding="utf-8")
-    sys.stdout.write(output)
-    sys.stdout.flush()
 
+    # Persist the step record BEFORE echoing: a broken stdout pipe must not
+    # lose the record of a command that ran to completion.
     state["steps"].append(
         {
             "name": args.name,
@@ -172,6 +198,14 @@ def cmd_step(args):
         }
     )
     save_pending(item_dir, state)
+    try:
+        sys.stdout.write(output)
+        sys.stdout.flush()
+    except BrokenPipeError:
+        # The executor's pipe is gone; the record is already saved. Point
+        # stdout at devnull so the interpreter's final flush stays quiet.
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
     raise SystemExit(proc.returncode)
 
 
@@ -197,6 +231,9 @@ def cmd_finish(args):
     item_dir = Path(args.item_dir)
     state = load_pending(item_dir)
     if args.result == "ok":
+        if not state["steps"]:
+            sys.stderr.write("evidence: refusing --result ok; no steps were recorded\n")
+            raise SystemExit(2)
         failed = [step["name"] for step in state["steps"] if not step["ok"]]
         if failed:
             sys.stderr.write(
@@ -204,11 +241,50 @@ def cmd_finish(args):
             )
             raise SystemExit(2)
 
+    # A recorded artifact that vanished must not keep a digest the report
+    # cannot back. `--result ok` refuses (fail closed, like a failed step);
+    # other results drop it with a note rather than assert a stale digest.
+    missing = [
+        artifact["path"]
+        for artifact in state["artifacts"]
+        if not (REPO_ROOT / artifact["path"]).is_file()
+    ]
+    if missing:
+        shown = ", ".join(normalize_text(path) for path in missing)
+        if args.result == "ok":
+            sys.stderr.write(
+                "evidence: refusing --result ok; recorded artifact(s) missing: "
+                + shown
+                + "\n"
+            )
+            raise SystemExit(2)
+        sys.stderr.write(
+            "evidence: dropping missing artifact(s) from the report: " + shown + "\n"
+        )
+        state["artifacts"] = [
+            artifact
+            for artifact in state["artifacts"]
+            if (REPO_ROOT / artifact["path"]).is_file()
+        ]
+
     for step in state["steps"]:
         log_path = item_dir / f"{slug(step['name'])}.log"
         if log_path.is_file():
-            text = log_path.read_text(encoding="utf-8")
+            text = log_path.read_text(encoding="utf-8", errors="replace")
             log_path.write_text(normalize_text(scrub_log(text)), encoding="utf-8")
+
+    # Recompute artifact digests AFTER normalization: `finish` rewrites step
+    # logs, so a digest recorded over the raw log would otherwise go stale.
+    for artifact in state["artifacts"]:
+        path = REPO_ROOT / artifact["path"]
+        if path.is_file():
+            actual = hashlib.sha256(path.read_bytes()).hexdigest()
+            if actual != artifact["sha256"]:
+                artifact["sha256"] = actual
+                print(
+                    "evidence: refreshed sha256 for "
+                    f"{normalize_text(artifact['path'])} (changed after normalization)"
+                )
 
     report = {
         "item": state["item"],
@@ -241,40 +317,111 @@ def cmd_finish(args):
     print(f"evidence: wrote {report_path} ({args.result})")
 
 
+def _strip_script_trailer(body):
+    """Drop script(1)'s trailing `Script done …` framing line, if present.
+
+    The timing file usually does not account for the trailer, but one that
+    does must not leak the framing line into the cast.
+    """
+    if not body:
+        return body
+    line_end = len(body) - 1 if body.endswith(b"\n") else len(body)
+    line_start = body.rfind(b"\n", 0, line_end) + 1
+    if body[line_start:line_end].startswith(b"Script done"):
+        return body[:line_start]
+    return body
+
+
+def _split_carry(chunk, targets):
+    """Split raw bytes into (emit, carry) for cast normalization.
+
+    `carry` holds trailing bytes that could begin a substitution prefix
+    (an absolute repo/home/temp path split across two script writes) or an
+    incomplete UTF-8 sequence; they are prepended to the next chunk so the
+    assembled body is normalized exactly, while event boundaries keep the
+    timing file's shape.
+    """
+    hold = 0
+    for target in targets:
+        for k in range(min(len(target) - 1, len(chunk)), 0, -1):
+            if chunk.endswith(target[:k]):
+                hold = max(hold, k)
+                break
+    emit = chunk[: len(chunk) - hold] if hold else chunk
+    try:
+        emit.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        if exc.reason == "unexpected end of data":
+            hold += len(emit) - exc.start
+            emit = chunk[: len(chunk) - hold]
+    carry = chunk[len(chunk) - hold :] if hold else b""
+    return emit, carry
+
+
 def cmd_cast(args):
     typescript = Path(args.typescript).read_bytes()
     newline = typescript.find(b"\n")
     body = typescript[newline + 1 :] if newline >= 0 else typescript
+    body = _strip_script_trailer(body)
 
-    timing = []
     timing_path = Path(args.timing)
-    if timing_path.is_file():
-        for line in timing_path.read_text(encoding="utf-8").splitlines():
-            parts = line.split()
-            if len(parts) != 2:
-                continue
-            try:
-                timing.append((float(parts[0]), int(parts[1])))
-            except ValueError:
-                continue
+    if not timing_path.is_file():
+        sys.stderr.write(f"evidence: timing file not found: {timing_path}\n")
+        raise SystemExit(2)
+    timing = []
+    for line in timing_path.read_text(encoding="utf-8").splitlines():
+        parts = line.split()
+        if len(parts) != 2:
+            continue
+        try:
+            timing.append((float(parts[0]), int(parts[1])))
+        except ValueError:
+            continue
+    if body and not any(length > 0 for _, length in timing):
+        sys.stderr.write(
+            "evidence: timing file has no usable `elapsed bytes` pairs "
+            "(no positive byte counts) but the typescript body is non-empty\n"
+        )
+        raise SystemExit(2)
+
+    # Normalize the assembled body, not each chunk: a write boundary can
+    # fall inside an absolute path (or a multi-byte UTF-8 sequence), and
+    # per-chunk substitution would miss the split prefix. The carry keeps
+    # any partial prefix for the next chunk; the concatenated event data
+    # is exactly the normalized body.
+    targets = [
+        str(REPO_ROOT).encode("utf-8"),
+        str(HOME_DIR).encode("utf-8"),
+        str(TMP_DIR).encode("utf-8"),
+    ]
+    targets = [target for target in targets if target and target != b"/"]
 
     records = []
     position = 0
     running = 0.0
+    carry = b""
     for elapsed, length in timing:
         if length <= 0:
             continue
-        chunk = body[position : position + length]
-        if not chunk:
+        if position >= len(body):
             break
+        chunk = carry + body[position : position + length]
         position += length
         # script(1)'s timing file holds per-write delays; asciinema v2 wants
         # absolute elapsed seconds, so accumulate.
         running += elapsed
-        data = normalize_text(chunk.decode("utf-8", "replace"))
-        records.append([round(running, 6), "o", data])
-    if not records and body:
-        records.append([0.0, "o", normalize_text(body.decode("utf-8", "replace"))])
+        emit, carry = _split_carry(chunk, targets)
+        data = normalize_text(emit.decode("utf-8", "replace"))
+        if data:
+            records.append([round(running, 6), "o", data])
+    # Flush any bytes the timing file did not cover (plus the held carry),
+    # so no output is silently dropped.
+    if position < len(body):
+        carry += body[position:]
+    if carry:
+        data = normalize_text(carry.decode("utf-8", "replace"))
+        if data:
+            records.append([round(running, 6), "o", data])
 
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -288,7 +435,7 @@ def cmd_cast(args):
 def cmd_normalize(args):
     for name in args.path:
         path = Path(name)
-        text = path.read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8", errors="replace")
         path.write_text(normalize_text(scrub_log(text)), encoding="utf-8")
         print(f"evidence: normalized {path}")
 

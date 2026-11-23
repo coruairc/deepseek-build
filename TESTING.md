@@ -9,10 +9,12 @@ or observable state.
 - **Live checks (§3) and installer/container/release (§5):** another ~25–40
   minutes; §3 needs a real key, §5 does not.
 
-> Status (2026-11-21): `scripts/test-gate.sh` is green on this tree — exit 0,
+> Status (2026-11-23): `scripts/test-gate.sh` is green on this tree — exit 0,
 > step 1 (workspace) PASS, step 2 (`config-docs`) PASS, leak scan PASS;
 > results 308 = binaries 219 + doctests 89, and the checked-in expected count is
-> 308. Evidence is under `docs/evidence/01-truth-baseline/test-gate/`. The live
+> 308. A plain confirmation run on 2026-11-23 (no `--refresh-expected`)
+> reproduced the same numbers and exit 0 without editing the expected file.
+> Evidence is under `docs/evidence/01-truth-baseline/test-gate/`. The live
 > DeepSeek smoke test and the runtime egress audit were last green on the
 > author's machine (2026-10-07). `scripts/check-egress.sh --strict` is red on
 > this tree for three pre-existing source strings (see
@@ -75,7 +77,7 @@ or observable state.
 | 8 | `scripts/smoke-test.sh` | 8 checks, `8 passed, 0 failed`, exit 0. Covers: `/models` lists `deepseek-v4-pro` + `deepseek-flash`; plain + streamed chat; a 3-turn thinking tool chain (`num_turns >= 3`); usage carries `reasoning_tokens` + cache fields; `deepseek-flash` and the hidden `deepseek-v4-flash` alias accepted; `cached_tokens == prompt_cache_hit_tokens` on a cache hit. Without a key: `FAIL  API key present — set DEEPSEEK_API_KEY or DEEPSEEK_BUILD_API_KEY`, then `0 passed, 1 failed`, exit 1. The key is never printed. |
 | 9 | `scripts/egress-check.sh` (5–10 min) | `EGRESS-CHECK PASS`, `EGRESS_VIOLATIONS=0`, exit 0. Runs a real model-driven session (shell, edit, `web_fetch`, local MCP, forced compaction, resume) under an LD_PRELOAD connect/send logger; the destination table shows only `api.deepseek.com:443`, the `web_fetch` host, loopback, and AF_UNIX. Without a key it exits 2 with `FAIL API key missing`. LD_PRELOAD limits apply — see `KNOWN-ISSUES.md`; `strace -f -e trace=connect,sendto,sendmsg` is the kernel-level alternative where available. |
 | 10 | `scripts/key-leak-check.sh` (no real key) | `PASS fake key absent from N saved file(s) and captured output`, exit 0. Runs the binary with a fake key in an isolated `HOME` and scans logs/sessions/stdout/stderr. |
-| 11 | `scripts/check-egress.sh --strict` (no key) | `HARD egress gate: OK`, exit 0, no SOFT branding hits. |
+| 11 | `scripts/check-egress.sh --strict` (no key) | **Known red baseline on this tree:** exit 1, `HARD EGRESS VIOLATION: forbidden destination/host strings found:` with `(3 hard hits total; …)` — three pre-existing source/test strings (`api.x.ai`, `grok.com`, `gs://bucket`; see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). The script exits at the HARD stage, before the SOFT branding scan runs. Phase 5 / FREEZE-03 owns the fixture fix; until then exit 1 here is the expected baseline, not a broken tree (matches the status banner above). |
 | 12 | `scripts/sandbox-run.sh --version` (no key) | prints the version; needs no network. |
 | 13 | `scripts/sandbox-run.sh -p "print hello"` (key) | the session completes; any destination other than the provider + loopback is refused and printed as `sandbox-run: BLOCKED connect ...` with the destination address (IPv4 or IPv6). To see the `web_fetch` host refused, ask it in the same session to fetch `https://example.com/` (`web_fetch` must be enabled) |
 
@@ -124,7 +126,13 @@ Launch the binary and approve tool calls as prompted.
   2026-11-21 it exited 0: step 1 `cargo test --workspace --no-fail-fast --
   --test-threads=4` PASS, step 2 `cargo test -p xai-grok-shell --lib --features
   config-docs -j 1` PASS, and the leak scan over `docs/evidence` PASS. Counts:
-  `results=308`, `binaries=219`, `doctests=89`, `expected=308`. The verdict is
+  `results=308`, `binaries=219`, `doctests=89`, `expected=308`. A plain
+  confirmation run on 2026-11-23 (no `--refresh-expected`) reproduced the same
+  counts and exit 0 — step 1: 31,913 passed / 0 failed / 386 ignored; the
+  `config-docs` step: 6,201 passed / 0 failed / 4 ignored (excerpt:
+  `docs/evidence/01-truth-baseline/test-gate/step2-config-docs-result-line.log`)
+  — and the expected
+  file was not edited. The verdict is
   the arithmetic (`results == binaries + doctests == expected`), never the tail
   of the log. `results` counts one top-level `test result:` line per cargo
   target block; raw `test result:` lines are 309 because
@@ -141,7 +149,9 @@ Launch the binary and approve tool calls as prompted.
   `util::config::consent::tests::set_consent_answer_is_monotonic_per_account`)
   now share one bare `#[serial_test::serial]` key. Five consecutive
   `cargo test -p xai-grok-workspace --lib -- --test-threads=4` runs each
-  reported `1694 passed; 0 failed`, so no `restore_fetch` band moved and no test
+  reported `1694 passed; 0 failed` — **reported, not artifact-backed (prior
+  session)**; run #3's committed step-1 log shows 1694/0 once — so no
+  `restore_fetch` band moved and no test
   is quarantined. The `git_gate` waits were widened (root-cache sleep 100 → 500
   ms; walk-timeout TTL 20 → 100 ms, sleep 40 → 250 ms; late-OK walk timeout
   40 → 100 ms, sleep 50 → 250 ms; joiner TTL 500 ms → 5 s; sustained-invalidate

@@ -1,0 +1,7 @@
+# Supplementary excerpt (added post-review, IN-04): run #3's step-2
+# (config-docs) cargo log lived at <TMP>/opencode/gate-run3/step2-config-docs.log
+# and was not committed in full; the gate stdout proves only rc=0. These are
+# the target block's Running line and its normalized `test result:` line,
+# extracted verbatim from that raw log (lines 319 and 6528).
+     Running unittests src/lib.rs (target/debug/deps/xai_grok_shell-12865bff3142af7e)
+test result: ok. 6201 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 51.27s

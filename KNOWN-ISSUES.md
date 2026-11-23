@@ -26,24 +26,30 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   inside `scripts/test-gate.sh`. Separately, three config tests fail when
   `DEEPSEEK_API_KEY` is exported; the gate unsets it (see the entry above).
 
-- **The full workspace run is green under the gate (2026-11-21).**
-  `scripts/test-gate.sh` exits 0: step 1 `cargo test --workspace --no-fail-fast
-  -- --test-threads=4` PASS, step 2 `cargo test -p xai-grok-shell --lib
-  --features config-docs -j 1` PASS, leak scan PASS; `results=308`,
-  `binaries=219`, `doctests=89`, `expected=308` (checked in at
-  `scripts/test-gate.expected`). Completeness is asserted arithmetically —
-  `results` counts one top-level `test result:` line per cargo target block —
-  and never inferred from the log tail. Raw `test result:` lines are 309
-  because `xai_tty_utils`'s `stderr_redirect_roundtrip_subprocess` re-runs its
-  own test binary with inherited stdout. Evidence:
-  `docs/evidence/01-truth-baseline/test-gate/`. **The 2026-10-09 figure
-  "31,939 passed / 2 failed / 388 ignored across 307 targets" is stale** (a
-  different tree) and must not be quoted. Quarantined tests: none. **The
-  confirmation rerun (plan 01-05 step 3f) was interrupted by a pause and is
-  NOT RUN; re-run `scripts/test-gate.sh` once on resume before treating the
-  count as confirmed, and do not change the expected count if it differs.**
-  The `test-gate` evidence item is also partial (log only; no cast or
-  `report.json`).
+- **The full workspace run is green under the gate (seeded 2026-11-21,
+  confirmed 2026-11-23).** `scripts/test-gate.sh` exits 0: step 1
+  `cargo test --workspace --no-fail-fast -- --test-threads=4` PASS, step 2
+  `cargo test -p xai-grok-shell --lib --features config-docs -j 1` PASS, leak
+  scan PASS; `results=308`, `binaries=219`, `doctests=89`, `expected=308`
+  (checked in at `scripts/test-gate.expected`). Completeness is asserted
+  arithmetically — `results` counts one top-level `test result:` line per cargo
+  target block — and never inferred from the log tail. Raw `test result:`
+  lines are 309 because `xai_tty_utils`'s
+  `stderr_redirect_roundtrip_subprocess` re-runs its own test binary with
+  inherited stdout. Evidence: `docs/evidence/01-truth-baseline/test-gate/`.
+  **The 2026-10-09 figure "31,939 passed / 2 failed / 388 ignored across 307
+  targets" is stale** (a different tree) and must not be quoted. Quarantined
+  tests: none. **Confirmation run #3 (2026-11-23, plain `scripts/test-gate.sh`,
+  no `--refresh-expected`) reproduced the same numbers and exit 0**: step 1
+  31,913 passed / 0 failed / 386 ignored; the `config-docs` step 6,201 passed /
+  0 failed / 4 ignored (artifact-backed by the supplementary excerpt
+  `docs/evidence/01-truth-baseline/test-gate/step2-config-docs-result-line.log`,
+  added post-review for IN-04); the expected file was not edited. The run's executor
+  session was killed by a server restart mid-compilation; the detached,
+  evidence-wrapped gate process survived and completed, and the continuation
+  executor adopted it (step record carries the real exit status; counts
+  re-derived independently from the log). The `test-gate` evidence item is
+  complete (cast, `report.json`, normalized log, notes).
 - **`xai-grok-sandbox --test deny_paths_e2e` is green: 14 passed / 0 failed /
   1 ignored (2026-11-21).** The previously failing
   `devbox_genuine_reexec_applies_enforcement` now runs a
@@ -66,7 +72,10 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
 - **All test targets compile** (`cargo check --workspace --tests` green).
 - **`xai-grok-workspace` test target: compiles and passes** (1694 passed in
   2026-11-21 runs; five consecutive `--lib -- --test-threads=4` runs each
-  reported `1694 passed; 0 failed`, so the `session::git_gate` /
+  reported `1694 passed; 0 failed` — **reported, not artifact-backed (prior
+  session)**: the raw per-run summary logs were not committed; run #3's
+  committed step-1 log independently shows `xai-grok-workspace` 1694/0 once,
+  `test-gate.log` line 1934 — so the `session::git_gate` /
   `restore_fetch` timing flake did not rotate under repetition). The `git_gate`
   waits were widened in plan 01-05 (root-cache sleep 100 → 500 ms; walk-timeout
   TTL 20 → 100 ms with sleep 40 → 250 ms; late-OK walk timeout 40 → 100 ms with
@@ -149,6 +158,15 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   `scripts/key-leak-check.sh` runs the binary with a fake key and scans debug logs
   and saved sessions — currently PASS. A unit test (`debug_redacts_api_key`)
   pins the redaction.
+- **Default (no-arg) `key-leak-check.sh` still fails open on grep exit ≥ 2
+  (pre-existing; deferred 2026-11-23).** The live-run scan uses
+  `if grep …; then hits=…; fi`, so an unreadable file or I/O error leaves
+  `hits=0` and prints PASS without a complete scan. The `--scan` mode (the
+  gate's step 3 and the committed-evidence scan) now fails closed on grep
+  errors (CR-01, fixed 2026-11-23); default-mode behaviour is frozen by
+  plan 01-05 task 3(b) for this phase. Follow-up: apply the same rc 0/1/else
+  branch (diagnostics only, never matched lines) and pin it in TESTING step 10.
+  Disposition: `01-REVIEW-DISPOSITION.md` row IN-07 (`deferred`).
 - **Live smoke (Step 1, 2026-10-07):** `scripts/smoke-test.sh` = 8/8 PASS on the
   author's machine. See the smoke results below.
 

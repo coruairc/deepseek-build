@@ -1,0 +1,13 @@
+disk-guard: 978 GB free on the target filesystem (minimum 150 GB): <REPO>/target
+disk-guard: 978 GB free on the target filesystem (minimum 150 GB): <REPO>/target
+GATE MODE: SUBSET — not the phase gate (packages: xai-grok-status-line xai-grok-sandbox)
+gate step 1: cargo test  -p xai-grok-status-line -p xai-grok-sandbox --no-fail-fast -- --test-threads=4
+gate step 1: PASS (rc=0, log <TMP>/opencode/gate-subset/step1-tests.log)
+gate step 2: cargo test -p xai-grok-shell --lib --features config-docs -j 1
+gate step 2: PASS (rc=0, log <TMP>/opencode/gate-subset/step2-config-docs.log)
+gate counts: results=9 (raw test-result lines: 9) binaries=7 doctests=2
+check results == binaries + doctests: PASS (9 == 9)
+check results == expected: SKIPPED (subset mode)
+gate step 3: scripts/key-leak-check.sh --scan docs/evidence
+gate step 3: PASS (rc=0, log <TMP>/opencode/gate-subset/step3-key-leak.log)
+GATE PASS

@@ -59,12 +59,22 @@ if [ "$scan" -eq 1 ]; then
     fi
   done
   # File names only: grep -l never prints the matched line, and -I skips
-  # binaries (casts are text, but a future artifact may not be).
-  if grep -RIlE -- "sk-FAKE-LEAKCANARY-[A-Za-z0-9-]+|sk-[A-Za-z0-9]{20,}" "$@" \
-    >"$WORK/hits.txt" 2>/dev/null; then
+  # binaries (casts are text, but a future artifact may not be — see the
+  # text-only convention in docs/evidence/README.md). grep exits 0 on a
+  # match, 1 on no match, and 2 on error (unreadable file, I/O error,
+  # recursive symlink loop); an error must fail closed, never pass as
+  # "no match". The script runs without `set -e`, so capturing $? is safe.
+  grep -RIlE -- "sk-FAKE-LEAKCANARY-[A-Za-z0-9-]+|sk-[A-Za-z0-9]{20,}" "$@" \
+    >"$WORK/hits.txt" 2>"$WORK/scan-err.txt"
+  grep_rc=$?
+  if [ "$grep_rc" -eq 0 ]; then
     hits=$(wc -l <"$WORK/hits.txt")
     echo "FAIL  key-shaped string found in $hits file(s):"
     cat "$WORK/hits.txt"
+    exit 1
+  elif [ "$grep_rc" -ne 1 ]; then
+    echo "FAIL  leak scan could not complete (grep rc=$grep_rc):"
+    cat "$WORK/scan-err.txt"   # grep diagnostics only — never matched lines
     exit 1
   fi
   echo "PASS  no key-shaped string in: $*"

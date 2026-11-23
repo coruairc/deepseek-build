@@ -1,0 +1,39 @@
+{
+  "item": "cost-estimate",
+  "requirements": [
+    "COST-02",
+    "COST-03"
+  ],
+  "date": "2026-11-23T13:10:04Z",
+  "host": "Linux/x86_64",
+  "command": "cargo test -p xai-grok-pager --lib status_line && cargo test -p xai-grok-pager --lib headless (captured with script -T; keys unset, color off)",
+  "steps": [
+    {
+      "name": "script -T capture: status_line + headless suites",
+      "ok": true,
+      "detail": "exit 0: test result: ok. 193 passed; 0 failed; 0 ignored; 0 measured; 9697 filtered out; finished in 0.09s"
+    },
+    {
+      "name": "typescript ran the pinned cost tests",
+      "ok": true,
+      "detail": "exit 0:       1 tui_and_headless_report_the_same_cost_for_one_override"
+    },
+    {
+      "name": "source pins the four rendered strings",
+      "ok": true,
+      "detail": "exit 0: ~$0.0001 est. ~$0.0042 est. ~$0.01 est. ~$0.37 est."
+    },
+    {
+      "name": "both suites report test result: ok",
+      "ok": true,
+      "detail": "exit 0: 2"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/01-truth-baseline/cost-estimate/cost-estimate.cast",
+      "sha256": "e638758e0194d2f452c003893c80a498022ca14974c7545688f8ee7fe160a446"
+    }
+  ],
+  "result": "ok"
+}

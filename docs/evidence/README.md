@@ -34,8 +34,13 @@ Exactly these keys, in this order (the verifier asserts the set):
 | `result` | string | `ok` \| `fail` \| `skipped` |
 
 Steps are produced by `scripts/evidence.py step`, which runs the command and
-records its real exit status. `finish --result ok` refuses when any step
-failed, so a report cannot overstate a run.
+records its real exit status (a command that fails to launch is recorded as a
+failed step). `finish --result ok` refuses when any step failed **or no steps
+were recorded**, or when a recorded artifact no longer exists on disk (it
+cannot vouch for a missing file); for a `fail`/`skipped` result a missing
+artifact is dropped with a note instead of keeping a stale sha256. So a report
+cannot overstate a run. The step record is saved before the output is echoed,
+so a broken stdout pipe cannot lose it.
 
 ## Normalization
 
@@ -54,6 +59,21 @@ prints file names only if the canary or an `sk-` key shape appears. A cast's
 data records pass through the same substitution, so a recorded screen cannot
 carry an absolute home path either.
 
+**Scan limitation (text-only evidence).** The scan uses `grep -I`, which
+skips binary files: a key inside a zipped or compiled artifact would not be
+found. The evidence convention is therefore text-only — casts, logs, JSON and
+Markdown. If a binary artifact is ever added, it needs a separate scan pass
+without `-I` (still file-names-only) before the item is committed.
+
+**Artifact ordering rule.** `finish` normalizes every step log, so an
+artifact's sha256 must be taken over the *normalized* file: normalize a
+externally produced log (`evidence.py normalize --path FILE`) **before**
+`artifact` records it, or rely on `finish` recomputing every artifact digest
+after normalization (it refreshes a stale digest and says so). Casts are
+never rewritten by `finish`. A finished item's `report.json` and hashed
+artifacts are frozen: corrections are a new item directory, never a re-run of
+`finish` over the old one.
+
 ## Recording an item
 
 ```sh
@@ -61,14 +81,16 @@ ITEM=docs/evidence/01-truth-baseline/ipv6-report
 scripts/evidence.py begin --item-dir "$ITEM" --item ipv6-report \
     --requirements SBOX-02 --command "sh scripts/test-sandbox-run.sh"
 
-# One step per assertion; each runs a real check and records its exit status.
-scripts/evidence.py step --item-dir "$ITEM" --name "ipv6-refused: names the destination" \
-    -- sh -c "grep -qF 'PASS: ipv6-refused: blocked line names 2001:db8::1' <captured>"
-
-# A cast from script(1): -T writes the timing file the converter needs.
+# Capture FIRST: script(1)'s -T writes the timing file the converter needs,
+# and the assertion steps below grep the typescript this produces.
 script -qec 'sh scripts/test-sandbox-run.sh' -T "$ITEM/run.timing" "$ITEM/run.typescript"
 scripts/evidence.py cast --typescript "$ITEM/run.typescript" \
     --timing "$ITEM/run.timing" --out "$ITEM/ipv6-report.cast"
+
+# One step per assertion; each runs a real check and records its exit status.
+# grep -F (not -q) so the step detail carries the matched PASS line.
+scripts/evidence.py step --item-dir "$ITEM" --name "ipv6-refused: names the destination" \
+    -- sh -c "grep -F 'PASS: ipv6-refused: blocked line names 2001:db8::1' '$ITEM/run.typescript'"
 
 scripts/evidence.py artifact --item-dir "$ITEM" --path "$ITEM/ipv6-report.cast"
 scripts/evidence.py finish --item-dir "$ITEM" --result ok

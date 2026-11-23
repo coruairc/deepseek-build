@@ -1,0 +1,5 @@
+      1 cost_below_the_floor_or_not_finite_is_omitted
+      1 cost_renders_the_estimate_at_fixed_width_per_branch
+      2 json_result_honours_status_line_pricing_override
+      2 messages_result_honours_status_line_pricing_override
+      1 tui_and_headless_report_the_same_cost_for_one_override

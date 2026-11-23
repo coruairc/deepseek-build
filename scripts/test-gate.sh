@@ -19,16 +19,17 @@
 #     scripts/test-gate.expected. Only `--refresh-expected`, on a fully green
 #     run, rewrites that file; a red run never writes it.
 #   - (added with the evidence convention) the leak scan over docs/evidence.
-#   The tail of the log is never the verdict.#
+#   The tail of the log is never the verdict.
 # Flags:
 #   --package <crate>    run only the named package(s) (repeatable). Prints
 #                        GATE MODE: SUBSET — not the phase gate and skips the
 #                        expected-count comparison.
 #   --refresh-expected   re-run and, only when both steps are green and the
 #                        derived equality holds, rewrite scripts/test-gate.expected
-#                        with commit/date/count provenance.
+#                        with commit/tree-state/date/count provenance.
 #   --log-dir <dir>      keep the two cargo logs in <dir> (default: a mktemp
-#                        dir removed on exit).
+#                        dir, removed only when the run is green; a red run
+#                        keeps it and prints the path).
 #
 # The three API-key variables are unset for every cargo step, so an exported
 # developer key can neither change results nor reach a log.
@@ -124,11 +125,16 @@ else
     echo "GATE MODE: FULL"
 fi
 
+# With no --log-dir, the logs live in a temp dir. A green run removes it; a
+# red run keeps it and prints the path, because the log is the gate's own
+# failure evidence and a reader must be able to open it after the exit.
 if [ -n "$LOG_DIR" ]; then
     mkdir -p "$LOG_DIR"
 else
     LOG_DIR=$(mktemp -d)
-    trap 'rm -rf "$LOG_DIR"' EXIT
+    # $status is assigned by the trap itself, at exit time.
+    # shellcheck disable=SC2154
+    trap 'status=$?; if [ "$status" -eq 0 ]; then rm -rf "$LOG_DIR"; else echo "gate: failing run kept its logs at $LOG_DIR" >&2; fi' EXIT
 fi
 LOG_STEP1="$LOG_DIR/step1-tests.log"
 LOG_STEP2="$LOG_DIR/step2-config-docs.log"
@@ -263,9 +269,20 @@ if [ "$REFRESH" -eq 1 ]; then
         echo "gate: --refresh-expected refused — the run is not green" >&2
         exit 1
     fi
+    # Stamp the working-tree state too: HEAD alone can predate uncommitted
+    # changes the count was measured on (a dirty-tree seed is not reproducible
+    # from the stamped commit alone). Compute the state BEFORE the group
+    # redirection opens: the redirect truncates $EXPECTED_FILE first, so a
+    # check inside the group would always see the file it is writing and
+    # could never report "clean".
+    tree_state="clean"
+    if [ -n "$(git -C "$root" status --porcelain)" ]; then
+        tree_state="dirty (uncommitted changes present at refresh time)"
+    fi
     {
         echo "# refreshed by: scripts/test-gate.sh --refresh-expected"
         echo "# commit: $(git -C "$root" rev-parse HEAD)"
+        echo "# tree: $tree_state"
         echo "# date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         echo "# a green full run: results == binaries + doctests"
         echo "results=$results"
@@ -298,4 +315,11 @@ if [ "$fail" -ne 0 ]; then
     echo "GATE FAIL"
     exit 1
 fi
-echo "GATE PASS"
+# The final verdict is mode-aware: a subset run must not end with the same
+# bare "GATE PASS" as the full phase gate (the tail is never the verdict,
+# but readers and automation key on the last line).
+if [ "$SUBSET" -eq 1 ]; then
+    echo "GATE PASS (SUBSET — not the phase gate)"
+else
+    echo "GATE PASS"
+fi

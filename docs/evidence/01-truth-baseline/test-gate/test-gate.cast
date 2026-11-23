@@ -1,0 +1,13 @@
+{"version": 2, "width": 80, "height": 24}
+[0.042695, "o", "disk-guard: 978 GB free on the target filesystem (minimum 150 GB): <REPO>/target\r\n"]
+[0.048825, "o", "disk-guard: 978 GB free on the target filesystem (minimum 150 GB): <REPO>/target\r\n"]
+[0.049052, "o", "GATE MODE: SUBSET — not the phase gate (packages: xai-grok-status-line xai-grok-sandbox)\r\n"]
+[0.049629, "o", "gate step 1: cargo test  -p xai-grok-status-line -p xai-grok-sandbox --no-fail-fast -- --test-threads=4\r\n"]
+[12.211144, "o", "gate step 1: PASS (rc=0, log <TMP>/opencode/gate-subset/step1-tests.log)\r\ngate step 2: cargo test -p xai-grok-shell --lib --features config-docs -j 1\r\n"]
+[311.349917, "o", "gate step 2: PASS (rc=0, log <TMP>/opencode/gate-subset/step2-config-docs.log)\r\n"]
+[312.006348, "o", "gate counts: results=9 (raw test-result lines: 9) binaries=7 doctests=2\r\n"]
+[312.006441, "o", "check results == binaries + doctests: PASS (9 == 9)\r\n"]
+[312.006482, "o", "check results == expected: SKIPPED (subset mode)\r\n"]
+[312.006548, "o", "gate step 3: scripts/key-leak-check.sh --scan docs/evidence\r\n"]
+[312.015657, "o", "gate step 3: PASS (rc=0, log <TMP>/opencode/gate-subset/step3-key-leak.log)\r\n"]
+[312.015672, "o", "GATE PASS\r\n"]

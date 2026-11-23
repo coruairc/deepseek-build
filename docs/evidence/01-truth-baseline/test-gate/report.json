@@ -1,0 +1,44 @@
+{
+  "item": "test-gate",
+  "requirements": [
+    "TEST-01",
+    "TEST-02",
+    "EVID-01"
+  ],
+  "date": "2026-11-23T13:04:48Z",
+  "host": "Linux/x86_64",
+  "command": "scripts/test-gate.sh (full confirmation run #3; expected count seeded by run #2 --refresh-expected)",
+  "steps": [
+    {
+      "name": "expected-count provenance (run 2, --refresh-expected)",
+      "ok": true,
+      "detail": "exit 0: doctests=89"
+    },
+    {
+      "name": "toolchain provenance (rustc version, cargo path)",
+      "ok": true,
+      "detail": "exit 0: <HOME>/.cargo/bin/cargo"
+    },
+    {
+      "name": "full gate confirmation (run 3)",
+      "ok": true,
+      "detail": "exit 0: GATE PASS"
+    },
+    {
+      "name": "subset-mode mechanism run (cast source)",
+      "ok": true,
+      "detail": "exit 0: GATE PASS"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/01-truth-baseline/test-gate/test-gate.cast",
+      "sha256": "f4270184097905ed604bd8096e589dc5dd1483cd46c67cbed9e5e70915a9f21c"
+    },
+    {
+      "path": "docs/evidence/01-truth-baseline/test-gate/test-gate.log",
+      "sha256": "d3161f61f3ad2de87c51d011151beb923e7d71d6a21c63021b7caecc4f711a67"
+    }
+  ],
+  "result": "ok"
+}
