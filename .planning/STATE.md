@@ -21,10 +21,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-11-21)
+See: .planning/PROJECT.md (updated 2026-11-23)
 
 **Core value:** One DeepSeek key in, a trustworthy daily coding agent out: the right model on every turn, zero traffic to any host you did not configure, and a release you can install with confidence.
-**Current focus:** Phase 01 — Truth Baseline
+**Current focus:** Phase 02 — Loop-Item Verification
 
 ## Current Position
 
@@ -63,7 +63,8 @@ Full log in PROJECT.md Key Decisions. Those shaping current work:
 - Routing is cut from this milestone entirely — `route_turn`, `[models] routing`, session pins, the `Route` status-line item, `/route` and per-model cost are v2. `/model` and `/effort` are the manual switches. Do not wire, display, or price routing in any phase.
 - What survives from the cost work is the honesty bug fix: `deepseek-v4-flash` priced in the table, the TUI figure labelled an estimate, headless honouring `[ui.status_line.pricing]`.
 - `deepseek-flash` becomes the catalog default, with the at-ceiling caveat (63/63 both models) and the revert path (`/model deepseek-v4-pro`, `-m deepseek-v4-pro`) documented.
-- Evidence per loop item = asciinema cast + `report.json` under `docs/evidence/`, absolute paths normalized. Phase 1 defines the convention; Phase 2 is its first consumer.
+- Evidence per loop item = asciinema cast + `report.json` under `docs/evidence/`, absolute paths normalized. Phase 1 shipped the convention and four items (ipv6, test-gate, cost-estimate, determinism); Phase 2 is its first external consumer.
+- **Determinism claims need an artifact-backed repetition:** a reported "5 runs, no rotation" was falsified by the Phase-1 verifier (2 failures in 35 runs). Fixed with a bounded 5 s/20 ms process-death poll and a committed 35/35 repetition item. Never accept a flake claim without a committed projection log — Phase 2's live/egress proofs inherit this standard.
 - The sandbox fix comes before the clean-suite gate: only the product fix may zero the bwrap pair — never a skip, an `#[ignore]`, or a widened predicate.
 - Publish tag is `v0.1.0` (no `deepseek-*` trigger added); the existing `deepseek-v0.1-snapshot` tag at `4b305bd0` is superseded in docs, never moved. This milestone does not publish `v0.1.0`.
 - The freeze marker is non-triggering, and the author's signed acceptance note must be committed before branch `deepseek` or the marker tag exists.
@@ -114,9 +115,10 @@ None yet.
 | Product | PROD-V2-01/02 — undo/checkpoint product, automatic Flash-for-research subagents | Tracked in REQUIREMENTS.md §v2 | 2026-11-21 | v0.1.x |
 | Naming | ~435 internal `GROK_*` env names; `xai-grok-*` crate/package names | Out of scope (D2) | 2026-11-21 | open-build |
 | Release | Publishing `v0.1.0` itself | Author publishes it | 2026-11-21 | after freeze |
+| Review | IN-07 — default-mode `key-leak-check.sh` fail-open on grep rc≥2 (pre-existing; default mode frozen by plan 01-05 task 3(b); `--scan` fails closed) | Ledgered in KNOWN-ISSUES.md | 2026-11-23 | v0.1.x |
 
 ## Session Continuity
 
 Last session: 2026-11-23
-Stopped at: Phase 01 complete, ready to plan Phase 2
+Stopped at: Phase 01 complete (24/24 verified); Phase 2 discuss next
 Resume file: None

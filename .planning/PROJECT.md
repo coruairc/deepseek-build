@@ -44,6 +44,17 @@ Shipped and confirmed valuable (from the codebase map, `.planning/codebase/`):
   `estimated_cost_usd` + `estimate: true`
 - ✓ Eval harness — `scripts/evals/`, 21 auto-checked tasks; E2/E3 results in `docs/TUNING.md`
 - ✓ Adapter proof — wiremock suite plus live smoke 8/8 PASS
+- ✓ Sandbox deny materialization — a non-traversable deny-parent is skipped while every other resolution
+  error stays fatal; `deny_paths_e2e` green unmodified, zero bwrap aborts — Phase 1 (`0bf46c84`)
+- ✓ Honest full-suite gate — count-asserted `results == binaries + doctests == expected` (308 = 219 + 89),
+  `config-docs` as a named step, and the restore_fetch flake closed by a bounded process-death poll with a
+  committed 35/35 repetition — Phase 1 (`1308903a`, `ad4d5e8a`)
+- ✓ Cost honesty — `deepseek-v4-flash` priced at Flash rates, the TUI figure labelled `~$… est.`, and
+  headless honouring `[ui.status_line.pricing]` with TUI/JSON equality — Phase 1 (`e834f647`)
+- ✓ `deepseek-flash` is the catalog default, with the 63/63 at-ceiling caveat and both revert spellings
+  documented — Phase 1 (`6d3cfcb9`)
+- ✓ Evidence convention — asciinema-v2 cast + 8-key `report.json` + notes under `docs/evidence/`, paths
+  normalized, leak-scanned; four Phase-1 items committed — Phase 1 (`1308903a`, `ad4d5e8a`)
 
 ### Active
 
@@ -51,17 +62,6 @@ Building toward the Phase 1 freeze. Each is a hypothesis until shipped and verif
 
 - [ ] Session resume, plan mode, permission prompts, and cost/cache display are verified against
   real sessions, fixed where broken, and polished where the verification exposes UX gaps
-- [ ] The sandbox profile decision lands: runtime-socket denies are materialized only where the
-  parent path is traversable, fail-closed behavior stays everywhere else, sandbox stays on by
-  default
-- [ ] `cargo test --workspace` exits 0 with zero failures on the author's host, with completeness
-  asserted rather than read from a tail line
-- [ ] Cost reporting is honest: `deepseek-v4-flash` is priced in the table instead of falling back
-  to Pro rates, the TUI figure is labelled an estimate, and headless honours the user's pricing
-  overrides so TUI and JSON agree
-- [ ] `deepseek-flash` is the default model, documented with the at-ceiling-benchmark caveat and
-  the revert path (`/model deepseek-v4-pro`, `-m`); `/model` is the manual switch until routing
-  exists
 - [ ] The product is proven on a real model-driven session with a throwaway key: live smoke passes,
   runtime egress shows only the provider plus the `web_fetch` host plus AF_UNIX sockets, and the
   key-leak scan is green — each with a committed artifact
@@ -160,8 +160,8 @@ Building toward the Phase 1 freeze. Each is a hypothesis until shipped and verif
 | Phase 1 commits land on `main`; freeze cuts branch `deepseek` + tag `deepseek-v0.1-snapshot` from its tip | One linear history to prove; no divergence between what is tested and what is frozen | — Pending |
 | Routing override = status line shows the routed model per turn; `/model` or `/effort` pins the session and routing never overrides a pin | Cost control must be visible and reversible; a silent router would undermine trust | — Pending |
 | `route_turn` is wired from the session sampler path rather than deleted | Measured Flash-vs-Pro savings in `docs/TUNING.md` are only realizable if the turn loop calls it | — Pending |
-| Sandbox stays on by default; runtime-socket denies are materialized only where the parent is traversable | Keeps the stronger default and the fail-closed invariant while removing a host-dependent startup failure | — Pending |
-| "Clean" full workspace run means zero failures on the author's host | A documented-but-red suite cannot support a trustworthy freeze | — Pending |
+| Sandbox stays on by default; runtime-socket denies are materialized only where the parent is traversable | Keeps the stronger default and the fail-closed invariant while removing a host-dependent startup failure | ✓ Phase 1 — `0bf46c84`, `deny_paths_e2e` 14/0/1 unmodified |
+| "Clean" full workspace run means zero failures on the author's host | A documented-but-red suite cannot support a trustworthy freeze | ✓ Phase 1 — counted gate green (31,913/0/386 + 6,201/0/4); any determinism claim now needs an artifact-backed repetition (35 runs), not a lucky sample |
 | macOS ships both arches in v0.1.0 | The timeout is a pipeline defect to fix, not a platform to abandon | — Pending |
 | Manifests bump to `0.1.0` and `release.yml` learns the DeepSeek tag shape in Phase 1 | The author's publish becomes a rerun, not a code change | — Pending |
 | Evidence per loop item = automated test where feasible + committed scripted session transcript | A freeze is only defensible if each claim has an artifact | — Pending |
@@ -169,8 +169,9 @@ Building toward the Phase 1 freeze. Each is a hypothesis until shipped and verif
 | Publish tag is `v0.1.0`; no `deepseek-*` trigger support is added | Today's `v*` trigger already handles it, so the release workflow needs no tag-shape surgery and a snapshot can never be classified stable | — Pending |
 | The pre-existing `deepseek-v0.1-snapshot` tag at `4b305bd0` is superseded in docs, not moved or deleted | Moving a published ref is destructive and rewrites history other clones may hold; the marker's job can be done by a new non-triggering name | — Pending |
 | Routing is cut from this milestone entirely | Routing generalizes across providers, so designing it now would mean designing it twice; it is the first item after the freeze, inside open-build | — Pending |
-| `deepseek-flash` becomes the default model | 4.6× cheaper and 25% faster at equal measured pass rate; the author accepted that the 21-task set is at ceiling and therefore cannot prove sufficiency, so the caveat and the revert path are documented | — Pending |
-| Evidence is an asciinema cast plus `report.json` under `docs/evidence/`, paths normalized | The pty harness already produces both; a cast alone has no machine-checkable assertions | — Pending |
+| `deepseek-flash` becomes the default model | 4.6× cheaper and 25% faster at equal measured pass rate; the author accepted that the 21-task set is at ceiling and therefore cannot prove sufficiency, so the caveat and the revert path are documented | ✓ Phase 1 — `6d3cfcb9`; resolver + docs verified |
+| Evidence is an asciinema cast plus `report.json` under `docs/evidence/`, paths normalized | The pty harness already produces both; a cast alone has no machine-checkable assertions | ✓ Phase 1 — four items (ipv6, test-gate, cost-estimate, determinism); convention documented and re-runnable |
+| Determinism claims require an artifact-backed repetition, never a single green sample | The Phase-1 verifier falsified a reported 5-run "no rotation" with 2 failures in 35 runs; a flake claim is only honest with a committed projection log and a real repetition | ✓ Phase 1 — bounded 5 s/20 ms death poll + 35/35 repetition item `ad4d5e8a` |
 | No `ci.yml` in this milestone | The gate is a green run on the author's host, which needs no CI; a test workflow is new scope | — Pending |
 | The container keeps the sandbox on, with documented run flags | The image is the artifact most likely to be tried first; shipping it sandbox-off would weaken the default where it is hardest to verify | — Pending |
 | A human acceptance session gates the freeze | Automated checks cannot tell whether the TUI is pleasant or whether a real repo round-trips cleanly; the author's 20–30 minute session on a repo clone is the only evidence for that | — Pending |
@@ -194,4 +195,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-21 after initialization*
+*Last updated: 2026-11-23 after Phase 1*
