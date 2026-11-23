@@ -70,18 +70,29 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   6221; the 24-test drop is inside the deleted login surface). `xai-grok-pager`
   9876 / 0 / 4 and `xai-grok-pager-minimal` 94 / 0 unchanged.
 - **All test targets compile** (`cargo check --workspace --tests` green).
-- **`xai-grok-workspace` test target: compiles and passes** (1694 passed in
-  2026-11-21 runs; five consecutive `--lib -- --test-threads=4` runs each
-  reported `1694 passed; 0 failed` — **reported, not artifact-backed (prior
-  session)**: the raw per-run summary logs were not committed; run #3's
-  committed step-1 log independently shows `xai-grok-workspace` 1694/0 once,
-  `test-gate.log` line 1934 — so the `session::git_gate` /
-  `restore_fetch` timing flake did not rotate under repetition). The `git_gate`
-  waits were widened in plan 01-05 (root-cache sleep 100 → 500 ms; walk-timeout
-  TTL 20 → 100 ms with sleep 40 → 250 ms; late-OK walk timeout 40 → 100 ms with
-  sleep 50 → 250 ms; joiner TTL 500 ms → 5 s; sustained-invalidate outer timeout
-  ×3 → ×10). `restore_fetch`'s bands were left unchanged because no rotation was
-  observed. **Coverage gap to re-home:** the local harness
+- **`xai-grok-workspace` test target: compiles and passes** (1695 passed in the
+  post-fix 2026-11-23 repetition; the 2026-11-21 runs reported 1694 before the
+  death-poll regression test existed). The `git_gate` waits were widened in plan
+  01-05 (root-cache sleep 100 → 500 ms; walk-timeout TTL 20 → 100 ms with sleep
+  40 → 250 ms; late-OK walk timeout 40 → 100 ms with sleep 50 → 250 ms; joiner
+  TTL 500 ms → 5 s; sustained-invalidate outer timeout ×3 → ×10).
+  **TEST-03 determinism — corrected 2026-11-23 by plan 01-06.** The earlier
+  five-run sample quoted here was executor-reported (raw logs never committed)
+  and is superseded: the Phase-1 verification's own 35-run repetition of
+  `cargo test -p xai-grok-workspace --lib -- --test-threads=4` on `1308903a`
+  (this file is identical at `98c2f1b8`) caught **2 failures in 35** of
+  `restore_fetch::tests::fetch_timeout_sigkills_term_immune_grandchild` —
+  `grandchild <pid> must not remain live` at `restore_fetch_tests.rs:731`. The
+  test read `/proc/<pid>` immediately after teardown while SIGKILL delivery and
+  reaping are asynchronous. Fixed by a deadline-bounded poll
+  (`wait_until_dead`: 5 s deadline, 20 ms interval) on all five process-death
+  assertion sites; the prompt-return bounds are still asserted before any
+  polling, no assertion direction changed and no `assert_timeout_about` band
+  moved. Post-fix repetition: **35/35 full-crate runs green** (`1695 passed; 0
+  failed` each), every run's `test result:` line recorded in
+  `docs/evidence/01-truth-baseline/determinism/repetition-35-runs.log`
+  (item `docs/evidence/01-truth-baseline/determinism/`, requirement TEST-03).
+  Quarantined tests: none. **Coverage gap to re-home:** the local harness
   `SessionToolHandle`/`create_local_harness` runs the toolset without the
   deleted hub pre-run/sandbox integration, so equivalent local coverage must be
   re-established (see `docs/DROPPED-TESTS.md`).

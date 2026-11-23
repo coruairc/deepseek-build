@@ -585,9 +585,12 @@ fn fetch_timeout_kills_process_group_with_grandchild() {
         .trim()
         .parse()
         .expect("grandchild pid");
-    assert!(!pid_alive(leader), "leader {leader} must not remain live");
     assert!(
-        !pid_alive(grandchild),
+        wait_until_dead(leader, PROCESS_DEATH_DEADLINE),
+        "leader {leader} must not remain live"
+    );
+    assert!(
+        wait_until_dead(grandchild, PROCESS_DEATH_DEADLINE),
         "grandchild {grandchild} must be killed via killpg"
     );
 }
@@ -610,6 +613,70 @@ fn pid_alive(pid: u32) -> bool {
     use nix::unistd::Pid;
 
     kill(Pid::from_raw(pid as i32), None::<Signal>).is_ok()
+}
+
+/// How long a process-death assertion waits for the kernel to deliver SIGKILL
+/// and reap the process before it fails.
+#[cfg(unix)]
+const PROCESS_DEATH_DEADLINE: Duration = Duration::from_secs(5);
+
+/// How often `wait_until_dead` re-reads the process state while waiting.
+#[cfg(unix)]
+const PROCESS_DEATH_POLL_INTERVAL: Duration = Duration::from_millis(20);
+
+/// Wait until `pid` is no longer alive, failing once `deadline` elapses.
+///
+/// SIGKILL delivery and reaping are asynchronous: a process that has been
+/// SIGKILLed can still be observed as live for a short window after teardown
+/// returns. The tests therefore assert "gone within a deadline", not "gone at
+/// this instant". The deadline exists so a process that never dies still fails
+/// instead of hanging the suite.
+#[cfg(unix)]
+fn wait_until_dead(pid: u32, deadline: Duration) -> bool {
+    let start = Instant::now();
+    while pid_alive(pid) {
+        if start.elapsed() >= deadline {
+            return false;
+        }
+        std::thread::sleep(PROCESS_DEATH_POLL_INTERVAL);
+    }
+    true
+}
+
+/// Pins the helper's deadline behaviour: an absent pid is dead immediately,
+/// while a live pid is still reported alive across a short deadline and the
+/// call returns near that deadline rather than hanging.
+///
+/// Linux-only because the non-Linux `pid_alive` probes via
+/// `kill(pid as i32, 0)`, and `u32::MAX as i32` is `-1` — not a pid.
+#[cfg(target_os = "linux")]
+#[test]
+fn wait_until_dead_is_bounded_and_deadline_respecting() {
+    let start = Instant::now();
+    assert!(
+        wait_until_dead(u32::MAX, PROCESS_DEATH_DEADLINE),
+        "an absent pid must be reported dead immediately"
+    );
+    assert!(
+        start.elapsed() < Duration::from_secs(1),
+        "an absent pid must not be waited on, elapsed {:?}",
+        start.elapsed()
+    );
+
+    let start = Instant::now();
+    assert!(
+        !wait_until_dead(std::process::id(), Duration::from_millis(150)),
+        "this test's own live pid must not be reported dead inside a 150 ms deadline"
+    );
+    let elapsed = start.elapsed();
+    assert!(
+        elapsed >= Duration::from_millis(100),
+        "the poll must keep observing until the deadline, elapsed {elapsed:?}"
+    );
+    assert!(
+        elapsed < Duration::from_secs(2),
+        "the poll must return near its deadline, elapsed {elapsed:?}"
+    );
 }
 
 #[cfg(unix)]
@@ -685,7 +752,10 @@ fn fetch_child_drop_tears_down_process() {
         start.elapsed() < Duration::from_secs(5),
         "Drop teardown must not hang"
     );
-    assert!(!pid_alive(pid), "dropped fetch child must die");
+    assert!(
+        wait_until_dead(pid, PROCESS_DEATH_DEADLINE),
+        "dropped fetch child must die"
+    );
 }
 
 #[cfg(unix)]
@@ -720,7 +790,7 @@ fn fetch_timeout_sigkills_term_immune_grandchild() {
     assert!(err.to_string().contains("timed out"), "got: {err}");
     assert!(start.elapsed() < Duration::from_secs(5));
     assert!(
-        !pid_alive(leader),
+        wait_until_dead(leader, PROCESS_DEATH_DEADLINE),
         "TERM-ignoring leader {leader} must die on SIGKILL"
     );
     let grandchild: u32 = std::fs::read_to_string(&pidfile)
@@ -729,7 +799,7 @@ fn fetch_timeout_sigkills_term_immune_grandchild() {
         .parse()
         .expect("pid");
     assert!(
-        !pid_alive(grandchild),
+        wait_until_dead(grandchild, PROCESS_DEATH_DEADLINE),
         "grandchild {grandchild} must not remain live"
     );
 }

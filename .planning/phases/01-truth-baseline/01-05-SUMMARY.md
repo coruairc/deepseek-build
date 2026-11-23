@@ -79,14 +79,17 @@ coverage:
         status: pass
     human_judgment: false
   - id: D3
-    description: "Timing flake made deterministic: bare serial key unification + widened git_gate waits, no rotation in a recorded 5-run repetition, no quarantine"
+    description: "Timing flake made deterministic: bare serial key unification + widened git_gate waits; the 5-run sample was falsified by the verification's 35-run repetition and superseded by the 01-06 bounded death poll (35/35, artifact-backed), no quarantine"
     requirement: TEST-03
     verification:
       - kind: unit
-        ref: "5x cargo test -p xai-grok-workspace --lib -- --test-threads=4 (task 2, 2026-11-21): each 1694 passed / 0 failed — reported, not artifact-backed (prior session; IN-04)"
-        status: pass
+        ref: "5x cargo test -p xai-grok-workspace --lib -- --test-threads=4 (task 2, 2026-11-21): each 1694 passed / 0 failed — reported, not artifact-backed (prior session; IN-04); FALSIFIED by the phase verification's 35-run repetition on 1308903a: 2 failures of restore_fetch::tests::fetch_timeout_sigkills_term_immune_grandchild (grandchild <pid> must not remain live, restore_fetch_tests.rs:731)"
+        status: fail
       - kind: integration
         ref: "run #3 workspace step: 31913 passed / 0 failed / 386 ignored incl. git_gate/restore_fetch"
+        status: pass
+      - kind: integration
+        ref: "01-06 post-fix repetition: 35x cargo test -p xai-grok-workspace --lib -- --test-threads=4, each 1695 passed / 0 failed with the named test ok — docs/evidence/01-truth-baseline/determinism/repetition-35-runs.log (report.json result: ok)"
         status: pass
     human_judgment: false
   - id: D4
@@ -139,7 +142,7 @@ status: complete
 - Run #3 totals: step 1 **31,913 passed / 0 failed / 386 ignored**; step 2 (`config-docs`) **6,201 passed / 0 failed / 4 ignored** (artifact-backed post-review by the supplementary excerpt `docs/evidence/01-truth-baseline/test-gate/step2-config-docs-result-line.log`, IN-04).
 - The expected file was **not edited** on resume.
 
-## Five-run repetition (task 2, cited — not re-run; reported, not artifact-backed (prior session))
+## Five-run repetition (task 2, cited — not re-run; SUPERSEDED by 01-06: the verification's 35-run repetition falsified it)
 
 Five consecutive `cargo test -p xai-grok-workspace --lib -- --test-threads=4` runs (2026-11-21, under the shared lock and gate environment) each reported **1694 passed / 0 failed** — no rotation, so no `restore_fetch` band moved and **no test is quarantined**. The raw per-run summary logs were not committed (IN-04): these numbers rest on the prior executor's report; run #3's committed step-1 log independently shows `xai-grok-workspace` 1694/0 once (`test-gate.log` line 1934). Widened waits (old → new): root-cache sleep 100 → 500 ms; walk-timeout TTL 20 → 100 ms with sleep 40 → 250 ms; late-OK walk timeout 40 → 100 ms with sleep 50 → 250 ms; joiner TTL 500 ms → 5 s; sustained-invalidate outer timeout ×3 → ×10. Serial keys: `record_and_lookup_round_trip` gained bare `#[serial_test::serial]`; the consent test's named key `serial(DEEPSEEK_BUILD_HOME)` became bare, so the two env-global tests exclude each other. No assertion changed direction; `restore_fetch_tests.rs` untouched.
 
@@ -351,6 +354,33 @@ diff header-only (numbers unchanged); `git diff` only the intended files.
 rc≥2) — pre-existing and frozen by plan 01-05 task 3(b); the `--scan` mode (the
 gate step) fails closed via CR-01. Recorded as `deferred` in
 `01-REVIEW-DISPOSITION.md` and in `KNOWN-ISSUES.md`.
+
+## Determinism correction (2026-11-23, 01-06)
+
+The five-run repetition above was falsified. The phase verification ran the
+phase's own command (`cargo test -p xai-grok-workspace --lib --
+--test-threads=4`) 35 times on `1308903a` (this report's
+`restore_fetch_tests.rs` is identical at `98c2f1b8`, sha256 `62a2656a…`) and
+caught **2 failures** of
+`restore_fetch::tests::fetch_timeout_sigkills_term_immune_grandchild`
+("grandchild <pid> must not remain live", `restore_fetch_tests.rs:731`): the
+test read `/proc/<pid>` immediately after teardown, while SIGKILL delivery and
+reaping are asynchronous. "Zero failures" in five runs was a lucky sample.
+
+Plan 01-06 fixed the observation, not the assertion: `wait_until_dead(pid,
+deadline)` polls every 20 ms and fails at a 5 s deadline, applied to all five
+process-death assertion sites in `restore_fetch_tests.rs`; the prompt-return
+bounds are still asserted before any polling, no assertion direction changed,
+no band moved, `restore_fetch.rs` is untouched, and a Linux-only test pins the
+helper's bound. No test is quarantined.
+
+Post-fix evidence: 20/20 exact-test runs and **35/35 full-crate runs green**
+(each `1695 passed; 0 failed`), recorded as the plan-06 evidence item
+`docs/evidence/01-truth-baseline/determinism/` — `determinism.cast` + 8-key
+`report.json` (`result: ok`) + `repetition-35-runs.log` (one headerless
+projection line per run, every line `rc=0 named=ok test result: ok.`) +
+`notes.md`. This section corrects D3 above; the rest of the report's history is
+unchanged.
 
 ---
 *Phase: 01-truth-baseline*

@@ -115,5 +115,12 @@ recorded as an artifact.
 - **cost-estimate** — `cargo test -p xai-grok-pager --lib status_line` and
   `cargo test -p xai-grok-pager --lib headless`; the report records the strings
   the suite pins.
+- **determinism** — the phase's own 35-run repetition:
+  `env -u DEEPSEEK_API_KEY -u DEEPSEEK_BUILD_API_KEY -u XAI_API_KEY cargo test
+  -p xai-grok-workspace --lib -- --test-threads=4`, looped 35 times, projecting
+  one `run NN/35: rc=… named=… <test result:>` line per run into
+  `determinism/repetition-35-runs.log`. Every run must show `rc=0`, `named=ok`
+  and `0 failed`; `notes.md` has the recipe, and the cast is the projection
+  stream of that same execution (not a re-run).
 
 After recording: `scripts/key-leak-check.sh --scan docs/evidence` must exit 0.

@@ -1,0 +1,65 @@
+{
+  "item": "determinism",
+  "requirements": [
+    "TEST-03"
+  ],
+  "date": "2026-11-23T18:50:33Z",
+  "host": "Linux/x86_64",
+  "command": "35 x env -u DEEPSEEK_API_KEY -u DEEPSEEK_BUILD_API_KEY -u XAI_API_KEY cargo test -p xai-grok-workspace --lib -- --test-threads=4",
+  "steps": [
+    {
+      "name": "targeted repetition 20 named-test runs",
+      "ok": true,
+      "detail": "exit 0: targeted repetition: 20/20 rc=0"
+    },
+    {
+      "name": "post-fix repetition 35 full-crate runs",
+      "ok": true,
+      "detail": "exit 0: run 35/35: rc=0 named=ok test result: ok. 1695 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.01s"
+    },
+    {
+      "name": "all 35 runs exited zero",
+      "ok": true,
+      "detail": "exit 0: 35 rc=0 run lines"
+    },
+    {
+      "name": "every run's summary is ok with zero failed",
+      "ok": true,
+      "detail": "exit 0: 35 lines, 35 test result ok, 35 zero-failed"
+    },
+    {
+      "name": "every run exercised the named test",
+      "ok": true,
+      "detail": "exit 0: 35 named=ok run lines"
+    },
+    {
+      "name": "all runs report one passed count",
+      "ok": true,
+      "detail": "exit 0: distinct passed count: 1695 passed;"
+    },
+    {
+      "name": "leak scan over docs evidence",
+      "ok": true,
+      "detail": "exit 0: PASS  no key-shaped string in: docs/evidence"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/01-truth-baseline/determinism/determinism.cast",
+      "sha256": "17d69b15bb8589c85cb6b0ea421f29459305e99b74255bc11a0c6da30f3ea4ad"
+    },
+    {
+      "path": "docs/evidence/01-truth-baseline/determinism/repetition-35-runs.log",
+      "sha256": "5836c0a4c4e19491bcb47146b167e3ab58dad2159560554abae50624aa77daf1"
+    },
+    {
+      "path": "docs/evidence/01-truth-baseline/determinism/targeted-repetition-20-named-test-runs.log",
+      "sha256": "e0fb3b4bcfec896b7aed5eb9a7ec51699324719bb9b37a3d51d9af8c8215a881"
+    },
+    {
+      "path": "docs/evidence/01-truth-baseline/determinism/post-fix-repetition-35-full-crate-runs.log",
+      "sha256": "5836c0a4c4e19491bcb47146b167e3ab58dad2159560554abae50624aa77daf1"
+    }
+  ],
+  "result": "ok"
+}

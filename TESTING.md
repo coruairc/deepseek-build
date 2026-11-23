@@ -144,18 +144,27 @@ Launch the binary and approve tool calls as prompted.
   provenance header (refresh command, commit, UTC date, the three numbers). Only
   a fully green `scripts/test-gate.sh --refresh-expected` rewrites it; edit it by
   hand and the full-mode comparison fails.
-- **Determinism (2026-11-21).** The two process-global `xai-grok-shell` tests
-  (`agent::folder_trust::tests::record_and_lookup_round_trip` and
-  `util::config::consent::tests::set_consent_answer_is_monotonic_per_account`)
-  now share one bare `#[serial_test::serial]` key. Five consecutive
-  `cargo test -p xai-grok-workspace --lib -- --test-threads=4` runs each
-  reported `1694 passed; 0 failed` — **reported, not artifact-backed (prior
-  session)**; run #3's committed step-1 log shows 1694/0 once — so no
-  `restore_fetch` band moved and no test
-  is quarantined. The `git_gate` waits were widened (root-cache sleep 100 → 500
-  ms; walk-timeout TTL 20 → 100 ms, sleep 40 → 250 ms; late-OK walk timeout
-  40 → 100 ms, sleep 50 → 250 ms; joiner TTL 500 ms → 5 s; sustained-invalidate
-  outer timeout ×3 → ×10); no assertion changed direction.
+- **Determinism (TEST-03, corrected 2026-11-23).** The two process-global
+  `xai-grok-shell` tests (`agent::folder_trust::tests::record_and_lookup_round_trip`
+  and `util::config::consent::tests::set_consent_answer_is_monotonic_per_account`)
+  share one bare `#[serial_test::serial]` key, and the `git_gate` waits were
+  widened (root-cache sleep 100 → 500 ms; walk-timeout TTL 20 → 100 ms, sleep
+  40 → 250 ms; late-OK walk timeout 40 → 100 ms, sleep 50 → 250 ms; joiner TTL
+  500 ms → 5 s; sustained-invalidate outer timeout ×3 → ×10); no assertion
+  changed direction. The earlier five-run sample is superseded: the phase
+  verification's 35-run repetition of `cargo test -p xai-grok-workspace --lib
+  -- --test-threads=4` on `1308903a` (identical file also at `98c2f1b8`)
+  produced **2 failures in 35** of
+  `restore_fetch::tests::fetch_timeout_sigkills_term_immune_grandchild`
+  (`grandchild <pid> must not remain live`, `restore_fetch_tests.rs:731`) — an
+  instantaneous `/proc` read after an asynchronous SIGKILL. Plan 01-06 fixed it
+  with a deadline-bounded death poll (5 s deadline, 20 ms interval) on all five
+  process-death sites, prompt-return bounds still asserted before any polling.
+  Post-fix: **35/35** full-crate runs green (`1695 passed; 0 failed` each),
+  each run's `test result:` line in
+  [`docs/evidence/01-truth-baseline/determinism/repetition-35-runs.log`](docs/evidence/01-truth-baseline/determinism/repetition-35-runs.log)
+  (item [`docs/evidence/01-truth-baseline/determinism/`](docs/evidence/01-truth-baseline/determinism/) —
+  cast, `report.json`, notes). No test is quarantined.
 - `cargo check --workspace --tests` is green (all test targets compile).
   `xai-grok-login` is green (395 / 0 / 1) since the dead OIDC surface was
   deleted. See [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) and
