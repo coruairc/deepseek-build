@@ -113,7 +113,7 @@ status: complete
 
 ## Accomplishments
 
-- `restore_fetch::tests::fetch_timeout_sigkills_term_immune_grandchild` — the only test that rotated (2 failures in the verification's 35 runs, `restore_fetch_tests.rs:731`) — now passes 20 consecutive exact runs and 35 consecutive full-crate runs.
+- `restore_fetch::tests::fetch_timeout_sigkills_term_immune_grandchild` — the test captured from the verification's 2 failures in 35 runs (`restore_fetch_tests.rs:731`; the second failure's identity was not recorded) — now passes 20 consecutive exact runs and 35 consecutive full-crate runs.
 - `wait_until_dead(pid, deadline)` (`PROCESS_DEATH_DEADLINE = 5 s`, `PROCESS_DEATH_POLL_INTERVAL = 20 ms`) is wired at all five process-death assertion sites; every test's prompt-return upper bound is still evaluated **before** any polling, no assertion direction changed, and `restore_fetch.rs` is byte-identical to HEAD.
 - A Linux-only unit test (`wait_until_dead_is_bounded_and_deadline_respecting`) pins the helper: absent pid → immediate `true`; own live pid → `false` after ≥ 100 ms of a 150 ms deadline, returning before 2 s.
 - `docs/evidence/01-truth-baseline/determinism/` records the real post-fix repetition: `determinism.cast` (v2, 3 events, the same execution), `report.json` (8 keys, 7/7 steps ok, `result: ok`), `repetition-35-runs.log` (35 headerless projection lines, every one `rc=0 named=ok test result: ok. 1695 passed; 0 failed`), `notes.md`, and the targeted/repetition/step logs.

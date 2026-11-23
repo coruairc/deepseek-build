@@ -83,7 +83,7 @@ coverage:
     requirement: TEST-03
     verification:
       - kind: unit
-        ref: "5x cargo test -p xai-grok-workspace --lib -- --test-threads=4 (task 2, 2026-11-21): each 1694 passed / 0 failed — reported, not artifact-backed (prior session; IN-04); FALSIFIED by the phase verification's 35-run repetition on 1308903a: 2 failures in 35, the captured one restore_fetch::tests::fetch_timeout_sigkills_term_immune_grandchild (grandchild <pid> must not remain live, restore_fetch_tests.rs:731)"
+        ref: "5x cargo test -p xai-grok-workspace --lib -- --test-threads=4 (task 2, 2026-11-21): each 1694 passed / 0 failed — reported, not artifact-backed (prior session; IN-04); FALSIFIED by the phase verification's 35-run repetition on 1308903a: 2 failures in 35; the captured one was restore_fetch::tests::fetch_timeout_sigkills_term_immune_grandchild (grandchild <pid> must not remain live, restore_fetch_tests.rs:731); the second failure's identity was not recorded"
         status: fail
       - kind: integration
         ref: "run #3 workspace step: 31913 passed / 0 failed / 386 ignored incl. git_gate/restore_fetch"
@@ -361,9 +361,10 @@ The five-run repetition above was falsified. The phase verification ran the
 phase's own command (`cargo test -p xai-grok-workspace --lib --
 --test-threads=4`) 35 times on `1308903a` (this report's
 `restore_fetch_tests.rs` is identical at `98c2f1b8`, sha256 `62a2656a…`) and
-caught **2 failures in 35** — the captured one is
+caught **2 failures in 35** — the captured one was
 `restore_fetch::tests::fetch_timeout_sigkills_term_immune_grandchild`
-("grandchild <pid> must not remain live", `restore_fetch_tests.rs:731`): the
+("grandchild <pid> must not remain live", `restore_fetch_tests.rs:731`; the
+second failure's identity was not recorded): the
 test read `/proc/<pid>` immediately after teardown, while SIGKILL delivery and
 reaping are asynchronous. "Zero failures" in five runs was a lucky sample.
 
