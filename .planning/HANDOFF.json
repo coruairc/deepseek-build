@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-11-22T08:15:00Z",
+  "timestamp": "2026-11-23T12:55:00Z",
   "phase": "05",
   "phase_name": "Documentation Truth & Freeze",
   "phase_dir": ".planning/phases/05-documentation-truth-freeze",
@@ -10,39 +10,148 @@
   "status": "blocked",
   "superseded_snapshot": "This file replaces the 2026-11-21 pause snapshot; STATE.md is the authoritative state.",
   "completed_tasks": [
-    { "id": "01", "name": "Phase 1 Truth Baseline — code, gate, evidence convention", "status": "done", "commit": "58cc8ac3" },
-    { "id": "02", "name": "Phase 2 Loop-Item Verification — permission/headless fix, evidence scaffolding", "status": "done", "commit": "f875cac8" },
-    { "id": "03", "name": "Phase 3 Pipeline Decoupling & Version — split jobs, guards, 0.1.0", "status": "done", "commit": "30eb36d4" },
-    { "id": "04", "name": "Phase 4 Distribution Proof — headless-image and installer docs, blocked proof", "status": "done", "commit": "ab9f755b" },
-    { "id": "05", "name": "Phase 5 Documentation Truth — DECISIONS/TESTING/KNOWN-ISSUES/user guide", "status": "done", "commit": "43441472" },
-    { "id": "06", "name": "Non-owner close-out — review findings, egress fixtures, planning truth, audit", "status": "done", "commit": "see git log 2026-11-22" }
+    {
+      "id": "01",
+      "name": "Phase 1 Truth Baseline — code, gate, evidence convention",
+      "status": "done",
+      "commit": "58cc8ac3"
+    },
+    {
+      "id": "02",
+      "name": "Phase 2 Loop-Item Verification — permission/headless fix, evidence scaffolding",
+      "status": "done",
+      "commit": "f875cac8"
+    },
+    {
+      "id": "03",
+      "name": "Phase 3 Pipeline Decoupling & Version — split jobs, guards, 0.1.0",
+      "status": "done",
+      "commit": "30eb36d4"
+    },
+    {
+      "id": "04",
+      "name": "Phase 4 Distribution Proof — headless-image and installer docs, blocked proof",
+      "status": "done",
+      "commit": "ab9f755b"
+    },
+    {
+      "id": "05",
+      "name": "Phase 5 Documentation Truth — DECISIONS/TESTING/KNOWN-ISSUES/user guide",
+      "status": "done",
+      "commit": "43441472"
+    },
+    {
+      "id": "06",
+      "name": "Non-owner close-out — review findings, egress fixtures, planning truth, audit",
+      "status": "done",
+      "commit": "see git log 2026-11-22"
+    }
   ],
   "remaining_tasks": [
-    { "id": "ACC-01", "name": "Owner acceptance session (20-30 min TUI, signed note)", "status": "blocked_owner" },
-    { "id": "PROOF", "name": "Live smoke, runtime egress and key-leak proof with a throwaway key", "status": "blocked_owner" },
-    { "id": "REL", "name": "Throwaway tag dry run, GHCR pull, installer proof", "status": "blocked_owner" },
-    { "id": "FREEZE", "name": "Pre-freeze checklist, deepseek branch, non-triggering marker tag", "status": "blocked_owner" },
-    { "id": "TESTS", "name": "Run the suite/gate, fmt, egress/branding/key-leak/deny gates", "status": "deferred_tests_skipped" }
+    {
+      "id": "F-1",
+      "name": "Release workflow tag/version mismatch (HIGH) — owner decision",
+      "status": "blocked_owner"
+    },
+    {
+      "id": "F-2",
+      "name": "publish gated on macOS (MEDIUM) — owner decision",
+      "status": "blocked_owner"
+    },
+    {
+      "id": "R-3",
+      "name": "Refresh test-gate.expected from a clean green run",
+      "status": "open"
+    },
+    {
+      "id": "ACC-01",
+      "name": "Owner acceptance session (20-30 min TUI, signed note)",
+      "status": "blocked_owner"
+    },
+    {
+      "id": "PROOF",
+      "name": "Live smoke, runtime egress and key-leak proof with a throwaway key",
+      "status": "blocked_owner"
+    },
+    {
+      "id": "REL",
+      "name": "Throwaway tag dry run, GHCR pull, installer proof",
+      "status": "blocked_owner"
+    },
+    {
+      "id": "FREEZE",
+      "name": "Pre-freeze checklist, deepseek branch, non-triggering marker tag",
+      "status": "blocked_owner"
+    },
+    {
+      "id": "TESTS",
+      "name": "Run the suite/gate, fmt, egress/branding/key-leak/deny gates",
+      "status": "deferred_tests_skipped"
+    }
   ],
   "blockers": [
-    { "description": "ACC-01: the author's acceptance session and signed note do not exist", "type": "human_action", "workaround": "Use the checklist at .planning/phases/05-documentation-truth-freeze/05-04-ACCEPTANCE-CHECKLIST.md, then commit the note" },
-    { "description": "No throwaway DEEPSEEK_API_KEY is available", "type": "owner_secret", "workaround": "Provide a revocable key, run PROOF-01/02/03 and the egress measurement, then revoke it" },
-    { "description": "Tag-push permission is not granted; this run must never push or tag", "type": "owner_permission", "workaround": "Grant it, run the Phase-4 dry run, then create the freeze branch and marker tag" },
-    { "description": "Tests, gates, smoke/egress runs and release builds are deferred by the owner (2026-11-22)", "type": "owner_decision", "workaround": "Re-enable testing in a later pass; every command is recorded in the plan SUMMARYs" }
+    {
+      "description": "ACC-01: the author's acceptance session and signed note do not exist",
+      "type": "human_action",
+      "workaround": "Use the checklist at .planning/phases/05-documentation-truth-freeze/05-04-ACCEPTANCE-CHECKLIST.md, then commit the note"
+    },
+    {
+      "description": "No throwaway DEEPSEEK_API_KEY is available",
+      "type": "owner_secret",
+      "workaround": "Provide a revocable key, run PROOF-01/02/03 and the egress measurement, then revoke it"
+    },
+    {
+      "description": "Tag-push permission is not granted; this run must never push or tag",
+      "type": "owner_permission",
+      "workaround": "Grant it, run the Phase-4 dry run, then create the freeze branch and marker tag"
+    },
+    {
+      "description": "Tests, gates, smoke/egress runs and release builds are deferred by the owner (2026-11-22)",
+      "type": "owner_decision",
+      "workaround": "Re-enable testing in a later pass; every command is recorded in the plan SUMMARYs"
+    }
   ],
   "async_jobs": [],
   "human_actions_pending": [
-    { "action": "Commit an ACC-01 acceptance note after the TUI session", "context": "Blocks FREEZE-01..03 and the marker tag", "blocking": true },
-    { "action": "Provide and later revoke a throwaway API key", "context": "Blocks PROOF-01/02/03 and the runtime egress measurement", "blocking": true },
-    { "action": "Grant tag-push permission", "context": "Blocks REL-04/05/06 and the distribution dry run", "blocking": true }
+    {
+      "action": "Commit an ACC-01 acceptance note after the TUI session",
+      "context": "Blocks FREEZE-01..03 and the marker tag",
+      "blocking": true
+    },
+    {
+      "action": "Provide and later revoke a throwaway API key",
+      "context": "Blocks PROOF-01/02/03 and the runtime egress measurement",
+      "blocking": true
+    },
+    {
+      "action": "Grant tag-push permission",
+      "context": "Blocks REL-04/05/06 and the distribution dry run",
+      "blocking": true
+    }
   ],
   "decisions": [
-    { "decision": "De-literalize the three egress fixtures instead of relaxing the scan", "rationale": "the gate must stay strict; the strings were negative fixtures, not destinations", "phase": "01" },
-    { "decision": "Redact the credential assertion and unset both key variables in that test", "rationale": "a failing test must never print a key; the sibling test was left alone to avoid a new env race", "phase": "01" },
-    { "decision": "Split build-linux/build-macos and gate the container on build-linux", "rationale": "a slow macOS leg must not erase the image", "phase": "03" },
-    { "decision": "release-dist strips at codegen time with debug=0", "rationale": "no DWARF, no sidecar, and the macOS ad-hoc signature stays valid", "phase": "03" }
+    {
+      "decision": "De-literalize the three egress fixtures instead of relaxing the scan",
+      "rationale": "the gate must stay strict; the strings were negative fixtures, not destinations",
+      "phase": "01"
+    },
+    {
+      "decision": "Redact the credential assertion and unset both key variables in that test",
+      "rationale": "a failing test must never print a key; the sibling test was left alone to avoid a new env race",
+      "phase": "01"
+    },
+    {
+      "decision": "Split build-linux/build-macos and gate the container on build-linux",
+      "rationale": "a slow macOS leg must not erase the image",
+      "phase": "03"
+    },
+    {
+      "decision": "release-dist strips at codegen time with debug=0",
+      "rationale": "no DWARF, no sidecar, and the macOS ad-hoc signature stays valid",
+      "phase": "03"
+    }
   ],
   "uncommitted_files": [],
-  "next_action": "Owner-gated. See .planning/v0.1.0-MILESTONE-AUDIT.md and STATE.md Needs Human; resume with /gsd-autonomous --from 05 after the acceptance note, --from 02 with a key, or --from 04 with tag permission.",
+  "next_action": "Owner continues locally in OpenCode: decide F-1/F-2 (see STATE.md Open Review Findings), run the test pass, then ACC-01, then /gsd-autonomous --from 05.",
   "context_notes": "All code and documentation that does not need the owner is landed on backend/gsd-auto. No push, tag, force, key print or new outbound destination occurred. Tests are deferred; no suite result was observed in the final pass."
 }

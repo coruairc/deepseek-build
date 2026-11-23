@@ -4,8 +4,8 @@ milestone: v0.1.0
 current_phase: 05
 current_phase_name: Documentation Truth & Freeze
 status: blocked
-stopped_at: Milestone audit NOT CERTIFIED — ACC-01, throwaway key, and tag permission are owner-gated
-last_updated: "2026-11-22T07:10:00.000Z"
+stopped_at: Development stopped by owner 2026-11-23; handed to owner local OpenCode. Review CHANGES REQUESTED (F-1, F-2) plus three owner gates open
+last_updated: "2026-11-23T12:55:00.000Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 05 docs complete; acceptance/freeze blocked; audit recorded
 state_head: 66ce4c7d955ea6dadccd18164f09337f62316fc1
@@ -153,8 +153,23 @@ Remaining non-owner debt:
 | 02/05 | needs_human — throwaway `DEEPSEEK_API_KEY` for PROOF-01/02/03 and the runtime egress measurement | provide a revocable key, then re-run Phase 2 |
 | 04 | blocked — tag-push permission for the distribution dry run (REL-04/05/06) | grant it, then `/gsd-autonomous --from 04` |
 
+## Open Review Findings (Reviewer @ 578e64ca, 2026-11-22 — CHANGES REQUESTED)
+
+| ID | Severity | Finding | Status |
+|----|----------|---------|--------|
+| F-1 | HIGH | `release.yml` (~L127-139, ~L288-300) requires tag == manifest version (now 0.1.0), so every permitted `v0.0.1-rc*` tag fails and only a full non-prerelease `v0.1.0` passes. Owner decision needed: accept `v0.1.0-rcN` as prerelease, or set the version back to 0.0.1. | open — owner decision; no tag until fixed |
+| F-2 | MEDIUM | `publish` still `needs: build-macos` and all 4 tarballs (`release.yml` ~L421, ~L441-453); comment at ~L262-266 is wrong. Owner decision: publish on Linux only with macOS best-effort, drop macOS, or keep. | open — owner decision |
+| R-3 | MEDIUM | Refresh `test-gate.expected` from a clean green run (current one came from a dirty tree). | open — needs a test run |
+| R-4 | LOW | Validate `TEST_GATE_MIN_GB`. | fixed `f476f876` (only `bash -n` checked; rejection paths not executed) |
+| R-5 | LOW | `--remap-path-prefix` (binary embeds build-machine paths; predates branch). | deferred to a separate change |
+| R-6 | LOW | Record stripped `release-dist` trade-off. | fixed `096fc9f3` |
+| R-7 | LOW | Audit timestamp later than its commit. | fixed `46c1d55c` |
+
+Reviewer-verified at 578e64ca: no new egress (only api.deepseek.com by default), `cargo check --workspace` passes, shell 6193 passed, pager headless/permission 193/193, lifecycle 49/49. The `debug_redact` failures are the box's protoc 3.21; the SIGTERM group-kill failure was a load flake (6/6 idle). Not verified: clippy, fmt, full test-gate, `check-egress --strict`, key-leak scan, cargo-deny, CI/macOS, live egress capture.
+
 ## Session Continuity
 
-Last session: 2026-11-22
-Stopped at: all non-owner work complete; three owner gates remain (ACC-01, throwaway key, tag permission)
-Resume file: none needed — this file plus `.planning/v0.1.0-MILESTONE-AUDIT.md` are authoritative. The 2026-11-21 `.continue-here.md` pause snapshot and the old `.planning/HANDOFF.json` are superseded.
+Last session: 2026-11-23 (Backend Grok Bot; development stopped by owner)
+Stopped at: branch `backend/gsd-auto` pushed; all non-owner work done; owner continues locally in OpenCode.
+Next: decide F-1/F-2 above, run the test pass, then ACC-01 (checklist `phases/05-documentation-truth-freeze/05-04-ACCEPTANCE-CHECKLIST.md`), then `/gsd-autonomous --from 05`.
+Resume file: this file plus `.planning/v0.1.0-MILESTONE-AUDIT.md` and `.planning/HANDOFF.json` are authoritative.
