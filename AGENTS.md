@@ -19,12 +19,15 @@ public description; §7 maps the code and §8 lists the rules for changing it.
 - **Branch:** `main` is the mainline and carries the released lineage
   (`v0.0.1-rc5`). Work branches rebase onto `main` before review; do not treat a
   side branch as the integration point.
-- **HEAD (refreshed 2026-11-23):** `main` is `33f5a71c` plus this handoff commit —
-  Phase 01 (Truth Baseline) of the v0.1.0 milestone is complete and verified 24/24;
-  Phase 02 (Loop-Item Verification) is next, ready to plan. See
-  [`HANDOFF-2026-11-23.md`](HANDOFF-2026-11-23.md) and `.planning/STATE.md`;
-  the rest of §0 below still describes the pre-milestone rc5 tree and is being
-  reconciled by Phase 5 (Documentation Truth & Freeze).
+- **HEAD (refreshed 2026-11-23, evening):** `main` = the Phase-01 close-out plus the
+  Phase-02 planning commit series. Phase 01 (Truth Baseline) is complete and verified
+  24/24; **Phase 02 (Loop-Item Verification) is planned and checker-verified (6 plans,
+  4 waves, 0 blockers) but `status: blocked`** — execution needs the build host (Rust
+  1.94.0, ≥150 GB free, shared `CARGO_TARGET_DIR`). See
+  [`HANDOFF-2026-11-23-evening.md`](HANDOFF-2026-11-23-evening.md) (planning handoff) and
+  [`HANDOFF-2026-11-23.md`](HANDOFF-2026-11-23.md) (Phase-01 close-out), plus
+  `.planning/STATE.md`; the rest of §0 below still describes the pre-milestone rc5 tree
+  and is being reconciled by Phase 5 (Documentation Truth & Freeze).
 - **Remote:** `origin git@github.com:coruairc/deepseek-build.git`.
 - **Toolchain:** Rust **1.94.0** via rustup (pinned in `rust-toolchain.toml`). Do not bump.
   `protoc` on PATH (`/usr/bin/protoc`); `dotslash` not needed. `strace` absent (use
