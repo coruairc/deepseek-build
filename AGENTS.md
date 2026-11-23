@@ -4,7 +4,7 @@ Read this first when resuming. It records exact state, what remains, and the
 commands to continue. Companion docs: [`DECISIONS.md`](DECISIONS.md) (locked
 decisions; wins on conflict), [`PLAN.md`](PLAN.md) (audit + phased plan),
 [`README.md`](README.md). Latest dated handoff:
-[`HANDOFF-2026-10-09.md`](HANDOFF-2026-10-09.md).
+[`HANDOFF-2026-11-23.md`](HANDOFF-2026-11-23.md).
 
 `deepseek-build` is a personal, DeepSeek-first terminal coding agent forked from
 [xai-org/grok-build](https://github.com/xai-org/grok-build) (Apache-2.0): a
@@ -19,9 +19,12 @@ public description; §7 maps the code and §8 lists the rules for changing it.
 - **Branch:** `main` is the mainline and carries the released lineage
   (`v0.0.1-rc5`). Work branches rebase onto `main` before review; do not treat a
   side branch as the integration point.
-- **HEAD (refreshed 2026-11-21):** `main` is `221a1a59` (rc5 telemetry/proxy
-  removal, first-party `api.deepseek.com` host check, Linux-only prerelease docs)
-  plus the reviewed docs commits that carry this file and `.planning/codebase/`.
+- **HEAD (refreshed 2026-11-23):** `main` is `33f5a71c` plus this handoff commit —
+  Phase 01 (Truth Baseline) of the v0.1.0 milestone is complete and verified 24/24;
+  Phase 02 (Loop-Item Verification) is next, ready to plan. See
+  [`HANDOFF-2026-11-23.md`](HANDOFF-2026-11-23.md) and `.planning/STATE.md`;
+  the rest of §0 below still describes the pre-milestone rc5 tree and is being
+  reconciled by Phase 5 (Documentation Truth & Freeze).
 - **Remote:** `origin git@github.com:coruairc/deepseek-build.git`.
 - **Toolchain:** Rust **1.94.0** via rustup (pinned in `rust-toolchain.toml`). Do not bump.
   `protoc` on PATH (`/usr/bin/protoc`); `dotslash` not needed. `strace` absent (use
