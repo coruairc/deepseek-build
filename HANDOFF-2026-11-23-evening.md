@@ -13,7 +13,7 @@ to continue.
   all six project agents and the global default were repointed to Flash for this run.
 - **No Rust toolchain on that host** (Alpine ships 1.96.1; the repo pins 1.94.0), no
   `protoc`, and only **~31 GB free** against this repo's `scripts/disk-guard.sh`
-  threshold of 150 GB. So: **planning only, zero builds, zero tests, zero cargo
+  default threshold of 60 GB. So: **planning only, zero builds, zero tests, zero cargo
   processes.** Disk stayed flat at 31 GB for the whole session.
 - Consequence: **Phase 02 is planned and checker-verified but NOT executed.** Nothing
   in the milestone advanced past `status: blocked`.
@@ -79,7 +79,7 @@ git pull                                  # brings the 7 commits above
 rustup toolchain install 1.94.0 --component rustfmt clippy
 source "$HOME/.cargo/env"
 export CARGO_TARGET_DIR="$HOME/Projects/deepseek-build/target"   # one shared target dir
-scripts/disk-guard.sh 150                # must pass before any build
+scripts/disk-guard.sh                    # default 60 GB; a full workspace build+tests is ~24 GB
 /gsd-execute-phase 2
 ```
 

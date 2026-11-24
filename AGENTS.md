@@ -23,7 +23,7 @@ public description; §7 maps the code and §8 lists the rules for changing it.
   Phase-02 planning commit series. Phase 01 (Truth Baseline) is complete and verified
   24/24; **Phase 02 (Loop-Item Verification) is planned and checker-verified (6 plans,
   4 waves, 0 blockers) but `status: blocked`** — execution needs the build host (Rust
-  1.94.0, ≥150 GB free, shared `CARGO_TARGET_DIR`). See
+  1.94.0, ≥60 GB free, shared `CARGO_TARGET_DIR`). See
   [`HANDOFF-2026-11-23-evening.md`](HANDOFF-2026-11-23-evening.md) (planning handoff) and
   [`HANDOFF-2026-11-23.md`](HANDOFF-2026-11-23.md) (Phase-01 close-out), plus
   `.planning/STATE.md`; the rest of §0 below still describes the pre-milestone rc5 tree
@@ -254,7 +254,7 @@ add an outbound destination, or the live smoke test needs a key not provided.
 ```sh
 source "$HOME/.cargo/env"
 
-scripts/disk-guard.sh               # stop if <150 GB free (see §8)
+scripts/disk-guard.sh               # stop if <60 GB free (see §8)
 cargo check -p xai-grok-pager-bin --message-format=short
 cargo test  -p xai-grok-sampling-types --lib
 cargo test  -p xai-grok-sampler --lib stream::chat_completions
@@ -389,7 +389,9 @@ with the code, trust the code.
   `CARGO_TARGET_DIR` at the main checkout's `target/` (e.g. `export
   CARGO_TARGET_DIR="$HOME/Projects/deepseek-build/target"`) and remove a
   worktree's own `target/` if one exists. Run `scripts/disk-guard.sh` before any
-  workspace build and **stop if it fails** (<150 GB free). Routine: per-crate
+  workspace build and **stop if it fails** (<60 GB free, the script's default;
+  it is deliberately ~2.5x the measured ~24 GB workspace build, not the old
+  150 GB figure that predates `incremental = false`). Routine: per-crate
   `cargo test -p <crate>` during work, one `cargo test --workspace` at the final
   gate, then reclaim with `cargo clean` (or `rm -rf target/debug`). Disk
   emergency: check `ps aux | grep -E 'cargo|rustc'` for stray builds, remove stale
