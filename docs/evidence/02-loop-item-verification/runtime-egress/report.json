@@ -1,0 +1,46 @@
+{
+  "item": "runtime-egress",
+  "requirements": [
+    "PROOF-02"
+  ],
+  "date": "2026-11-25T21:25:58Z",
+  "host": "Linux/x86_64",
+  "command": "scripts/egress-check.sh session recorded in docs/evidence/02-loop-item-verification/live-smoke/live-smoke-transcript.txt (read back; no second live run)",
+  "steps": [
+    {
+      "name": "egress: zero violations",
+      "ok": true,
+      "detail": "exit 0: EGRESS_VIOLATIONS=0"
+    },
+    {
+      "name": "egress: allowlist verdict passed",
+      "ok": true,
+      "detail": "exit 0: PASS  egress allowlist: all observed destinations are allowed"
+    },
+    {
+      "name": "egress: destination table parsed and permitted",
+      "ok": true,
+      "detail": "exit 0: destination-check: 4 row(s) PASS; API_CONNECTS=7; WEB_FETCH_CONNECTS=1; EGRESS_VIOLATIONS=0"
+    },
+    {
+      "name": "egress: provider and web_fetch both contacted",
+      "ok": true,
+      "detail": "exit 0: PASS  EGRESS-CHECK PASS"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/02-loop-item-verification/runtime-egress/destination-check.py",
+      "sha256": "1700a16e591d2a88ca46008bb3ae32e33c5952cba55dc3ac088501abb2247904"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/runtime-egress/destinations.txt",
+      "sha256": "c422705ef3552d154c0b7ae015e5225d4f1dabe32af0f343f47873c0c1f237a3"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/live-smoke/live-smoke-transcript.txt",
+      "sha256": "e31161c4b33c5f1d1c8e7b32fab39f28b3bcd44c7b059d71120f6bd73ff389c0"
+    }
+  ],
+  "result": "ok"
+}
