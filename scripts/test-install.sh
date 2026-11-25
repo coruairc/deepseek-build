@@ -11,6 +11,8 @@
 #   6. unwritable INSTALL_DIR (no sudo suggestion)
 #   7. pre-existing real file named `dsb` (never clobbered)
 #   8. pre-existing foreign `dsb` symlink (never clobbered)
+#   9. pinned stable release: VERSION=0.1.0, VERSION=v0.1.0 and VERSION=v0.1.0-proof1
+#      (the Phase 4 tag shape) resolve /download/v<tag>/deepseek-build-<ver>-<target>.tar.gz
 #
 # No network beyond 127.0.0.1. Cleans up via trap.
 # Run: sh scripts/test-install.sh
@@ -23,6 +25,8 @@ BASE="http://127.0.0.1:0"       # rewritten by start_server (dynamic port)
 BASE_BAD="http://127.0.0.1:0"  # rewritten by start_server ... bad
 FAKE_VERSION=0.0.0-test
 FAKE_VERSION_2=0.0.1-test
+FAKE_VERSION_STABLE=0.1.0
+FAKE_VERSION_PROOF=0.1.0-proof1
 
 PASS=0
 FAIL=0
@@ -141,11 +145,18 @@ build_fake_tree() {
         say "SKIP: unknown host platform, cannot build fake tree"
         exit 77
     }
-    mkdir -p "$_tree/download/v$FAKE_VERSION" "$_tree/download/v$FAKE_VERSION_2" "$_tree/latest/download"
+    mkdir -p "$_tree/download/v$FAKE_VERSION" "$_tree/download/v$FAKE_VERSION_2" \
+        "$_tree/download/v$FAKE_VERSION_STABLE" "$_tree/download/v$FAKE_VERSION_PROOF" \
+        "$_tree/latest/download"
     make_tarball "$_tree/stage" "$FAKE_VERSION" "$_host" "$_tree/download/v$FAKE_VERSION" "$_corrupt"
     # A second version for the rerun-to-update case.
     make_tarball "$_tree/stage2" "$FAKE_VERSION_2" "$_host" "$_tree/download/v$FAKE_VERSION_2"
-    # The "latest" release points at the newest version (v2).
+    # The stable release and the Phase 4 proof tag (a prerelease by hyphen).
+    make_tarball "$_tree/stage_stable" "$FAKE_VERSION_STABLE" "$_host" "$_tree/download/v$FAKE_VERSION_STABLE"
+    make_tarball "$_tree/stage_proof" "$FAKE_VERSION_PROOF" "$_host" "$_tree/download/v$FAKE_VERSION_PROOF"
+    # The "latest" release points at the newest version (v2). Deliberately NOT at
+    # the stable 0.1.0: the latest-install assertions pin v0.0.1-test, so a tree
+    # reshuffle that changed "latest" would fail here instead of passing quietly.
     cp "$_tree/download/v$FAKE_VERSION_2/deepseek-build-$FAKE_VERSION_2-$_host.tar.gz" "$_tree/latest/download/"
     cp "$_tree/download/v$FAKE_VERSION_2/SHA256SUMS" "$_tree/latest/download/SHA256SUMS"
     # install.sh as a release asset (some tests fetch it).
@@ -304,6 +315,93 @@ if [ -L "$SB_BIN/dsb" ]; then
     pass "latest-install: dsb shortcut created"
 else
     fail "latest-install: dsb shortcut created" "no symlink at $SB_BIN/dsb"
+fi
+
+# ---------------------------------------------------------------------------
+# Case 1c: pinned stable release — VERSION=0.1.0 and VERSION=v0.1.0
+# ---------------------------------------------------------------------------
+# `install.sh` accepts either form, normalises to the tag v0.1.0, builds
+# `deepseek-build-0.1.0-<target>.tar.gz` and fetches /download/v0.1.0/. This is
+# the shape of the real release the `version` job derives (release.yml).
+
+HOST=$(host_target)
+
+new_sandbox stable
+OUT=$(HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" VERSION="$FAKE_VERSION_STABLE" \
+    PATH="$SB_BIN:/usr/bin:/bin" DSB_INSTALL_BASE_URL="$BASE" sh "$INSTALL_SH" 2>&1) || fail "stable-0.1.0: install" "exit nonzero"
+if [ -x "$SB_BIN/deepseek-build" ]; then
+    pass "stable-0.1.0: binary installed"
+else
+    fail "stable-0.1.0: binary installed" "binary missing at $SB_BIN/deepseek-build"
+fi
+assert_contains "$OUT" "Downloading deepseek-build-$FAKE_VERSION_STABLE-$HOST.tar.gz" "stable-0.1.0: tarball name"
+assert_contains "$OUT" "Installed v$FAKE_VERSION_STABLE to" "stable-0.1.0: installed tag"
+assert_contains "$OUT" "deepseek-build $FAKE_VERSION_STABLE" "stable-0.1.0: version printed"
+
+new_sandbox stablev
+OUT=$(HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" VERSION="v$FAKE_VERSION_STABLE" \
+    PATH="$SB_BIN:/usr/bin:/bin" DSB_INSTALL_BASE_URL="$BASE" sh "$INSTALL_SH" 2>&1) || fail "stable-v0.1.0: install" "exit nonzero"
+if [ -x "$SB_BIN/deepseek-build" ]; then
+    pass "stable-v0.1.0: binary installed"
+else
+    fail "stable-v0.1.0: binary installed" "binary missing at $SB_BIN/deepseek-build"
+fi
+assert_contains "$OUT" "Downloading deepseek-build-$FAKE_VERSION_STABLE-$HOST.tar.gz" "stable-v0.1.0: same tarball as the unprefixed form"
+assert_contains "$OUT" "Installed v$FAKE_VERSION_STABLE to" "stable-v0.1.0: installed tag"
+assert_contains "$OUT" "deepseek-build $FAKE_VERSION_STABLE" "stable-v0.1.0: version printed"
+
+# The exact tag Phase 4 pushes: hyphenated, so release.yml classifies it as a
+# prerelease and the image never moves :latest.
+new_sandbox proof
+OUT=$(HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" VERSION="v$FAKE_VERSION_PROOF" \
+    PATH="$SB_BIN:/usr/bin:/bin" DSB_INSTALL_BASE_URL="$BASE" sh "$INSTALL_SH" 2>&1) || fail "proof-0.1.0-proof1: install" "exit nonzero"
+if [ -x "$SB_BIN/deepseek-build" ]; then
+    pass "proof-0.1.0-proof1: binary installed"
+else
+    fail "proof-0.1.0-proof1: binary installed" "binary missing at $SB_BIN/deepseek-build"
+fi
+assert_contains "$OUT" "Downloading deepseek-build-$FAKE_VERSION_PROOF-$HOST.tar.gz" "proof-0.1.0-proof1: tarball name"
+assert_contains "$OUT" "Installed v$FAKE_VERSION_PROOF to" "proof-0.1.0-proof1: installed tag"
+assert_contains "$OUT" "deepseek-build $FAKE_VERSION_PROOF" "proof-0.1.0-proof1: version printed"
+
+# A VERSION whose v-prefixed form does not start with v<digit> dies before any
+# download.
+new_sandbox invalid
+OUT=$(HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" VERSION="not-a-version" \
+    DSB_INSTALL_BASE_URL="$BASE" sh "$INSTALL_SH" 2>&1) && RC=0 || RC=$?
+if [ "$RC" -ne 0 ]; then
+    pass "invalid-version: nonzero exit"
+else
+    fail "invalid-version" "exited 0 for VERSION=not-a-version"
+fi
+assert_contains "$OUT" "Invalid VERSION: not-a-version" "invalid-version: clear message"
+if [ -e "$SB_BIN" ] && [ -n "$(ls -A "$SB_BIN" 2>/dev/null)" ]; then
+    fail "invalid-version: nothing installed" "INSTALL_DIR not empty: $(ls -A "$SB_BIN")"
+else
+    pass "invalid-version: nothing installed"
+fi
+
+# FINDING (recorded, not fixed): `VERSION=0.1` passes install.sh's `v[0-9]*`
+# prefix check — the tag becomes v0.1 — and then the download 404s at
+# /download/v0.1/deepseek-build-0.1-<target>.tar.gz. That shape cannot reach a
+# real release because release.yml's `version` job rejects a non-semver tag
+# before anything builds ("release tag 'v0.1' is not a semver tag", pinned by
+# scripts/check-release-tag-shape.py), so install.sh's lenient prefix check is
+# a usability gap, not a release hazard. install.sh is not modified.
+new_sandbox loose
+OUT=$(HOME="$SB_HOME" INSTALL_DIR="$SB_BIN" VERSION="0.1" \
+    DSB_INSTALL_BASE_URL="$BASE" sh "$INSTALL_SH" 2>&1) && RC=0 || RC=$?
+if [ "$RC" -ne 0 ]; then
+    pass "loose-version-0.1: fails at download"
+else
+    fail "loose-version-0.1" "exited 0 for VERSION=0.1 (the fake tree has no v0.1 release)"
+fi
+assert_contains "$OUT" "Downloading deepseek-build-0.1-$HOST.tar.gz" "loose-version-0.1: passed the prefix check, then built a v0.1 URL"
+assert_not_contains "$OUT" "Installed v" "loose-version-0.1: no install reported"
+if [ -e "$SB_BIN" ] && [ -n "$(ls -A "$SB_BIN" 2>/dev/null)" ]; then
+    fail "loose-version-0.1: nothing installed" "INSTALL_DIR not empty: $(ls -A "$SB_BIN")"
+else
+    pass "loose-version-0.1: nothing installed"
 fi
 
 # ---------------------------------------------------------------------------
@@ -495,7 +593,7 @@ fi
 
 say ""
 if [ "$FAIL" -eq 0 ]; then
-    say "ALL PASS ($PASS assertions)"
+    say "ALL PASS (${PASS}/${PASS} assertions)"
     exit 0
 else
     say "FAILED: $FAIL of $((PASS + FAIL)) assertions ($FAILED_NAMES)"

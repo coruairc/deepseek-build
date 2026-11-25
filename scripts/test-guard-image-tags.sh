@@ -6,7 +6,8 @@
 # for the wrong reason. No network, no Docker, no GitHub Actions.
 #
 # Accepted prerelease shapes covered: the 2-name collapsed set and the 4-name
-# expanded set, because a pinned metadata-action may produce either.
+# expanded set, because a pinned metadata-action may produce either — for
+# 0.1.0-rc1 and for the Phase 4 tag v0.1.0-proof1.
 # Rejected shapes covered: empty list, prerelease `latest`, prerelease name
 # outside the allowed set, each missing stable alias (version, v-version,
 # major.minor, major, latest), extra alias, a ref outside IMAGE, and a
@@ -166,6 +167,20 @@ check_v prerelease-rc-four-names ok true 0.1.0-rc1 "$(tags \
     "${IMAGE}:0.1" \
     "${IMAGE}:0")" \
     "guard-image-tags: OK 4 names (prerelease)"
+
+# The exact tag Phase 4 pushes (v0.1.0-proof1): the collapsed 2-name set is the
+# accepted shape and `latest` must be absent from it.
+check_v prerelease-proof1-two-names ok true 0.1.0-proof1 "$(tags \
+    "${IMAGE}:0.1.0-proof1" \
+    "${IMAGE}:v0.1.0-proof1")" \
+    "guard-image-tags: OK 2 names (prerelease)" \
+    "resolved tag names (2):"
+
+check_v prerelease-proof1-with-latest fail true 0.1.0-proof1 "$(tags \
+    "${IMAGE}:0.1.0-proof1" \
+    "${IMAGE}:v0.1.0-proof1" \
+    "${IMAGE}:latest")" \
+    "'latest' must not be present"
 
 # ---------------------------------------------------------------------------
 # Rejected shapes
