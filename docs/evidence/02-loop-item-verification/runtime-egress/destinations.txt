@@ -1,4 +1,4 @@
-10  unix  /run/systemd/resolve/io.systemd.Resolve  0  -  PASS  unix
-7  inet  3.173.21.63  443  api.deepseek.com  PASS  allowlisted
-2  unix  /var/run/dbus/system_bus_socket  0  -  PASS  unix
-1  inet6  2606:4700:10::6814:179a  443  example.com  PASS  allowlisted
+10 unix /run/systemd/resolve/io.systemd.Resolve 0 - PASS unix
+7 inet 3.173.21.63 443 api.deepseek.com PASS allowlisted
+2 unix /var/run/dbus/system_bus_socket 0 - PASS unix
+1 inet6 2606:4700:10::6814:179a 443 example.com PASS allowlisted
