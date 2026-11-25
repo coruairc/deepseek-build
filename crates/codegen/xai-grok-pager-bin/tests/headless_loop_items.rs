@@ -202,3 +202,267 @@ async fn headless_permission_denial_names_both_flags() {
     );
     assert_eq!(violations.len(), 3, "{violations:?}");
 }
+
+/// The stable first sentence of the full plan-mode reminder (`plan_mode.rs`).
+const PLAN_REMINDER_FULL: &str =
+    "Plan mode is active. Do not make any edits or writes to the system.";
+/// The alternating-turn variant, injected once the activation reminder has been recorded.
+const PLAN_REMINDER_SPARSE: &str =
+    "Plan mode is still active. Do not make any edits or writes to the system";
+
+/// Foreground chat-completions request bodies, in arrival order.
+/// Auxiliary traffic (titles, summaries) has no conversation and is skipped, so the last body is a turn.
+fn chat_completion_bodies(server: &MockInferenceServer) -> Vec<Value> {
+    server
+        .requests()
+        .into_iter()
+        .filter(|entry| entry.conversation.is_some() && entry.path.contains("/chat/completions"))
+        .filter_map(|entry| entry.body)
+        .collect()
+}
+
+/// The tail of the conversation as the model received it: the injected reminder precedes the user prompt.
+fn recent_message_text(body: &Value) -> String {
+    let messages = body
+        .get("messages")
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or(&[]);
+    let start = messages.len().saturating_sub(3);
+    messages
+        .get(start..)
+        .unwrap_or(&[])
+        .iter()
+        .filter_map(|message| serde_json::to_string(message).ok())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn body_model(body: &Value) -> &str {
+    body.get("model")
+        .and_then(Value::as_str)
+        .unwrap_or_else(|| panic!("no model on the request body: {body}"))
+}
+
+fn body_effort(body: &Value) -> &str {
+    body.get("reasoning_effort")
+        .and_then(Value::as_str)
+        .unwrap_or_else(|| {
+            panic!("no reasoning_effort on the request body; did the mock model advertise support? {body}")
+        })
+}
+
+/// SESS-01/SESS-04: one session, three headless invocations, one sandbox.
+/// Every invocation goes through `run_headless_in_sandbox_borrowed` so HOME and the session store persist;
+/// `run_headless` would build a fresh sandbox per call and make invocation 2 a brand-new session.
+#[tokio::test]
+async fn headless_resume_restores_model_effort_and_plan_state() {
+    let server = MockInferenceServer::start_with_models(vec![
+        MockModelEntry::new("deepseek-v4-pro")
+            .with_supports_reasoning_effort(true)
+            .with_reasoning_efforts(vec![serde_json::json!("high"), serde_json::json!("low")]),
+    ])
+    .await
+    .expect("start mock inference server");
+    server.set_response("ok");
+
+    let mut sandbox = TestSandbox::builder().mock_url(server.url()).build();
+    if let Some(ca) = server.ca_pem_path() {
+        sandbox.set_env("GROK_EXTRA_CA_BUNDLE", ca);
+    }
+    // The catalog is local (`is_models_fetch_enabled()` is false), and a custom models endpoint skips the
+    // built-in entries, so `-m deepseek-v4-pro` only resolves once a `[model.*]` table declares it.
+    // `supports_reasoning_effort` is what makes `--effort` reach the wire at all (`apply_supported_effort`).
+    std::fs::write(
+        sandbox.grok_home().join("config.toml"),
+        "[model.\"deepseek-v4-pro\"]\nsupports_reasoning_effort = true\n",
+    )
+    .expect("write catalog config");
+
+    let run = |args: &[&str]| {
+        let mut cmd = tokio::process::Command::new(grok_binary());
+        cmd.current_dir(sandbox.workspace()).args(args);
+        cmd
+    };
+
+    // Invocation 1: a new session in plan mode, pinned to an explicit model and effort.
+    let started = run_headless_in_sandbox_borrowed(
+        run(&[
+            "-p",
+            "start the session",
+            "--permission-mode",
+            "plan",
+            "--trust",
+            "-m",
+            "deepseek-v4-pro",
+            "--effort",
+            "high",
+            "--output-format",
+            "json",
+        ]),
+        &sandbox,
+    )
+    .await;
+    println!(
+        "start stdout:\n{}\nstart stderr:\n{}",
+        started.stdout, started.stderr
+    );
+    assert!(
+        !started.timed_out && started.status.success(),
+        "start invocation failed: timed_out={} status={:?}\n{}",
+        started.timed_out,
+        started.status,
+        started.stderr
+    );
+    let session_id = parse_json_result(&started.stdout)
+        .get("sessionId")
+        .and_then(Value::as_str)
+        .expect("sessionId on the first result")
+        .to_owned();
+    let started_body = {
+        let bodies = chat_completion_bodies(&server);
+        assert!(
+            !bodies.is_empty(),
+            "the start invocation sent no foreground chat request"
+        );
+        bodies.into_iter().last().expect("start request body")
+    };
+    let requests_after_start = chat_completion_bodies(&server).len();
+
+    // Invocation 2: resume by id with neither -m nor --effort; the session record must supply both.
+    let resumed = run_headless_in_sandbox_borrowed(
+        run(&[
+            "-p",
+            "continue",
+            "--trust",
+            "-r",
+            &session_id,
+            "--output-format",
+            "json",
+        ]),
+        &sandbox,
+    )
+    .await;
+    println!(
+        "resume stdout:\n{}\nresume stderr:\n{}",
+        resumed.stdout, resumed.stderr
+    );
+    assert!(
+        !resumed.timed_out && resumed.status.success(),
+        "resume invocation failed: timed_out={} status={:?}\n{}",
+        resumed.timed_out,
+        resumed.status,
+        resumed.stderr
+    );
+    let resumed_id = parse_json_result(&resumed.stdout)
+        .get("sessionId")
+        .and_then(Value::as_str)
+        .expect("sessionId on the resumed result")
+        .to_owned();
+    assert_eq!(
+        resumed_id, session_id,
+        "resume started a different session: {resumed_id} != {session_id}"
+    );
+    // The last foreground request of this invocation: a second turn inside it could not go unseen.
+    let resumed_body = {
+        let bodies = chat_completion_bodies(&server);
+        assert!(
+            bodies.len() > requests_after_start,
+            "the resume invocation sent no foreground chat request"
+        );
+        bodies
+            .into_iter()
+            .skip(requests_after_start)
+            .last()
+            .expect("resumed request body")
+    };
+    let requests_after_resume = chat_completion_bodies(&server).len();
+
+    // Invocation 3: an explicit --effort on resume wins over the session value.
+    let overridden = run_headless_in_sandbox_borrowed(
+        run(&[
+            "-p",
+            "continue",
+            "--trust",
+            "-r",
+            &session_id,
+            "--effort",
+            "low",
+            "--output-format",
+            "json",
+        ]),
+        &sandbox,
+    )
+    .await;
+    println!(
+        "override stdout:\n{}\noverride stderr:\n{}",
+        overridden.stdout, overridden.stderr
+    );
+    assert!(
+        !overridden.timed_out && overridden.status.success(),
+        "override invocation failed: timed_out={} status={:?}\n{}",
+        overridden.timed_out,
+        overridden.status,
+        overridden.stderr
+    );
+
+    // The last foreground request of the override invocation; the earlier bodies must stay untouched.
+    let overridden_body = {
+        let bodies = chat_completion_bodies(&server);
+        assert!(
+            bodies.len() > requests_after_resume,
+            "the override invocation sent no foreground chat request"
+        );
+        bodies
+            .into_iter()
+            .skip(requests_after_resume)
+            .last()
+            .expect("override request body")
+    };
+
+    let started_model = body_model(&started_body).to_owned();
+    let started_effort = body_effort(&started_body).to_owned();
+    let resumed_model = body_model(&resumed_body);
+    let resumed_effort = body_effort(&resumed_body).to_owned();
+    let overridden_model = body_model(&overridden_body);
+    let overridden_effort = body_effort(&overridden_body).to_owned();
+
+    let resumed_tail = recent_message_text(&resumed_body);
+    let resumed_full = resumed_tail.contains(PLAN_REMINDER_FULL);
+    let resumed_sparse = resumed_tail.contains(PLAN_REMINDER_SPARSE);
+    println!(
+        "resume facts: started_model={started_model} started_effort={started_effort} \
+         resumed_model={resumed_model} resumed_effort={resumed_effort} \
+         override_model={overridden_model} override_effort={overridden_effort} \
+         plan_reminder_full={resumed_full} plan_reminder_sparse={resumed_sparse}"
+    );
+
+    assert_eq!(
+        started_model, "deepseek-v4-pro",
+        "invocation 1 did not request the pinned model"
+    );
+    assert_eq!(
+        resumed_model, started_model,
+        "the resumed turn requested '{resumed_model}', not the started model '{started_model}'"
+    );
+    assert_eq!(
+        resumed_effort, started_effort,
+        "the resumed turn sent effort '{resumed_effort}', not the started effort '{started_effort}'"
+    );
+    assert!(
+        resumed_full || resumed_sparse,
+        "the resumed turn carries no plan-mode reminder; plan state was not restored\n{resumed_tail}"
+    );
+    assert_eq!(
+        overridden_effort, "low",
+        "an explicit --effort low on resume did not reach the wire ({overridden_effort})"
+    );
+    assert_ne!(
+        overridden_effort, resumed_effort,
+        "the explicit resume effort did not override the session value"
+    );
+    assert_eq!(
+        overridden_model, started_model,
+        "the effort-only resume drifted off the session model"
+    );
+}
