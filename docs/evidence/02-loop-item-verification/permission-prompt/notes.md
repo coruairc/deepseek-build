@@ -4,6 +4,8 @@ The cast is the pty step recorded in this item (`perm-01: three outcomes and the
 
 ## Re-run
 
+To re-run the recorded steps:
+
 ```sh
 export CARGO_TARGET_DIR="$PWD/target"
 mkdir -p /tmp/opencode/02-04
@@ -25,7 +27,7 @@ Use an absolute `GROK_PTY_CAST_DIR`. A relative one is resolved from the pty-har
 
 ## What fired the gate
 
-Pty: `[ui] permission_mode = "ask"` and `remember_tool_approvals = true`, with `.claude/settings.json` `{"permissions":{}}`. A blanket `Bash(*)` ask is `policy_forced_prompt` and skips the session-grant short-circuit (`ASK_FLOOR_REMEMBER` drops exact grants), so the identical `rm -rf cache` call prompted again. Ask mode alone made the first call prompt, and the saved exact grant suppressed the repeat. Commands are single argv sequences (`rm -rf build`, `rm -rf cache`, `bash -c 'printf %s PERM01_REJECT'`); a chained `&&` hides the Always allow row. Row numbers were parsed from the screen, not hard-coded.
+Pty: `[ui] permission_mode = "ask"` and `remember_tool_approvals = true`, with `.claude/settings.json` `{"permissions":{}}`. A blanket `Bash(*)` ask is `policy_forced_prompt` and skips the session-grant short-circuit (`ASK_FLOOR_REMEMBER` drops exact grants), so the identical `rm -rf cache` call prompted again. Ask mode alone made the first call prompt, and the saved exact grant suppressed the repeat. Commands are single argv sequences (`rm -rf build`, `rm -rf cache`, `bash -c 'echo hi'`); a chained `&&` hides the Always allow row. Row numbers were parsed from the screen, not hard-coded.
 
 Headless denial: one `TestSandbox`, `.claude/settings.json` `{"permissions":{"ask":["Bash(*)"]}}`, and `--trust`. That combination made both the plain and JSON invocations exit 1.
 

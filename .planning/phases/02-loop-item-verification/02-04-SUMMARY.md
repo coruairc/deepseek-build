@@ -92,7 +92,7 @@ The permission prompt now paints the shell's high-signal warning as its own row,
 - `security_warning_line` (`permissions.rs:195`) keeps only a first line that starts with `⚠ Security warning: `. `enqueue_permission` stores that string on `PermissionViewState.warning` (`permission_view.rs:171`) before `build_permission_display` rebuilds the execute title.
 - The view paints the warning in `theme.warning` at normal weight above the bold question, and `permission_chrome_height` grows by exactly one when it is present.
 - `PERMISSION_DENIAL_FLAGS` (`headless.rs:478`) composes both denial strings. Hint: `Turn ended: a permission-gated tool was cancelled because headless mode cannot prompt for approval. Re-run with --always-approve, or choose a non-interactive permission mode such as --permission-mode auto.` Error: `Error: permission-gated tool cancelled; re-run with --always-approve, or choose a non-interactive permission mode such as --permission-mode auto.`
-- Pty scenario `permission_prompt_outcomes_and_warning` drove allow-once (`rm -rf build`), always-allow plus a no-reprompt repeat (`rm -rf cache`), and reject (`bash -c 'printf %s PERM01_REJECT'`) on one session. Labels asserted: `Yes, proceed`, `Always allow:`, `No, reject (type to add feedback)`, and `Security warning:`.
+- Pty scenario `permission_prompt_outcomes_and_warning` drove allow-once (`rm -rf build`), always-allow plus a no-reprompt repeat (`rm -rf cache`), and reject (`bash -c 'echo hi'`) on one session. Labels asserted: `Yes, proceed`, `Always allow:`, `No, reject (type to add feedback)`, and `Security warning:`.
 - Evidence item `permission-prompt` is finished (`result: ok`, requirements PERM-01 and PERM-02).
 
 ## Task Commits
