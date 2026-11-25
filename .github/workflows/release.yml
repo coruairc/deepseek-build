@@ -82,6 +82,16 @@ jobs:
                 exit 1
                 ;;
             esac
+            # Strict semver gate: a non-semver tag (v0.1, v1, v0.1.0.0) must die
+            # here, before any build or registry push, because
+            # `type=ref,event=tag` would otherwise emit e.g. :v0.1 and move
+            # :latest. Build metadata is rejected too — the pinned
+            # metadata-action sanitizes `+` to `-`, so `v0.1.0+build.5` would
+            # compare mismatched names after `publish` created a release.
+            if ! printf '%s' "$version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+              echo "::error::release tag '${GITHUB_REF_NAME}' is not a semver tag (expected vX.Y.Z or vX.Y.Z-<pre>)"
+              exit 1
+            fi
           else
             version="0.0.0-${GITHUB_SHA:0:7}"
           fi
@@ -526,6 +536,20 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=ref,event=tag
+
+      # The metadata-action tag list is what both push steps below publish —
+      # including `:latest` for a stable tag — so it is guarded BEFORE the first
+      # push; a guard after them would be too late. The step prints the resolved
+      # names (the release evidence quotes them) and fails loudly on an empty
+      # list, a prerelease `latest`, a missing stable alias, or a name outside
+      # the allowed set.
+      - name: Guard the resolved image tag list
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/deepseek-build
+          TAGS: ${{ steps.meta.outputs.tags }}
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          IS_PRERELEASE: ${{ needs.version.outputs.is_prerelease }}
+        run: scripts/guard-image-tags.sh
 
       # Build each arch natively (no QEMU) and push by digest, then assemble the
       # multi-arch manifest. `file: Dockerfile` is the copy staged per context.

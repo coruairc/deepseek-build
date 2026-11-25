@@ -1,6 +1,9 @@
 # scripts
 
 - `check-egress.sh` — HARD/SOFT network-egress grep gate.
+- `check-release-workflow.py` — static assertions over `.github/workflows/release.yml`: job graph, `needs:`, matrix legs, artifact names, tag-guard placement, SHA pins.
+- `guard-image-tags.sh` — pre-push guard for the `docker/metadata-action` tag list (`:latest` only on a stable release; prints the resolved names).
+- `test-guard-image-tags.sh` — fixture suite for `guard-image-tags.sh` (stable, prerelease 2-name and 4-name, and every rejection).
 - `test-gate.sh` — the phase test gate: workspace + `config-docs` runs, completeness checked against the build graph and a checked-in count.
 - `evidence.py` — record a `docs/evidence/` item: steps, artifacts, normalized `report.json`, `script(1)` → asciinema v2 cast.
 - `sandbox-run.sh` — run the binary with only the provider (IPv4 and IPv6) + loopback reachable.

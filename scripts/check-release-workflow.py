@@ -398,6 +398,78 @@ def a13_sha_pins(doc: Workflow) -> list[str]:
     return problems
 
 
+def a14_container_guard(doc: Workflow) -> list[str]:
+    container = jobs_of(doc).get("container")
+    if not isinstance(container, dict):
+        return ["job 'container' is missing"]
+    problems: list[str] = []
+    steps = steps_of(container)
+    metadata = [
+        i for i, s in enumerate(steps) if uses_of(s).startswith("docker/metadata-action@")
+    ]
+    pushes = [
+        i
+        for i, s in enumerate(steps)
+        if uses_of(s).startswith("docker/build-push-action@")
+    ]
+    guards = [
+        i for i, s in enumerate(steps) if run_of(s).strip() == "scripts/guard-image-tags.sh"
+    ]
+    if len(metadata) != 1:
+        problems.append(
+            f"container has {len(metadata)} metadata-action step(s), expected exactly 1"
+        )
+    if len(pushes) != 2:
+        problems.append(
+            f"container has {len(pushes)} build-push-action step(s), expected exactly 2"
+        )
+    if len(guards) != 1:
+        problems.append(
+            f"container has {len(guards)} step(s) running scripts/guard-image-tags.sh, "
+            "expected exactly 1"
+        )
+    if problems:
+        return problems
+    guard = guards[0]
+    if not metadata[0] < guard:
+        problems.append("the tag guard runs before the metadata step")
+    if not guard < min(pushes):
+        problems.append(
+            "the tag guard runs after a build-push step (too late: :latest moves there)"
+        )
+    name = str(steps[guard].get("name") or "").strip()
+    if name != "Guard the resolved image tag list":
+        problems.append(
+            f"guarded step name is {name!r}, expected 'Guard the resolved image tag list'"
+        )
+    env = env_of(steps[guard])
+    for key in ("IMAGE", "TAGS", "RELEASE_VERSION", "IS_PRERELEASE"):
+        if not str(env.get(key) or "").strip():
+            problems.append(f"the tag guard's env is missing {key}")
+    return problems
+
+
+def a15_semver_gate(doc: Workflow) -> list[str]:
+    version = jobs_of(doc).get("version")
+    if not isinstance(version, dict):
+        return ["job 'version' is missing"]
+    derive = [s for s in steps_of(version) if s.get("id") == "derive"]
+    if len(derive) != 1:
+        return [f"version has {len(derive)} step(s) with id 'derive', expected 1"]
+    body = run_of(derive[0])
+    problems: list[str] = []
+    if SEMVER_RE_TEXT not in body:
+        problems.append(
+            "the derive step no longer contains the strict semver gate regex "
+            f"{SEMVER_RE_TEXT!r}"
+        )
+    if "::error::release tag" not in body:
+        problems.append(
+            "the derive step does not emit a named ::error:: for a non-semver tag"
+        )
+    return problems
+
+
 ASSERTIONS: list[Assertion] = [
     ("A1", "jobs are exactly version/build-linux/build-macos/publish/container", a1_job_set),
     (
@@ -444,6 +516,12 @@ ASSERTIONS: list[Assertion] = [
     ),
     ("A12", "no run body invokes strip or dsymutil", a12_no_strip_commands),
     ("A13", "every uses: value is pinned to a 40-hex SHA", a13_sha_pins),
+    (
+        "A14",
+        "the tag-list guard sits between metadata-action and both pushes",
+        a14_container_guard,
+    ),
+    ("A15", "the version job's derive step carries the strict semver gate", a15_semver_gate),
 ]
 
 
