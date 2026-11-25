@@ -103,6 +103,11 @@ coverage:
         ref: "git diff --exit-code -- install.sh (empty); manual loopback probe: `==> Downloading deepseek-build-0.1-x86_64-unknown-linux-gnu.tar.gz` then `curl: (22) The requested URL returned error: 404`, rc=22"
         status: pass
     human_judgment: false
+
+# Metrics
+duration: 14min
+completed: 2026-11-25
+status: complete
 ---
 
 # Phase 3 Plan 04: `v0.1.0` tag-shape verification Summary
