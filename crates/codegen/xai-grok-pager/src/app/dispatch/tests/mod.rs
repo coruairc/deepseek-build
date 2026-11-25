@@ -973,6 +973,7 @@ fn enqueue_permission_with_enable_always_approve(
         args_expanded: false,
         desc_scroll: 0,
         subagent_label: None,
+        warning: None,
         options_area_height: 0,
         options_scroll_offset: 0,
     });
@@ -1072,6 +1073,7 @@ fn push_synthetic_permission(
         args_expanded: false,
         desc_scroll: 0,
         subagent_label: None,
+        warning: None,
         options_area_height: 0,
         options_scroll_offset: 0,
     };

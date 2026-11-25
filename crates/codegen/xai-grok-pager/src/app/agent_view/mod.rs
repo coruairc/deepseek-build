@@ -2031,6 +2031,7 @@ pub(crate) mod test_fixtures {
             args_expanded: false,
             desc_scroll: 0,
             subagent_label: None,
+            warning: None,
             options_area_height: 0,
             options_scroll_offset: 0,
         }

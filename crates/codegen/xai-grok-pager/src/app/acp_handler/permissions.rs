@@ -109,6 +109,10 @@ fn enqueue_permission(
         });
 
     let subagent_label = resolve_subagent_label(agent, &perm.request.session_id);
+    // The shell owns the copy: it prepends `⚠ Security warning: …` as the first
+    // line of the wire title. Read that line before display rebuilds the title
+    // for execute prompts (which would otherwise drop the warning).
+    let warning = security_warning_line(perm.request.tool_call.fields.title.as_deref());
 
     let (title, description, bash_command_raw) = build_permission_display(
         &perm.request,
@@ -158,6 +162,7 @@ fn enqueue_permission(
         args_expanded: false,
         desc_scroll: 0,
         subagent_label,
+        warning,
         options_area_height: 0,
         options_scroll_offset: 0,
     });
@@ -181,6 +186,21 @@ fn resolve_subagent_label(agent: &AgentView, session_id: &acp::SessionId) -> Opt
         ));
     }
     Some("Child session (untracked):".to_string())
+}
+
+const SECURITY_WARNING_PREFIX: &str = "⚠ Security warning: ";
+
+/// First line of the wire title when the shell prepended a high-signal warning.
+/// Later lines are ignored so a buried prefix cannot invent a warning row.
+pub(super) fn security_warning_line(title: Option<&str>) -> Option<String> {
+    let title = title?;
+    let first = title
+        .split_once('\n')
+        .map(|(line, _)| line)
+        .unwrap_or(title);
+    first
+        .strip_prefix(SECURITY_WARNING_PREFIX)
+        .map(|_| first.to_owned())
 }
 
 pub(super) fn build_permission_display(

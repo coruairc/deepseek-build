@@ -67,6 +67,7 @@ use mcp::{
 #[cfg(test)]
 use permissions::{
     MCP_ARGS_MAX_LINE_CHARS, MCP_ARGS_MAX_LINES, build_permission_display, mcp_args_lines,
+    security_warning_line,
 };
 use permissions::{
     apply_recap_block, handle_permission_request, should_drop_duplicate_auto_recap,

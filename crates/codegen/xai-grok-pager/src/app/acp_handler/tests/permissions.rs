@@ -163,6 +163,28 @@
     }
 
     #[test]
+    fn security_warning_line_keeps_only_the_prefixed_first_line() {
+        let wired = "⚠ Security warning: a destructive or high-impact command\nRun rm -rf build";
+        assert_eq!(
+            security_warning_line(Some(wired)).as_deref(),
+            Some("⚠ Security warning: a destructive or high-impact command")
+        );
+        assert_eq!(
+            security_warning_line(Some("Run rm -rf build")).as_deref(),
+            None
+        );
+        assert_eq!(security_warning_line(Some("")).as_deref(), None);
+        assert_eq!(security_warning_line(None).as_deref(), None);
+        let buried =
+            "Run rm -rf build\n⚠ Security warning: a destructive or high-impact command";
+        assert_eq!(
+            security_warning_line(Some(buried)).as_deref(),
+            None,
+            "a prefix that is not the first line must not invent a warning row"
+        );
+    }
+
+    #[test]
     fn recap_fills_uncommitted_spinner_in_place() {
         let mut agent = make_agent(Some("s1"));
         let spinner = agent

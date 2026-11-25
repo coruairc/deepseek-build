@@ -166,6 +166,10 @@ pub struct PermissionViewState {
 
     pub subagent_label: Option<String>,
 
+    /// High-signal shell warning, extracted from the wire title's first line.
+    /// `None` when the shell did not prepend one.
+    pub warning: Option<String>,
+
     pub options_area_height: usize,
 
     pub options_scroll_offset: usize,
@@ -311,6 +315,9 @@ fn permission_chrome_height(state: &PermissionViewState, content_w: usize) -> u1
         .min(u16::MAX as usize) as u16;
     let mut h: u16 = 1;
     if state.subagent_label.is_some() {
+        h += 1;
+    }
+    if state.warning.is_some() {
         h += 1;
     }
     h += 1;
@@ -465,6 +472,21 @@ pub fn render_permission_view(
                 content_x,
                 y,
                 &Line::from(Span::styled(label.clone(), prov_style)),
+                content_width,
+            );
+        }
+        y += 1;
+    }
+
+    if let Some(ref warning) = state.warning {
+        if y < area_bottom {
+            buf.set_line(
+                content_x,
+                y,
+                &Line::from(Span::styled(
+                    warning.clone(),
+                    Style::default().fg(theme.warning),
+                )),
                 content_width,
             );
         }
@@ -1720,6 +1742,7 @@ mod tests {
             args_expanded: false,
             desc_scroll: 0,
             subagent_label: Some("subagent: worker".to_string()),
+            warning: None,
             options_area_height: 0,
             options_scroll_offset: 0,
         }
@@ -1836,6 +1859,7 @@ mod tests {
             args_expanded: false,
             desc_scroll: 0,
             subagent_label: None,
+            warning: None,
             options_area_height: 0,
             options_scroll_offset: 0,
         }
@@ -1978,6 +2002,42 @@ mod tests {
         assert_eq!(permission_chrome_height(&state, 80), base + 3);
         state.description = vec!["x".repeat(100)];
         assert_eq!(permission_chrome_height(&state, 80), base + 2);
+    }
+
+    #[test]
+    fn security_warning_paints_above_the_question_and_grows_chrome_by_one() {
+        // Same two-line wire title `with_security_warning` produces. The view
+        // paints the extracted first line; it does not re-derive the finding.
+        let wired = "⚠ Security warning: a destructive or high-impact command\nRun rm -rf build";
+        let (first, _) = wired.split_once('\n').expect("warning and title");
+        assert!(
+            first.starts_with("⚠ Security warning: "),
+            "fixture must match the shell prefix"
+        );
+        let mut with_warning = permission_state_with_title("clean the build dir", 1);
+        with_warning.warning = Some(first.to_owned());
+        let without = permission_state_with_title("clean the build dir", 1);
+        assert_eq!(
+            permission_chrome_height(&with_warning, 80),
+            permission_chrome_height(&without, 80) + 1
+        );
+        let text = render_to_text(&with_warning, Rect::new(0, 0, 100, 16));
+        assert!(
+            text.contains("Security warning: a destructive or high-impact command"),
+            "warning row missing:\n{text}"
+        );
+        let warning_line = text
+            .lines()
+            .position(|line| line.contains("Security warning:"))
+            .expect("warning row");
+        let question_line = text
+            .lines()
+            .position(|line| line.contains("clean the build dir"))
+            .expect("question row");
+        assert!(
+            warning_line < question_line,
+            "warning must paint above the question:\n{text}"
+        );
     }
 
     #[test]

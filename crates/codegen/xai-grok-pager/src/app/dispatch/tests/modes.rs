@@ -761,6 +761,7 @@ fn set_yolo_mode_on_with_no_allow_once_option_sends_cancelled() {
         args_expanded: false,
         desc_scroll: 0,
         subagent_label: None,
+        warning: None,
         options_area_height: 0,
         options_scroll_offset: 0,
     });
@@ -842,6 +843,7 @@ fn set_yolo_mode_on_drains_multi_item_queue() {
             args_expanded: false,
             desc_scroll: 0,
             subagent_label: None,
+            warning: None,
             options_area_height: 0,
             options_scroll_offset: 0,
         });
@@ -919,6 +921,7 @@ fn set_yolo_mode_on_duplicate_dispatch_still_drains_queue() {
             args_expanded: false,
             desc_scroll: 0,
             subagent_label: None,
+            warning: None,
             options_area_height: 0,
             options_scroll_offset: 0,
         });
@@ -1908,6 +1911,7 @@ fn dispatch_cycle_mode_plan_to_always_approve_drains_queue_via_inner() {
             args_expanded: false,
             desc_scroll: 0,
             subagent_label: None,
+            warning: None,
             options_area_height: 0,
             options_scroll_offset: 0,
         });
