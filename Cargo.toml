@@ -383,15 +383,21 @@ strip = "symbols"
 #
 # Hardening: thin LTO for cross-crate optimization with reasonable link times,
 # codegen-units=1 maximizes optimization (whole-program analysis, no CGU boundaries).
-# debug=1 emits line-tables DWARF; strip=false keeps symbols so CI can extract
-# .debug sidecars (Linux) or .dSYM bundles (macOS) before stripping post-build.
+# No debug info ships: `debug = false` emits no DWARF, and `strip = "debuginfo"`
+# strips whatever the dependency graph still produces *during linking* while
+# keeping the symbol table, so the crash handler's backtraces still name frames.
+# No `.debug` sidecar and no `.dSYM` bundle exist: `split-debuginfo = "off"`
+# keeps dsymutil from running and there is no sidecar-extraction step at all
+# (REL-V2-02 is deferred). The strip is rustc's link-time `-C strip=debuginfo`;
+# never add an external strip after signing — it rewrites the binary, invalidates
+# the signature, and on arm64 the kernel then refuses to exec the result.
 # Linker flags (RELRO, NX stack) are set per-target in .cargo/config.toml.
 [profile.release-dist]
 inherits = "release"
 lto = "thin"
 codegen-units = 1
-strip = false
-debug = 1
+strip = "debuginfo"
+debug = false
 split-debuginfo = "off"
 
 # Production profile for latency-sensitive x-product services (VF, home-mixer).
