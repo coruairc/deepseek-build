@@ -73,7 +73,7 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 - [ ] **REL-04**: The GHCR image is built, published, and pulled from a throwaway pre-release tag
 - [ ] **REL-05**: The container image runs a real headless tool-executing turn with the documented run flags that keep the sandbox on, and the README states the image is headless-only with the mounts it needs
 - [ ] **REL-06**: `install.sh` is proven against a real pre-release tag, and the unpinned `latest` path's actual behaviour is established rather than assumed from the fake-tree harness
-- [ ] **REL-07**: `release-dist` ships no DWARF (`strip`/`debug` resolved, no `.debug`/`.dSYM` sidecar assumption), with the macOS signature risk verified
+- [x] **REL-07**: `release-dist` ships no DWARF (`strip`/`debug` resolved, no `.debug`/`.dSYM` sidecar assumption), with the macOS signature risk verified
 - [x] **REL-08**: The `docker/metadata-action` tag list is guarded so an empty list fails loudly instead of producing a silent no-op manifest
 
 ### Packaging And Versioning
@@ -192,7 +192,7 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | REL-01 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | REL-02 | Phase 3 — Pipeline Decoupling & Version | Pending |
 | REL-03 | Phase 3 — Pipeline Decoupling & Version | Pending |
-| REL-07 | Phase 3 — Pipeline Decoupling & Version | Pending |
+| REL-07 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | REL-08 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-01 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-02 | Phase 3 — Pipeline Decoupling & Version | Complete |

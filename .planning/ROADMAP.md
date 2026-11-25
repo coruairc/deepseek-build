@@ -94,12 +94,12 @@ Plans:
   3. The macOS binary passes `--version` when extracted from the final tarball with its signature intact after any strip or debug-profile change, and `release-dist` ships no DWARF with no `.debug`/`.dSYM` sidecar assumed.
   4. Manifests report `0.1.0` through `[workspace.package] version` with the four remaining crates inheriting it and `Cargo.lock` regenerated; both the CI `GROK_VERSION` stamp and a source build's `CARGO_PKG_VERSION` print `0.1.0`.
   5. `release.yml` is verified against the `v0.1.0` tag shape — trigger, version parse, prerelease classification, `install.sh` validation — with no `deepseek-*` trigger added.
-**Plans**: 2/4 plans complete
+**Plans**: 3/4 plans complete
 
 Plans:
 - [x] 03-01: Split `build-linux`/`build-macos`; `publish` needs both, `container` needs linux only; strict semver gate in `version`; tag-list guard before the first push
 - [x] 03-02: `[workspace.package] version = "0.1.0"`, four inheriting crates, `Cargo.lock` regenerated, both version paths asserted
-- [ ] 03-03: `release-dist` ships no DWARF (`debug = false`, link-time strip), explicit ad-hoc sign, extracted-tarball `--version` and `codesign --verify`, macOS budget
+- [x] 03-03: `release-dist` ships no DWARF (`debug = false`, link-time strip), explicit ad-hoc sign, extracted-tarball `--version` and `codesign --verify`, macOS budget
 - [ ] 03-04: `v0.1.0` tag-shape verification — trigger, version parse, prerelease classification, `install.sh` validation
 
 ### Phase 4: Distribution Proof
@@ -184,7 +184,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Truth Baseline | 6/6 | Complete    | 2026-11-23 |
 | 2. Loop-Item Verification | 6/6 | Complete | 2026-11-25 |
-| 3. Pipeline Decoupling & Version | 0/4 | Not started | - |
+| 3. Pipeline Decoupling & Version | 3/4 | In Progress | - |
 | 4. Distribution Proof | 0/3 | Not started | - |
 | 5. Windows Support | 0/5 | Not started | - |
 | 6. Documentation Truth & Freeze | 0/5 | Not started | - |
