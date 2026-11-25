@@ -71,14 +71,14 @@ Plans:
   3. `scripts/key-leak-check.sh` is green over the tree and over the committed artifacts, no key material appears in logs, saved sessions or evidence files, and the throwaway key is revoked after the run.
   4. The interactive permission prompt offers allow-once, allow-for-session and reject with the security warning on high-signal findings; headless denial fails closed with an actionable hint naming `--always-approve` and `--permission-mode auto` on both the stderr and JSON error paths; permission mode is visible and matches after resume; `--permission-mode plan` is verified to arm plan mode headless, with `KNOWN-ISSUES.md` corrected rather than the code changed.
   5. Resume restores the session's model, reasoning effort and plan state; plan mode is read-only except the plan file in every permission mode including `always-approve` and `auto`; a drafted plan survives quit and resume as committed evidence; and the provenance of each resumed setting (session versus config) is documented.
-**Plans**: 3/6 plans executed
+**Plans**: 4/6 plans executed
 
 Plans:
 - [x] 02-01: Live smoke on a real model-driven session with a throwaway key; transcript committed as evidence
 - [x] 02-02: Runtime egress measurement on that session — provider, `web_fetch` host, AF_UNIX only; measurement committed
 - [ ] 02-03: Key-leak scan over tree and artifacts, no key material in logs/sessions/evidence, key revoked
 - [x] 02-04: Permission prompt — the high-signal warning row, the three outcomes on a real screen, and one denial sentence naming both flags on both headless paths
-- [ ] 02-05: Resume fidelity — model, effort and plan state restored, a drafted plan surviving quit and resume, provenance documented
+- [x] 02-05: Resume fidelity — model, effort and plan state restored, a drafted plan surviving quit and resume, provenance documented
 - [ ] 02-06: Permission mode across resume, headless plan arming, and plan mode read-only in every permission mode
 **UI hint**: yes
 

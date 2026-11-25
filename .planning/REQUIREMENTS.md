@@ -60,10 +60,10 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 ### Sessions And Plan Mode
 
-- [ ] **SESS-01**: Resume restores the session's model, reasoning effort, and plan state
+- [x] **SESS-01**: Resume restores the session's model, reasoning effort, and plan state
 - [ ] **SESS-02**: Plan mode is read-only except the plan file in every permission mode, including `always-approve` and `auto`
-- [ ] **SESS-03**: A drafted plan survives quit and resume, promoted from the existing pty scenario into committed evidence
-- [ ] **SESS-04**: The provenance of each resumed setting is documented — what comes from the session versus from config
+- [x] **SESS-03**: A drafted plan survives quit and resume, promoted from the existing pty scenario into committed evidence
+- [x] **SESS-04**: The provenance of each resumed setting is documented — what comes from the session versus from config
 
 ### Release Pipeline
 
@@ -172,10 +172,10 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | PERM-02 | Phase 2 — Loop-Item Verification | Complete |
 | PERM-03 | Phase 2 — Loop-Item Verification | Pending |
 | PERM-04 | Phase 2 — Loop-Item Verification | Pending |
-| SESS-01 | Phase 2 — Loop-Item Verification | Pending |
+| SESS-01 | Phase 2 — Loop-Item Verification | Complete |
 | SESS-02 | Phase 2 — Loop-Item Verification | Pending |
-| SESS-03 | Phase 2 — Loop-Item Verification | Pending |
-| SESS-04 | Phase 2 — Loop-Item Verification | Pending |
+| SESS-03 | Phase 2 — Loop-Item Verification | Complete |
+| SESS-04 | Phase 2 — Loop-Item Verification | Complete |
 | REL-01 | Phase 3 — Pipeline Decoupling & Version | Pending |
 | REL-02 | Phase 3 — Pipeline Decoupling & Version | Pending |
 | REL-03 | Phase 3 — Pipeline Decoupling & Version | Pending |
