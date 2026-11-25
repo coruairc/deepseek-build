@@ -1,0 +1,46 @@
+{
+  "item": "permission-prompt",
+  "requirements": [
+    "PERM-01",
+    "PERM-02"
+  ],
+  "date": "2026-11-25T21:17:22Z",
+  "host": "Linux/x86_64",
+  "command": "pty: permission_prompt_outcomes_and_warning; headless: headless_permission_denial_names_both_flags",
+  "steps": [
+    {
+      "name": "perm-01: three outcomes and the warning row on a real screen",
+      "ok": true,
+      "detail": "exit 0: test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 6.64s"
+    },
+    {
+      "name": "perm-02: both denial paths name both flags",
+      "ok": true,
+      "detail": "exit 0: test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.05s"
+    },
+    {
+      "name": "perm-02: auto-mode probe line recorded",
+      "ok": true,
+      "detail": "exit 0: auto-mode probe: terminated=true json_parsed=true denial_hint=true tool_ran=false exit=Some(1)"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/02-loop-item-verification/permission-prompt/permission-prompt.cast",
+      "sha256": "00e30d48518d5ccee44c17f11aaeebd623c160a700c5fd53cce71e8cfaa1a1fa"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/permission-prompt/perm-01-three-outcomes-and-the-warning-row-on-a-real-screen.log",
+      "sha256": "73147e2e386c3a47c6ea1ad8f7929edd730d5aeba65dd32e9df0768c6074f0c1"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/permission-prompt/perm-02-both-denial-paths-name-both-flags.log",
+      "sha256": "40992b73e0f5d955dbc7522cd12f489325f08e162caaef687e8dd6af685e060a"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/permission-prompt/perm-02-auto-mode-probe-line-recorded.log",
+      "sha256": "ee975175c4b02cc034e5fccc016841d8592f652bb9fe04f387bdd14b153faa5a"
+    }
+  ],
+  "result": "ok"
+}
