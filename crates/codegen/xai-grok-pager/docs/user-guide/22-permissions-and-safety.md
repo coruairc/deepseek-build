@@ -61,6 +61,8 @@ permission_mode = "always-approve"   # or "auto", "ask", …
 
 Claude-compatible `defaultMode` in `.claude/settings.json` is also supported (see [Claude-compatible settings](#3-claude-code-compatibility-claudesettingsjson)). CLI overrides config for that process.
 
+Each launch resolves the permission mode again from the CLI flag, then `[ui] permission_mode`, then the built-in default; resuming a session does not carry a mode over from it. What does come from the session is the [plan state and the plan file](19-plan-mode.md), which survive a restart, plus the model and reasoning effort the session last ran with — pass `-m` or `--effort` on resume to override either for that process.
+
 ### Always-approve
 
 Skips ordinary permission prompts so tools run without waiting for a click. `deny` rules, hooks, and some shell `ask` rules still apply. Admins can lock the mode off (below).

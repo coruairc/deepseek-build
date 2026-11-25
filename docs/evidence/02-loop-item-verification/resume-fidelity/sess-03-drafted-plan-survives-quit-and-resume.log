@@ -1,0 +1,9 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.74s
+     Running tests/plan_approval_resume.rs (target/debug/deps/plan_approval_resume-7805ee09cb5cc160)
+
+running 1 test
+SESS-03: model deepseek-flash before and after the quit (summary and request body); plan body shown after resume
+wrote cast: <REPO>/docs/evidence/02-loop-item-verification/resume-fidelity/resume-fidelity.cast
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.87s
+

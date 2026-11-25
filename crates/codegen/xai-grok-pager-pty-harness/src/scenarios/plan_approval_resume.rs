@@ -75,6 +75,11 @@ pub async fn assert_plan_approval_restored_after_resume() -> Result<()> {
     first.inject_keys(b"\x11").context("ctrl-q confirm")?;
     first.quit().context("reap first pager")?;
 
+    // The shell has flushed the session record; capture the model it will have to restore.
+    let model_before_resume = session_model_id(content.home()).context("model before resume")?;
+    let setup_turn_model =
+        last_request_model(&content).context("model of the setup turn's request")?;
+
     let seeded = seed_parked_approval(content.home()).context("seed parked approval")?;
     assert!(seeded > 0, "no session dir seeded");
 
@@ -93,23 +98,23 @@ pub async fn assert_plan_approval_restored_after_resume() -> Result<()> {
     // Without the shell re-park this times out.
     resumed
         .wait_for_text("request changes", WELCOME_TIMEOUT)
-        .context("restored approval 'request changes' after --continue")?;
+        .context("SESS-03: restored approval 'request changes' after --continue")?;
     resumed
         .wait_for_text("quit plan", Duration::from_secs(5))
-        .context("restored approval 'quit plan' after resume")?;
+        .context("SESS-03: restored approval 'quit plan' after resume")?;
     let screen = resumed.screen_contents();
     if !screen.contains("approve") {
-        bail!("expected approval primary action after resume\n{screen}");
+        bail!("SESS-03: expected approval primary action after resume\n{screen}");
     }
     // History was seeded before quit; plan body from disk is a stronger signal that the session was restored when chrome already covers the transcript
     if !screen.contains("GBT3703Repro")
         && !screen.contains(SETUP_SENTINEL)
         && !screen.contains("Seed plan file on disk")
     {
-        bail!("expected resumed session content (plan body or setup sentinel)\n{screen}");
+        bail!("SESS-03: expected resumed session content (plan body or setup sentinel)\n{screen}");
     }
     if resumed.contains_text("panicked") {
-        bail!("pager panicked\n{screen}");
+        bail!("SESS-03: pager panicked\n{screen}");
     }
 
     // Approve: the shell leaves plan mode and injects the implement turn.
@@ -121,8 +126,99 @@ pub async fn assert_plan_approval_restored_after_resume() -> Result<()> {
         .await
         .context("implement turn expectation timeout")?;
 
+    // The model after the quit: the session record must still name it, and the resumed process must send it.
+    // The prompt info row renders `unknown` in this mock (no model catalog), so it cannot distinguish models;
+    // the shell's `summary.json` and the resumed request body are the observables this scenario relies on.
+    let model_after_resume = session_model_id(content.home()).context("model after resume")?;
+    let resumed_turn_model =
+        last_request_model(&content).context("model of the resumed turn's request")?;
+    if model_after_resume != model_before_resume {
+        bail!(
+            "SESS-03: the resumed session record carries model '{model_after_resume}', not \
+             '{model_before_resume}'"
+        );
+    }
+    if resumed_turn_model != setup_turn_model {
+        bail!(
+            "SESS-03: the resumed turn asked for model '{resumed_turn_model}', not \
+             '{setup_turn_model}'"
+        );
+    }
+    eprintln!(
+        "SESS-03: model {setup_turn_model} before and after the quit (summary and request body); \
+         plan body shown after resume"
+    );
+
+    write_cast_if_requested(&resumed, "resume-fidelity.cast");
     resumed.quit().context("quit resumed pager")?;
     Ok(())
+}
+
+/// Dump the resumed pager's asciinema cast into `$GROK_PTY_CAST_DIR/resume-fidelity.cast` when set.
+/// Same opt-in and non-fatal contract as `write_cast_if_requested` in the pty_e2e tests, implemented
+/// here because this scenario lives in `src/`, not in that test module.
+fn write_cast_if_requested(harness: &PtyHarness, file_name: &str) {
+    let Ok(dir) = std::env::var("GROK_PTY_CAST_DIR") else {
+        return;
+    };
+    if dir.is_empty() {
+        return;
+    }
+    let path = std::path::PathBuf::from(dir).join(file_name);
+    match harness.write_cast(&path) {
+        Ok(()) => eprintln!("wrote cast: {}", path.display()),
+        Err(e) => eprintln!("failed to write cast {}: {e}", path.display()),
+    }
+}
+
+/// The model id recorded in the shell's session summary (`summary.json`), the value `restore_persisted_model` reads.
+fn session_model_id(home: &Path) -> Result<String> {
+    let sessions_root = home.join(".grok").join("sessions");
+    let mut model = None;
+    for cwd_ent in std::fs::read_dir(&sessions_root).context("read sessions root")? {
+        let cwd_ent = cwd_ent.context("cwd entry")?;
+        if !cwd_ent.file_type().context("ft")?.is_dir() {
+            continue;
+        }
+        for sess_ent in std::fs::read_dir(cwd_ent.path()).context("read cwd sessions")? {
+            let sess_ent = sess_ent.context("session entry")?;
+            if !sess_ent.file_type().context("ft")?.is_dir() {
+                continue;
+            }
+            let summary = sess_ent.path().join("summary.json");
+            let Ok(raw) = std::fs::read_to_string(&summary) else {
+                continue;
+            };
+            let Ok(value) = serde_json::from_str::<serde_json::Value>(&raw) else {
+                continue;
+            };
+            if let Some(id) = value
+                .get("current_model_id")
+                .and_then(serde_json::Value::as_str)
+            {
+                model = Some(id.to_owned());
+            }
+        }
+    }
+    model.context("no session summary carried current_model_id")
+}
+
+/// The model the pager last asked the provider for, from the foreground chat/completions bodies.
+/// Auxiliary traffic (titles, summaries) takes no conversation and is skipped.
+fn last_request_model(content: &ContentController) -> Result<String> {
+    content
+        .server()
+        .requests()
+        .into_iter()
+        .filter(|entry| entry.conversation.is_some() && entry.path.contains("/chat/completions"))
+        .filter_map(|entry| entry.body)
+        .filter_map(|body| {
+            body.get("model")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+        })
+        .next_back()
+        .context("no chat/completions request body carried a model")
 }
 
 /// For every session dir under the sandbox home, write `plan.md` and flip `awaiting_plan_approval` to `true` in `plan_mode.json`.

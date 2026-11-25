@@ -1,0 +1,38 @@
+{
+  "item": "resume-fidelity",
+  "requirements": [
+    "SESS-01",
+    "SESS-03",
+    "SESS-04"
+  ],
+  "date": "2026-11-25T21:53:17Z",
+  "host": "Linux/x86_64",
+  "command": "headless: headless_resume_restores_model_effort_and_plan_state; pty: plan_approval_resume with cast capture",
+  "steps": [
+    {
+      "name": "sess-01: resumed model, effort and plan state",
+      "ok": true,
+      "detail": "exit 0: test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 1.08s"
+    },
+    {
+      "name": "sess-03: drafted plan survives quit and resume",
+      "ok": true,
+      "detail": "exit 0: test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.87s"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/02-loop-item-verification/resume-fidelity/resume-fidelity.cast",
+      "sha256": "c0ac2e51808313040f8826caec1baa5d36a553c821fe56579e15aa0c70e9f1fb"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/resume-fidelity/sess-01-resumed-model-effort-and-plan-state.log",
+      "sha256": "0144e4c52981f6238e4f1a5922d2c28524c7f7b3bab79149dcef304ce8c768ed"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/resume-fidelity/sess-03-drafted-plan-survives-quit-and-resume.log",
+      "sha256": "922a01a9243e44945d8778cb21fafb468b3b70413cae88119bfacaba8f0c0c32"
+    }
+  ],
+  "result": "ok"
+}

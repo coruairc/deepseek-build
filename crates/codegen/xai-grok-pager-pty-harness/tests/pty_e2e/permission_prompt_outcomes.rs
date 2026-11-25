@@ -137,12 +137,7 @@ async fn permission_prompt_outcomes_and_warning() {
         .wait_for_text(WELCOME_SCREEN_SENTINEL, WELCOME_TIMEOUT)
         .expect("welcome");
 
-    let (once_expect, once_settled) = submit(
-        &mut harness,
-        &content,
-        "allow_once",
-        "rm -rf build",
-    );
+    let (once_expect, once_settled) = submit(&mut harness, &content, "allow_once", "rm -rf build");
     wait_for_prompt(&mut harness, "allow_once");
     let prompted = harness.screen_contents();
     assert!(
@@ -173,12 +168,8 @@ async fn permission_prompt_outcomes_and_warning() {
         .wait_for_turn_idle(Duration::from_secs(30))
         .expect("allow-once turn idle");
 
-    let (always_expect, always_settled) = submit(
-        &mut harness,
-        &content,
-        "always_allow",
-        "rm -rf cache",
-    );
+    let (always_expect, always_settled) =
+        submit(&mut harness, &content, "always_allow", "rm -rf cache");
     wait_for_prompt(&mut harness, "always_allow");
     select_labeled_row(&mut harness, ALWAYS_ALLOW);
     harness
@@ -206,12 +197,7 @@ async fn permission_prompt_outcomes_and_warning() {
     // The persistent grant must swallow the identical call. A blocking prompt
     // would keep SETTLED_repeat from ever arriving; prior prompt text can still
     // sit in scrollback, so absence of the label is not the signal.
-    let (repeat_expect, repeat_settled) = submit(
-        &mut harness,
-        &content,
-        "repeat",
-        "rm -rf cache",
-    );
+    let (repeat_expect, repeat_settled) = submit(&mut harness, &content, "repeat", "rm -rf cache");
     harness
         .wait_until(
             "repeat settles without a new decision",
@@ -234,12 +220,8 @@ async fn permission_prompt_outcomes_and_warning() {
         .wait_for_turn_idle(Duration::from_secs(30))
         .expect("repeat turn idle");
 
-    let (reject_expect, reject_settled) = submit(
-        &mut harness,
-        &content,
-        "reject",
-        "bash -c 'echo hi'",
-    );
+    let (reject_expect, reject_settled) =
+        submit(&mut harness, &content, "reject", "bash -c 'echo hi'");
     wait_for_prompt(&mut harness, "reject");
     select_labeled_row(&mut harness, REJECT);
     harness
