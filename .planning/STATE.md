@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 milestone: v0.1.0
 current_phase: 2
 current_phase_name: Loop-Item Verification
-status: blocked
-stopped_at: Phase 2 planned and checker-verified (6 plans); execution needs the build host
-last_updated: "2026-11-23T22:40:00.000Z"
-last_activity: 2026-11-23
-last_activity_desc: Phase 2 discuss + UI-SPEC + research + patterns + 6 plans; execution blocked on this host
-state_head: 470c51b1
+status: executing
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-11-25T19:58:00.000Z"
+last_activity: 2026-11-25
+last_activity_desc: 02-01 live-smoke item committed (PROOF-01)
+state_head: ec878ef0
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 12
-  completed_plans: 6
+  completed_plans: 7
   percent: 20
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-11-23)
 ## Current Position
 
 Phase: 2 — Loop-Item Verification
-Plan: 6 plans created (02-01…02-06), checker-verified: 0 blockers
-Status: Planned — execution blocked on this host (see Blockers)
-Last activity: 2026-11-23 — discuss, UI-SPEC, research, patterns, plans
+Plan: 02-01 complete; 02-02…02-06 remain (02-04 in flight on this tree)
+Status: Executing
+Last activity: 2026-11-25 — 02-01 live-smoke item committed
 
 Progress: [██░░░░░░░░] 20%
 
@@ -88,13 +88,11 @@ None yet.
 
 ### Blockers/Concerns
 
-- **Phase 2 execution needs the build host (blocking, 2026-11-23):** the host this run executed on has
-  **no Rust toolchain** (`cargo`/`rustc` absent, no `target/`), **31 GB free** on the target filesystem
-  (below the 60 GB `scripts/disk-guard.sh` default and the 150 GB project floor), **3.7 GB RAM**, **no
-  `DEEPSEEK_API_KEY`**, no `gh` CLI, no usable docker/podman, and no `script(1)`/`asciinema`/`strace`.
-  Every Phase 2 success criterion needs a compiled binary; PROOF-01/02/03 additionally need the key.
-  Nothing was fabricated: no evidence item was created and no plan was executed. Resume on the author's
-  build host with `/gsd-execute-phase 2`.
+- **Phase 2 host block — cleared on resume (2026-11-25):** the 2026-11-23 block was the remote
+  Alpine box (no toolchain, 31 GB free, no key). This resume is on the author's build host:
+  `rustc 1.94.0`, `scripts/disk-guard.sh` exit 0 (961 GB free). 02-01 has since executed.
+  The inherited key was rejected; the login-shell key probed `models_ok` and is the one to
+  rotate after Phase 2. The value was not read.
 - **Acceptance gate (human, blocking):** ACC-01 needs a 20–30 minute TUI session on a real repo clone by the author. FREEZE-01/02/03 must not run until the signed note is committed — this is the milestone's only human-blocking dependency.
 - **Snapshot tag is public:** `deepseek-v0.1-snapshot` already exists on origin at `4b305bd0`. It must be recorded as superseded in docs and left untouched; moving or deleting it is destructive.
 - **Throwaway key for Phase 2 — RESOLVED (2026-11-23):** the author chose to use the existing env
@@ -127,6 +125,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-23 (autonomous run)
-Stopped at: Phase 2 fully planned and checker-verified (6 plans, 0 blockers) at `470c51b1`; execution not started because this host has no toolchain, no key and 31 GB free. Resume with `/gsd-execute-phase 2` on the build host.
-Resume file: .planning/phases/02-loop-item-verification/02-06-PLAN.md
+Last session: 2026-11-25
+Stopped at: Completed 02-01-PLAN.md. The earlier 401 checkpoint is superseded: a login-shell probe printed models_ok, and the live-smoke item is committed at ec878ef0. 02-04 remains in flight on this tree. Do not start a second live run for 02-02; it reads the committed transcript.
+Resume file: .planning/phases/02-loop-item-verification/02-02-PLAN.md

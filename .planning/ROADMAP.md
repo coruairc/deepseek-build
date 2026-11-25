@@ -74,7 +74,7 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
-- [ ] 02-01: Live smoke on a real model-driven session with a throwaway key; transcript committed as evidence
+- [x] 02-01: Live smoke on a real model-driven session with a throwaway key; transcript committed as evidence
 - [ ] 02-02: Runtime egress measurement on that session — provider, `web_fetch` host, AF_UNIX only; measurement committed
 - [ ] 02-03: Key-leak scan over tree and artifacts, no key material in logs/sessions/evidence, key revoked
 - [ ] 02-04: Permission prompt — the high-signal warning row, the three outcomes on a real screen, and one denial sentence naming both flags on both headless paths
