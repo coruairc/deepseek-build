@@ -82,12 +82,25 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 - [ ] **PKG-02**: The version is asserted on both paths — the CI `GROK_VERSION` stamp and a source build's `CARGO_PKG_VERSION`
 - [ ] **PKG-03**: `release.yml` is verified against the `v0.1.0` tag shape (trigger, version parse, prerelease classification, `install.sh` validation) with no `deepseek-*` trigger added
 
+### Homebrew
+
+- [ ] **PKG-04**: A Homebrew tap formula for macOS arm64 and x86_64 exists in-tree at `packaging/homebrew/deepseek-build.rb`, pins the real release URLs and SHA-256 values, installs the binary, and its activation command is documented; the tap repository itself is the author's action
+
+### Windows Support
+
+- [ ] **WIN-01**: A `build-windows` job on `windows-latest` builds `x86_64-pc-windows-msvc` and produces a `.zip` containing the binary and the license files, published as `release-x86_64-pc-windows-msvc` alongside the four existing tarballs
+- [ ] **WIN-02**: The compile spike (`cargo check --workspace --all-targets --target x86_64-pc-windows-msvc`) runs on a Windows runner and its errors are triaged into real gaps, missing `cfg`s and test-only failures, with the definitive file list recorded
+- [ ] **WIN-03**: The TUI runs under ConPTY on a real Windows terminal: a shell command and a file edit complete through the pager
+- [ ] **WIN-04**: The sandbox is honest on Windows — only `off` is accepted, any other `--sandbox` value is a hard error naming the unsupported platform, and the README and sandbox guide state the tier; no artifact claims "sandboxed"
+- [ ] **WIN-05**: `install.ps1` downloads the zip, verifies SHA-256 before extracting, installs to `%LOCALAPPDATA%`, prints a PATH hint and supports `-Uninstall`; `scripts/test-install.ps1` exercises it and the real proof runs against a throwaway tag
+- [ ] **WIN-06**: A Windows acceptance record reports the test-target count and pass/fail/unix-gated totals, `--version` from the extracted zip, a headless turn with a sentinel, the two `*_windows.rs` PTY scenarios with `--ignored`, and an explicit list of what did not run
+
 ### Documentation Truth
 
 - [ ] **DOCS-01**: `DECISIONS.md` §E/§F is rewritten from the tree, keeping D9's personal-tool intent while recording that the release pipeline exists
 - [ ] **DOCS-02**: `TESTING.md` §2/§6 is corrected — no OIDC test counts, no stale sign-in line
-- [ ] **DOCS-03**: `KNOWN-ISSUES.md` is reconciled, including the superseded `deepseek-v0.1-snapshot` tag, `--permission-mode plan`, and the sandbox findings
-- [ ] **DOCS-04**: The user guide covers the Flash default with its caveat and revert path, the estimate labelling, headless permission failure, container run flags, and the measured cost levers (`/model`, `--effort low`)
+- [ ] **DOCS-03**: `KNOWN-ISSUES.md` is reconciled, including the superseded `deepseek-v0.1-snapshot` tag, the `--permission-mode plan` correction, the sandbox findings, and the Windows tier
+- [ ] **DOCS-04**: The user guide covers the Flash default with its caveat and revert path, the estimate labelling, headless permission failure, container run flags, the measured cost levers (`/model`, `--effort low`), and the Windows tier
 
 ### Human Acceptance
 
@@ -95,8 +108,8 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 ### Freeze
 
-- [ ] **FREEZE-01**: Branch `deepseek` exists at the freeze commit on `main`
-- [ ] **FREEZE-02**: A non-triggering freeze marker tag sits on that commit, and the pre-existing `deepseek-v0.1-snapshot` tag at `4b305bd0` is recorded as superseded rather than moved
+- [ ] **FREEZE-01**: Branch `deepseek-build` exists at the freeze commit on `main`
+- [ ] **FREEZE-02**: A non-triggering freeze marker tag sits on that commit, and the pre-existing `deepseek` branch plus `deepseek-v0.1-snapshot` tag at `4b305bd0` are recorded as superseded rather than moved
 - [ ] **FREEZE-03**: The pre-freeze checklist passes — clean suite, egress gate, branding surface, key-leak check, deny check, runtime proof artifacts, and the release dry-run evidence — after the author's sign-off
 
 ## v2 Requirements
@@ -184,21 +197,28 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | PKG-01 | Phase 3 — Pipeline Decoupling & Version | Pending |
 | PKG-02 | Phase 3 — Pipeline Decoupling & Version | Pending |
 | PKG-03 | Phase 3 — Pipeline Decoupling & Version | Pending |
+| PKG-04 | Phase 4 — Distribution Proof | Pending |
 | REL-04 | Phase 4 — Distribution Proof | Pending |
 | REL-05 | Phase 4 — Distribution Proof | Pending |
 | REL-06 | Phase 4 — Distribution Proof | Pending |
-| DOCS-01 | Phase 5 — Documentation Truth & Freeze | Pending |
-| DOCS-02 | Phase 5 — Documentation Truth & Freeze | Pending |
-| DOCS-03 | Phase 5 — Documentation Truth & Freeze | Pending |
-| DOCS-04 | Phase 5 — Documentation Truth & Freeze | Pending |
-| ACC-01 | Phase 5 — Documentation Truth & Freeze | Pending |
-| FREEZE-01 | Phase 5 — Documentation Truth & Freeze | Pending |
-| FREEZE-02 | Phase 5 — Documentation Truth & Freeze | Pending |
-| FREEZE-03 | Phase 5 — Documentation Truth & Freeze | Pending |
+| WIN-01 | Phase 5 — Windows Support | Pending |
+| WIN-02 | Phase 5 — Windows Support | Pending |
+| WIN-03 | Phase 5 — Windows Support | Pending |
+| WIN-04 | Phase 5 — Windows Support | Pending |
+| WIN-05 | Phase 5 — Windows Support | Pending |
+| WIN-06 | Phase 5 — Windows Support | Pending |
+| DOCS-01 | Phase 6 — Documentation Truth & Freeze | Pending |
+| DOCS-02 | Phase 6 — Documentation Truth & Freeze | Pending |
+| DOCS-03 | Phase 6 — Documentation Truth & Freeze | Pending |
+| DOCS-04 | Phase 6 — Documentation Truth & Freeze | Pending |
+| ACC-01 | Phase 6 — Documentation Truth & Freeze | Pending |
+| FREEZE-01 | Phase 6 — Documentation Truth & Freeze | Pending |
+| FREEZE-02 | Phase 6 — Documentation Truth & Freeze | Pending |
+| FREEZE-03 | Phase 6 — Documentation Truth & Freeze | Pending |
 
 **Coverage:**
-- v1 requirements: 41 total
-- Mapped to phases: 41
+- v1 requirements: 48 total
+- Mapped to phases: 48
 - Unmapped: 0 ✓
 - Duplicates: 0 ✓
 
@@ -209,10 +229,11 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | 1 — Truth Baseline | SBOX-01, SBOX-02, TEST-01, TEST-02, TEST-03, EVID-01, EVID-02, COST-01, COST-02, COST-03, DEF-01 | 11 |
 | 2 — Loop-Item Verification | PROOF-01, PROOF-02, PROOF-03, PERM-01, PERM-02, PERM-03, PERM-04, SESS-01, SESS-02, SESS-03, SESS-04 | 11 |
 | 3 — Pipeline Decoupling & Version | REL-01, REL-02, REL-03, REL-07, REL-08, PKG-01, PKG-02, PKG-03 | 8 |
-| 4 — Distribution Proof | REL-04, REL-05, REL-06 | 3 |
-| 5 — Documentation Truth & Freeze | DOCS-01, DOCS-02, DOCS-03, DOCS-04, ACC-01, FREEZE-01, FREEZE-02, FREEZE-03 | 8 |
-| **Total** | | **41** |
+| 4 — Distribution Proof | REL-04, REL-05, REL-06, PKG-04 | 4 |
+| 5 — Windows Support | WIN-01, WIN-02, WIN-03, WIN-04, WIN-05, WIN-06 | 6 |
+| 6 — Documentation Truth & Freeze | DOCS-01, DOCS-02, DOCS-03, DOCS-04, ACC-01, FREEZE-01, FREEZE-02, FREEZE-03 | 8 |
+| **Total** | | **48** |
 
 ---
 *Requirements defined: 2026-11-21*
-*Last updated: 2026-11-21 after cutting routing and per-model cost from the milestone*
+*Last updated: 2026-11-26 — added Windows Support (WIN-01…06, Phase 5), the Homebrew tap (PKG-04, Phase 4), and renumbered Documentation Truth & Freeze to Phase 6*

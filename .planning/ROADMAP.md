@@ -8,13 +8,13 @@ Linux-only release pipeline all exist and are not re-planned here. The milestone
 product surface. It makes the finished thing honest, proves it on a real session, proves its
 artifacts, and freezes it.
 
-Five phases, two workstreams, sequential. **Truth:** fix the sandbox deny materialization, make the
+Six phases, three workstreams, sequential. **Truth:** fix the sandbox deny materialization, make the
 cost figure and the default model honest, then assert a zero-failure suite and stand up the evidence
 convention. **Proof:** exercise the daily loop and measure the runtime egress boundary on a real
 model-driven session with a throwaway key, each with a committed artifact. **Distribution:** decouple
 the pipeline and settle the version/tag shape before any tag exists, prove the image and installer
-from a throwaway pre-release tag, then reconcile the docs, take the author's signed acceptance, and
-cut the freeze marker last.
+from a throwaway pre-release tag, make Windows a supported target at a named tier, then reconcile the
+docs, take the author's signed acceptance, and cut the freeze marker last.
 
 Routing and per-model cost are **not** in this milestone. `/model` and `/effort` are the manual
 switches; automatic routing is designed in open-build after the freeze, where it generalizes across
@@ -97,10 +97,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 03-01: Split `build-linux`/`build-macos`; `container: needs: [version, build-linux]`; empty-tag-list guard
-- [ ] 03-02: macOS time budget — measure the job log first, then strip/debug, re-sign, extracted-tarball smoke, no DWARF in `release-dist`
-- [ ] 03-03: `[workspace.package] version = "0.1.0"`, four inheriting crates, `Cargo.lock` regenerated
-- [ ] 03-04: Dual version-path assertion and `v0.1.0` tag-shape verification
+- [ ] 03-01: Split `build-linux`/`build-macos`; `publish` needs both, `container` needs linux only; strict semver gate in `version`; tag-list guard before the first push
+- [ ] 03-02: `[workspace.package] version = "0.1.0"`, four inheriting crates, `Cargo.lock` regenerated, both version paths asserted
+- [ ] 03-03: `release-dist` ships no DWARF (`debug = false`, link-time strip), explicit ad-hoc sign, extracted-tarball `--version` and `codesign --verify`, macOS budget
+- [ ] 03-04: `v0.1.0` tag-shape verification — trigger, version parse, prerelease classification, `install.sh` validation
 
 ### Phase 4: Distribution Proof
 **Goal:** As the author, I want the image, the installer and the macOS artifacts proven from a real throwaway pre-release tag, so that the freeze rests on distribution evidence rather than on a fake-tree harness.
@@ -119,25 +119,46 @@ Plans:
 - [ ] 04-02: In-image headless tool-executing turn with sandbox-on flags; README GHCR block corrected
 - [ ] 04-03: Installer proof from the real release, pinned and unpinned, plus cleanup and the evidence cast
 
-### Phase 5: Documentation Truth & Freeze
-**Goal:** As the author, I want the docs to describe the tree that exists, my own acceptance session signed off, and a freeze marker on a `deepseek` branch that moves no published tag, so that the freeze is defensible.
+### Phase 5: Windows Support
+**Goal:** As the author, I want deepseek-build to build, ship and install on Windows x86_64 at a named tier — builds and runs, sandbox refuses honestly — so that a supported platform means something on all three and Windows never ships a silent sandbox no-op.
 **Mode:** mvp
 **Depends on**: Phase 4
+**Requirements**: WIN-01, WIN-02, WIN-03, WIN-04, WIN-05, WIN-06
+**Success Criteria** (what must be TRUE):
+  1. A `build-windows` job (`windows-latest`) builds `x86_64-pc-windows-msvc` and produces a `.zip` containing the binary and the license files, and `publish` carries it as `release-x86_64-pc-windows-msvc` alongside the four existing tarballs.
+  2. The compile spike (`cargo check --workspace --all-targets --target x86_64-pc-windows-msvc`) runs on a Windows runner and its error list is triaged into real gaps, missing `cfg`s and test-only failures; the phase reports the resulting file count rather than assuming the upstream port compiles unchanged.
+  3. The TUI runs under ConPTY: a shell command and a file edit complete through the pager on a real Windows terminal.
+  4. The sandbox is honest on Windows: only `off` is accepted, any other `--sandbox` value is a hard error naming the unsupported platform, and the README plus the sandbox user-guide page state the tier. No artifact claims "sandboxed".
+  5. `install.ps1` downloads the zip, verifies SHA-256 before extracting, installs to `%LOCALAPPDATA%`, prints a PATH hint and supports `-Uninstall`; `scripts/test-install.ps1` exercises it, and the real proof runs against a throwaway tag.
+  6. A Windows acceptance record reports the test-target count and the pass/fail/unix-gated totals (never a tail line), `--version` from the extracted zip, one headless turn with a sentinel, the two `*_windows.rs` PTY scenarios with `--ignored`, and an explicit list of what did not run.
+**Plans**: 1 plan detailed now; the tail is sized by the spike
+
+Plans:
+- [ ] 05-01: Compile spike on `windows-latest` — `cargo check --all-targets` for the MSVC target, triage every error, produce the definitive file list (no product change)
+- [ ] 05-02: Sandbox honesty — reject non-`off` `--sandbox` on Windows, fix the misleading fallback message, platform note in README and the sandbox guide
+- [ ] 05-03: Long-tail correctness from 05-01's list (temp paths, file-lock slot, search fallback, gated modules)
+- [ ] 05-04: Distribution — `build-windows` job, `.zip`, `install.ps1` + `test-install.ps1`, publish wiring and verify loop
+- [ ] 05-05: Windows acceptance record and docs, honestly listing what did not run
+
+### Phase 6: Documentation Truth & Freeze
+**Goal:** As the author, I want the docs to describe the tree that exists, my own acceptance session signed off, and the DeepSeek entity cut onto a `deepseek-build` branch with a non-triggering marker tag that moves no published ref, so that the freeze is defensible.
+**Mode:** mvp
+**Depends on**: Phase 5
 **Requirements**: DOCS-01, DOCS-02, DOCS-03, DOCS-04, ACC-01, FREEZE-01, FREEZE-02, FREEZE-03
 **Success Criteria** (what must be TRUE):
-  1. `DECISIONS.md` §E/§F is rewritten from the tree, keeping D9's personal-tool intent while recording that the release pipeline exists; `TESTING.md` §2/§6 has no OIDC test counts and no stale sign-in line; `KNOWN-ISSUES.md` records the superseded `deepseek-v0.1-snapshot` tag, the `--permission-mode plan` finding and the sandbox findings.
-  2. The user guide covers the Flash default with its caveat and revert path, the estimate labelling, headless permission failure, container run flags and the measured cost levers (`/model`, `--effort low`).
+  1. `DECISIONS.md` §E/§F is rewritten from the tree, keeping D9's personal-tool intent while recording that the release pipeline exists; `TESTING.md` §2/§6 has no OIDC test counts and no stale sign-in line; `KNOWN-ISSUES.md` records the superseded `deepseek-v0.1-snapshot` tag, the `--permission-mode plan` correction, the sandbox findings and the Windows tier.
+  2. The user guide covers the Flash default with its caveat and revert path, the estimate labelling, headless permission failure, container run flags, the measured cost levers (`/model`, `--effort low`) and the Windows tier.
   3. **Blocking gate:** the author has used the TUI for 20–30 minutes on a clone of a real repo and the signed acceptance note is committed; **FREEZE-01/02/03 do not run until that commit exists**, so no branch and no marker tag can precede the sign-off.
-  4. Only after the acceptance note is committed, the pre-freeze checklist passes — completeness-asserted clean suite, `check-egress.sh --strict` exit 0 with a dated record, `branding_surface`, `key-leak-check.sh`, `cargo-deny`, the runtime proof artifacts and the Phase 4 dry-run evidence.
-  5. Branch `deepseek` exists at the freeze commit on `main`; a non-triggering marker tag sits on that commit with `git rev-parse <tag>^{}` equal to the branch tip; the pre-existing `deepseek-v0.1-snapshot` tag at `4b305bd0` is unchanged and recorded as superseded; the marker triggered no workflow run and `v0.1.0` was not published.
+  4. Only after the acceptance note is committed, the pre-freeze checklist passes — completeness-asserted clean suite, `check-egress.sh --strict` exit 0 with a dated record (the three test-only strings must be resolved by a recorded decision, not by weakening the gate silently), `branding_surface`, `key-leak-check.sh`, `cargo-deny`, the runtime proof artifacts and the Phase 4 dry-run evidence.
+  5. Branch **`deepseek-build`** exists at the freeze commit on `main`; a non-triggering marker tag sits on that commit with `git rev-parse <tag>^{}` equal to the branch tip; the pre-existing `deepseek` branch and `deepseek-v0.1-snapshot` tag at `4b305bd0` are unchanged and recorded as superseded; the marker triggered no workflow run and `v0.1.0` was not published.
 **Plans**: 5 plans
 
 Plans:
-- [ ] 05-01: `DECISIONS.md` §E/§F rewritten from the tree; `TESTING.md` §2/§6 corrected
-- [ ] 05-02: `KNOWN-ISSUES.md` reconciled — superseded snapshot tag, `--permission-mode plan`, sandbox findings
-- [ ] 05-03: User guide — Flash default with caveat and revert path, estimate label, headless denial, container flags, cost levers
-- [ ] 05-04: Human acceptance — 20–30 minutes in the TUI on a real repo clone, signed note committed (blocks 05-05)
-- [ ] 05-05: Pre-freeze checklist, branch `deepseek`, non-triggering marker tag verified against the branch tip, snapshot tag untouched
+- [ ] 06-01: `DECISIONS.md` §E/§F rewritten from the tree; `TESTING.md` §2/§6 corrected
+- [ ] 06-02: `KNOWN-ISSUES.md` reconciled — superseded snapshot tag, plan-mode correction, sandbox findings, Windows tier
+- [ ] 06-03: User guide — Flash default with caveat and revert path, estimate label, headless denial, container flags, cost levers, Windows tier
+- [ ] 06-04: Human acceptance — 20–30 minutes in the TUI on a real repo clone, signed note committed (blocks 06-05)
+- [ ] 06-05: Pre-freeze checklist, branch `deepseek-build`, non-triggering marker tag verified against the branch tip, snapshot refs untouched
 
 ## Sequencing Constraints
 
@@ -148,13 +169,14 @@ The order is load-bearing, not conventional. Each line is a reason a later step 
 - **Phase 2 before Phase 3:** the tarball and image a dry run proves are built from the product tree, so the product tree must be final first. Proving artifacts of a tree you then change means the freeze ships something that was never proven.
 - **Phase 3 before Phase 4 — decoupling:** `container` currently depends on the whole four-leg matrix, so a slow macOS leg skips the image. A dry run before the split can therefore produce no image at all, or an image whose tag is decided by the metadata-action list that has no empty-list guard.
 - **Phase 3 before Phase 4 — version and tag shape:** a dry run is a real push. It exercises the version parse, the prerelease classification and `install.sh` validation against a tag, so the tag shape must be settled first; otherwise the dry run can move `:latest` or publish a snapshot as a stable release.
-- **Phase 4 before Phase 5:** FREEZE-03's checklist includes the release dry-run evidence, and DOCS-04 must describe container run flags that were actually exercised. Documentation written before the proof would describe an artifact that may not exist.
-- **Phase 5 last, and acceptance before the freeze marker:** docs reconciliation must describe the finished tree, the pre-freeze gates must be re-run after every other phase landed, and ACC-01 is a **blocking gate** — the author's signed note must be committed before branch `deepseek` or the marker tag is created. The freeze marker must also be non-triggering, and `v0.1.0` stays unpublished: the author publishes it.
+- **Phase 4 before Phase 5:** Windows packaging is built from the post-split workflow and the settled version, so a Windows `.zip` cannot be produced by the coupled pipeline Phase 3 exists to remove, and it cannot carry a version the tag contract has not settled.
+- **Phase 5 before Phase 6:** a freeze claim that omits a supported platform is incomplete, and DOCS-03/DOCS-04 must describe the Windows tier and installer that actually exist. The sandbox-honesty fix must land before any Windows artifact ships, because a `.zip` is the moment the silent no-op becomes a false claim.
+- **Phase 6 last, and acceptance before the freeze marker:** docs reconciliation must describe the finished tree, the pre-freeze gates must be re-run after every other phase landed, and ACC-01 is a **blocking gate** — the author's signed note must be committed before branch `deepseek-build` or the marker tag is created. The freeze marker must also be non-triggering, and `v0.1.0` stays unpublished: the author publishes it.
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -162,4 +184,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Loop-Item Verification | 6/6 | Complete | 2026-11-25 |
 | 3. Pipeline Decoupling & Version | 0/4 | Not started | - |
 | 4. Distribution Proof | 0/3 | Not started | - |
-| 5. Documentation Truth & Freeze | 0/5 | Not started | - |
+| 5. Windows Support | 0/5 | Not started | - |
+| 6. Documentation Truth & Freeze | 0/5 | Not started | - |
