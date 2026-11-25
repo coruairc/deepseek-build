@@ -1,0 +1,5 @@
+probe exit: 1 (401 expected with a fake key)
+Internal error: "Unauthorized (401) from https://api.deepseek.com/chat/completions: authentication_error: Authentication Fails, Your api key: ****0000 is invalid (request_id: cd91c93c-f2d6-46bd-9a31-7fa4fff89195)\n\n  Model:     deepseek-flash\n  Auth:      ApiKey\n  Version:   0.0.1-rc5\n  Available: deepseek-v4-pro, deepseek-flash, deepseek-v4-flash"
+Error: Internal error: "Unauthorized (401) from https://api.deepseek.com/chat/completions: authentication_error: Authentication Fails, Your api key: ****0000 is invalid (request_id: cd91c93c-f2d6-46bd-9a31-7fa4fff89195)\n\n  Model:     deepseek-flash\n  Auth:      ApiKey\n  Version:   0.0.1-rc5\n  Available: deepseek-v4-pro, deepseek-flash, deepseek-v4-flash"
+2026-11-25T23:10:35.813031Z  INFO session.sampler_transport_prewarm: xai_grok_sampler::prewarm: sampler transport prewarmed origin=https://api.deepseek.com status=401 Unauthorized elapsed_ms=513
+provider observed: 401 from api.deepseek.com

@@ -1,0 +1,4 @@
+{"version": 2, "width": 80, "height": 24}
+[0.769663, "o", "run exit: 1 (401/other error is expected with a fake key)\r\n"]
+[0.772641, "o", "PASS  fake key absent from 52 saved file(s) and captured output\r\n"]
+[0.772641, "o", "\n"]
