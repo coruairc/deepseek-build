@@ -4,7 +4,7 @@ Read this first when resuming. It records exact state, what remains, and the
 commands to continue. Companion docs: [`DECISIONS.md`](DECISIONS.md) (locked
 decisions; wins on conflict), [`PLAN.md`](PLAN.md) (audit + phased plan),
 [`README.md`](README.md). Latest dated handoff:
-[`HANDOFF-2026-11-23.md`](HANDOFF-2026-11-23.md).
+[`HANDOFF-2026-11-25.md`](HANDOFF-2026-11-25.md).
 
 `deepseek-build` is a personal, DeepSeek-first terminal coding agent forked from
 [xai-org/grok-build](https://github.com/xai-org/grok-build) (Apache-2.0): a
@@ -19,15 +19,13 @@ public description; §7 maps the code and §8 lists the rules for changing it.
 - **Branch:** `main` is the mainline and carries the released lineage
   (`v0.0.1-rc5`). Work branches rebase onto `main` before review; do not treat a
   side branch as the integration point.
-- **HEAD (refreshed 2026-11-23, evening):** `main` = the Phase-01 close-out plus the
-  Phase-02 planning commit series. Phase 01 (Truth Baseline) is complete and verified
-  24/24; **Phase 02 (Loop-Item Verification) is planned and checker-verified (6 plans,
-  4 waves, 0 blockers) but `status: blocked`** — execution needs the build host (Rust
-  1.94.0, ≥60 GB free, shared `CARGO_TARGET_DIR`). See
-  [`HANDOFF-2026-11-23-evening.md`](HANDOFF-2026-11-23-evening.md) (planning handoff) and
-  [`HANDOFF-2026-11-23.md`](HANDOFF-2026-11-23.md) (Phase-01 close-out), plus
-  `.planning/STATE.md`; the rest of §0 below still describes the pre-milestone rc5 tree
-  and is being reconciled by Phase 5 (Documentation Truth & Freeze).
+- **HEAD (refreshed 2026-11-25, 21:21 UTC):** `main` = `30388a51`. Phase 01 is
+  complete. Phase 02: **02-01 committed** (live-smoke, PROOF-01). **02-04 code
+  and evidence item committed**; SUMMARY was uncommitted and a `cargo test`
+  still held the build lock when the author clocked off. Do not start a second
+  executor until that test exits. Resume from
+  [`HANDOFF-2026-11-25.md`](HANDOFF-2026-11-25.md). The rest of §0 still
+  describes the pre-milestone rc5 tree and is reconciled by Phase 5.
 - **Remote:** `origin git@github.com:coruairc/deepseek-build.git`.
 - **Toolchain:** Rust **1.94.0** via rustup (pinned in `rust-toolchain.toml`). Do not bump.
   `protoc` on PATH (`/usr/bin/protoc`); `dotslash` not needed. `strace` absent (use

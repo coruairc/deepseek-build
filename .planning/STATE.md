@@ -3,11 +3,11 @@ gsd_state_version: "1.0"
 milestone: v0.1.0
 current_phase: 2
 current_phase_name: Loop-Item Verification
-status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-11-25T19:58:00.000Z"
+status: paused
+stopped_at: Author clocked off. 02-01 complete. 02-04 evidence committed at 30388a51; SUMMARY uncommitted; cargo test still holding the build lock. See HANDOFF-2026-11-25.md
+last_updated: "2026-11-25T21:21:14.000Z"
 last_activity: 2026-11-25
-last_activity_desc: 02-01 live-smoke item committed (PROOF-01)
+last_activity_desc: Clocked off during 02-04 evidence capture; 02-01 committed
 state_head: ec878ef0
 progress:
   total_phases: 5
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-11-23)
 ## Current Position
 
 Phase: 2 — Loop-Item Verification
-Plan: 02-01 complete; 02-02…02-06 remain (02-04 in flight on this tree)
-Status: Executing
-Last activity: 2026-11-25 — 02-01 live-smoke item committed
+Plan: 02-01 complete; 02-04 evidence committed (30388a51), SUMMARY not yet committed; 02-02, 02-03, 02-05, 02-06 not started
+Status: Paused — author clocked off
+Last activity: 2026-11-25 21:21 UTC — handoff written; cargo test still holding /tmp/team-build.lock
 
 Progress: [██░░░░░░░░] 20%
 
@@ -125,6 +125,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-25
-Stopped at: Completed 02-01-PLAN.md. The earlier 401 checkpoint is superseded: a login-shell probe printed models_ok, and the live-smoke item is committed at ec878ef0. 02-04 remains in flight on this tree. Do not start a second live run for 02-02; it reads the committed transcript.
-Resume file: .planning/phases/02-loop-item-verification/02-02-PLAN.md
+Last session: 2026-11-25 21:21 UTC
+Stopped at: Author clocked off. 02-01 complete (ec878ef0). 02-04 tasks 1–2 committed (b5a75b78, 4599b561); task 3 evidence capture still running. Do not start a second executor or a second cargo test. 02-02 reads the committed live-smoke transcript — no second live run.
+Resume file: HANDOFF-2026-11-25.md
