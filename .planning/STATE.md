@@ -4,16 +4,16 @@ milestone: v0.1.0
 current_phase: 3
 current_phase_name: Pipeline Decoupling & Version
 status: executing
-stopped_at: Phase 3 plan 03-01 complete (1/4) — build matrix split and tag guard landed; REL-02 open until the Phase 4 tag run
-last_updated: "2026-11-25T23:27:22.000Z"
+stopped_at: Phase 3 plan 03-02 complete (2/4) — workspace version 0.1.0 and both --version paths proven; next is 03-03 (release-dist DWARF/strip/sign)
+last_updated: "2026-11-25T23:42:00.000Z"
 last_activity: 2026-11-25
-last_activity_desc: 03-01 split build-linux/build-macos, added the workflow checker and the image tag-list guard
-state_head: ba3b49125154f4c8c5d3fb8879180898d40ddc82
+last_activity_desc: 03-02 moved the four shipped crates to [workspace.package] version 0.1.0, regenerated Cargo.lock and pinned both --version paths
+state_head: 645ffd43c25bbe95c54cd38c054b77f1b41d3d0a
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 21
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-11-23)
 ## Current Position
 
 Phase: 3 — Pipeline Decoupling & Version
-Plan: 03-01 of 4 complete; next is 03-02 (workspace version + `Cargo.lock` regeneration).
-Status: Plan 03-01 complete — checker 15/15, guard fixtures 18/18, actionlint and shellcheck clean. REL-02 is still open (Phase 4 tag run).
-Last activity: 2026-11-25 23:26 UTC — 03-01 split `build-linux`/`build-macos` and guarded the image tag list.
+Plan: 03-02 of 4 complete; next is 03-03 (`release-dist` DWARF/strip/sign and the macOS budget).
+Status: Plan 03-02 complete — the lock diff is exactly four package versions, `cargo check --workspace --locked` is green, and both `--version` paths are test-backed (`0.1.0` from source, `9.9.9-test` from the stamp). REL-02 is still open (Phase 4 tag run).
+Last activity: 2026-11-25 23:40 UTC — 03-02 set the workspace version to 0.1.0 and pinned both version paths.
 
-Progress: [██████░░░░] 62%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -47,7 +47,7 @@ Progress: [██████░░░░] 62%
 |-------|-------|-------|----------|
 | 01 | 6 | 6 | - |
 | 02 | 6 | 6 | - |
-| 03 | 1 | 4 | - |
+| 03 | 2 | 4 | - |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -58,6 +58,7 @@ Progress: [██████░░░░] 62%
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 03 P02 | 12m | 2 tasks | 7 files |
 | Phase 03 P01 | 5m | 2 tasks | 5 files |
 | Phase 02 P04 | 102m | 3 tasks | 14 files |
 | Phase 02 P05 | 35m | 2 tasks | 9 files |
@@ -105,6 +106,9 @@ Full log in PROJECT.md Key Decisions. Those shaping current work:
 - [Phase 03]: `build-linux`/`build-macos` are separate jobs; `publish` needs both (its verify step names four tarballs) and `container` needs `build-linux` only, so a slow macOS leg cannot erase the image. Artifact names stay `release-<target>`.
 - [Phase 03]: Both CI builds pass `--locked`; 03-02's regenerated `Cargo.lock` must land before any tag or the build fails on a stale lock. No workflow runs in Phase 3.
 - [Phase 03]: The image-tag guard requires all five stable aliases and accepts both prerelease shapes (2-name collapsed, 4-name expanded); `latest` is forbidden on a prerelease. `{{major}}` = `0` for `v0.1.0` is published, not suppressed.
+- [Phase 03]: Version truth is `[workspace.package] version = "0.1.0"`; only `xai-grok-shell`, `xai-grok-pager`, `xai-grok-pager-bin` and `xai-grok-version` inherit it, and the other literal-version manifests stay literal on purpose. The lock diff is exactly those four package versions.
+- [Phase 03]: `--version` is proven on both paths by `crates/codegen/xai-grok-pager-bin/tests/version_paths.rs` — `0.1.0` with `GROK_VERSION` unset, `9.9.9-test` with it set (a real rebuild, so the stamp path cannot pass by inheriting the source value). The test also names `"0.1.0"` so a silent revert fails.
+- [Phase 03]: The 0.1.0 bump re-keys `Swatinem/rust-cache` (manifest/lock hash), so the Phase 4 tag run starts cold on all four legs. Expected, not a defect.
 
 ### Pending Todos
 
@@ -126,7 +130,7 @@ None yet.
 - **Research base drift:** STACK/ARCHITECTURE read `main` @ `221a1a59`, PITFALLS @ `9e6780d9`. Re-verify `release.yml` edges and manifest versions before Phase 3.
 - **macOS time budget (MEDIUM):** measure the macOS job log before choosing between timeout, strip and LTO override. Both arches must fit the job timeout; one cache-warming run is allowed if cold cache is the cause.
 - **Dry-run side effects:** a dry run is a real push. 03-01 removed both known silent paths (the image no longer waits for macOS; the tag list is guarded and the version job rejects non-semver tags). The dispatch verification must still create no release and move no `:latest`, and no throwaway tag may be created until Phase 4.
-- **`--locked` lock prerequisite:** both build jobs now pass `--locked`. 03-02 (workspace `0.1.0` + four inheriting crates) must regenerate `Cargo.lock` and land on `main` before the Phase 4 tag, or the build fails on the stale lock. REL-02 (both macOS legs inside the budget) remains open until that tag run.
+- **`--locked` lock prerequisite — RESOLVED (2026-11-25, 03-02):** both build jobs pass `--locked`; 03-02 regenerated `Cargo.lock` for the `0.1.0` workspace version (exactly four package versions) and `cargo check --workspace --locked` is green, so the Phase 4 tag run will not fail on a stale lock. REL-02 (both macOS legs inside the budget) remains open until that tag run.
 - **No `ci.yml`:** the gate is a green run on the author's host, wrapped in the shared build lock with `scripts/disk-guard.sh` first.
 - **Egress gate is red at base (Phase 5 owner):** `scripts/check-egress.sh --strict` exits 1 on three
   committed test fixtures — `crates/codegen/xai-grok-shell-base/src/util/mod.rs:422-423`
@@ -153,5 +157,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-11-25
-Stopped at: Phase 3 plan 03-01 complete (1/4) — release graph split, tag-list guard and semver gate landed and fixture-proven; no tag, push or dispatch was created. Next: 03-02 (workspace version + `Cargo.lock`).
-Resume file: .planning/phases/03-pipeline-decoupling-version/03-01-SUMMARY.md
+Stopped at: Phase 3 plan 03-02 complete (2/4) — workspace `0.1.0`, four inheriting crates, `Cargo.lock` regenerated and accepted by `--locked`; both `--version` paths test-backed. Next: 03-03 (`release-dist` DWARF/strip/sign, macOS budget).
+Resume file: .planning/phases/03-pipeline-decoupling-version/03-02-SUMMARY.md
