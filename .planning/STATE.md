@@ -1,19 +1,19 @@
 ---
 gsd_state_version: "1.0"
 milestone: v0.1.0
-current_phase: 2
-current_phase_name: Loop-Item Verification
-status: verifying
-stopped_at: Phase 2 complete (6/6) — 02-03 sealed the key-leak item with the dated revocation attestation
-last_updated: "2026-11-25T23:16:00.000Z"
+current_phase: 3
+current_phase_name: Pipeline Decoupling & Version
+status: executing
+stopped_at: Phase 3 plan 03-01 complete (1/4) — build matrix split and tag guard landed; REL-02 open until the Phase 4 tag run
+last_updated: "2026-11-25T23:27:22.000Z"
 last_activity: 2026-11-25
-last_activity_desc: Phase 2 complete; 02-03 key-leak canary, scoped scans and revocation attestation recorded
-state_head: 97b1f27806c572e09ba0b7bd3df41cc5e65131c1
+last_activity_desc: 03-01 split build-linux/build-macos, added the workflow checker and the image tag-list guard
+state_head: ba3b49125154f4c8c5d3fb8879180898d40ddc82
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 2
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 21
+  completed_plans: 13
 ---
 
 # Project State
@@ -23,21 +23,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-23)
 
 **Core value:** One DeepSeek key in, a trustworthy daily coding agent out: the right model on every turn, zero traffic to any host you did not configure, and a release you can install with confidence.
-**Current focus:** Phase 2 — Loop-Item Verification
+**Current focus:** Phase 3 — Pipeline Decoupling & Version
 
 ## Current Position
 
-Phase: 2 — Loop-Item Verification
-Plan: All six plans complete (02-01 … 02-06).
-Status: Phase complete — ready for verification. Phase 2's seven evidence items are committed.
-Last activity: 2026-11-25 23:11 UTC — 02-03 complete (key-leak canary, two scoped scans, dated revocation attestation)
+Phase: 3 — Pipeline Decoupling & Version
+Plan: 03-01 of 4 complete; next is 03-02 (workspace version + `Cargo.lock` regeneration).
+Status: Plan 03-01 complete — checker 15/15, guard fixtures 18/18, actionlint and shellcheck clean. REL-02 is still open (Phase 4 tag run).
+Last activity: 2026-11-25 23:26 UTC — 03-01 split `build-linux`/`build-macos` and guarded the image tag list.
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 62%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
+- Total plans completed: 13
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -45,8 +45,9 @@ Progress: [████░░░░░░] 40%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 6 | - | - |
-| 02 | 6 planned | - | - |
+| 01 | 6 | 6 | - |
+| 02 | 6 | 6 | - |
+| 03 | 1 | 4 | - |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -57,6 +58,7 @@ Progress: [████░░░░░░] 40%
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 03 P01 | 5m | 2 tasks | 5 files |
 | Phase 02 P04 | 102m | 3 tasks | 14 files |
 | Phase 02 P05 | 35m | 2 tasks | 9 files |
 | Phase 02 P06 | 55m | 2 tasks | 19 files |
@@ -100,6 +102,9 @@ Full log in PROJECT.md Key Decisions. Those shaping current work:
 - [Phase 02]: The key-leak gate is the default-mode canary (product writes no key material; 52 saved files) plus scoped `--scan` over the committed artifacts, which fails closed. The tracked-file `sk-`-shape baseline (2 files / 4 lines at HEAD `eef4714e`) is recorded as a measurement with no equality gate.
 - [Phase 02]: The canary's own `run exit:` cannot distinguish a provider 401 from a dead network, so the provider-path step records a same-conditions fake-key probe that observed `status=401 Unauthorized` from `api.deepseek.com`.
 - [Phase 02]: PROOF-03's revocation is an author attestation: one dated sentence with no key fragment or account identifier, plus a step proving only that the sentence is present. Nothing in the item claims a tool verified the revocation.
+- [Phase 03]: `build-linux`/`build-macos` are separate jobs; `publish` needs both (its verify step names four tarballs) and `container` needs `build-linux` only, so a slow macOS leg cannot erase the image. Artifact names stay `release-<target>`.
+- [Phase 03]: Both CI builds pass `--locked`; 03-02's regenerated `Cargo.lock` must land before any tag or the build fails on a stale lock. No workflow runs in Phase 3.
+- [Phase 03]: The image-tag guard requires all five stable aliases and accepts both prerelease shapes (2-name collapsed, 4-name expanded); `latest` is forbidden on a prerelease. `{{major}}` = `0` for `v0.1.0` is published, not suppressed.
 
 ### Pending Todos
 
@@ -120,7 +125,8 @@ None yet.
   attestation (no API can verify a revocation).
 - **Research base drift:** STACK/ARCHITECTURE read `main` @ `221a1a59`, PITFALLS @ `9e6780d9`. Re-verify `release.yml` edges and manifest versions before Phase 3.
 - **macOS time budget (MEDIUM):** measure the macOS job log before choosing between timeout, strip and LTO override. Both arches must fit the job timeout; one cache-warming run is allowed if cold cache is the cause.
-- **Dry-run side effects:** a dry run is a real push. `container` currently depends on the whole matrix and the metadata-action tag list has no empty-list guard, so Phase 3 must land before any throwaway tag, and the dispatch verification must create no release and move no `:latest`.
+- **Dry-run side effects:** a dry run is a real push. 03-01 removed both known silent paths (the image no longer waits for macOS; the tag list is guarded and the version job rejects non-semver tags). The dispatch verification must still create no release and move no `:latest`, and no throwaway tag may be created until Phase 4.
+- **`--locked` lock prerequisite:** both build jobs now pass `--locked`. 03-02 (workspace `0.1.0` + four inheriting crates) must regenerate `Cargo.lock` and land on `main` before the Phase 4 tag, or the build fails on the stale lock. REL-02 (both macOS legs inside the budget) remains open until that tag run.
 - **No `ci.yml`:** the gate is a green run on the author's host, wrapped in the shared build lock with `scripts/disk-guard.sh` first.
 - **Egress gate is red at base (Phase 5 owner):** `scripts/check-egress.sh --strict` exits 1 on three
   committed test fixtures — `crates/codegen/xai-grok-shell-base/src/util/mod.rs:422-423`
@@ -147,5 +153,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-11-25
-Stopped at: Phase 2 complete (6/6) — 02-03 sealed the key-leak item; the revocation is the author's dated attestation, not a verified fact. Next: `/gsd-verify-work 2`, then Phase 3.
-Resume file: HANDOFF-2026-11-25.md
+Stopped at: Phase 3 plan 03-01 complete (1/4) — release graph split, tag-list guard and semver gate landed and fixture-proven; no tag, push or dispatch was created. Next: 03-02 (workspace version + `Cargo.lock`).
+Resume file: .planning/phases/03-pipeline-decoupling-version/03-01-SUMMARY.md
