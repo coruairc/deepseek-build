@@ -49,7 +49,7 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 - [x] **PROOF-01**: A live smoke run on a real model-driven session with a throwaway key passes, with the transcript committed as evidence
 - [x] **PROOF-02**: Runtime egress on that same session is measured and shows only the configured provider, the `web_fetch` host, and AF_UNIX sockets — zero violations — with the measurement committed as evidence
-- [ ] **PROOF-03**: `scripts/key-leak-check.sh` is green over the tree and over the committed artifacts, no key material appears in logs, saved sessions, or evidence files, and the throwaway key is revoked afterwards
+- [x] **PROOF-03**: `scripts/key-leak-check.sh` is green over the tree and over the committed artifacts, no key material appears in logs, saved sessions, or evidence files, and the throwaway key is revoked afterwards
 
 ### Permissions
 
@@ -167,7 +167,7 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | DEF-01 | Phase 1 — Truth Baseline | Complete |
 | PROOF-01 | Phase 2 — Loop-Item Verification | Complete |
 | PROOF-02 | Phase 2 — Loop-Item Verification | Complete |
-| PROOF-03 | Phase 2 — Loop-Item Verification | Pending |
+| PROOF-03 | Phase 2 — Loop-Item Verification | Complete |
 | PERM-01 | Phase 2 — Loop-Item Verification | Complete |
 | PERM-02 | Phase 2 — Loop-Item Verification | Complete |
 | PERM-03 | Phase 2 — Loop-Item Verification | Complete |

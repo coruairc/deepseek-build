@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 milestone: v0.1.0
 current_phase: 2
 current_phase_name: Loop-Item Verification
-status: in_progress
-stopped_at: 02-06 complete (permission mode, headless plan arming, plan read-only)
-last_updated: "2026-11-25T23:02:00.000Z"
+status: verifying
+stopped_at: Phase 2 complete (6/6) — 02-03 sealed the key-leak item with the dated revocation attestation
+last_updated: "2026-11-25T23:16:00.000Z"
 last_activity: 2026-11-25
-last_activity_desc: Autonomous run from phase 2; 02-06 complete (permission mode / plan read-only)
-state_head: 08a0e4bb50730e615a523dff48a6d30c96605194
+last_activity_desc: Phase 2 complete; 02-03 key-leak canary, scoped scans and revocation attestation recorded
+state_head: 97b1f27806c572e09ba0b7bd3df41cc5e65131c1
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -28,16 +28,16 @@ See: .planning/PROJECT.md (updated 2026-11-23)
 ## Current Position
 
 Phase: 2 — Loop-Item Verification
-Plan: 02-01, 02-02, 02-04, 02-05 and 02-06 complete. Only 02-03 (key rotation) is left in Phase 2.
-Status: In progress — autonomous run from `--from 2`; 02-06 left uncommitted for review (DECISIONS C1)
-Last activity: 2026-11-25 23:00 UTC — 02-06 complete (permission mode / headless plan arming / plan read-only)
+Plan: All six plans complete (02-01 … 02-06).
+Status: Phase complete — ready for verification. Phase 2's seven evidence items are committed.
+Last activity: 2026-11-25 23:11 UTC — 02-03 complete (key-leak canary, two scoped scans, dated revocation attestation)
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -60,6 +60,7 @@ Progress: [██░░░░░░░░] 20%
 | Phase 02 P04 | 102m | 3 tasks | 14 files |
 | Phase 02 P05 | 35m | 2 tasks | 9 files |
 | Phase 02 P06 | 55m | 2 tasks | 19 files |
+| Phase 02 P03 | 4m | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Full log in PROJECT.md Key Decisions. Those shaping current work:
 - [Phase 02]: PERM-04 asserts the reminder sentence in the captured request body **and** `plan_mode.json` state=Active; the reminder alone does not prove the edit gate armed.
 - [Phase 02]: A failed edit block finishes collapsed, so a pty test must expand the row (real SGR double-click) before asserting a plan-mode refusal on screen; parse paths from the unwrapped tool result, never from wrapped screen text.
 - [Phase 02]: `GROK_PTY_CAST_DIR` must be absolute: cargo runs the test binary with its crate directory as cwd, so a repo-relative cast dir writes beside the crate.
+- [Phase 02]: The key-leak gate is the default-mode canary (product writes no key material; 52 saved files) plus scoped `--scan` over the committed artifacts, which fails closed. The tracked-file `sk-`-shape baseline (2 files / 4 lines at HEAD `eef4714e`) is recorded as a measurement with no equality gate.
+- [Phase 02]: The canary's own `run exit:` cannot distinguish a provider 401 from a dead network, so the provider-path step records a same-conditions fake-key probe that observed `status=401 Unauthorized` from `api.deepseek.com`.
+- [Phase 02]: PROOF-03's revocation is an author attestation: one dated sentence with no key fragment or account identifier, plus a step proving only that the sentence is present. Nothing in the item claims a tool verified the revocation.
 
 ### Pending Todos
 
@@ -111,8 +115,9 @@ None yet.
 - **Acceptance gate (human, blocking):** ACC-01 needs a 20–30 minute TUI session on a real repo clone by the author. FREEZE-01/02/03 must not run until the signed note is committed — this is the milestone's only human-blocking dependency.
 - **Snapshot tag is public:** `deepseek-v0.1-snapshot` already exists on origin at `4b305bd0`. It must be recorded as superseded in docs and left untouched; moving or deleting it is destructive.
 - **Throwaway key for Phase 2 — RESOLVED (2026-11-23):** the author chose to use the existing env
-  `DEEPSEEK_API_KEY` and rotate it after the run (see Decisions). PROOF-01/02/03 are unblocked;
-  the rotation confirmation is a human action owed at the end of Phase 2.
+  `DEEPSEEK_API_KEY` and rotate it after the run (see Decisions). PROOF-01/02/03 are unblocked.
+  The author confirmed the rotation/revocation on 2026-11-25; 02-03 records it as a dated
+  attestation (no API can verify a revocation).
 - **Research base drift:** STACK/ARCHITECTURE read `main` @ `221a1a59`, PITFALLS @ `9e6780d9`. Re-verify `release.yml` edges and manifest versions before Phase 3.
 - **macOS time budget (MEDIUM):** measure the macOS job log before choosing between timeout, strip and LTO override. Both arches must fit the job timeout; one cache-warming run is allowed if cold cache is the cause.
 - **Dry-run side effects:** a dry run is a real push. `container` currently depends on the whole matrix and the metadata-action tag list has no empty-list guard, so Phase 3 must land before any throwaway tag, and the dispatch verification must create no release and move no `:latest`.
@@ -124,7 +129,8 @@ None yet.
 - **Credential test prints an exported key (hygiene):** with `DEEPSEEK_API_KEY` exported, an
   `xai-grok-shell` credential assertion prints the key in its failure message. It reached only a local
   log, which was redacted; nothing was committed. The gate now unsets the key vars; the assertion should
-  be redacted too, and the key rotated if it was shared.
+  be redacted too. The key used for the Phase-2 live runs is rotated/revoked per the author's
+  02-03 attestation.
 
 ## Deferred Items
 
@@ -141,5 +147,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-11-25
-Stopped at: 02-06 complete (permission mode / headless plan arming / plan read-only), left uncommitted for review. Only 02-03 (key rotation) is left in Phase 2. Do not start a second live session.
+Stopped at: Phase 2 complete (6/6) — 02-03 sealed the key-leak item; the revocation is the author's dated attestation, not a verified fact. Next: `/gsd-verify-work 2`, then Phase 3.
 Resume file: HANDOFF-2026-11-25.md

@@ -33,7 +33,7 @@ Re-verify `release.yml` edges and manifest versions before Phase 3. Design decis
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Truth Baseline** - Sandbox stops aborting, cost and default model stop lying, and the suite is provably green (completed 2026-11-23)
-- [ ] **Phase 2: Loop-Item Verification** - Permissions, resume and plan mode proven against a real session, with the egress boundary measured
+- [x] **Phase 2: Loop-Item Verification** - Permissions, resume and plan mode proven against a real session, with the egress boundary measured (completed 2026-11-25)
 - [ ] **Phase 3: Pipeline Decoupling & Version** - A slow macOS leg can no longer erase the image and the tag shape is settled
 - [ ] **Phase 4: Distribution Proof** - Image, installer and macOS artifacts proven from a throwaway tag
 - [ ] **Phase 5: Documentation Truth & Freeze** - Docs match the tree, the author signs off, and the freeze marker moves no published tag
@@ -71,12 +71,12 @@ Plans:
   3. `scripts/key-leak-check.sh` is green over the tree and over the committed artifacts, no key material appears in logs, saved sessions or evidence files, and the throwaway key is revoked after the run.
   4. The interactive permission prompt offers allow-once, allow-for-session and reject with the security warning on high-signal findings; headless denial fails closed with an actionable hint naming `--always-approve` and `--permission-mode auto` on both the stderr and JSON error paths; permission mode is visible and matches after resume; `--permission-mode plan` is verified to arm plan mode headless, with `KNOWN-ISSUES.md` corrected rather than the code changed.
   5. Resume restores the session's model, reasoning effort and plan state; plan mode is read-only except the plan file in every permission mode including `always-approve` and `auto`; a drafted plan survives quit and resume as committed evidence; and the provenance of each resumed setting (session versus config) is documented.
-**Plans**: 5/6 plans executed
+**Plans**: 6/6 plans complete
 
 Plans:
 - [x] 02-01: Live smoke on a real model-driven session with a throwaway key; transcript committed as evidence
 - [x] 02-02: Runtime egress measurement on that session — provider, `web_fetch` host, AF_UNIX only; measurement committed
-- [ ] 02-03: Key-leak scan over tree and artifacts, no key material in logs/sessions/evidence, key revoked
+- [x] 02-03: Key-leak canary plus scoped `--scan` over the committed artifacts, measured whole-tree baseline, dated revocation attestation
 - [x] 02-04: Permission prompt — the high-signal warning row, the three outcomes on a real screen, and one denial sentence naming both flags on both headless paths
 - [x] 02-05: Resume fidelity — model, effort and plan state restored, a drafted plan surviving quit and resume, provenance documented
 - [x] 02-06: Permission mode across resume, headless plan arming, and plan mode read-only in every permission mode
@@ -159,7 +159,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Truth Baseline | 6/6 | Complete    | 2026-11-23 |
-| 2. Loop-Item Verification | 5/6 | In Progress | - |
+| 2. Loop-Item Verification | 6/6 | Complete | 2026-11-25 |
 | 3. Pipeline Decoupling & Version | 0/4 | Not started | - |
 | 4. Distribution Proof | 0/3 | Not started | - |
 | 5. Documentation Truth & Freeze | 0/5 | Not started | - |
