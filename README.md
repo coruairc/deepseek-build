@@ -119,8 +119,9 @@ Manual install, if you prefer to drive every step:
 | `x86_64-apple-darwin` | macOS 13 (Ventura)+ on Intel |
 
 macOS builds come from macOS 15 runners; the listed minimums are conservative.
-The macOS binaries are **not codesigned and not notarized**, so first launch
-may need a right-click **Open**, or
+The macOS binaries are **ad-hoc signed** (`codesign --sign -`) so Apple silicon
+will execute them, **not notarized**, and carry **no Developer ID**, so first
+launch may need a right-click **Open**, or
 `xattr -d com.apple.quarantine <path-to-binary>`.
 
 > Independent project, not affiliated with DeepSeek. "DeepSeek" is a trademark

@@ -21,22 +21,39 @@ and asserts the structure Phase 3 promised (REL-01, REL-08):
   - the image tag-list guard runs after the metadata step and before the first
     `build-push-action`, i.e. before `:latest` can move;
   - the `version` job rejects a non-semver tag before anything builds;
+  - `build-macos` signs the linked binary ad-hoc after the build and before
+    packaging, and verifies the *extracted tarball* (signature, version
+    needles, no `__DWARF` segment, no `.dSYM`) before it uploads;
+  - the macOS job carries its own 240-minute budget while the Linux job keeps
+    90, and no `CARGO_PROFILE_*` override landed in a build job by accident;
   - no `run:` body invokes `strip`/`dsymutil`, and every `uses:` stays pinned
     to a full-length commit SHA.
+
+After the structural assertions this script also runs the macOS
+extracted-artifact step's shell body in a temp directory against stubbed
+`codesign`/`otool` and a fake tarball (the Linux fixture). That exercises the
+step's paths, needles and DWARF gate as written, so a broken path or a changed
+needle fails here instead of on the first real tag. It proves step *logic*
+only: no Mach-O signature is created or verified on this host, so REL-03's
+macOS execution half still needs the real tag run.
 
 Usage
 -----
     python3 scripts/check-release-workflow.py [path/to/release.yml]
 
-Prints one PASS/FAIL line per numbered assertion and every violation found,
-then exits 1 if any assertion failed. Defaults to the repo's release.yml
-relative to this script. Requires Python 3 and PyYAML.
+Prints one PASS/FAIL line per numbered assertion, the fixture tally, and every
+violation found, then exits 1 if any assertion or fixture case failed.
+Defaults to the repo's release.yml relative to this script. Requires Python 3,
+PyYAML, `bash` and `tar`.
 """
 
 from __future__ import annotations
 
+import os
 import re
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Callable
 
@@ -62,6 +79,15 @@ ALL_TARGETS = [
     "aarch64-apple-darwin",
     "x86_64-apple-darwin",
 ]
+
+# The macOS artifact contract (REL-03, REL-02) names these explicitly, and the
+# fixture drives the verify step through the same variables the step declares.
+SIGN_STEP_NAME = "Ad-hoc sign the macOS binary"
+ARTIFACT_STEP_NAME = "Verify the packaged macOS artifact"
+ARTIFACT_VERIFY_DIR_ENV = "ARTIFACT_VERIFY_DIR"
+FIXTURE_TARGET = "x86_64-apple-darwin"
+LINUX_TIMEOUT_MINUTES = 90
+MACOS_TIMEOUT_MINUTES = 240
 
 # Kept byte-identical to the derive step so a rewrite of one side fails here.
 PRERELEASE_RE_TEXT = r"^[0-9]+\.[0-9]+\.[0-9]+-"
@@ -470,6 +496,288 @@ def a15_semver_gate(doc: Workflow) -> list[str]:
     return problems
 
 
+def step_indices_by_name(job: dict[str, Any], name: str) -> list[int]:
+    return [
+        index
+        for index, step in enumerate(steps_of(job))
+        if str(step.get("name") or "").strip() == name
+    ]
+
+
+def a16_macos_adhoc_sign(doc: Workflow) -> list[str]:
+    """REL-03/T-03-08: sign explicitly after linking and before packaging."""
+    job = jobs_of(doc).get("build-macos")
+    if not isinstance(job, dict):
+        return ["job 'build-macos' is missing"]
+    steps = steps_of(job)
+    problems: list[str] = []
+    builds = [i for i, s in enumerate(steps) if "cargo build" in run_of(s)]
+    packages = step_indices_by_name(job, "Package tarball")
+    signs = [
+        i for i, s in enumerate(steps) if "codesign --force --sign -" in run_of(s)
+    ]
+    if len(builds) != 1:
+        problems.append(
+            f"build-macos has {len(builds)} 'cargo build' step(s), expected exactly 1"
+        )
+    if len(packages) != 1:
+        problems.append(
+            f"build-macos has {len(packages)} 'Package tarball' step(s), expected exactly 1"
+        )
+    if len(signs) != 1:
+        problems.append(
+            "build-macos has "
+            f"{len(signs)} step(s) running 'codesign --force --sign -', expected exactly 1"
+        )
+    if problems:
+        return problems
+    if not builds[0] < signs[0] < packages[0]:
+        problems.append(
+            "the ad-hoc sign step is not between the 'cargo build' step and "
+            "'Package tarball'"
+        )
+    name = str(steps[signs[0]].get("name") or "").strip()
+    if name != SIGN_STEP_NAME:
+        problems.append(f"signed step name is {name!r}, expected {SIGN_STEP_NAME!r}")
+    return problems
+
+
+def a17_macos_verify_extracted(doc: Workflow) -> list[str]:
+    """REL-03: verify the packaged tarball, not the pre-tar build output."""
+    job = jobs_of(doc).get("build-macos")
+    if not isinstance(job, dict):
+        return ["job 'build-macos' is missing"]
+    steps = steps_of(job)
+    problems: list[str] = []
+    packages = step_indices_by_name(job, "Package tarball")
+    uploads = [
+        i
+        for i, s in enumerate(steps)
+        if uses_of(s).startswith("actions/upload-artifact@")
+    ]
+    verifies = step_indices_by_name(job, ARTIFACT_STEP_NAME)
+    if len(packages) != 1:
+        problems.append(
+            f"build-macos has {len(packages)} 'Package tarball' step(s), expected exactly 1"
+        )
+    if len(uploads) != 1:
+        problems.append(
+            f"build-macos has {len(uploads)} upload-artifact step(s), expected exactly 1"
+        )
+    if len(verifies) != 1:
+        problems.append(
+            f"build-macos has {len(verifies)} step(s) named {ARTIFACT_STEP_NAME!r}, "
+            "expected exactly 1"
+        )
+    if problems:
+        return problems
+    if not packages[0] < verifies[0] < uploads[0]:
+        problems.append(
+            f"{ARTIFACT_STEP_NAME!r} is not between 'Package tarball' and the "
+            "upload-artifact step"
+        )
+    step = steps[verifies[0]]
+    body = run_of(step)
+    for needle in (
+        "tar -xzf",
+        "codesign --verify --strict",
+        "--version",
+        "__DWARF",
+        "*.dSYM",
+    ):
+        if needle not in body:
+            problems.append(
+                f"{ARTIFACT_STEP_NAME!r} run body is missing {needle!r}"
+            )
+    env = env_of(step)
+    for key in ("RELEASE_VERSION", "RT", ARTIFACT_VERIFY_DIR_ENV):
+        if not str(env.get(key) or "").strip():
+            problems.append(f"{ARTIFACT_STEP_NAME!r} env is missing {key}")
+    return problems
+
+
+def a18_build_timeouts(doc: Workflow) -> list[str]:
+    """REL-02: the macOS budget is larger; the Linux budget is untouched."""
+    jobs = jobs_of(doc)
+    problems: list[str] = []
+    for job_name, expected in (
+        ("build-linux", LINUX_TIMEOUT_MINUTES),
+        ("build-macos", MACOS_TIMEOUT_MINUTES),
+    ):
+        job = jobs.get(job_name)
+        if not isinstance(job, dict):
+            problems.append(f"job '{job_name}' is missing")
+            continue
+        value = job.get("timeout-minutes")
+        if value != expected:
+            problems.append(
+                f"{job_name}.timeout-minutes is {value!r}, expected {expected}"
+            )
+    return problems
+
+
+def a19_no_profile_overrides(doc: Workflow) -> list[str]:
+    """No `CARGO_PROFILE_*` override may land in a build job by accident."""
+    problems: list[str] = []
+    jobs = jobs_of(doc)
+    for job_name in ("build-linux", "build-macos"):
+        job = jobs.get(job_name)
+        if not isinstance(job, dict):
+            continue
+        job_env = job.get("env")
+        for key in (job_env if isinstance(job_env, dict) else {}):
+            if "CARGO_PROFILE_" in str(key):
+                problems.append(f"{job_name} sets job-level env {key!r}")
+        for index, step in enumerate(steps_of(job), start=1):
+            if "CARGO_PROFILE_" in run_of(step):
+                problems.append(
+                    f"{job_name} step {index} ({step.get('name', '?')!r}) run body "
+                    "mentions CARGO_PROFILE_"
+                )
+            for key, value in env_of(step).items():
+                if "CARGO_PROFILE_" in str(key) or "CARGO_PROFILE_" in str(value):
+                    problems.append(
+                        f"{job_name} step {index} ({step.get('name', '?')!r}) env "
+                        f"{key!r} = {value!r}"
+                    )
+    return problems
+
+
+CODESIGN_STUB = """#!/bin/sh
+# Linux fixture stand-in for macOS codesign: claim an ad-hoc signature, pass.
+printf 'Executable=%s\\nSignature=adhoc\\n' "$*" >&2
+exit 0
+"""
+
+OTOOL_STUB_CLEAN = """#!/bin/sh
+# Linux fixture stand-in for macOS otool: no load commands, so no __DWARF.
+exit 0
+"""
+
+OTOOL_STUB_DWARF = """#!/bin/sh
+# Linux fixture stand-in: report a __DWARF segment the way `otool -l` would.
+printf 'Load command 2\\n      cmd LC_SEGMENT_64\\n     segname __DWARF\\n'
+exit 0
+"""
+
+
+def _write_stub(directory: Path, name: str, content: str) -> None:
+    path = directory / name
+    path.write_text(content, encoding="utf-8")
+    path.chmod(0o755)
+
+
+def run_artifact_step_fixture(doc: Workflow) -> list[str]:
+    """Run the macOS verify step's shell body against stubs and a fake tarball.
+
+    Proves the step's paths, needles and DWARF gate as written on Linux; it
+    proves nothing about a real Mach-O signature, which only a macOS host can
+    produce or verify. Each fixture sets RELEASE_VERSION, RT and
+    ARTIFACT_VERIFY_DIR explicitly — the same names the step declares in
+    `env:` — so no variable comes from this host's environment.
+    """
+    job = jobs_of(doc).get("build-macos")
+    if not isinstance(job, dict):
+        return ["fixture: job 'build-macos' is missing"]
+    steps = steps_of(job)
+    targets = step_indices_by_name(job, ARTIFACT_STEP_NAME)
+    if len(targets) != 1:
+        return [
+            f"fixture: build-macos has {len(targets)} step(s) named "
+            f"{ARTIFACT_STEP_NAME!r}, expected exactly 1"
+        ]
+    body = run_of(steps[targets[0]])
+    if not body.strip():
+        return [f"fixture: {ARTIFACT_STEP_NAME!r} has an empty run body"]
+
+    # label, tarball version, version the binary prints, otool stub, .dSYM, expect success
+    cases = [
+        ("good 0.1.0", "0.1.0", "0.1.0", "clean", False, True),
+        ("good 0.1.0-proof1", "0.1.0-proof1", "0.1.0-proof1", "clean", False, True),
+        ("wrong --version fails", "0.1.0", "9.9.9", "clean", False, False),
+        ("stubbed __DWARF fails", "0.1.0", "0.1.0", "dwarf", False, False),
+        ("stray .dSYM fails", "0.1.0", "0.1.0", "clean", True, False),
+    ]
+    problems: list[str] = []
+    passed = 0
+    with tempfile.TemporaryDirectory(prefix="release-workflow-fixture-") as work:
+        root = Path(work)
+        for (
+            label,
+            tarball_version,
+            printed_version,
+            otool_mode,
+            make_dsym,
+            expect_ok,
+        ) in cases:
+            case_dir = root / re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-")
+            stage = case_dir / "stage"
+            stage.mkdir(parents=True)
+            binary = stage / "deepseek-build"
+            binary.write_text(
+                "#!/bin/sh\nprintf 'deepseek-build %s (abcdef123456)\\n' '"
+                + printed_version
+                + "'\n",
+                encoding="utf-8",
+            )
+            binary.chmod(0o755)
+            tarball = (
+                case_dir / f"deepseek-build-{tarball_version}-{FIXTURE_TARGET}.tar.gz"
+            )
+            try:
+                subprocess.run(
+                    ["tar", "-czf", str(tarball), "-C", str(stage), "deepseek-build"],
+                    check=True,
+                    capture_output=True,
+                )
+            except (OSError, subprocess.CalledProcessError) as exc:
+                problems.append(f"fixture case {label!r}: could not build tarball: {exc}")
+                continue
+            if make_dsym:
+                (case_dir / "artifact.dSYM").mkdir()
+            stubs = case_dir / "stubs"
+            stubs.mkdir()
+            _write_stub(stubs, "codesign", CODESIGN_STUB)
+            _write_stub(
+                stubs,
+                "otool",
+                OTOOL_STUB_DWARF if otool_mode == "dwarf" else OTOOL_STUB_CLEAN,
+            )
+            env = {
+                "PATH": f"{stubs}:{os.environ.get('PATH', '/usr/bin:/bin')}",
+                "HOME": str(case_dir),
+                "RELEASE_VERSION": tarball_version,
+                "RT": FIXTURE_TARGET,
+                ARTIFACT_VERIFY_DIR_ENV: str(case_dir / "extract"),
+            }
+            try:
+                proc = subprocess.run(
+                    ["bash", "-c", body],
+                    cwd=case_dir,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                )
+            except subprocess.TimeoutExpired:
+                problems.append(f"fixture case {label!r}: timed out after 120s")
+                continue
+            if (proc.returncode == 0) == expect_ok:
+                passed += 1
+            else:
+                expected = "0" if expect_ok else "non-zero"
+                problems.append(
+                    f"fixture case {label!r}: exit {proc.returncode}, expected "
+                    f"{expected}; stdout={proc.stdout!r} stderr={proc.stderr!r}"
+                )
+    total = len(cases)
+    if problems:
+        print(f"FAIL: artifact-step fixture: {passed}/{total} PASS")
+        return problems
+    print(f"artifact-step fixture: {passed}/{total} PASS")
+    return []
+
+
 ASSERTIONS: list[Assertion] = [
     ("A1", "jobs are exactly version/build-linux/build-macos/publish/container", a1_job_set),
     (
@@ -522,6 +830,22 @@ ASSERTIONS: list[Assertion] = [
         a14_container_guard,
     ),
     ("A15", "the version job's derive step carries the strict semver gate", a15_semver_gate),
+    (
+        "A16",
+        "build-macos signs the binary ad-hoc after the build and before 'Package tarball'",
+        a16_macos_adhoc_sign,
+    ),
+    (
+        "A17",
+        "the packaged macOS artifact is verified after packaging and before the upload",
+        a17_macos_verify_extracted,
+    ),
+    (
+        "A18",
+        "build-macos budget is 240 minutes; build-linux keeps 90",
+        a18_build_timeouts,
+    ),
+    ("A19", "no CARGO_PROFILE_* override lands in a build job", a19_no_profile_overrides),
 ]
 
 
@@ -552,6 +876,12 @@ def main(argv: list[str]) -> int:
         else:
             print(f"PASS: {assertion_id} {description}")
 
+    # The fixture runs after the structural assertions: it needs the step the
+    # assertions locate, and it exercises the real shell body, not a copy.
+    fixture_problems = run_artifact_step_fixture(doc)
+    for problem in fixture_problems:
+        print(f"      - {problem}")
+
     total = len(ASSERTIONS)
     if failed:
         print(f"release-workflow: {total - failed}/{total} assertions PASS, {failed} FAILED")
@@ -560,7 +890,7 @@ def main(argv: list[str]) -> int:
         print("FAIL: the workflow has no trigger block")
         return 1
     print(f"release-workflow: {total}/{total} assertions PASS")
-    return 0
+    return 1 if fixture_problems else 0
 
 
 if __name__ == "__main__":

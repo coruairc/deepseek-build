@@ -111,6 +111,17 @@ jobs:
   # macOS targets on macOS 15 runners (macos-13 is retired; macos-15-intel still
   # exists and runs natively on Intel hardware) in `build-macos`. Artifact names
   # stay `release-<target>`, the contract `publish` and `container` download.
+  # Budgets differ on purpose: every Linux leg gets 90 minutes, `build-macos`
+  # gets 240. On `v0.0.1-rc4` (run 40111152104) the aarch64-apple-darwin leg hit
+  # the 90-minute job timeout and cancelled the run before `publish` (and the
+  # then-coupled `container`) could start. The macOS arm64 runner is a 3 vCPU /
+  # 7 GB box (4 vCPU / 14 GB for macos-15-intel) while `release-dist` does thin
+  # LTO with codegen-units = 1, so 90 minutes was never a plausible ceiling
+  # there. If 240 is still not enough, the next lever is a macOS-only per-job
+  # profile override: CARGO_PROFILE_RELEASE_DIST_LTO=off plus
+  # CARGO_PROFILE_RELEASE_DIST_CODEGEN_UNITS=16 on `build-macos` only. Do not add
+  # it speculatively — the Phase 4 tag run decides, and every Linux leg keeps its
+  # LTO settings either way.
   build-linux:
     name: build-linux (${{ matrix.target }})
     needs: version
@@ -252,7 +263,7 @@ jobs:
     name: build-macos (${{ matrix.target }})
     needs: version
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 90
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -315,6 +326,19 @@ jobs:
         env:
           GROK_VERSION: ${{ needs.version.outputs.version }}
 
+      # rustc ad-hoc signs arm64 Mach-O output by itself, but the Intel linker
+      # emits an unsigned binary, and an unsigned artifact would fail the
+      # --verify below for a non-defect. Sign explicitly on both arches after the
+      # build and before packaging: the signature then covers the
+      # link-time-stripped binary, and nothing writes to the file afterwards
+      # (`tar` preserves bytes, which the extracted-artifact check proves).
+      - name: Ad-hoc sign the macOS binary
+        run: |
+          set -euo pipefail
+          codesign --force --sign - target/release-dist/deepseek-build
+          codesign --verify --strict --verbose=2 target/release-dist/deepseek-build
+          codesign -dv target/release-dist/deepseek-build 2>&1
+
       # `deepseek-build <version> (<shortcommit>)` — both shape and stamped
       # version are asserted; a wrong stamp must fail the job here.
       - name: Smoke-check the built binary
@@ -371,6 +395,53 @@ jobs:
           tar -czf "deepseek-build-${RELEASE_VERSION}-${RT}.tar.gz" -C "$stage" deepseek-build LICENSE NOTICE THIRD-PARTY-NOTICES README.txt
           printf '%s\n' "archive contents:"
           tar -tzf "deepseek-build-${RELEASE_VERSION}-${RT}.tar.gz"
+
+      # A user downloads the tarball, not `target/release-dist`, so verify the
+      # packaged artifact: the signature must still validate after `tar`, the
+      # extracted binary must report the stamped version (same needles as the
+      # pre-tar smoke), and the archive must carry no `__DWARF` segment and no
+      # `.dSYM` bundle. Runs before the upload, so a bad artifact never reaches
+      # `publish`. `ARTIFACT_VERIFY_DIR` is declared here (and `RT` for the
+      # tarball name) so the body is `set -u`-clean and the Linux fixture can
+      # drive it with the same variable names.
+      - name: Verify the packaged macOS artifact
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          RT: ${{ matrix.target }}
+          ARTIFACT_VERIFY_DIR: ${{ runner.temp }}/verify-packaged-artifact
+        run: |
+          set -euo pipefail
+          rm -rf "${ARTIFACT_VERIFY_DIR}"
+          mkdir -p "${ARTIFACT_VERIFY_DIR}"
+          tar -xzf "deepseek-build-${RELEASE_VERSION}-${RT}.tar.gz" -C "${ARTIFACT_VERIFY_DIR}"
+          bin="${ARTIFACT_VERIFY_DIR}/deepseek-build"
+          # `tar` does not alter file bytes, so the signature applied after
+          # linking is still valid on the extracted file. On arm64 the exec
+          # below is the second test of that same fact: the kernel refuses to
+          # run a binary whose signature no longer matches.
+          codesign --verify --strict --verbose=2 "${bin}"
+          if ! codesign -dv "${bin}" 2>&1 | grep -Eq 'Signature=(adhoc|Authority=)'; then
+            echo "::error::extracted binary carries no signature (expected an ad-hoc or Developer ID signature)"
+            exit 1
+          fi
+          out="$("${bin}" --version)"
+          printf 'extracted binary reports: %s\n' "${out}"
+          if ! printf '%s\n' "${out}" | grep -Fq "deepseek-build ${RELEASE_VERSION} ("; then
+            echo "::error::extracted --version does not report the release version: wanted 'deepseek-build ${RELEASE_VERSION} (...)', got '${out}'"
+            exit 1
+          fi
+          if ! printf '%s\n' "${out}" | grep -Eq '^deepseek-build [^ ]+ \([0-9a-f]{7,40}\)$'; then
+            echo "::error::extracted --version output has unexpected shape (name version (commit)): '${out}'"
+            exit 1
+          fi
+          if otool -l "${bin}" | grep -q '__DWARF'; then
+            echo "::error::extracted binary still carries a __DWARF segment; release-dist must ship no DWARF"
+            exit 1
+          fi
+          if [ -n "$(find . -name '*.dSYM' -print -quit)" ]; then
+            echo "::error::a .dSYM bundle exists under the build tree; split-debuginfo must stay \"off\""
+            exit 1
+          fi
 
       # GitHub-internal artifact transport only (see the hard constraint above).
       # The publish job downloads these and attaches them to the release.
