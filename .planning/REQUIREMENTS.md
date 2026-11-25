@@ -55,13 +55,13 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 - [x] **PERM-01**: The interactive permission prompt is exercised end to end and shows allow-once, allow-for-session, and reject, with the security warning on high-signal findings
 - [x] **PERM-02**: Headless permission denial fails closed with an actionable hint naming `--always-approve` and `--permission-mode auto`, on both the stderr and JSON error paths
-- [ ] **PERM-03**: Permission mode is visible in the UI and matches after resume
-- [ ] **PERM-04**: `--permission-mode plan` is verified to arm plan mode headless, and `KNOWN-ISSUES.md` is corrected rather than the code being changed
+- [x] **PERM-03**: Permission mode is visible in the UI and matches after resume
+- [x] **PERM-04**: `--permission-mode plan` is verified to arm plan mode headless, and `KNOWN-ISSUES.md` is corrected rather than the code being changed
 
 ### Sessions And Plan Mode
 
 - [x] **SESS-01**: Resume restores the session's model, reasoning effort, and plan state
-- [ ] **SESS-02**: Plan mode is read-only except the plan file in every permission mode, including `always-approve` and `auto`
+- [x] **SESS-02**: Plan mode is read-only except the plan file in every permission mode, including `always-approve` and `auto`
 - [x] **SESS-03**: A drafted plan survives quit and resume, promoted from the existing pty scenario into committed evidence
 - [x] **SESS-04**: The provenance of each resumed setting is documented — what comes from the session versus from config
 
@@ -170,10 +170,10 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | PROOF-03 | Phase 2 — Loop-Item Verification | Pending |
 | PERM-01 | Phase 2 — Loop-Item Verification | Complete |
 | PERM-02 | Phase 2 — Loop-Item Verification | Complete |
-| PERM-03 | Phase 2 — Loop-Item Verification | Pending |
-| PERM-04 | Phase 2 — Loop-Item Verification | Pending |
+| PERM-03 | Phase 2 — Loop-Item Verification | Complete |
+| PERM-04 | Phase 2 — Loop-Item Verification | Complete |
 | SESS-01 | Phase 2 — Loop-Item Verification | Complete |
-| SESS-02 | Phase 2 — Loop-Item Verification | Pending |
+| SESS-02 | Phase 2 — Loop-Item Verification | Complete |
 | SESS-03 | Phase 2 — Loop-Item Verification | Complete |
 | SESS-04 | Phase 2 — Loop-Item Verification | Complete |
 | REL-01 | Phase 3 — Pipeline Decoupling & Version | Pending |

@@ -4,16 +4,16 @@ milestone: v0.1.0
 current_phase: 2
 current_phase_name: Loop-Item Verification
 status: in_progress
-stopped_at: null
-last_updated: "2026-11-25T22:06:00.000Z"
+stopped_at: 02-06 complete (permission mode, headless plan arming, plan read-only)
+last_updated: "2026-11-25T23:02:00.000Z"
 last_activity: 2026-11-25
-last_activity_desc: Autonomous run from phase 2; 02-05 complete (resume fidelity)
-state_head: b782b5d2efaf04f5b82b87dcfc440fc9adb24ec8
+last_activity_desc: Autonomous run from phase 2; 02-06 complete (permission mode / plan read-only)
+state_head: 08a0e4bb50730e615a523dff48a6d30c96605194
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -28,16 +28,16 @@ See: .planning/PROJECT.md (updated 2026-11-23)
 ## Current Position
 
 Phase: 2 — Loop-Item Verification
-Plan: 02-01, 02-02, 02-04 and 02-05 complete. Next is 02-06; 02-03 (key rotation) is still owed.
-Status: In progress — autonomous run from `--from 2`
-Last activity: 2026-11-25 22:05 UTC — 02-05 complete (resume fidelity); 02-06 next
+Plan: 02-01, 02-02, 02-04, 02-05 and 02-06 complete. Only 02-03 (key rotation) is left in Phase 2.
+Status: In progress — autonomous run from `--from 2`; 02-06 left uncommitted for review (DECISIONS C1)
+Last activity: 2026-11-25 23:00 UTC — 02-06 complete (permission mode / headless plan arming / plan read-only)
 
 Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 11
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -59,6 +59,7 @@ Progress: [██░░░░░░░░] 20%
 |------|----------|-------|-------|
 | Phase 02 P04 | 102m | 3 tasks | 14 files |
 | Phase 02 P05 | 35m | 2 tasks | 9 files |
+| Phase 02 P06 | 55m | 2 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,10 @@ Full log in PROJECT.md Key Decisions. Those shaping current work:
 - [Phase 02]: Pty session-grant proof uses ask mode without Bash(*) ask, because that rule skips the session-grant short-circuit.
 - [Phase 02]: Resume proofs read request bodies, not logs: one TestSandbox plus run_headless_in_sandbox_borrowed for every invocation; the sandbox config.toml must declare a [model.*] entry because the mock catalog is not fetched.
 - [Phase 02]: A resumed plan turn injects the sparse reminder (reminder_count is odd); the permission chip after resume is a config fact, not session memory — plan state and plan.md come from plan_mode.json/plan.md.
+- [Phase 02]: PERM-03 resumes by the session id read from `<grok home>/sessions/*/*` with no `--permission-mode` on either launch; `--continue` would prove recency, not the named session.
+- [Phase 02]: PERM-04 asserts the reminder sentence in the captured request body **and** `plan_mode.json` state=Active; the reminder alone does not prove the edit gate armed.
+- [Phase 02]: A failed edit block finishes collapsed, so a pty test must expand the row (real SGR double-click) before asserting a plan-mode refusal on screen; parse paths from the unwrapped tool result, never from wrapped screen text.
+- [Phase 02]: `GROK_PTY_CAST_DIR` must be absolute: cargo runs the test binary with its crate directory as cwd, so a repo-relative cast dir writes beside the crate.
 
 ### Pending Todos
 
@@ -136,5 +141,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-11-25
-Stopped at: 02-05 complete (resume fidelity). Wave 2: 02-06 next. 02-03 (key rotation) still owed. Do not start a second live session.
+Stopped at: 02-06 complete (permission mode / headless plan arming / plan read-only), left uncommitted for review. Only 02-03 (key rotation) is left in Phase 2. Do not start a second live session.
 Resume file: HANDOFF-2026-11-25.md
