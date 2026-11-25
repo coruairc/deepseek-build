@@ -1040,6 +1040,36 @@ fn permission_cancel_hint_only_fires_for_unapproved_gated_cancel() {
         super::permission_cancel_hint("end_turn", Some(PERMISSION_CANCELLED_CATEGORY), false)
             .is_none()
     );
+
+    let hint = super::permission_denial_hint();
+    let error = super::permission_denial_error();
+    assert!(
+        hint.starts_with("Turn ended: a permission-gated tool was cancelled"),
+        "{hint}"
+    );
+    assert!(hint.contains("--always-approve"), "{hint}");
+    assert!(hint.contains("--permission-mode auto"), "{hint}");
+    assert!(!hint.contains("--permission-mode always-approve"), "{hint}");
+    assert!(
+        error.starts_with("permission-gated tool cancelled; re-run with"),
+        "{error}"
+    );
+    assert!(error.contains("--always-approve"), "{error}");
+    assert!(error.contains("--permission-mode auto"), "{error}");
+    assert!(
+        !error.contains("--permission-mode always-approve"),
+        "{error}"
+    );
+    assert_eq!(
+        super::permission_cancel_hint("cancelled", Some(PERMISSION_CANCELLED_CATEGORY), false)
+            .as_deref(),
+        Some(hint.as_str())
+    );
+    assert_eq!(
+        super::permission_cancel_hint("cancelled", Some(PERMISSION_REJECTED_CATEGORY), false)
+            .as_deref(),
+        Some(hint.as_str())
+    );
 }
 
 #[tokio::test]
