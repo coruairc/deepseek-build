@@ -53,8 +53,8 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 ### Permissions
 
-- [ ] **PERM-01**: The interactive permission prompt is exercised end to end and shows allow-once, allow-for-session, and reject, with the security warning on high-signal findings
-- [ ] **PERM-02**: Headless permission denial fails closed with an actionable hint naming `--always-approve` and `--permission-mode auto`, on both the stderr and JSON error paths
+- [x] **PERM-01**: The interactive permission prompt is exercised end to end and shows allow-once, allow-for-session, and reject, with the security warning on high-signal findings
+- [x] **PERM-02**: Headless permission denial fails closed with an actionable hint naming `--always-approve` and `--permission-mode auto`, on both the stderr and JSON error paths
 - [ ] **PERM-03**: Permission mode is visible in the UI and matches after resume
 - [ ] **PERM-04**: `--permission-mode plan` is verified to arm plan mode headless, and `KNOWN-ISSUES.md` is corrected rather than the code being changed
 
@@ -168,8 +168,8 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | PROOF-01 | Phase 2 — Loop-Item Verification | Complete |
 | PROOF-02 | Phase 2 — Loop-Item Verification | Pending |
 | PROOF-03 | Phase 2 — Loop-Item Verification | Pending |
-| PERM-01 | Phase 2 — Loop-Item Verification | Pending |
-| PERM-02 | Phase 2 — Loop-Item Verification | Pending |
+| PERM-01 | Phase 2 — Loop-Item Verification | Complete |
+| PERM-02 | Phase 2 — Loop-Item Verification | Complete |
 | PERM-03 | Phase 2 — Loop-Item Verification | Pending |
 | PERM-04 | Phase 2 — Loop-Item Verification | Pending |
 | SESS-01 | Phase 2 — Loop-Item Verification | Pending |

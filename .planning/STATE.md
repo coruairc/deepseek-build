@@ -4,17 +4,16 @@ milestone: v0.1.0
 current_phase: 2
 current_phase_name: Loop-Item Verification
 status: paused
-stopped_at: Author clocked off. 02-01 complete. 02-04 evidence committed at 30388a51; SUMMARY uncommitted; cargo test still holding the build lock. See HANDOFF-2026-11-25.md
-last_updated: "2026-11-25T21:21:14.000Z"
-last_activity: 2026-11-25
-last_activity_desc: Clocked off during 02-04 evidence capture; 02-01 committed
-state_head: ec878ef0
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-11-25T21:22:43.922Z"
+last_activity: "2026-11-25 21:21 UTC — handoff written; cargo test still holding /tmp/team-build.lock"
+state_head: 757b1f17bbf0b857b1a47131cff9866efed3c6de
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 12
-  completed_plans: 7
-  percent: 20
+  completed_plans: 8
+last_activity_desc: 02-04 complete; 02-01 remains complete; author had clocked off during evidence capture
 ---
 
 # Project State
@@ -29,9 +28,11 @@ See: .planning/PROJECT.md (updated 2026-11-23)
 ## Current Position
 
 Phase: 2 — Loop-Item Verification
-Plan: 02-01 complete; 02-04 evidence committed (30388a51), SUMMARY not yet committed; 02-02, 02-03, 02-05, 02-06 not started
-Status: Paused — author clocked off
-Last activity: 2026-11-25 21:21 UTC — handoff written; cargo test still holding /tmp/team-build.lock
+Current Plan: 3
+Total Plans in Phase: 6
+Plan: 02-01 complete (ec878ef0). 02-04 complete (b5a75b78, 4599b561, 30388a51). 02-02, 02-03, 02-05, 02-06 not started. The inherited key was rejected; 02-01 used the login-shell key and recorded that. Do not start a second live run.
+Status: Paused — author clocked off; 02-04 finished after the handoff
+Last activity: 2026-11-25 21:22 UTC — 02-04 SUMMARY written; no cargo test still running
 
 Progress: [██░░░░░░░░] 20%
 
@@ -54,6 +55,11 @@ Progress: [██░░░░░░░░] 20%
 - Trend: —
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 02 P04 | 102m | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -81,6 +87,9 @@ Full log in PROJECT.md Key Decisions. Those shaping current work:
   shared `CARGO_TARGET_DIR`, one `flock` build lock, and one merge step per wave. This overrides the
   default "one implementer, one working tree" rule for this project; dependent plans (live-session
   proof, artifact builds, freeze) stay sequential. No plan is parallelized with a direct dependency.
+- [Phase 02]: Permission warning is the wire title's first line, painted above the question; chrome height grows by one.
+- [Phase 02]: Both headless denial lines are composed from PERMISSION_DENIAL_FLAGS naming --always-approve and --permission-mode auto.
+- [Phase 02]: Pty session-grant proof uses ask mode without Bash(*) ask, because that rule skips the session-grant short-circuit.
 
 ### Pending Todos
 
@@ -125,6 +134,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-25 21:21 UTC
-Stopped at: Author clocked off. 02-01 complete (ec878ef0). 02-04 tasks 1–2 committed (b5a75b78, 4599b561); task 3 evidence capture still running. Do not start a second executor or a second cargo test. 02-02 reads the committed live-smoke transcript — no second live run.
-Resume file: HANDOFF-2026-11-25.md
+Last session: 2026-11-25T21:22:43.684Z
+Stopped at: Completed 02-04-PLAN.md
+Resume file: None
