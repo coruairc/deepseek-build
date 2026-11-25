@@ -128,3 +128,70 @@ async fn plan_gate_sees_hook_rewritten_path() {
         })
         .await;
 }
+
+/// SESS-02 by construction: `plan_mode_edit_gate` is a pure function of (tracker, tool input,
+/// access kind). Its signature has **no permission-policy parameter**, and it runs before any
+/// permission resolution in `prepare_tool_call`, so no permission mode — `default`, `auto` or
+/// `always-approve` — can reach an edit it refuses. This calls the gate directly with the same
+/// inputs production builds (`AccessKind::from(&tool_input)`), with no permission manager in scope
+/// at all, which is the point: there is nothing for a policy to consult.
+#[tokio::test(flavor = "current_thread")]
+async fn plan_mode_edit_gate_rejects_without_consulting_a_permission_policy() {
+    use xai_grok_tools::implementations::codex::apply_patch::tool::ApplyPatchInput;
+    use xai_grok_tools::implementations::grok_build::search_replace::SearchReplaceInput;
+    use xai_grok_tools::types::ToolInput;
+    use xai_grok_workspace::permission::AccessKind;
+
+    let local = tokio::task::LocalSet::new();
+    local
+        .run_until(async {
+            let actor = build_gate_actor().await;
+            activate_plan_mode(&actor);
+            let plan_path = actor.plan_mode.lock().plan_file_path().to_path_buf();
+
+            let edit_at = |path: &str| {
+                ToolInput::SearchReplace(SearchReplaceInput {
+                    file_path: path.to_owned(),
+                    old_string: "a".to_owned(),
+                    new_string: "b".to_owned(),
+                    replace_all: false,
+                })
+            };
+            let outside = edit_at("/tmp/src/main.rs");
+            let patch = ToolInput::ApplyPatch(ApplyPatchInput {
+                patch: "*** Begin Patch\n*** Update File: /tmp/src/main.rs\n*** End Patch"
+                    .to_owned(),
+            });
+            let plan_file = edit_at(&plan_path.to_string_lossy());
+            let plan_file_kind = AccessKind::Edit(plan_path.to_string_lossy().into_owned());
+
+            let gate = |input: &ToolInput| {
+                super::tool_calls::plan_mode_edit_gate(
+                    &actor.plan_mode.lock(),
+                    input,
+                    &AccessKind::from(input),
+                )
+            };
+
+            assert_eq!(
+                gate(&outside),
+                super::tool_calls::PlanEditGate::RejectNonPlanFile,
+                "an edit outside the plan file must be rejected with no policy in scope"
+            );
+            assert_eq!(
+                gate(&patch),
+                super::tool_calls::PlanEditGate::RejectNonPlanFile,
+                "apply_patch names its files inside the patch text and must always be rejected"
+            );
+            assert_eq!(
+                super::tool_calls::plan_mode_edit_gate(
+                    &actor.plan_mode.lock(),
+                    &plan_file,
+                    &plan_file_kind,
+                ),
+                super::tool_calls::PlanEditGate::Allow,
+                "the plan file itself stays editable"
+            );
+        })
+        .await;
+}

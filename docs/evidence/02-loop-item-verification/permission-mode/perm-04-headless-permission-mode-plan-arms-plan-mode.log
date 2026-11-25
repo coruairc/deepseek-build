@@ -1,0 +1,322 @@
+   Compiling xai-grok-tools-api v0.1.220-alpha.4 (<REPO>/crates/codegen/xai-grok-tools-api)
+warning: function `remote_fetch_enabled_from_policy_layers` is never used
+  --> crates/codegen/xai-grok-config/src/remote_fetch.rs:45:4
+   |
+45 | fn remote_fetch_enabled_from_policy_layers(
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `xai-grok-config` (lib) generated 1 warning
+warning: `xai-grok-config` (lib) generated 1 warning (1 duplicate)
+warning: fields `stream_tool_calls`, `reasoning_summary`, `extra_response_includes`, and `doom_loop_recovery` are never read
+   --> crates/codegen/xai-grok-sampler/src/client.rs:266:5
+    |
+257 | struct ClientDefaults {
+    |        -------------- fields in this struct
+...
+266 |     stream_tool_calls: bool,
+    |     ^^^^^^^^^^^^^^^^^
+267 |     reasoning_summary: Option<xai_grok_sampling_types::ReasoningSummary>,
+    |     ^^^^^^^^^^^^^^^^^
+268 |     extra_response_includes: Vec<String>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^
+269 |     doom_loop_recovery: Option<xai_grok_sampling_types::DoomLoopRecoveryPolicy>,
+    |     ^^^^^^^^^^^^^^^^^^
+    |
+    = note: `ClientDefaults` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `inner` is never read
+  --> crates/codegen/xai-grok-sampler/src/doom_loop.rs:22:5
+   |
+21 | pub struct DoomLoopSignalCollector {
+   |            ----------------------- field in this struct
+22 |     inner: Arc<Mutex<CollectorState>>,
+   |     ^^^^^
+   |
+   = note: `DoomLoopSignalCollector` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: fields `signals`, `malformed_logged`, `policy`, and `abort_disarmed` are never read
+  --> crates/codegen/xai-grok-sampler/src/doom_loop.rs:27:5
+   |
+26 | struct CollectorState {
+   |        -------------- fields in this struct
+27 |     signals: Vec<DoomLoopSignal>,
+   |     ^^^^^^^
+28 |     malformed_logged: bool,
+   |     ^^^^^^^^^^^^^^^^
+29 |     policy: DoomLoopRecoveryPolicy,
+   |     ^^^^^^
+30 |     // Inverted so `derive(Default)` starts attempts armed.
+31 |     abort_disarmed: bool,
+   |     ^^^^^^^^^^^^^^
+   |
+   = note: `CollectorState` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: multiple associated items are never used
+   --> crates/codegen/xai-grok-sampler/src/doom_loop.rs:36:19
+    |
+ 34 | impl DoomLoopSignalCollector {
+    | ---------------------------- associated items in this implementation
+ 35 |     /// A fresh, armed collector judging confidence with `policy`.
+ 36 |     pub(crate) fn new(policy: DoomLoopRecoveryPolicy) -> Self {
+    |                   ^^^
+...
+ 45 |     pub(crate) fn disarm_abort(&self) {
+    |                   ^^^^^^^^^^^^
+...
+ 52 |     pub(crate) fn abort_triggers(&self) -> Option<Vec<String>> {
+    |                   ^^^^^^^^^^^^^^
+...
+ 64 |     pub(crate) fn absorb(&self, event_name: &str, data: &str) -> bool {
+    |                   ^^^^^^
+...
+ 86 |     pub(crate) fn take(&self) -> Vec<DoomLoopSignal> {
+    |                   ^^^^
+...
+ 93 |     fn record(&self, signals: Vec<DoomLoopSignal>) {
+    |        ^^^^^^
+...
+112 |     fn log_malformed_once(&self) {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: method `replace` is never used
+  --> crates/codegen/xai-grok-sampler/src/doom_loop_recovery.rs:79:8
+   |
+42 | impl RecoveryBudget {
+   | ------------------- method in this implementation
+...
+79 |     fn replace(&mut self, slot: &mut String, text: String) {
+   |        ^^^^^^^
+
+warning: variants `Reasoning` and `Text` are never constructed
+   --> crates/codegen/xai-grok-sampler/src/doom_loop_recovery.rs:107:5
+    |
+106 | enum CapturedItem {
+    |      ------------ variants in this enum
+107 |     Reasoning(Box<rs::ReasoningItem>),
+    |     ^^^^^^^^^
+108 |     Text(String),
+    |     ^^^^
+
+warning: fields `raw_reasoning_indexes`, `reasoning_budget`, and `text_budget` are never read
+   --> crates/codegen/xai-grok-sampler/src/doom_loop_recovery.rs:133:5
+    |
+128 | struct CapturedResponse {
+    |        ---------------- fields in this struct
+...
+133 |     raw_reasoning_indexes: BTreeSet<u32>,
+    |     ^^^^^^^^^^^^^^^^^^^^^
+134 |     output: BTreeMap<(u32, u32, String), String>,
+135 |     reasoning_budget: RecoveryBudget,
+    |     ^^^^^^^^^^^^^^^^
+136 |     text_budget: RecoveryBudget,
+    |     ^^^^^^^^^^^
+
+warning: multiple associated items are never used
+   --> crates/codegen/xai-grok-sampler/src/doom_loop_recovery.rs:158:19
+    |
+156 | impl FailedResponseCapture {
+    | -------------------------- associated items in this implementation
+157 |     /// Allocate a capture for an attempt whose doom-loop abort is armed.
+158 |     pub(crate) fn armed() -> Self {
+    |                   ^^^^^
+...
+166 |     pub(crate) fn is_armed(&self) -> bool {
+    |                   ^^^^^^^^
+...
+177 |     pub(crate) fn record_reasoning_delta(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^
+...
+203 |     pub(crate) fn record_reasoning_done(
+    |                   ^^^^^^^^^^^^^^^^^^^^^
+...
+228 |     pub(crate) fn record_reasoning_summary_delta(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+252 |     pub(crate) fn record_reasoning_summary_done(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+276 |     pub(crate) fn record_output_delta(
+    |                   ^^^^^^^^^^^^^^^^^^^
+...
+295 |     pub(crate) fn record_output_done(
+    |                   ^^^^^^^^^^^^^^^^^^
+...
+317 |     pub(crate) fn record_unreplayable(&self) {
+    |                   ^^^^^^^^^^^^^^^^^^^
+...
+323 |     pub(crate) fn record_item_start(&self, item: &rs::OutputItem) {
+    |                   ^^^^^^^^^^^^^^^^^
+...
+334 |     pub(crate) fn record_output_item(&self, output_index: u32, item: &rs::OutputItem) {
+    |                   ^^^^^^^^^^^^^^^^^^
+...
+355 |     pub(crate) fn record_terminal_output(&self, output: &[rs::OutputItem]) {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `output_message_text` is never used
+   --> crates/codegen/xai-grok-sampler/src/doom_loop_recovery.rs:476:4
+    |
+476 | fn output_message_text(message: &rs::OutputMessage) -> String {
+    |    ^^^^^^^^^^^^^^^^^^^
+
+warning: variants `Error` and `End` are never constructed
+  --> crates/codegen/xai-grok-sampler/src/span_timing.rs:68:5
+   |
+66 | pub(crate) enum ItemClass {
+   |                 --------- variants in this enum
+67 |     Content,
+68 |     Error,
+   |     ^^^^^
+69 |     End,
+   |     ^^^
+
+warning: `xai-grok-sampler` (lib) generated 10 warnings
+warning: type `deepseekUpsell` should have an upper camel case name
+ --> crates/codegen/xai-grok-telemetry/src/events/upsell.rs:7:10
+  |
+7 | pub enum deepseekUpsell {
+  |          ^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `DeepseekUpsell`
+  |
+  = note: `#[warn(non_camel_case_types)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: type `deepseekUpsellShown` should have an upper camel case name
+  --> crates/codegen/xai-grok-telemetry/src/events/upsell.rs:17:12
+   |
+17 | pub struct deepseekUpsellShown {
+   |            ^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `DeepseekUpsellShown`
+
+warning: type `deepseekUpsellClicked` should have an upper camel case name
+  --> crates/codegen/xai-grok-telemetry/src/events/upsell.rs:24:12
+   |
+24 | pub struct deepseekUpsellClicked {
+   |            ^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to upper camel case: `DeepseekUpsellClicked`
+
+warning: unreachable pattern
+  --> crates/codegen/xai-grok-telemetry/src/client.rs:79:22
+   |
+79 |         "deepseek" | "deepseek" => "deepseek",
+   |         ----------   ^^^^^^^^^^ no value can reach this
+   |         |
+   |         matches all the relevant values
+   |
+   = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
+
+warning: `xai-grok-telemetry` (lib) generated 4 warnings
+warning: `xai-grok-sampler` (lib) generated 10 warnings (10 duplicates)
+warning: `xai-grok-telemetry` (lib) generated 4 warnings (4 duplicates)
+   Compiling xai-tool-runtime v0.1.0 (<REPO>/crates/common/xai-tool-runtime)
+   Compiling xai-grok-tools v0.1.220-alpha.4 (<REPO>/crates/codegen/xai-grok-tools)
+   Compiling xai-grok-workspace-client v0.1.0 (<REPO>/crates/codegen/xai-grok-workspace-client)
+warning: function `emit_401` is never used
+  --> crates/codegen/xai-grok-tools/src/attribution.rs:33:15
+   |
+33 | pub(crate) fn emit_401(
+   |               ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `resolve_bearer` is never used
+  --> crates/codegen/xai-grok-tools/src/types/api_key_provider.rs:41:21
+   |
+41 | pub(crate) async fn resolve_bearer(provider: Option<&SharedApiKeyProvider>) -> Option<String> {
+   |                     ^^^^^^^^^^^^^^
+
+warning: constant `MAX_ENTRIES` is never used
+  --> crates/codegen/xai-grok-tools/src/util/shared_http.rs:10:7
+   |
+10 | const MAX_ENTRIES: usize = 32;
+   |       ^^^^^^^^^^^
+
+warning: struct `Entry` is never constructed
+  --> crates/codegen/xai-grok-tools/src/util/shared_http.rs:13:8
+   |
+13 | struct Entry {
+   |        ^^^^^
+
+warning: struct `CacheKey` is never constructed
+  --> crates/codegen/xai-grok-tools/src/util/shared_http.rs:21:19
+   |
+21 | pub(crate) struct CacheKey(String);
+   |                   ^^^^^^^^
+
+warning: function `cached_client` is never used
+  --> crates/codegen/xai-grok-tools/src/util/shared_http.rs:25:15
+   |
+25 | pub(crate) fn cached_client<E>(
+   |               ^^^^^^^^^^^^^
+
+warning: function `cache_key` is never used
+  --> crates/codegen/xai-grok-tools/src/util/shared_http.rs:65:15
+   |
+65 | pub(crate) fn cache_key(kind: &str, headers: &reqwest::header::HeaderMap) -> CacheKey {
+   |               ^^^^^^^^^
+
+warning: function `headers_fingerprint` is never used
+  --> crates/codegen/xai-grok-tools/src/util/shared_http.rs:71:4
+   |
+71 | fn headers_fingerprint(headers: &reqwest::header::HeaderMap) -> String {
+   |    ^^^^^^^^^^^^^^^^^^^
+
+   Compiling xai-grok-hooks v0.1.0 (<REPO>/crates/codegen/xai-grok-hooks)
+   Compiling xai-grok-mcp v0.1.0 (<REPO>/crates/codegen/xai-grok-mcp)
+   Compiling xai-grok-pager-diff v0.1.0 (<REPO>/crates/codegen/xai-grok-pager-diff)
+   Compiling xai-grok-agent v0.1.0 (<REPO>/crates/codegen/xai-grok-agent)
+warning: `xai-grok-tools` (lib) generated 8 warnings
+   Compiling xai-grok-workspace v0.1.220-alpha.4 (<REPO>/crates/codegen/xai-grok-workspace)
+   Compiling xai-grok-subagent-resolution v0.1.0 (<REPO>/crates/codegen/xai-grok-subagent-resolution)
+   Compiling xai-grok-plugin-marketplace v0.1.0 (<REPO>/crates/codegen/xai-grok-plugin-marketplace)
+warning: `xai-grok-tools` (lib) generated 8 warnings (8 duplicates)
+   Compiling xai-grok-http v0.1.0 (<REPO>/crates/codegen/xai-grok-http)
+   Compiling xai-grok-shell-terminal v0.1.0 (<REPO>/crates/codegen/xai-grok-shell-terminal)
+   Compiling xai-grok-pager-render v0.1.0 (<REPO>/crates/codegen/xai-grok-pager-render)
+   Compiling xai-grok-memory v0.1.0 (<REPO>/crates/codegen/xai-grok-memory)
+   Compiling xai-grok-shell-session-support v0.1.0 (<REPO>/crates/codegen/xai-grok-shell-session-support)
+   Compiling xai-grok-login v0.1.0 (<REPO>/crates/codegen/xai-grok-login)
+   Compiling xai-grok-shell v0.0.1-rc5 (<REPO>/crates/codegen/xai-grok-shell)
+   Compiling xai-grok-pager v0.0.1-rc5 (<REPO>/crates/codegen/xai-grok-pager)
+   Compiling xai-grok-pager-minimal v0.1.0 (<REPO>/crates/codegen/xai-grok-pager-minimal)
+   Compiling xai-grok-pager-bin v0.0.1-rc5 (<REPO>/crates/codegen/xai-grok-pager-bin)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 12s
+     Running tests/headless_loop_items.rs (target/debug/deps/headless_loop_items-e0a14ea40ad9c4d8)
+
+running 1 test
+[harness-timing] headless command <REPO>/target/debug/deepseek-build: 402.610571ms (timed_out=false)
+plan stdout:
+{
+  "text": "I would plan the change before touching anything.",
+  "stopReason": "end_turn",
+  "sessionId": "01a214e2-1136-7802-80f4-5fe501831b19",
+  "requestId": "79f350e7-a32e-47bc-bf0b-8528ba22fa1f",
+  "usage": {
+    "input_tokens": 10,
+    "cache_read_input_tokens": 0,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 8,
+    "reasoning_tokens": 0,
+    "total_tokens": 18
+  },
+  "num_turns": 1,
+  "modelUsage": {
+    "deepseek-flash": {
+      "inputTokens": 10,
+      "outputTokens": 8,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 1
+    }
+  },
+  "estimated_cost_usd": 0.000044880000000000004,
+  "estimate": true
+}
+
+plan stderr:
+
+PERM-04: reminder matched in the captured request body: Plan mode is active. Do not make any edits or writes to the system.\n\n## Plan File:\nNo plan written yet. Write your plan to <TMP>/.tmpSTjhuH/home/.grok/session
+PERM-04: plan_mode.json files: ["<TMP>/.tmpSTjhuH/home/.grok/sessions/%2Ftmp%2F.tmpSTjhuH%2Fworkspace/01a214e2-1136-7802-80f4-5fe501831b19/plan_mode.json"]
+PERM-04: <TMP>/.tmpSTjhuH/home/.grok/sessions/%2Ftmp%2F.tmpSTjhuH%2Fworkspace/01a214e2-1136-7802-80f4-5fe501831b19/plan_mode.json state=Active
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.41s
+

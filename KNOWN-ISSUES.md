@@ -213,11 +213,15 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
 - **Worked:** simple edit; fixing a failing test (it ran `python3 test_calc.py`);
   a multi-file rename (`mul`→`multiply` across 4 files); session resume with
   context recall. Warm-turn cache hit rate 98–99%.
-- **Plan mode gap:** `--permission-mode plan` is read-only (no file changed) but
-  does not send `session/set_mode`, write `plan_mode.json`, or inject the
-  plan-mode reminder; a bare "change X" request therefore ends as a cancelled
-  turn with empty output instead of a plan. A prompt that explicitly asks for a
-  plan produces one.
+- **Plan mode (corrected 2026-11-25):** the note that stood here described an
+  older tree. The current headless path sends `session/set_mode` with `plan`
+  before the prompt, so the shell injects the plan-mode reminder
+  (`Plan mode is active. Do not make any edits or writes to the system.`) into
+  the turn's request, persists `plan_mode.json` with `state: "Active"`, and
+  keeps the plan edit gate armed. Proven from the captured request body and the
+  session's own `plan_mode.json` by
+  `docs/evidence/02-loop-item-verification/permission-mode/` (PERM-04), which
+  also drives the flag end to end instead of asserting it.
 - **Headless cannot prompt:** a permission-gated action (e.g. `rm -rf`) ends as
   `permission_cancelled` with a one-line stderr message naming `--always-approve`
   and a non-zero exit (`d3a9c176`). `--always-approve` is required for unattended

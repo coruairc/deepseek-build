@@ -1,0 +1,41 @@
+{
+  "item": "permission-mode",
+  "requirements": [
+    "PERM-03",
+    "PERM-04"
+  ],
+  "date": "2026-11-25T22:42:07Z",
+  "host": "Linux/x86_64",
+  "command": "pty: permission_mode_chip_matches_after_resume; headless: headless_permission_mode_plan_arms_plan_mode",
+  "steps": [
+    {
+      "name": "perm-03: permission chip matches after resume by session id",
+      "ok": true,
+      "detail": "exit 0: test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 26.17s"
+    },
+    {
+      "name": "perm-04: headless --permission-mode plan arms plan mode",
+      "ok": true,
+      "detail": "exit 0: test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.41s"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/02-loop-item-verification/permission-mode/permission-mode.cast",
+      "sha256": "ff5ddc94bbe68b6072099364f7d74d23ef655b451f8637048673a14d8250b446"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/permission-mode/permission-mode-before-quit.cast",
+      "sha256": "565154c99550799e5a92dfdb50237d7cb5c6a05e8c2b33a4da64d1b2aa210cf5"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/permission-mode/perm-03-permission-chip-matches-after-resume-by-session-id.log",
+      "sha256": "40d1b35733ee70089cfe0453c1c315a7d3757524348b4f1406f6aff45caeeb6a"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/permission-mode/perm-04-headless-permission-mode-plan-arms-plan-mode.log",
+      "sha256": "de372c644db27085a4de6415b8521012368619007dd19e8fbe89bcb02e43292e"
+    }
+  ],
+  "result": "ok"
+}

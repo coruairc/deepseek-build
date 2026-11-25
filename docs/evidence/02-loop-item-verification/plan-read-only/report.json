@@ -1,0 +1,44 @@
+{
+  "item": "plan-read-only",
+  "requirements": [
+    "SESS-02"
+  ],
+  "date": "2026-11-25T22:44:56Z",
+  "host": "Linux/x86_64",
+  "command": "pty: plan_mode_read_only_in_every_permission_mode; unit: plan_mode_edit_gate_rejects_without_consulting_a_permission_policy",
+  "steps": [
+    {
+      "name": "sess-02: plan mode refuses out-of-plan edits in every permission mode",
+      "ok": true,
+      "detail": "exit 0: test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 23.40s"
+    },
+    {
+      "name": "sess-02: the gate takes no permission policy",
+      "ok": true,
+      "detail": "exit 0: test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 6187 filtered out; finished in 0.02s"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/02-loop-item-verification/plan-read-only/plan-read-only-default.cast",
+      "sha256": "31f6128bd57863d62d232c985e501ecee62e4b1aaf40267398238c96ced4b797"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/plan-read-only/plan-read-only-auto.cast",
+      "sha256": "e78a375f2759b5749ac3cf8b125158e1bcedba0d6c721ceec3ea0f62ae5e5440"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/plan-read-only/plan-read-only-always-approve.cast",
+      "sha256": "b88c30f49c4ba79a6b434007ea95a8161843f0d467d90d1cbb39e1b4df8bf394"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/plan-read-only/sess-02-plan-mode-refuses-out-of-plan-edits-in-every-permission-mode.log",
+      "sha256": "5d1b63a0cc26ac4d1c8958f10afbc169defe752ffb5e0b8de7ad925f04a7e748"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/plan-read-only/sess-02-the-gate-takes-no-permission-policy.log",
+      "sha256": "ce12361432dee1aa6e250267d903d8cbc26b3ff9532c78826d166fb7a9e79685"
+    }
+  ],
+  "result": "ok"
+}

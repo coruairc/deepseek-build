@@ -1,0 +1,19 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.72s
+     Running tests/pty_e2e_shell_tools.rs (target/debug/deps/pty_e2e_shell_tools-4e236b6bdb39e3e6)
+
+running 1 test
+default: out-of-plan tool result: Rejected: file edits are not allowed in plan mode - the only editable file is the plan file (<TMP>/.tmp0G1FS7/home/.grok/sessions/%2Ftmp%2F.tmp0G1FS7%2Fworkspace/01a214e2-3120-7da3-a2bb-d969cc89ec74/plan.md).
+default: out-of-plan file now: "fn main() {}\n"
+default: plan chip ok; refusal='Rejected: file edits are not allowed in plan mode - the only editable file is the plan file (<TMP>/.tmp0G1FS7/home/.grok/sessions/%2Ftmp%2F.tmp0G1FS7%2Fworkspace/01a214e2-3120-7da3-a2bb-d969cc89ec74/plan.md).'; plan path=<TMP>/.tmp0G1FS7/home/.grok/sessions/%2Ftmp%2F.tmp0G1FS7%2Fworkspace/01a214e2-3120-7da3-a2bb-d969cc89ec74/plan.md; plan-file edit ran
+wrote cast: <REPO>/docs/evidence/02-loop-item-verification/plan-read-only/plan-read-only-default.cast
+auto: out-of-plan tool result: Rejected: file edits are not allowed in plan mode - the only editable file is the plan file (<TMP>/.tmpopIbo4/home/.grok/sessions/%2Ftmp%2F.tmpopIbo4%2Fworkspace/01a214e2-4e48-7840-990b-938c41d51245/plan.md).
+auto: out-of-plan file now: "fn main() {}\n"
+auto: plan chip ok; refusal='Rejected: file edits are not allowed in plan mode - the only editable file is the plan file (<TMP>/.tmpopIbo4/home/.grok/sessions/%2Ftmp%2F.tmpopIbo4%2Fworkspace/01a214e2-4e48-7840-990b-938c41d51245/plan.md).'; plan path=<TMP>/.tmpopIbo4/home/.grok/sessions/%2Ftmp%2F.tmpopIbo4%2Fworkspace/01a214e2-4e48-7840-990b-938c41d51245/plan.md; plan-file edit ran
+wrote cast: <REPO>/docs/evidence/02-loop-item-verification/plan-read-only/plan-read-only-auto.cast
+always-approve: out-of-plan tool result: Rejected: file edits are not allowed in plan mode - the only editable file is the plan file (<TMP>/.tmp9h9MQk/home/.grok/sessions/%2Ftmp%2F.tmp9h9MQk%2Fworkspace/01a214e2-6c45-7ff1-9382-19b21f639820/plan.md).
+always-approve: out-of-plan file now: "fn main() {}\n"
+always-approve: plan chip ok; refusal='Rejected: file edits are not allowed in plan mode - the only editable file is the plan file (<TMP>/.tmp9h9MQk/home/.grok/sessions/%2Ftmp%2F.tmp9h9MQk%2Fworkspace/01a214e2-6c45-7ff1-9382-19b21f639820/plan.md).'; plan path=<TMP>/.tmp9h9MQk/home/.grok/sessions/%2Ftmp%2F.tmp9h9MQk%2Fworkspace/01a214e2-6c45-7ff1-9382-19b21f639820/plan.md; plan-file edit ran
+wrote cast: <REPO>/docs/evidence/02-loop-item-verification/plan-read-only/plan-read-only-always-approve.cast
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 23.40s
+

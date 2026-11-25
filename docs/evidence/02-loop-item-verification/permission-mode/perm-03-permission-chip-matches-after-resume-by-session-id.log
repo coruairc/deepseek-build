@@ -1,0 +1,13 @@
+   Compiling xai-grok-pager-pty-harness v0.1.0 (<REPO>/crates/codegen/xai-grok-pager-pty-harness)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.36s
+     Running tests/pty_e2e_shell_tools.rs (target/debug/deps/pty_e2e_shell_tools-4e236b6bdb39e3e6)
+
+running 1 test
+PERM-03 observation: plan banner=false plan+permission pair=true
+wrote cast: <REPO>/docs/evidence/02-loop-item-verification/permission-mode/permission-mode-before-quit.cast
+PERM-03: resuming session by id 01a214df-a338-7fe0-b015-83dac1e86b75 with no permission flag
+PERM-03: chip before quit = 'always-approve', after -r 01a214df-a338-7fe0-b015-83dac1e86b75 = 'always-approve'; transcript_restored=true; plan chip survived=true
+wrote cast: <REPO>/docs/evidence/02-loop-item-verification/permission-mode/permission-mode.cast
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 26.17s
+

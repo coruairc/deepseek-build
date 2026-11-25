@@ -48,10 +48,14 @@ mod mcp_menu_loads_servers_in_non_project_dir;
 mod mcp_menu_loads_servers_in_project_dir;
 #[path = "pty_e2e/mid_text_skill_token_echo_styled_pty.rs"]
 mod mid_text_skill_token_echo_styled_pty;
+#[path = "pty_e2e/permission_mode_resume.rs"]
+mod permission_mode_resume;
 #[path = "pty_e2e/permission_prompt_hook_chimes_only_on_real_wait.rs"]
 mod permission_prompt_hook_chimes_only_on_real_wait;
 #[path = "pty_e2e/permission_prompt_outcomes.rs"]
 mod permission_prompt_outcomes;
+#[path = "pty_e2e/plan_mode_read_only.rs"]
+mod plan_mode_read_only;
 #[path = "pty_e2e/send_subagent_message_row.rs"]
 mod send_subagent_message_row;
 #[path = "pty_e2e/send_subagent_message_row_opens_child.rs"]

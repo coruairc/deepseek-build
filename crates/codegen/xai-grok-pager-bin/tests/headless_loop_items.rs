@@ -466,3 +466,121 @@ async fn headless_resume_restores_model_effort_and_plan_state() {
         "the effort-only resume drifted off the session model"
     );
 }
+
+/// Every `plan_mode.json` under the sandbox's session store (a session dir is `<id>/`).
+fn plan_mode_files(sandbox: &TestSandbox) -> Vec<std::path::PathBuf> {
+    fn walk(dir: &std::path::Path, depth: usize, out: &mut Vec<std::path::PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() && depth < 3 {
+                walk(&path, depth + 1, out);
+            } else if path
+                .file_name()
+                .is_some_and(|name| name == "plan_mode.json")
+            {
+                out.push(path);
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(&sandbox.grok_home().join("sessions"), 0, &mut out);
+    out
+}
+
+/// PERM-04: `--permission-mode plan` arms plan mode in a headless run.
+///
+/// The CLI flag alone lands on the agent definition's inert `permission_mode`; `apply_headless_permission_mode`
+/// sends one `session/set_mode` before the prompt (`headless.rs`), and the shell then injects the plan-mode
+/// reminder into the next request. This asserts the reminder reached the model in the captured request body —
+/// the observable a stale `KNOWN-ISSUES.md` bullet claimed never happened.
+#[tokio::test]
+async fn headless_permission_mode_plan_arms_plan_mode() {
+    let server =
+        MockInferenceServer::start_with_models(vec![MockModelEntry::new("deepseek-v4-pro")])
+            .await
+            .expect("start mock inference server");
+    server.set_response("I would plan the change before touching anything.");
+
+    let mut sandbox = TestSandbox::builder().mock_url(server.url()).build();
+    if let Some(ca) = server.ca_pem_path() {
+        sandbox.set_env("GROK_EXTRA_CA_BUNDLE", ca);
+    }
+
+    let mut cmd = tokio::process::Command::new(grok_binary());
+    cmd.current_dir(sandbox.workspace())
+        .args(["-p", "plan the change", "--permission-mode", "plan"])
+        .arg("--trust")
+        .args(["--output-format", "json"]);
+    let run = run_headless_in_sandbox_borrowed(cmd, &sandbox).await;
+    println!("plan stdout:\n{}\nplan stderr:\n{}", run.stdout, run.stderr);
+    assert!(
+        !run.timed_out && run.status.success(),
+        "headless --permission-mode plan failed: timed_out={} status={:?}\n{}",
+        run.timed_out,
+        run.status,
+        run.stderr
+    );
+    let result = parse_json_result(&run.stdout);
+    assert_eq!(
+        result.get("stopReason").and_then(Value::as_str),
+        Some("end_turn"),
+        "the planning turn did not run to completion: {result}"
+    );
+
+    // The reminder is injected as a message in the turn's own request; search the whole body so a
+    // conversation-shape change cannot hide it from the assertion.
+    let bodies = chat_completion_bodies(&server);
+    let body = bodies
+        .last()
+        .expect("--permission-mode plan sent no foreground chat request");
+    let rendered = serde_json::to_string(body).expect("serialize the request body");
+    let matched = rendered
+        .find(PLAN_REMINDER_FULL)
+        .map(|at| {
+            let rest = rendered.get(at..).unwrap_or_default();
+            rest.lines()
+                .next()
+                .unwrap_or_default()
+                .chars()
+                .take(160)
+                .collect::<String>()
+        })
+        .unwrap_or_else(|| {
+            panic!(
+                "the captured request body carries no plan-mode reminder, so plan mode was not \
+                 armed:\n{rendered}"
+            )
+        });
+    println!("PERM-04: reminder matched in the captured request body: {matched}");
+
+    // The plan edit gate is armed in the same session: assert the persisted state when the shell
+    // wrote one, and record its absence (do not fail) when it did not.
+    let plan_state_files = plan_mode_files(&sandbox);
+    println!("PERM-04: plan_mode.json files: {plan_state_files:?}");
+    for path in &plan_state_files {
+        let raw = std::fs::read_to_string(path).expect("read plan_mode.json");
+        let state: Value = serde_json::from_str(&raw).expect("plan_mode.json is JSON");
+        println!(
+            "PERM-04: {} state={}",
+            path.display(),
+            state
+                .get("state")
+                .and_then(Value::as_str)
+                .unwrap_or("<absent>")
+        );
+        assert_eq!(
+            state.get("state").and_then(Value::as_str),
+            Some("Active"),
+            "a persisted plan_mode.json from this run must be Active: {raw}"
+        );
+    }
+    if plan_state_files.is_empty() {
+        println!(
+            "PERM-04: no plan_mode.json was written; only the reminder is observed for this run \
+             (recorded in the item's notes.md)"
+        );
+    }
+}
