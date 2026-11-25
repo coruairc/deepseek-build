@@ -1,0 +1,65 @@
+Script started on 2026-11-25 20:48:23+01:00 [COMMAND="scripts/egress-check.sh" <not executed on terminal>]
+egress-check: bin=<TMP>/opencode/02-01/deepseek-build
+egress-check: work=<TMP><TMP>.pjpQ12GBT5 (KEEP=1 to keep)
+egress-check: allowlist: api.deepseek.com, example.com, loopback, AF_UNIX
+
+=== build connect logger ===
+PASS  compiled <TMP><TMP>.pjpQ12GBT5/egress_log.so
+
+=== isolated home + local MCP server ===
+PASS  config: web_fetch enabled, auto_compact_threshold_percent=1, MCP stdio server egressmcp
+PASS  scratch git repo ready at <TMP><TMP>.pjpQ12GBT5/scratch
+
+=== session 1 (headless json: shell + edit + web_fetch + MCP + compaction) ===
+PASS  session 1 exited 0
+PASS  session id: 01a21440-8c0c-74f2-aaa9-8a4e24d88339
+
+=== session 2 (resume the same session) ===
+PASS  resume exited 0
+PASS  resume reused session id (01a21440-8c0c-74f2-aaa9-8a4e24d88339)
+
+=== activity evidence ===
+PASS  shell tool ran (shell_out.txt contains shell-egress)
+PASS  resumed headless turn ran and replied RESUMED
+PASS  edit tool ran (edit_me.txt now: hello edited)
+PASS  MCP tool ran: egress_ping called note=from-egress-check 
+PASS  auto-compaction ran (74 debug marker(s); threshold=1%)
+
+=== observed destinations ===
+count  family  destination                                      port  host                 status  reason
+-----  ------  -----------------------------------------------  ----  -------------------  ------  ----------
+   10  unix    /run/systemd/resolve/io.systemd.Resolve             0  -                    PASS    unix
+    7  inet    3.173.21.63                                       443  api.deepseek.com     PASS    allowlisted
+    2  unix    /var/run/dbus/system_bus_socket                     0  -                    PASS    unix
+    1  inet6   2606:4700:10::6814:179a                           443  example.com          PASS    allowlisted
+
+allowlisted IPs for api.deepseek.com: 3.173.21.63
+allowlisted IPs for example.com: 104.20.23.154, 172.66.147.243, 2606:4700:10::6814:179a, 2606:4700:10::ac42:93f3
+
+WEB_FETCH_CONNECTS=1
+API_CONNECTS=7
+EGRESS_VIOLATIONS=0
+PASS  egress allowlist: all observed destinations are allowed
+PASS  web_fetch made a real connection to example.com
+
+=== sandbox-run.sh (blocking guard) comparison ===
+sandbox-run.sh session exited 0
+sandbox-run.sh result: Sandbox probe returned `sandbox-probe`; the fetch to example.com failed with an HTTP request error.
+sandbox-run.sh BLOCKED connect lines: 4
+      1 sandbox-run: BLOCKED connect to 104.20.23.154
+      1 sandbox-run: BLOCKED connect to 172.66.147.243
+      1 sandbox-run: BLOCKED connect to 2606:4700:10::6814:179a
+      1 sandbox-run: BLOCKED connect to 2606:4700:10::ac42:93f3
+
+note: sandbox-run.sh formats both AF_INET and AF_INET6 destinations, so a
+      refused address is named in its own family's notation and 'non-ip' only
+      appears for a non-IP address family. Its allowlist is family-tagged and
+      built from getaddrinfo(AF_UNSPEC), so it carries the IPv6 addresses the
+      resolver returns for the provider as well as the IPv4 ones. The
+      web_fetch host is not on that allowlist and is refused as expected, so
+      the fetch fails while the session still completes.
+
+=== verdict ===
+PASS  EGRESS-CHECK PASS
+
+Script done on 2026-11-25 20:50:58+01:00 [COMMAND_EXIT_CODE="0"]

@@ -1,0 +1,55 @@
+{
+  "item": "live-smoke",
+  "requirements": [
+    "PROOF-01"
+  ],
+  "date": "2026-11-25T19:48:23Z",
+  "host": "Linux/x86_64",
+  "command": "scripts/egress-check.sh and scripts/smoke-test.sh (captured with script -T)",
+  "steps": [
+    {
+      "name": "smoke: adapter checks all passed",
+      "ok": true,
+      "detail": "exit 0: 8 passed, 0 failed"
+    },
+    {
+      "name": "loop: shell tool ran",
+      "ok": true,
+      "detail": "exit 0: PASS  shell tool ran (shell_out.txt contains shell-egress)"
+    },
+    {
+      "name": "loop: edit tool ran",
+      "ok": true,
+      "detail": "exit 0: PASS  edit tool ran (edit_me.txt now: hello edited)"
+    },
+    {
+      "name": "loop: web_fetch made a real connection",
+      "ok": true,
+      "detail": "exit 0: PASS  web_fetch made a real connection to example.com"
+    },
+    {
+      "name": "loop: resumed the same session",
+      "ok": true,
+      "detail": "exit 0: PASS  resume reused session id (01a21440-8c0c-74f2-aaa9-8a4e24d88339)"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/02-loop-item-verification/live-smoke/live-smoke.cast",
+      "sha256": "39a2b54e7415674f7c2b3c331a8edb430914d69de880dbaa5ca5a66204dc7841"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/live-smoke/adapter-smoke.cast",
+      "sha256": "9045871cefb7898427bdbf997ab0f5163c5fecff2ec5868cb43c6ae8a860e320"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/live-smoke/live-smoke-transcript.txt",
+      "sha256": "e31161c4b33c5f1d1c8e7b32fab39f28b3bcd44c7b059d71120f6bd73ff389c0"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/live-smoke/adapter-smoke-transcript.txt",
+      "sha256": "0c88d576b8a2ab7909eb961ea4b07ab3f34dfe141f4717d1081b711c2e8d37fc"
+    }
+  ],
+  "result": "ok"
+}

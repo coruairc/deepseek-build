@@ -1,0 +1,11 @@
+{"version": 2, "width": 80, "height": 24}
+[0.03009, "o", "PASS  API key present (DEEPSEEK_API_KEY or DEEPSEEK_BUILD_API_KEY)\r\n"]
+[0.511404, "o", "PASS  /models accepts deepseek-v4-pro and deepseek-flash (OK ['deepseek-flash', 'deepseek-v4-pro'])\r\n"]
+[2.909013, "o", "PASS  plain headless chat returned a reply (exit 0)\r\n"]
+[4.112312, "o", "PASS  streamed headless chat emitted stream events\r\n"]
+[13.476634, "o", "PASS  3-turn thinking tool-call chain (num_turns>=3)\r\n"]
+[13.493831, "o", "PASS  usage carries reasoning/cache fields (reasoning=55 cache_read=44544 cache_create=0)\r\n"]
+[16.125574, "o", "PASS  deepseek-flash and hidden deepseek-v4-flash alias accepted\r\n"]
+[19.202565, "o", "PASS  raw usage: cached_tokens == prompt_cache_hit_tokens on a cache hit\r\n"]
+[19.202572, "o", "\r\n8 passed, 0 failed\r\n"]
+[19.202572, "o", "\n"]

@@ -1,0 +1,13 @@
+Script started on 2026-11-25 20:51:15+01:00 [COMMAND="scripts/smoke-test.sh" <not executed on terminal>]
+PASS  API key present (DEEPSEEK_API_KEY or DEEPSEEK_BUILD_API_KEY)
+PASS  /models accepts deepseek-v4-pro and deepseek-flash (OK ['deepseek-flash', 'deepseek-v4-pro'])
+PASS  plain headless chat returned a reply (exit 0)
+PASS  streamed headless chat emitted stream events
+PASS  3-turn thinking tool-call chain (num_turns>=3)
+PASS  usage carries reasoning/cache fields (reasoning=55 cache_read=44544 cache_create=0)
+PASS  deepseek-flash and hidden deepseek-v4-flash alias accepted
+PASS  raw usage: cached_tokens == prompt_cache_hit_tokens on a cache hit
+
+8 passed, 0 failed
+
+Script done on 2026-11-25 20:51:34+01:00 [COMMAND_EXIT_CODE="0"]

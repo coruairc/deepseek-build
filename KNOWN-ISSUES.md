@@ -140,6 +140,13 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   - AF_UNIX sockets (`/run/systemd/resolve/io.systemd.Resolve`,
     `/var/run/dbus/system_bus_socket`).
   `EGRESS_VIOLATIONS=0`. Non-loopback public destinations must be on port 443.
+- **Evidence normalizer overlaps `mktemp`'s `/tmp/tmp.*` prefix (observed 2026-11-25, plan 02-01).**
+  `scripts/evidence.py` replaces every `/tmp` substring. A work directory created
+  as `/tmp/tmp.<random>` therefore renders as `<TMP><TMP>.<random>` in the
+  normalized transcript and cast. The live-smoke item records this; the scripts
+  were not edited (read-only this phase). It is a display overlap, not a second
+  directory and not a key leak. Follow-up: replace the longest prefix once, or
+  stop at a path boundary, so `/tmp/tmp.X` becomes `<TMP>/tmp.X`.
 - **`scripts/sandbox-run.sh` is stricter**: it allows only the provider +
   loopback, so the `web_fetch` host is refused (the session still completes).
   Its shim resolves the allow host over both families and names IPv6 refusals by
