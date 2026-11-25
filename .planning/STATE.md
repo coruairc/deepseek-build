@@ -4,16 +4,16 @@ milestone: v0.1.0
 current_phase: 3
 current_phase_name: Pipeline Decoupling & Version
 status: executing
-stopped_at: Phase 3 plan 03-03 complete (3/4) — release-dist ships no DWARF (0 .debug / 1 .symtab), build-macos ad-hoc signs and verifies the extracted tarball with a 240-minute budget; next is 03-04
-last_updated: "2026-11-25T23:46:00.000Z"
+stopped_at: Phase 3 plan 03-04 complete (4/4) — the v0.1.0 tag shape is proven against the workflow's own derive body (17/17), the installer harness is 58/58, and one command runs every static release gate; next is Phase 4
+last_updated: "2026-11-25T23:55:00.000Z"
 last_activity: 2026-11-25
-last_activity_desc: 03-03 removed DWARF from release-dist and added the macOS ad-hoc sign + extracted-tarball verify steps at 240 minutes; checker 19/19, fixture 5/5
-state_head: d448f7dee11568b37cf4c1d5a147236e8bd67dc6
+last_activity_desc: 03-04 verified v0.1.0 / v0.1.0-proof1 against release.yml's own derive body, extended the installer harness to 58/58, and added scripts/check-release-pipeline.sh
+state_head: fa865111445f0023beaf8e5ee2d6bc4e0d5bb3f1
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 21
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 # Project State
@@ -28,16 +28,16 @@ See: .planning/PROJECT.md (updated 2026-11-23)
 ## Current Position
 
 Phase: 3 — Pipeline Decoupling & Version
-Plan: 03-03 of 4 complete; next is 03-04 (`v0.1.0` tag-shape verification).
-Status: Plan 03-03 complete — `release-dist` is `debug = false` + `strip = "debuginfo"` (0 `.debug` / 1 `.symtab` on a real build), `build-macos` signs ad-hoc and verifies the extracted tarball before upload, the macOS budget is 240 minutes, and the checker is 19/19 with a 5-case Linux fixture. REL-02 and the macOS half of REL-03 stay open (Phase 4 tag run).
-Last activity: 2026-11-25 23:45 UTC — 03-03 removed DWARF from `release-dist`, added the macOS sign/verify steps and the 240-minute budget.
+Plan: 03-04 of 4 complete (4/4). Phase 3 is complete; next is Phase 4 (`04-01`).
+Status: Plan 03-04 complete — the `v0.1.0` tag shape is proven against `release.yml`'s own derive body (17/17: `v0.1.0` stable, `v0.1.0-rc1`/`v0.1.0-proof1` prerelease, branch `0.0.0-<sha7>`, five non-semver shapes rejected), the installer harness is 58/58 incl. pinned `0.1.0`/`0.1.0-proof1`, the guard fixture is 20/20, and `sh scripts/check-release-pipeline.sh` runs every static gate at pinned tallies. `install.sh` is byte-unchanged; the `VERSION=0.1` leniency is recorded as a finding. REL-02 and the macOS half of REL-03 stay open (Phase 4 tag run).
+Last activity: 2026-11-25 23:51 UTC — 03-04 added the tag-shape checker and the one-command static release gate, and extended the installer/guard harnesses.
 
-Progress: [███████░░░] 71%
+Progress: [████████░░] 76%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 16
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -47,7 +47,7 @@ Progress: [███████░░░] 71%
 |-------|-------|-------|----------|
 | 01 | 6 | 6 | - |
 | 02 | 6 | 6 | - |
-| 03 | 3 | 4 | - |
+| 03 | 4 | 4 | - |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -58,6 +58,7 @@ Progress: [███████░░░] 71%
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 03 P04 | 14m | 2 tasks | 5 files |
 | Phase 03 P03 | 5m | 2 tasks | 4 files |
 | Phase 03 P02 | 12m | 2 tasks | 7 files |
 | Phase 03 P01 | 5m | 2 tasks | 5 files |
@@ -114,6 +115,10 @@ Full log in PROJECT.md Key Decisions. Those shaping current work:
 - [Phase 03]: `build-macos` ad-hoc signs (`codesign --force --sign -`) after the build and verifies the **extracted tarball** — `codesign --verify --strict`, a `Signature=` line, both `--version` needles, no `__DWARF`, no `*.dSYM` — before the upload. The pre-tar smoke stays as the faster failure.
 - [Phase 03]: macOS budget is 240 minutes and Linux stays 90; no `CARGO_PROFILE_*` override. If 240 is still too small, `CARGO_PROFILE_RELEASE_DIST_LTO=off` + `CARGO_PROFILE_RELEASE_DIST_CODEGEN_UNITS=16` on `build-macos` only is the pre-decided next lever.
 - [Phase 03]: `check-release-workflow.py` is 19/19 (A16 sign ordering, A17 extracted-artifact verify, A18 timeouts, A19 no profile override) plus a 5-case Linux fixture that runs the verify step's real body against stub `codesign`/`otool`. REL-02 and the CI half of REL-03 remain open until the Phase 4 tag run.
+- [Phase 03]: The `v0.1.0` tag shape is proven against the workflow's own derive body, extracted and executed at test time: `v0.1.0` -> `version=0.1.0`/`is_prerelease=false`, `v0.1.0-rc1` and `v0.1.0-proof1` -> prerelease, branch -> `0.0.0-<sha7>`, and `v0.1`/`v1`/`v0.1.0.0`/`v0.1.0+build.5`/`1.0.0` all rejected non-zero with a named error. `scripts/check-release-tag-shape.py` is 17/17.
+- [Phase 03]: `v0.1.0-proof1` is the Phase 4 throwaway tag: covered in the derive matrix, the image-tag guard fixture (exactly `{0.1.0-proof1, v0.1.0-proof1}`, no `latest`) and the installer harness (`deepseek-build-0.1.0-proof1-<target>.tar.gz`).
+- [Phase 03]: `install.sh`'s `VERSION=0.1` leniency is recorded, not fixed — it passes the `v[0-9]*` prefix check and then 404s; the `version` job's semver gate makes that shape unreachable for a real release. `install.sh` is byte-unchanged and the installer harness is 58/58.
+- [Phase 03]: `scripts/check-release-pipeline.sh` is the one-command static gate (actionlint, shellcheck, workflow checker 19/19 + fixture 5/5, guard 20/20, tag-shape 17/17, installer 58/58) with every tally pinned, so a shrunken checker fails the gate.
 
 ### Pending Todos
 
@@ -134,7 +139,7 @@ None yet.
   attestation (no API can verify a revocation).
 - **Research base drift:** STACK/ARCHITECTURE read `main` @ `221a1a59`, PITFALLS @ `9e6780d9`. Re-verify `release.yml` edges and manifest versions before Phase 3.
 - **macOS time budget — mitigation landed, proof pending (2026-11-25, 03-03):** `build-macos` now carries 240 minutes (Linux 90) and `release-dist` no longer emits DWARF; no profile override was added. REL-02 still needs the Phase 4 tag run: read both macOS job durations there, and if 240 is still not enough apply `CARGO_PROFILE_RELEASE_DIST_LTO=off` / `CARGO_PROFILE_RELEASE_DIST_CODEGEN_UNITS=16` to `build-macos` only.
-- **Dry-run side effects:** a dry run is a real push. 03-01 removed both known silent paths (the image no longer waits for macOS; the tag list is guarded and the version job rejects non-semver tags). The dispatch verification must still create no release and move no `:latest`, and no throwaway tag may be created until Phase 4.
+- **Dry-run side effects:** a dry run is a real push. 03-01 removed both known silent paths (the image no longer waits for macOS; the tag list is guarded and the version job rejects non-semver tags). 03-04 closed the tag-shape half locally (`v0.1.0-proof1` is pre-verified as a prerelease with no `:latest`, and the installer URL shape is exercised), so the Phase 4 tag run is the first remaining real-world risk. The dispatch verification must still create no release and move no `:latest`, and no throwaway tag may be created until Phase 4.
 - **`--locked` lock prerequisite — RESOLVED (2026-11-25, 03-02):** both build jobs pass `--locked`; 03-02 regenerated `Cargo.lock` for the `0.1.0` workspace version (exactly four package versions) and `cargo check --workspace --locked` is green, so the Phase 4 tag run will not fail on a stale lock. REL-02 (both macOS legs inside the budget) remains open until that tag run.
 - **No `ci.yml`:** the gate is a green run on the author's host, wrapped in the shared build lock with `scripts/disk-guard.sh` first.
 - **Egress gate is red at base (Phase 5 owner):** `scripts/check-egress.sh --strict` exits 1 on three
@@ -162,5 +167,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-11-25
-Stopped at: Phase 3 plan 03-03 complete (3/4) — `release-dist` has no DWARF, `build-macos` signs ad-hoc and verifies the extracted tarball at 240 minutes, checker 19/19 + fixture 5/5. Next: 03-04 (`v0.1.0` tag-shape verification).
-Resume file: .planning/phases/03-pipeline-decoupling-version/03-03-SUMMARY.md
+Stopped at: Phase 3 plan 03-04 complete (4/4) — the `v0.1.0` tag shape is proven against `release.yml`'s own derive body (17/17), the installer harness is 58/58 incl. `0.1.0`/`0.1.0-proof1`, the guard fixture is 20/20, and `sh scripts/check-release-pipeline.sh` runs every static gate at pinned tallies. Next: Phase 4 (`04-01`); REL-02 and the macOS half of REL-03 need the Phase 4 tag run.
+Resume file: .planning/phases/03-pipeline-decoupling-version/03-04-SUMMARY.md

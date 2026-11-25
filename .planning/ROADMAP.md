@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Truth Baseline** - Sandbox stops aborting, cost and default model stop lying, and the suite is provably green (completed 2026-11-23)
 - [x] **Phase 2: Loop-Item Verification** - Permissions, resume and plan mode proven against a real session, with the egress boundary measured (completed 2026-11-25)
-- [ ] **Phase 3: Pipeline Decoupling & Version** - A slow macOS leg can no longer erase the image and the tag shape is settled
+- [x] **Phase 3: Pipeline Decoupling & Version** - A slow macOS leg can no longer erase the image and the tag shape is settled (completed 2026-11-25; REL-02's macOS-timeout proof lands in Phase 4's tag run)
 - [ ] **Phase 4: Distribution Proof** - Image, installer and macOS artifacts proven from a throwaway tag
 - [ ] **Phase 5: Documentation Truth & Freeze** - Docs match the tree, the author signs off, and the freeze marker moves no published tag
 
@@ -94,13 +94,13 @@ Plans:
   3. The macOS binary passes `--version` when extracted from the final tarball with its signature intact after any strip or debug-profile change, and `release-dist` ships no DWARF with no `.debug`/`.dSYM` sidecar assumed.
   4. Manifests report `0.1.0` through `[workspace.package] version` with the four remaining crates inheriting it and `Cargo.lock` regenerated; both the CI `GROK_VERSION` stamp and a source build's `CARGO_PKG_VERSION` print `0.1.0`.
   5. `release.yml` is verified against the `v0.1.0` tag shape — trigger, version parse, prerelease classification, `install.sh` validation — with no `deepseek-*` trigger added.
-**Plans**: 3/4 plans complete
+**Plans**: 4/4 plans complete
 
 Plans:
 - [x] 03-01: Split `build-linux`/`build-macos`; `publish` needs both, `container` needs linux only; strict semver gate in `version`; tag-list guard before the first push
 - [x] 03-02: `[workspace.package] version = "0.1.0"`, four inheriting crates, `Cargo.lock` regenerated, both version paths asserted
 - [x] 03-03: `release-dist` ships no DWARF (`debug = false`, link-time strip), explicit ad-hoc sign, extracted-tarball `--version` and `codesign --verify`, macOS budget
-- [ ] 03-04: `v0.1.0` tag-shape verification — trigger, version parse, prerelease classification, `install.sh` validation
+- [x] 03-04: `v0.1.0` tag-shape verification — trigger, the workflow's own derive body, prerelease classification, `install.sh` validation; one command for every static gate
 
 ### Phase 4: Distribution Proof
 **Goal:** As the author, I want the image, the installer and the macOS artifacts proven from a real throwaway pre-release tag, so that the freeze rests on distribution evidence rather than on a fake-tree harness.
@@ -184,7 +184,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Truth Baseline | 6/6 | Complete    | 2026-11-23 |
 | 2. Loop-Item Verification | 6/6 | Complete | 2026-11-25 |
-| 3. Pipeline Decoupling & Version | 3/4 | In Progress | - |
+| 3. Pipeline Decoupling & Version | 4/4 | Complete (REL-02 proof deferred to Phase 4) | 2026-11-25 |
 | 4. Distribution Proof | 0/3 | Not started | - |
 | 5. Windows Support | 0/5 | Not started | - |
 | 6. Documentation Truth & Freeze | 0/5 | Not started | - |

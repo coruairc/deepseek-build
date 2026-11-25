@@ -80,7 +80,7 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 - [x] **PKG-01**: Manifests report `0.1.0` via `[workspace.package] version` with the four remaining crates inheriting it, and `Cargo.lock` is regenerated
 - [x] **PKG-02**: The version is asserted on both paths — the CI `GROK_VERSION` stamp and a source build's `CARGO_PKG_VERSION`
-- [ ] **PKG-03**: `release.yml` is verified against the `v0.1.0` tag shape (trigger, version parse, prerelease classification, `install.sh` validation) with no `deepseek-*` trigger added
+- [x] **PKG-03**: `release.yml` is verified against the `v0.1.0` tag shape (trigger, version parse, prerelease classification, `install.sh` validation) with no `deepseek-*` trigger added
 
 ### Homebrew
 
@@ -196,7 +196,7 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | REL-08 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-01 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-02 | Phase 3 — Pipeline Decoupling & Version | Complete |
-| PKG-03 | Phase 3 — Pipeline Decoupling & Version | Pending |
+| PKG-03 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-04 | Phase 4 — Distribution Proof | Pending |
 | REL-04 | Phase 4 — Distribution Proof | Pending |
 | REL-05 | Phase 4 — Distribution Proof | Pending |
