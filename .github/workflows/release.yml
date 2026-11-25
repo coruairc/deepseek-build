@@ -6,6 +6,11 @@
 # for that tag. `workflow_dispatch` runs the same pipeline for manual testing;
 # it creates NO release (release creation is tag-only).
 #
+# The four targets are split across two jobs, `build-linux` and `build-macos`,
+# so a slow or failed macOS leg cannot erase the container image: `container`
+# needs only `build-linux`, while `publish` waits for both because its verify
+# step names all four tarballs. Artifact names stay `release-<target>`.
+#
 # ══ HARD CONSTRAINT (stakeholder) — NO OTHER UPLOADS ═════════════════════════
 # This workflow must not upload anything anywhere else. The ONLY upload paths
 # allowed here are:
@@ -89,13 +94,15 @@ jobs:
             echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # One matrix job per target; every leg runs on a NATIVE runner for its target
-  # (no cross-compilation): linux gnu on ubuntu-22.04 (older glibc base),
-  # linux arm64 on the free-for-public-repos native arm runner, and both macOS
-  # targets on macOS 15 runners (macos-13 is retired; macos-15-intel still
-  # exists and runs natively on Intel hardware).
-  build:
-    name: build (${{ matrix.target }})
+  # Two matrix jobs split by OS family so `container` can depend on the Linux
+  # one alone; every leg runs on a NATIVE runner for its target (no
+  # cross-compilation): linux gnu on ubuntu-22.04 (older glibc base) and linux
+  # arm64 on the free-for-public-repos native arm runner in `build-linux`; both
+  # macOS targets on macOS 15 runners (macos-13 is retired; macos-15-intel still
+  # exists and runs natively on Intel hardware) in `build-macos`. Artifact names
+  # stay `release-<target>`, the contract `publish` and `container` download.
+  build-linux:
+    name: build-linux (${{ matrix.target }})
     needs: version
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -107,6 +114,139 @@ jobs:
             runner: ubuntu-22.04
           - target: aarch64-unknown-linux-gnu
             runner: ubuntu-22.04-arm
+    steps:
+      # Tag ref -> HEAD is the tag commit, so `git rev-parse HEAD` in build.rs
+      # stamps the commit correctly at the default shallow fetch-depth (1).
+      - name: Checkout tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      # protoc is HARD-REQUIRED on GitHub Actions: crates/build/xai-proto-build
+      # returns an error when GITHUB_ACTIONS is set and no protoc is found. The
+      # repo's bin/protoc dotslash wrapper must NOT be used in CI (dotslash is
+      # absent and it would try a network fetch), so we set the PROTOC env var
+      # explicitly to the real protoc path — find_protoc checks $PROTOC first
+      # and never reaches the wrapper walk-up.
+      - name: Install system dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends protobuf-compiler cmake
+          # cmake: build prerequisite for aws-lc-sys (rustls) — usually
+          # preinstalled on ubuntu-22.04, installed anyway (idempotent).
+          protoc_path="$(command -v protoc)"
+          if [ -z "${protoc_path}" ]; then
+            echo "::error::protoc was not installed by apt"
+            exit 1
+          fi
+          echo "PROTOC=${protoc_path}" >> "$GITHUB_ENV"
+
+      # rust-toolchain.toml pins 1.94.0 and rustup picks it up automatically on
+      # the first cargo call inside the repo; install it explicitly up front
+      # (minimal profile, no components — a release build runs no clippy/fmt) so
+      # the version is deterministic instead of lazily resolved.
+      - name: Install Rust toolchain
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.94.0 --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      # Per-target cache key so the 4 matrix legs never thrash one cache.
+      - name: Restore cargo cache
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          key: ${{ matrix.target }}
+          cache-on-failure: true
+
+      # GROK_VERSION stamps the release version into the binary (build.rs +
+      # xai-grok-version); without it IS_DEV_BUILD=true and --version omits the
+      # tag's version. jemalloc / ObjC link args in .cargo/config.toml apply
+      # automatically per target. --locked turns a stale Cargo.lock into a red
+      # job instead of a silent regenerate (03-02 regenerates the lock in this
+      # same phase; no workflow runs until Phase 4).
+      - name: Build release-dist binary
+        run: cargo build --profile release-dist --locked -p xai-grok-pager-bin
+        env:
+          GROK_VERSION: ${{ needs.version.outputs.version }}
+
+      # `deepseek-build <version> (<shortcommit>)` — both shape and stamped
+      # version are asserted; a wrong stamp must fail the job here.
+      - name: Smoke-check the built binary
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          out="$(target/release-dist/deepseek-build --version)"
+          printf 'binary reports: %s\n' "${out}"
+          if ! printf '%s\n' "${out}" | grep -Fq "deepseek-build ${RELEASE_VERSION} ("; then
+            echo "::error::--version does not report the release version: wanted 'deepseek-build ${RELEASE_VERSION} (...)', got '${out}'"
+            exit 1
+          fi
+          if ! printf '%s\n' "${out}" | grep -Eq '^deepseek-build [^ ]+ \([0-9a-f]{7,40}\)$'; then
+            echo "::error::--version output has unexpected shape (name version (commit)): '${out}'"
+            exit 1
+          fi
+
+      # Tarball with the binary + licenses at the TOP LEVEL (no nested dir), so
+      # `tar xf` drops the binary directly. THIRD-PARTY-NOTICES ships because
+      # vendored libgit2's GPL-2.0-with-linking-exception text lives there —
+      # that is the license-safe choice for a public distribution.
+      - name: Package tarball
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          RT: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          stage="$(mktemp -d)"
+          cp target/release-dist/deepseek-build "$stage/deepseek-build"
+          cp LICENSE NOTICE THIRD-PARTY-NOTICES "$stage/"
+          cat > "$stage/README.txt" <<'EOF'
+          deepseek-build
+          ==============
+
+          A terminal coding assistant for DeepSeek models (deepseek-v4-pro / deepseek-flash).
+
+          This binary is an independent project, not affiliated with DeepSeek.
+
+          It is built from source derived from xai-org/grok-build (Apache-2.0). The
+          LICENSE, NOTICE, and THIRD-PARTY-NOTICES files in this archive carry the
+          full license and attribution details, including the vendored libgit2
+          license (GPL-2.0-with-linking-exception).
+
+          Quick start:
+
+              export DEEPSEEK_API_KEY=...       # or DEEPSEEK_BUILD_API_KEY=...
+              ./deepseek-build
+
+          Configuration, sessions, and logs live under ~/.deepseek-build. At runtime
+          the binary only talks to api.deepseek.com over HTTPS.
+          Source and docs: https://github.com/coruairc/deepseek-build
+          EOF
+          tar -czf "deepseek-build-${RELEASE_VERSION}-${RT}.tar.gz" -C "$stage" deepseek-build LICENSE NOTICE THIRD-PARTY-NOTICES README.txt
+          printf '%s\n' "archive contents:"
+          tar -tzf "deepseek-build-${RELEASE_VERSION}-${RT}.tar.gz"
+
+      # GitHub-internal artifact transport only (see the hard constraint above).
+      # The publish job downloads these and attaches them to the release.
+      # The container job downloads linux-* tarballs to build Docker images.
+      - name: Upload tarball as a job artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-${{ matrix.target }}
+          path: deepseek-build-*.tar.gz
+          if-no-files-found: error
+
+  build-macos:
+    name: build-macos (${{ matrix.target }})
+    needs: version
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
           - target: aarch64-apple-darwin
             runner: macos-15
           - target: x86_64-apple-darwin
@@ -126,23 +266,7 @@ jobs:
       # absent and it would try a network fetch), so we set the PROTOC env var
       # explicitly to the real protoc path — find_protoc checks $PROTOC first
       # and never reaches the wrapper walk-up.
-      - name: Install system dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends protobuf-compiler cmake
-          # cmake: build prerequisite for aws-lc-sys (rustls) — usually
-          # preinstalled on ubuntu-22.04, installed anyway (idempotent).
-          protoc_path="$(command -v protoc)"
-          if [ -z "${protoc_path}" ]; then
-            echo "::error::protoc was not installed by apt"
-            exit 1
-          fi
-          echo "PROTOC=${protoc_path}" >> "$GITHUB_ENV"
-
-      - name: Install system dependencies (macOS)
-        if: runner.os == 'macOS'
+      - name: Install system dependencies
         run: |
           set -euo pipefail
           # cmake is preinstalled on macOS runners (needed by aws-lc-sys).
@@ -158,20 +282,12 @@ jobs:
       # the first cargo call inside the repo; install it explicitly up front
       # (minimal profile, no components — a release build runs no clippy/fmt) so
       # the version is deterministic instead of lazily resolved.
-      - name: Install Rust toolchain (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          set -euo pipefail
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.94.0 --profile minimal
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-
-      - name: Install Rust toolchain (macOS)
-        if: runner.os == 'macOS'
+      - name: Install Rust toolchain
         run: |
           set -euo pipefail
           rustup toolchain install 1.94.0 --profile minimal
 
-      # Per-target cache key so the 4 matrix legs never thrash one cache.
+      # Per-target cache key so the matrix legs never thrash one cache.
       - name: Restore cargo cache
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
@@ -181,9 +297,11 @@ jobs:
       # GROK_VERSION stamps the release version into the binary (build.rs +
       # xai-grok-version); without it IS_DEV_BUILD=true and --version omits the
       # tag's version. jemalloc / ObjC link args in .cargo/config.toml apply
-      # automatically per target.
+      # automatically per target. --locked turns a stale Cargo.lock into a red
+      # job instead of a silent regenerate (03-02 regenerates the lock in this
+      # same phase; no workflow runs until Phase 4).
       - name: Build release-dist binary
-        run: cargo build --profile release-dist -p xai-grok-pager-bin
+        run: cargo build --profile release-dist --locked -p xai-grok-pager-bin
         env:
           GROK_VERSION: ${{ needs.version.outputs.version }}
 
@@ -260,7 +378,7 @@ jobs:
   # contents: write to create the release, nothing else.
   publish:
     name: Publish GitHub release
-    needs: [version, build]
+    needs: [version, build-linux, build-macos]
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     permissions:
@@ -346,7 +464,7 @@ jobs:
   # wrong (or a non-existent) GHCR namespace when a collaborator pushes a tag.
   container:
     name: Build and push container image
-    needs: [version, build]
+    needs: [version, build-linux]
     runs-on: ubuntu-22.04
     if: github.ref_type == 'tag'
     timeout-minutes: 30
