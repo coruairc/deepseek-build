@@ -1,0 +1,2 @@
+| `attestation: dated revocation sentence present` | `grep -F 'Revoked: '` over this note |
+Revoked: 2026-11-25 (author confirmation recorded 2026-11-25T23:11:13Z; the exact platform-action time was not recorded) — the author rotated/revoked the DEEPSEEK_API_KEY used for the Phase-2 live runs on platform.deepseek.com.

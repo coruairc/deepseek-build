@@ -124,3 +124,53 @@ recorded as an artifact.
   stream of that same execution (not a re-run).
 
 After recording: `scripts/key-leak-check.sh --scan docs/evidence` must exit 0.
+
+## Re-running the Phase-2 items
+
+Phase-2 items live under `docs/evidence/02-loop-item-verification/`. The two
+live items need a real key exported in the parent shell and a build host; the
+rest are offline. The four pty commands need a `PAGER_BINARY` copy of the
+release binary and an **absolute** `GROK_PTY_CAST_DIR` (cargo runs the test
+binary with its crate directory as cwd, so a repo-relative path writes beside
+the crate).
+
+- **live-smoke** — export `DEEPSEEK_API_KEY` in the parent shell (never in the
+  captured command), then
+  `BIN=<private copy of target/release/deepseek-build> script -qec
+  'scripts/egress-check.sh' -T run.timing run.typescript` and the same
+  `script -qec 'scripts/smoke-test.sh'` capture. Expect `EGRESS-CHECK PASS`
+  from the first and `8 passed, 0 failed` from the second.
+- **runtime-egress** — `python3
+  docs/evidence/02-loop-item-verification/runtime-egress/destination-check.py
+  docs/evidence/02-loop-item-verification/live-smoke/live-smoke-transcript.txt
+  /dev/null` re-derives the measurement from the committed transcript (no key,
+  no network). Expect `parsed 4 rows; API_CONNECTS=7; WEB_FETCH_CONNECTS=1`,
+  exit 0.
+- **key-leak** — `scripts/key-leak-check.sh` (its own fake key, real endpoint)
+  expects `PASS  fake key absent from N saved file(s) and captured output`;
+  then `scripts/key-leak-check.sh --scan docs/evidence` expects `PASS  no
+  key-shaped string in: docs/evidence`, exit 0. The revocation half is a human
+  action recorded as a dated attestation in `key-leak/notes.md`; it has no
+  re-run.
+- **permission-prompt** — `PAGER_BINARY=… GROK_PTY_CAST_DIR=<absolute item
+  path> cargo test -p xai-grok-pager-pty-harness --test pty_e2e_shell_tools --
+  --ignored --nocapture permission_prompt_outcomes_and_warning`, then
+  `cargo test -p xai-grok-pager-bin --test headless_loop_items -- --nocapture
+  headless_permission_denial`. Expect `test result: ok. 1 passed; 0 failed`
+  from each.
+- **permission-mode** — the same pty target with
+  `permission_mode_chip_matches_after_resume`, then
+  `cargo test -p xai-grok-pager-bin --test headless_loop_items -- --nocapture
+  headless_permission_mode_plan_arms_plan_mode`. Expect `test result: ok. 1
+  passed; 0 failed` from each.
+- **resume-fidelity** — `cargo test -p xai-grok-pager-bin --test
+  headless_loop_items -- --nocapture
+  headless_resume_restores_model_effort_and_plan_state`, then
+  `cargo test -p xai-grok-pager-pty-harness --test plan_approval_resume --
+  --nocapture`. Expect `test result: ok. 1 passed; 0 failed` from each.
+- **plan-read-only** — the pty target with
+  `plan_mode_read_only_in_every_permission_mode` (three permission modes), then
+  `cargo test -p xai-grok-shell --lib plan_mode_edit_gate`. Expect `test
+  result: ok. 1 passed; 0 failed` and `11 passed; 0 failed` respectively.
+
+After recording: `scripts/key-leak-check.sh --scan docs/evidence` must exit 0.

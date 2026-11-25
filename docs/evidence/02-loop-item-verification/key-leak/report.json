@@ -1,0 +1,57 @@
+{
+  "item": "key-leak",
+  "requirements": [
+    "PROOF-03"
+  ],
+  "date": "2026-11-25T23:10:16Z",
+  "host": "Linux/x86_64",
+  "command": "scripts/key-leak-check.sh (default canary run) + scripts/key-leak-check.sh --scan (committed artifacts), captured with script -T",
+  "steps": [
+    {
+      "name": "canary: product wrote no key material",
+      "ok": true,
+      "detail": "exit 0: PASS  fake key absent from 52 saved file(s) and captured output"
+    },
+    {
+      "name": "canary: the provider path really ran",
+      "ok": true,
+      "detail": "exit 0: provider observed: 401 from api.deepseek.com"
+    },
+    {
+      "name": "scan: committed evidence tree is clean",
+      "ok": true,
+      "detail": "exit 0: PASS  no key-shaped string in: docs/evidence"
+    },
+    {
+      "name": "scan: every path this phase committed is clean",
+      "ok": true,
+      "detail": "exit 0: PASS  no key-shaped string in: docs .planning/phases/02-loop-item-verification"
+    },
+    {
+      "name": "baseline: whole-tree key-shape grep measured",
+      "ok": true,
+      "detail": "exit 0: 4379"
+    },
+    {
+      "name": "attestation: dated revocation sentence present",
+      "ok": true,
+      "detail": "exit 0: Revoked: 2026-11-25 (author confirmation recorded 2026-11-25T23:11:13Z; the exact platform-action time was not recorded) — the author rotated/revoked the DEEPSEEK_API_KEY used for the Phase-2 live runs on platform.deepseek.com."
+    },
+    {
+      "name": "scan: item directory clean after the note",
+      "ok": true,
+      "detail": "exit 0: PASS  no key-shaped string in: docs/evidence/02-loop-item-verification/key-leak"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/02-loop-item-verification/key-leak/key-leak.cast",
+      "sha256": "09198aa1911c703769f7f363ed76169970ffbe1af886c88b966ac8eaeec86fa6"
+    },
+    {
+      "path": "docs/evidence/02-loop-item-verification/key-leak/notes.md",
+      "sha256": "9e4c959b12829c5091f8e390fb4120de566629bf059c0282640095987a3d005b"
+    }
+  ],
+  "result": "ok"
+}
