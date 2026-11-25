@@ -19,13 +19,11 @@ public description; §7 maps the code and §8 lists the rules for changing it.
 - **Branch:** `main` is the mainline and carries the released lineage
   (`v0.0.1-rc5`). Work branches rebase onto `main` before review; do not treat a
   side branch as the integration point.
-- **HEAD (refreshed 2026-11-25, 21:21 UTC):** `main` = `30388a51`. Phase 01 is
-  complete. Phase 02: **02-01 committed** (live-smoke, PROOF-01). **02-04 code
-  and evidence item committed**; SUMMARY was uncommitted and a `cargo test`
-  still held the build lock when the author clocked off. Do not start a second
-  executor until that test exits. Resume from
-  [`HANDOFF-2026-11-25.md`](HANDOFF-2026-11-25.md). The rest of §0 still
-  describes the pre-milestone rc5 tree and is reconciled by Phase 5.
+- **HEAD (refreshed 2026-11-25, clock-off):** Phase 01 is complete. Phase 02:
+  **02-01 and 02-04 are committed**. Next plan is 02-02, which reads the
+  committed live-smoke transcript — do not start a second live session.
+  Resume from [`HANDOFF-2026-11-25.md`](HANDOFF-2026-11-25.md). The rest of §0
+  still describes the pre-milestone rc5 tree and is reconciled by Phase 5.
 - **Remote:** `origin git@github.com:coruairc/deepseek-build.git`.
 - **Toolchain:** Rust **1.94.0** via rustup (pinned in `rust-toolchain.toml`). Do not bump.
   `protoc` on PATH (`/usr/bin/protoc`); `dotslash` not needed. `strace` absent (use

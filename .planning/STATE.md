@@ -4,16 +4,16 @@ milestone: v0.1.0
 current_phase: 2
 current_phase_name: Loop-Item Verification
 status: paused
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-11-25T21:22:43.922Z"
-last_activity: "2026-11-25 21:21 UTC — handoff written; cargo test still holding /tmp/team-build.lock"
-state_head: 757b1f17bbf0b857b1a47131cff9866efed3c6de
+stopped_at: Author clocked off. Wave 1 done (02-01, 02-04). Next is 02-02. Do not start a second live session. See HANDOFF-2026-11-25.md
+last_updated: "2026-11-25T21:30:00.000Z"
+last_activity: 2026-11-25
+last_activity_desc: Clocked off after 02-04 completed
+state_head: ae23831973043731108ae502e6edd289b86c7276
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 12
   completed_plans: 8
-last_activity_desc: 02-04 complete; 02-01 remains complete; author had clocked off during evidence capture
 ---
 
 # Project State
@@ -23,16 +23,14 @@ last_activity_desc: 02-04 complete; 02-01 remains complete; author had clocked o
 See: .planning/PROJECT.md (updated 2026-11-23)
 
 **Core value:** One DeepSeek key in, a trustworthy daily coding agent out: the right model on every turn, zero traffic to any host you did not configure, and a release you can install with confidence.
-**Current focus:** Phase 02 — Loop-Item Verification
+**Current focus:** Phase 2 — Loop-Item Verification
 
 ## Current Position
 
 Phase: 2 — Loop-Item Verification
-Current Plan: 3
-Total Plans in Phase: 6
-Plan: 02-01 complete (ec878ef0). 02-04 complete (b5a75b78, 4599b561, 30388a51). 02-02, 02-03, 02-05, 02-06 not started. The inherited key was rejected; 02-01 used the login-shell key and recorded that. Do not start a second live run.
-Status: Paused — author clocked off; 02-04 finished after the handoff
-Last activity: 2026-11-25 21:22 UTC — 02-04 SUMMARY written; no cargo test still running
+Plan: 02-01 and 02-04 complete. Next is 02-02 (not started).
+Status: Paused — author clocked off
+Last activity: 2026-11-25 — 02-04 finished after the first handoff commit
 
 Progress: [██░░░░░░░░] 20%
 
@@ -134,6 +132,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-25T21:22:43.684Z
-Stopped at: Completed 02-04-PLAN.md
-Resume file: None
+Last session: 2026-11-25
+Stopped at: Wave 1 complete (02-01, 02-04). 02-02 was not started. Do not start a second live session. Key rotation still owed at 02-03.
+Resume file: HANDOFF-2026-11-25.md

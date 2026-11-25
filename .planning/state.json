@@ -11,7 +11,7 @@
     {
       "number": "2",
       "name": "Loop-Item Verification",
-      "status": "pending"
+      "status": "paused"
     },
     {
       "number": "3",
@@ -31,8 +31,8 @@
   ],
   "next": {
     "command": "/gsd-progress --next",
-    "label": "Advance to the next step (plan phase 2)",
-    "reason": "Phase 2 of 5 — needs a plan"
+    "label": "Resume with /gsd-autonomous --from 2",
+    "reason": "Paused at clock-off. Wave 1 done. Next plan is 02-02."
   },
-  "updated_at": "2026-11-23T20:24:01.143Z"
+  "updated_at": "2026-11-25T21:24:09.676Z"
 }
