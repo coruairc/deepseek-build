@@ -112,12 +112,14 @@ Plans:
   2. The pulled image runs a real headless turn that executes a shell command, with the documented run flags that keep the sandbox on, and the README states the image is headless-only with the mounts it needs.
   3. `install.sh` installs a pinned `VERSION=` from the real release and prints that version, and the unpinned `latest` path's actual behaviour is established by checking the real URL rather than the fake-tree harness.
   4. The throwaway tag, its release and the image tag it created are cleaned up, with no `:latest` left pointing at a throwaway build and the dry-run evidence committed.
-**Plans**: 3 plans
+**Plans**: 5 plans
 
 Plans:
-- [ ] 04-01: Throwaway tag dry run — image build, publish to GHCR, pull from the registry
-- [ ] 04-02: In-image headless tool-executing turn with sandbox-on flags; README GHCR block corrected
-- [ ] 04-03: Installer proof from the real release, pinned and unpinned, plus cleanup and the evidence cast
+- [ ] 04-01: Throwaway tag `v0.1.0-proof1` — push, green run, release assets and prerelease classification
+- [ ] 04-02: Installer proof against the real release — pinned, then the real `latest` behaviour; README install truth
+- [ ] 04-03: Homebrew formula with real URLs and SHA-256 values, plus the tap activation doc
+- [ ] 04-04: Registry-side image proof (digest, manifest, tags); the in-image run recorded as environment-blocked with exact commands; README container truth
+- [ ] 04-05: Evidence sealed, the keep-prerelease deviation recorded, leak scan
 
 ### Phase 5: Windows Support
 **Goal:** As the author, I want deepseek-build to build, ship and install on Windows x86_64 at a named tier — builds and runs, sandbox refuses honestly — so that a supported platform means something on all three and Windows never ships a silent sandbox no-op.
