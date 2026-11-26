@@ -2,9 +2,9 @@
 
 Honest list of what is incomplete or broken at this revision. Nothing here is
 hidden behind a "temporary" flag; where code remains it is called out. Claims are
-against the tree on `dsb/integration` after the live-smoke, egress, polish and
-real-use passes (2026-10-07), with the test state refreshed 2026-10-09 and the
-rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
+against `main` at the Phase 5.1 close (2026-11-26, `0d276f85`). The test state is
+last recorded 2026-11-23 (and its expected count is now stale, see below); the
+distribution, container and Windows notes were refreshed 2026-11-26.
 
 ## Build & tests
 
@@ -49,7 +49,13 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   evidence-wrapped gate process survived and completed, and the continuation
   executor adopted it (step record carries the real exit status; counts
   re-derived independently from the log). The `test-gate` evidence item is
-  complete (cast, `report.json`, normalized log, notes).
+  complete (cast, `report.json`, normalized log, notes). **The checked-in
+  `scripts/test-gate.expected` is stale for the current tree (2026-11-26):** it
+  was refreshed at `c159a3e7` (2026-11-23) with `results=308`, `binaries=219`,
+  and test binaries added since — `xai-grok-pager-bin`'s `headless_loop_items`
+  and `version_paths`, among others — raise the target count. A green
+  `scripts/test-gate.sh --refresh-expected` run must rewrite it before any
+  release claim quotes the suite size.
 - **`xai-grok-sandbox --test deny_paths_e2e` is green: 14 passed / 0 failed /
   1 ignored (2026-11-21).** The previously failing
   `devbox_genuine_reexec_applies_enforcement` now runs a
@@ -58,14 +64,20 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   ignored test is the pre-existing `subprocess_entry` harness entry point and no
   new `#[ignore]` was added. `read_deny_empty_set_verifies_inside_bwrap` passes
   here because `/run/containerd` is absent.
-- **`xai-grok-login`: green — 413 → 395 passed / 0 failed / 1 ignored.** The
-  lane was red (405/33/1) because inert OAuth/OIDC scaffolding tests could never
-  pass, and one e2e test deadlocked. Fixed 2026-10-09: the dead xAI login/OIDC
-  surface was deleted (dropping 18 tests of removed behavior, ledgered), the
-  sleep-gate test was rewritten to drive the real drain with a controllable
-  refresher (was a deterministic hang), and the API-key env vars are now guarded so
-  a developer's exported key can neither change results nor leak. See
-  `docs/DROPPED-TESTS.md`.
+- **The same bwrap test still fails on a host that cannot create namespaces
+  (build box, Step 3e 2026-10-23).** `devbox_genuine_reexec_applies_enforcement`
+  fails inside the containerised build box because bwrap re-exec cannot create
+  namespaces there; the failure is host-environment, not code, and the author's
+  host is green. Repro:
+  `cargo test -p xai-grok-sandbox --test deny_paths_e2e -j 1 -- devbox_genuine_reexec_applies_enforcement`.
+- **`xai-grok-login`: green (last recorded 2026-10-09: 395 passed / 0 failed /
+  1 ignored).** The lane was red because inert OAuth/OIDC scaffolding tests
+  could never pass, and one e2e test deadlocked. The dead xAI login/OIDC surface
+  was deleted (dropping 18 tests of removed behavior, ledgered), the sleep-gate
+  test was rewritten to drive the real drain with a controllable refresher, and
+  the API-key env vars are guarded so a developer's exported key can neither
+  change results nor leak. See `docs/DROPPED-TESTS.md`. The count is historical;
+  do not compare it with a current run.
 - **`xai-grok-shell`: 6197 passed / 0 failed / 4 ignored** on the final tree (was
   6221; the 24-test drop is inside the deleted login surface). `xai-grok-pager`
   9876 / 0 / 4 and `xai-grok-pager-minimal` 94 / 0 unchanged.
@@ -113,17 +125,25 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
 - **Step 6 mutation check:** breaking the sandbox truncation cap (`5_000`→
   `6_000`) made `sandbox_host_caps_task_output_polls_at_5k` fail, confirming the
   sandbox tests still detect the behavior; the change was reverted.
-- **Tags/releases:** on `origin` only `last-known-good-2026-10-06` (`b3847ff8`,
-  before the pager test repair, still contains egress code — not safe to run) and
-  `parked-test-repair-2026-10-06` (`c7d7f7e4`); two local-only tags
-  (`pre-merge-main-2026-10-07`, `pre-merge-integration-2026-10-07`). **No `v*`
-  release tag has ever been pushed and no GitHub release exists** (checked
-  against `origin` and `gh release list` on 2026-10-09).
+- **Tags/releases (2026-11-26):** the release pipeline exists and has run.
+  Prerelease tags `v0.0.1-rc2` … `v0.0.1-rc5` and `v0.1.0-proof1` are on
+  `origin`; `v0.1.0-proof1` (commit `b14d28eb`) built all four targets plus the
+  GHCR image in run 45724842211 (7/7 jobs) and published a pre-release with six
+  assets. **`v0.1.0` is not published** (the author publishes it). The old
+  `last-known-good-2026-10-06` tag (`b3847ff8`) still contains egress code and is
+  not safe to run.
+- **`deepseek-v0.1-snapshot` is superseded, not moved (FREEZE-02).** The
+  pre-existing `deepseek` branch and the `deepseek-v0.1-snapshot` tag both sit at
+  `4b305bd0c1ab2fbb55468df14ab6a7e94d7c8d0b`. The freeze marker is a new,
+  non-triggering tag; it must not move either ref. The `v0.1.0-proof1` tag push
+  left `origin/main` (`6e9d8d88…`) and both of those refs where they were
+  (`docs/evidence/04-distribution-proof/tag-push/`).
 
 ## Network / egress
 
-- **`scripts/check-egress.sh --strict` is red on this tree (baseline, 2026-11-21).**
-  It exits 1 with 3 HARD hits, all pre-existing source/test strings:
+- **`scripts/check-egress.sh --strict` is red on this tree (baseline,
+  re-checked 2026-11-26).** It exits 1 with 3 HARD hits, all pre-existing
+  source/test strings:
   `crates/codegen/xai-grok-shell-base/src/util/mod.rs:422-423` (`api.x.ai`,
   `grok.com`) and `crates/codegen/xai-grok-shell/src/agent/config_tests.rs:2768`
   (`gs://bucket`). Phase 1 does not fix the gate (out of scope); the red
@@ -223,8 +243,11 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   `docs/evidence/02-loop-item-verification/permission-mode/` (PERM-04), which
   also drives the flag end to end instead of asserting it.
 - **Headless cannot prompt:** a permission-gated action (e.g. `rm -rf`) ends as
-  `permission_cancelled` with a one-line stderr message naming `--always-approve`
-  and a non-zero exit (`d3a9c176`). `--always-approve` is required for unattended
+  `permission_cancelled` with a one-line stderr message naming both
+  `--always-approve` and `--permission-mode auto`, and a non-zero exit
+  (`d3a9c176`; the exact line is pinned in
+  `crates/codegen/xai-grok-pager-bin/tests/headless_loop_items.rs`). The JSON
+  error path carries the same hint. `--always-approve` is required for unattended
   actions.
 - **Cost:** the provider still reports no `cost_usd_ticks`, so `total_cost_usd`
   is omitted. The headless `--output-format json` result carries a local estimate
@@ -265,18 +288,18 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   scripted keystrokes (2026-10-07: welcome logo, `/model`, `/effort`, `/think`,
   status line), but no person has used it interactively. §4 items in
   [`TESTING.md`](TESTING.md) are the checklist for that pass.
-- **Release workflow in CI: Linux only.** Tags `v0.0.1-rc2`/`rc3` failed on the
-  Linux protoc 3.12 build; `v0.0.1-rc4` (run 40111152104) built both Linux
-  targets, but `aarch64-apple-darwin` hit the 90-minute `timeout-minutes` and
-  cancelled the run before `publish`. The Linux-only prerelease
-  [`v0.0.1-rc4`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc4) was published by hand from that run's artifacts
-  (2026-10-24); the x86_64 installer was verified against it. macOS builds are
-  dropped for now (a per-target timeout change needs a token with the
-  `workflow` scope).
-- **Container image: never built or pulled.** The `container` job `needs` the
-  whole build matrix, so the rc4 macOS cancellation skipped it; there is no
-  GHCR package (checked 2026-10-24). Neither `docker/Dockerfile` nor
-  `docker/Dockerfile.localtest` has been exercised.
+- **Release workflow in CI: green on its four targets (2026-11-26).** Run
+  45724842211 (`v0.1.0-proof1`) is 7/7 jobs: two Linux, two macOS (47.8 min and
+  61.5 min against the 240-minute budget), container, publish. The release is a
+  pre-release with six assets, and both macOS binaries are ad-hoc signed,
+  verified from the extracted tarball. `v0.0.1-rc4`'s macOS timeout is history;
+  see `docs/evidence/04-distribution-proof/tag-run/`.
+- **Container image: built, published and pulled (2026-11-26).** The `container`
+  job depends on `build-linux` only, so the macOS legs cannot skip it. The image
+  was pulled by index digest and run; see [Container image](#container-image-2026-11-26).
+  Neither `docker/Dockerfile` nor `docker/Dockerfile.localtest` has been
+  exercised by a human locally, but the published image is the CI-built one from
+  `docker/Dockerfile`.
 - **Live scripts on any machine but the author's: never.** `scripts/smoke-test.sh`
   (8/8) and `scripts/egress-check.sh` (`EGRESS_VIOLATIONS=0`) passed there on
   2026-10-07 and have not been reproduced elsewhere.
@@ -294,6 +317,29 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
 - **Adding bwrap would not be enough.** bwrap needs user namespaces, which a default unprivileged
   container blocks; enabling it requires `--cap-add SYS_ADMIN` or `--privileged`, i.e. weakening the
   container's own isolation. That trade-off is deliberately not made.
+
+## Windows tier (2026-11-26)
+
+- **Windows packaging is in the tree but not yet released or accepted.** The release workflow
+  carries a `build-windows` job (`windows-latest`, `x86_64-pc-windows-msvc`, 90-minute budget)
+  that stages a `.zip` (binary + `LICENSE`, `NOTICE`, `THIRD-PARTY-NOTICES`, `README.txt`) and
+  `install.ps1` exists at the repo root; both were uncommitted working-tree changes at the time
+  of writing. `scripts/test-install.ps1` does not exist yet, no tagged run has produced a
+  Windows `.zip`, and WIN-01…06 are **pending** in `.planning/REQUIREMENTS.md` (Phase 5 is 0/5).
+  Do not tell a user that a Windows `.zip` is downloadable today.
+- **The sandbox is honest on Windows.** There is no Windows sandbox backend. Only `--sandbox off`
+  is accepted; any other profile (including one from `config.toml` or
+  `DEEPSEEK_BUILD_SANDBOX`) is a startup error naming the unsupported platform, and
+  `/session-info` reports it unsupported. Tests: `windows_only_accepts_off`,
+  `windows_absent_request_defaults_to_off`, `unsupported_platform_error_names_windows_exactly`
+  (`crates/codegen/xai-grok-sandbox/src/profiles.rs`). The user-guide page `18-sandbox.md` and
+  the README state the tier; no artifact claims "sandboxed" on Windows.
+- **The compile spike is recorded, not finished.** `.planning/phases/05-windows-support/05-SPIKE-LOG.md`
+  records a `windows-latest` `cargo check` spike on throwaway branches
+  (`ci/windows-spike`, `ci/windows-spike2`): four blockers found, three fixes landed on `main`
+  (`find-msvc-tools` 0.1.15, `xai-proto-build` temp files instead of `/dev/*`, pty `cfg(unix)`
+  gates). The run that would prove the whole workspace clean on Windows is not recorded as
+  green, so a Windows build is unsupported-but-plausible, not proven.
 
 ## Rebrand / config
 
@@ -321,23 +367,29 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
   `24-monitoring-usage.md`, plus pruned sections elsewhere). Remaining prose
   reads `deepseek-build <command>`.
 
-- **Project-level directory is still `.grok/` (2026-10-21).** Per-user state
-  is `~/.deepseek-build`, but per-repo config, skills, agents, hooks, plugins,
-  rules, sandbox profiles, and rewind checkpoints are still read from and
-  written to `<repo>/.grok/` (e.g. `xai-grok-sandbox/src/profiles.rs`,
-  `xai-grok-hooks/src/discovery.rs`, `xai-grok-workspace`). The user guide
-  documents `.grok/` because that is what the code does; renaming it is a code
-  change across several crates and has not been made.
-  **Decision (rc5, 2026-10-24): keep.** The `.grok/` project folder and the
-  internal-only `GROK_*` env vars (including `GROK_VERSION`, which the release
-  workflow uses to stamp `--version`) stay as they are for 0.0.1. Migrating
-  them touches the sandbox, hooks, workspace, skills and release workflow
-  together and would break existing per-repo setups without a migration
-  path; it is deferred to after the first stable release.
-- **Version string (fixed in rc5).** The workspace crates now carry version
-  `0.0.1-rc5` (was the inherited `1.0.45`). Release builds still take the
-  version from the tag via `GROK_VERSION`; a source build without it prints
-  `deepseek-build 0.0.1-rc5 (<commit>)`.
+- **Project directory is `.deepseek/`, with `.grok/` as a compatibility
+  fallback (BRAND-01…03, 2026-11-26).** `xai-grok-brand::PROJECT_DIR_NAME =
+  ".deepseek"`, `LEGACY_PROJECT_DIR_NAMES = [".grok"]`, and
+  `project_dir_names()` return `.deepseek` first. Agents, plugins, skills,
+  workflows, project `config.toml`, hooks, `lsp.json`, sandbox profiles and
+  `workspaced.toml` all resolve through it; a repository with only `.grok/`
+  still works, and `.deepseek` wins when both define the same name. Writes go to
+  `.deepseek`; an existing `.grok` file is never migrated or rewritten.
+  - **Retained residuals:** `cwd/.grok/rewind-checkpoints` stays where it is
+    (session durability; splitting the mirror could stop existing sessions
+    rehydrating), and `.grok-plugin/` stays (marketplace index convention).
+  - **Open-build:** flip `PROJECT_DIR_NAME` to `.ob`; the fallback list then
+    reads `.ob` → `.deepseek` → `.grok`.
+- **Some user-guide project paths still say `.grok/`.** The canonical pages
+  `05-configuration.md`, `12-project-rules.md` and `26-config-reference.md`
+  document `.deepseek/` with the fallback, but a few pages (`08-skills.md`,
+  `09-plugins.md`, `10-hooks.md`) still show `.grok/` in project-scope paths.
+  This is a documentation gap, not a code gap.
+- **Version string (0.1.0).** `[workspace.package] version = "0.1.0"`, inherited
+  by the remaining crates. Release builds take the version from the tag via
+  `GROK_VERSION`; the `v0.1.0-proof1` image prints
+  `deepseek-build 0.1.0-proof1 (b14d28eb2bc7)`, and a source build without the
+  stamp prints `deepseek-build 0.1.0 (<commit>)`.
 - **Leftover sign-in surface.** `login` / `logout` subcommands and the `/login`
   slash command are still registered, and `login --help` still describes
   OAuth via `api.deepseek.com`, although the OAuth/OIDC stack was deleted and
