@@ -75,6 +75,9 @@ impl AgentView {
                 self.persona_detail = detail;
                 InputOutcome::Changed
             }
+            crate::views::agents_modal::AgentsModalOutcome::SwitchAgent { name } => {
+                InputOutcome::Action(Action::SwitchAgent(name))
+            }
             crate::views::agents_modal::AgentsModalOutcome::EditInEditor { path, tab } => {
                 InputOutcome::Action(Action::SuspendForEditor {
                     path,
@@ -109,9 +112,10 @@ impl AgentView {
                 InputOutcome::Changed
             }
             crate::views::agents_modal::AgentsModalOutcome::ViewAgent { .. }
+            | crate::views::agents_modal::AgentsModalOutcome::SwitchAgent { .. }
             | crate::views::agents_modal::AgentsModalOutcome::OpenPersonaDetail { .. }
             | crate::views::agents_modal::AgentsModalOutcome::EditInEditor { .. } => {
-                // Mouse interactions don't trigger view/edit; ignore
+                // Mouse interactions don't trigger view/edit/switch; ignore
                 InputOutcome::Unchanged
             }
             crate::views::agents_modal::AgentsModalOutcome::Changed => InputOutcome::Changed,
