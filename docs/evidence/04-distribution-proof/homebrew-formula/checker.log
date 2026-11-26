@@ -1,0 +1,24 @@
+PASS  class: exactly one Formula subclass named DeepseekBuild
+PASS  url: exactly two url lines
+PASS  url: both are https on github.com under the release download path
+PASS  version: one literal matching the tag in the URLs
+PASS  url: exactly one aarch64 and one x86_64 darwin asset
+PASS  url: on_macos wraps on_arm and on_intel, each before its asset
+PASS  sha256: exactly two 64-hex literals, distinct
+PASS  sha256: each matches the release SHA256SUMS line for its url
+PASS  sha256: release.json asset digests agree with SHA256SUMS
+PASS  install: bin.install, dsb symlink, licence docs and a --version test
+PASS  metadata: desc, homepage and Apache-2.0 licence
+PASS  source build: no head, branch, patch or Xcode dependency
+PASS  hosts: no URL host other than github.com
+PASS  placeholder: no zeroed or TODO hash
+PASS  livecheck: skipped or absent, so no other host is queried
+PASS  online: deepseek-build-0.1.0-proof1-aarch64-apple-darwin.tar.gz answers 200
+PASS  online: deepseek-build-0.1.0-proof1-aarch64-apple-darwin.tar.gz Content-Length is the release size
+PASS  online: deepseek-build-0.1.0-proof1-x86_64-apple-darwin.tar.gz answers 200
+PASS  online: deepseek-build-0.1.0-proof1-x86_64-apple-darwin.tar.gz Content-Length is the release size
+homebrew-formula: 19/19 PASS
+PASS  self-test: wrong-sha256 rejected by 'sha256: each matches the release SHA256SUMS line for its url'
+PASS  self-test: missing-on-intel rejected by 'url: on_macos wraps on_arm and on_intel, each before its asset'
+PASS  self-test: non-github-url rejected by 'hosts: no URL host other than github.com'
+self-test: 3/3 PASS
