@@ -173,6 +173,24 @@ none of `No release has been published yet`, `not codesigned`, `is currently emp
 `--stage container` is written and currently **2/8** — 04-04's deliverable (digest, `--sandbox devbox`,
 `/home/app/.deepseek-build`, the login step, and removing `Not yet built or published` / `ghcr.io/<owner>`).
 
+### The tamper case (offline, unchanged harness)
+
+A tampered checksum cannot be induced on the *published* release without pointing `install.sh` at a local
+server, which means the fake-tree hook this plan forbids — so the tamper gate is proven by the unchanged
+offline harness, exactly as the plan frames it (a unit check, never the REL-06 evidence):
+
+```sh
+sh scripts/test-install.sh   # ALL PASS (58/58 assertions)
+PASS: checksum-mismatch: nonzero exit
+PASS: checksum-mismatch: mismatch message
+PASS: checksum-mismatch: nothing installed
+```
+
+That case serves a real tarball with a wrong `SHA256SUMS` line over loopback and asserts the installer
+aborts before extracting. On the real release the same gate is evidenced by the installer printing
+`Checksum OK (298c9f27…)` — a line reached only after the comparison — with that hash independently
+confirmed against the release `SHA256SUMS` and GitHub's digest above.
+
 ## README before → after
 
 | Section | Before | After |
@@ -311,3 +329,5 @@ Ready for **04-03** (Homebrew formula) — it needs the two Apple tarball digest
   `10/10 PASS`, `readme-distribution[install]: 12/12 PASS`, `shellcheck --shell=sh scripts/prove-install.sh` exit 0,
   `git status --porcelain install.sh` empty, both `report.json` `result: ok` (11 and 8 steps), no evidence file over 1 MiB,
   `scripts/key-leak-check.sh --scan` green on both new items, and zero literal fake-tree hook names in `prove-install.sh`.
+- `sh scripts/test-install.sh` → `ALL PASS (58/58 assertions)`, including the three `checksum-mismatch` assertions.
+- Recorded artifact digests re-hashed against `report.json`: all four match.
