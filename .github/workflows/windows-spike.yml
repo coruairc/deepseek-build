@@ -36,6 +36,19 @@ jobs:
           cargo --version
           rustup show active-toolchain
 
+      - name: Install protoc (hard-required by xai-proto-build in CI)
+        shell: bash
+        run: |
+          set -euo pipefail
+          choco install protoc -y --no-progress
+          protoc_path="$(command -v protoc || true)"
+          if [ -z "$protoc_path" ]; then
+            protoc_path="/c/ProgramData/chocolatey/bin/protoc.exe"
+          fi
+          test -x "$protoc_path" || { echo "::error::protoc not found after choco install"; exit 1; }
+          "$protoc_path" --version
+          echo "PROTOC=$protoc_path" >> "$GITHUB_ENV"
+
       - name: cargo check --workspace --all-targets
         id: check
         shell: bash
