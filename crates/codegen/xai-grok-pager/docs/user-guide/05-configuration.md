@@ -715,7 +715,16 @@ The key ones. See the README for the complete list.
 
 | Variable | Description |
 |----------|-------------|
-| `DEEPSEEK_API_KEY` | API key from platform.deepseek.com |
+| `DEEPSEEK_API_KEY` | API key from platform.deepseek.com (preferred) |
+| `DEEPSEEK_BUILD_API_KEY` | Fallback name for the same key |
+
+The environment always wins. If neither variable is set, deepseek-build falls
+back to a saved key at `~/.deepseek-build/credentials.json` (`0600`, written
+atomically). The interactive TUI asks for it with a masked prompt at startup
+when no key is available; Enter saves and continues, Esc quits. Headless runs
+never prompt. A credentials file that is group/other-readable is refused with a
+`chmod 600 <path>` hint rather than used. There is no config key for the API
+key.
 
 ### Endpoints
 

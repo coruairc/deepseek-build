@@ -330,6 +330,14 @@ export DEEPSEEK_API_KEY=sk-...          # preferred
 # or: export DEEPSEEK_BUILD_API_KEY=sk-...
 ```
 
+In the interactive TUI, if neither variable is set and no saved key exists, a
+masked `DeepSeek API key` prompt opens at startup. Enter saves the key to
+`~/.deepseek-build/credentials.json` (mode `0600`, written atomically) and
+continues without a restart; Esc quits with the sign-in message. The
+environment always wins over the saved file, which is read only when neither
+variable is set, so exporting either variable replaces the saved key for that
+run. Headless runs (`-p` / `--output-format`) never prompt.
+
 Models: `deepseek-flash` (default) and `deepseek-v4-pro`, plus a hidden
 `deepseek-v4-flash` legacy alias; each offers `none`/`low`/`high`/`max`
 reasoning effort. A custom OpenAI-compatible `base_url` is supported via model
@@ -344,15 +352,16 @@ See [`docs/TUNING.md`](docs/TUNING.md) for the measurement.
 ## Quickstart
 
 ```sh
-export DEEPSEEK_API_KEY=sk-...     # env only; there is no interactive key entry
+export DEEPSEEK_API_KEY=sk-...     # optional; the TUI can ask on first launch
 cd your-repo
 dsb                                # or: deepseek-build
 ```
 
-Without a key, a headless run stops before any model request with
+On first launch the TUI asks for the key (masked) and saves it with mode `0600`
+in `~/.deepseek-build/credentials.json`. Without a key, a headless run stops
+before any model request with
 `Not signed in: set DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) to authenticate.`
-and exit code 1. The TUI likewise cannot sign in; quit (`q`), export the key,
-and relaunch.
+and exit code 1; headless never prompts.
 
 First commands inside the TUI:
 

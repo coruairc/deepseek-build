@@ -40,12 +40,19 @@ Start deepseek-build by running:
 deepseek-build
 ```
 
-deepseek-build needs a DeepSeek API key. Get one from [platform.deepseek.com](https://platform.deepseek.com), then set the `DEEPSEEK_API_KEY` environment variable:
+deepseek-build needs a DeepSeek API key. Get one from [platform.deepseek.com](https://platform.deepseek.com). You can either set the `DEEPSEEK_API_KEY` environment variable:
 
 ```bash
 export DEEPSEEK_API_KEY="sk-..."
 deepseek-build
 ```
+
+or just launch `deepseek-build`: when neither `DEEPSEEK_API_KEY` nor
+`DEEPSEEK_BUILD_API_KEY` is set and no saved key exists, the TUI opens a masked
+`DeepSeek API key` prompt. Enter saves it to `~/.deepseek-build/credentials.json`
+(mode `0600`, written atomically) and continues without restarting; Esc quits.
+The environment wins over the saved file, which is used only when neither
+variable is set. Headless runs never prompt.
 
 ---
 
