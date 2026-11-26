@@ -9,17 +9,19 @@ or observable state.
 - **Live checks (§3) and installer/container/release (§5):** another ~25–40
   minutes; §3 needs a real key, §5 does not.
 
-> Status (2026-11-23): `scripts/test-gate.sh` is green on this tree — exit 0,
-> step 1 (workspace) PASS, step 2 (`config-docs`) PASS, leak scan PASS;
-> results 308 = binaries 219 + doctests 89, and the checked-in expected count is
-> 308. A plain confirmation run on 2026-11-23 (no `--refresh-expected`)
-> reproduced the same numbers and exit 0 without editing the expected file.
-> Evidence is under `docs/evidence/01-truth-baseline/test-gate/`. The live
-> DeepSeek smoke test and the runtime egress audit were last green on the
-> author's machine (2026-10-07). `scripts/check-egress.sh --strict` is red on
-> this tree for three pre-existing source strings (see
-> [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). Four surfaces have never been
-> exercised: see [Not exercised yet](#not-exercised-yet).
+> Status (2026-11-26): the last **recorded** full gate run was green on
+> 2026-11-23 — exit 0, step 1 (workspace) PASS, step 2 (`config-docs`) PASS,
+> leak scan PASS; `results=308`, `binaries=219`, `doctests=89`. Test binaries
+> landed after that refresh (`xai-grok-pager-bin`'s `headless_loop_items` and
+> `version_paths`, among others), so **the checked-in
+> `scripts/test-gate.expected` (308 results / 219 binaries) is stale**. Run
+> `scripts/test-gate.sh --refresh-expected` to a green finish and commit the new
+> counts before quoting a number. Evidence for the 2026-11-23 run is under
+> `docs/evidence/01-truth-baseline/test-gate/`. The live DeepSeek smoke test and
+> the runtime egress audit were last green on the author's machine (2026-10-07).
+> `scripts/check-egress.sh --strict` is red on this tree for three pre-existing
+> source strings (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). Some surfaces
+> remain unexercised: see [Not exercised yet](#not-exercised-yet).
 
 ## Disk budget
 
@@ -60,7 +62,7 @@ or observable state.
 | 1 | `source "$HOME/.cargo/env"` | no output |
 | 2 | `cargo build --release -p xai-grok-pager-bin` | exit 0, ends `Finished release ...` (a cold first build takes 10+ min of compile time — not counted in the 20–30 min pass) |
 | 3 | `ls -lh target/release/deepseek-build` | an executable; last measured 147M (153,624,024 bytes) |
-| 4 | `./target/release/deepseek-build --version` | `deepseek-build 0.0.1-rc5 (<12-hex commit>)`, exit 0 |
+| 4 | `./target/release/deepseek-build --version` | `deepseek-build 0.1.0 (<12-hex commit>)` for a source build, exit 0. A CI binary built from a tag stamps that tag (`0.1.0-proof1 (b14d28eb2bc7)` for `v0.1.0-proof1`). |
 
 ## 2. Key handling and first run (3 min)
 
@@ -68,7 +70,7 @@ or observable state.
 |---|-----|--------|
 | 5 | `[ -n "${DEEPSEEK_API_KEY:-}" ] && echo key-present` (or check `DEEPSEEK_BUILD_API_KEY`) | `key-present`; if nothing prints, export the key before continuing |
 | 6 | Missing-key path, no key involved: `T=$(mktemp -d); env -u DEEPSEEK_API_KEY -u DEEPSEEK_BUILD_API_KEY HOME="$T/home" DEEPSEEK_BUILD_HOME="$T/dbh" ./target/release/deepseek-build -p hi; echo "exit=$?"; rm -rf "$T"` | stderr `Not signed in: set DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) to authenticate.`; `exit=1`; fail-closed before any model request (verified 2026-10-09 against a release binary built at `46aef092`) |
-| 7 | Fresh first run: `BIN="$PWD/target/release/deepseek-build"; T=$(mktemp -d); (cd /tmp && HOME="$T/home" "$BIN"); rm -rf "$T"` | `$T/home/.deepseek-build/` (or `$DEEPSEEK_BUILD_HOME/`) is created with `sessions/`, `docs/user-guide/` (28 files), `config.toml`, `logs/`; the TUI starts with the DeepSeek whale welcome logo. With the key exported: "Logged in with API key" and the prompt accepts input. Without a key: stays on the welcome screen with a one-line sign-in error (last observed: `OIDC not configured`). There is **no interactive key entry** — quit and export the key instead. `q` quits cleanly. |
+| 7 | Fresh first run: `BIN="$PWD/target/release/deepseek-build"; T=$(mktemp -d); (cd /tmp && HOME="$T/home" "$BIN"); rm -rf "$T"` | `$T/home/.deepseek-build/` (or `$DEEPSEEK_BUILD_HOME/`) is created with `sessions/`, `docs/user-guide/` (26 files), `config.toml`, `logs/`; the TUI starts with the DeepSeek whale welcome logo. With the key exported: "Logged in with API key" and the prompt accepts input. Without a key: stays on the welcome screen, whose retry row reads `Retry sign-in (set DEEPSEEK_API_KEY)`; auth is env-only (no OIDC/OAuth path). There is **no interactive key entry** — quit and export the key instead. `q` quits cleanly. |
 
 ## 3. Live scripts (8–12 min; a real key needed for steps 8, 9 and 13)
 
@@ -109,37 +111,40 @@ Launch the binary and approve tool calls as prompted.
 | # | Run | Expect |
 |---|-----|--------|
 | 29 | `sh scripts/test-install.sh` | `ALL PASS (39 assertions)`, exit 0. Builds a fake release tree and serves it on 127.0.0.1; covers success, latest-resolution, checksum mismatch (installs nothing), unsupported OS, tarball 404, uninstall (incl. the `dsb` shortcut), rerun-update, unwritable dir, and a pre-existing `dsb` file or foreign `dsb` symlink. No network beyond loopback. |
-| 30 | Container — production `docker/Dockerfile`: **NOT YET EXERCISED.** It expects a staged context assembled from the CI release tarballs (`deepseek-build-amd64` / `deepseek-build-arm64` + `LICENSE`, `NOTICE`, `THIRD-PARTY-NOTICES`, `README.txt`). The image is `debian:bookworm-slim`, runs as uid 1000, and `ENTRYPOINT`s `deepseek-build` with licenses in `/usr/share/doc/deepseek-build/`. Once a release exists: `docker buildx build --platform linux/amd64 -f docker/Dockerfile -t deepseek-build:test <ctx>` | image builds; `docker run --rm deepseek-build:test --version` prints the version |
+| 30 | Container — published image: the CI-built `ghcr.io/coruairc/deepseek-build` image from `v0.1.0-proof1` was pulled by index digest `sha256:8f5c484e…` and run on 2026-11-26 (registry facts and the in-image turn are in `docs/evidence/04-distribution-proof/`). It is `debian:bookworm-slim`, runs as uid 1000, and `ENTRYPOINT`s `deepseek-build` with licenses in `/usr/share/doc/deepseek-build/`; it ships **no `bubblewrap`**. To rebuild locally: `docker buildx build --platform linux/amd64 -f docker/Dockerfile -t deepseek-build:test <ctx>`, where `<ctx>` is staged from the release tarballs | `docker run --rm ghcr.io/…@sha256:8f5c484e… --version` prints `deepseek-build 0.1.0-proof1 (b14d28eb2bc7)`; a headless turn with `--permission-mode auto` runs a shell command and returns `estimated_cost_usd` |
 | 31 | Container — local smoke (`docker/Dockerfile.localtest`): stage a directory with your built binary copied as `deepseek-build`, plus `LICENSE`, `NOTICE`, `THIRD-PARTY-NOTICES` and a `README.txt`, then `docker build -f docker/Dockerfile.localtest -t deepseek-build:localtest .` — **NOT YET EXERCISED** | `docker run --rm deepseek-build:localtest --version` works; `docker run -it --rm -e DEEPSEEK_API_KEY -v "$PWD":/work deepseek-build:localtest` starts the TUI |
-| 32 | Release dry run — **NOT YET EXERCISED in CI.** Follow the test-tag procedure in [`AGENTS.md`](AGENTS.md) §6 (`v0.0.1-rc1`). No `v*` tag has ever been pushed and `gh release list` is empty (checked 2026-10-09) | all 4 native builds succeed; each tarball has `deepseek-build` + `LICENSE` + `NOTICE` + `THIRD-PARTY-NOTICES` + `README.txt` at top level; `SHA256SUMS` lists all 4; the release gets 4 tarballs + `SHA256SUMS` + `install.sh`; the installer-installed binary prints the tag version |
+| 32 | Release proof — **EXERCISED** on `v0.1.0-proof1` (run 45724842211, 7/7 jobs, 2026-11-26) | all four native builds succeeded; each tarball has `deepseek-build` + `LICENSE` + `NOTICE` + `THIRD-PARTY-NOTICES` + `README.txt` at top level; `SHA256SUMS` lists all four; the pre-release has six assets (four tarballs + `SHA256SUMS` + `install.sh`); the pinned installer prints `0.1.0-proof1 (b14d28eb2bc7)`. Evidence: `docs/evidence/04-distribution-proof/`. `v0.0.1-rc1` … `rc5` are published prereleases in the same workflow |
 
 ## Not exercised yet
 
 > - **Interactive TUI by a human.** It has been driven under a pty (scripted keystrokes, 2026-10-07), never used by a person.
-> - **Release workflow in CI.** Never run; no `v*` tag pushed; no GitHub release exists.
-> - **Container image.** Never built or pulled, by CI or locally.
 > - **Live scripts on any machine but the author's.** `smoke-test.sh` (8/8) and `egress-check.sh` (`EGRESS_VIOLATIONS=0`) passed there on 2026-10-07 and have not been reproduced elsewhere.
+>
+> The release workflow (run 45724842211) and the published container image (pulled by digest) were exercised on 2026-11-26; the remaining unproven surfaces are Windows (no artifact), a local `docker/Dockerfile.localtest` build, and a `brew install` on macOS.
 
 ## 6. Test suite status
 
-- **The gate is `scripts/test-gate.sh`; run it before any release claim.** On
-  2026-11-21 it exited 0: step 1 `cargo test --workspace --no-fail-fast --
-  --test-threads=4` PASS, step 2 `cargo test -p xai-grok-shell --lib --features
-  config-docs -j 1` PASS, and the leak scan over `docs/evidence` PASS. Counts:
-  `results=308`, `binaries=219`, `doctests=89`, `expected=308`. A plain
-  confirmation run on 2026-11-23 (no `--refresh-expected`) reproduced the same
-  counts and exit 0 — step 1: 31,913 passed / 0 failed / 386 ignored; the
-  `config-docs` step: 6,201 passed / 0 failed / 4 ignored (excerpt:
-  `docs/evidence/01-truth-baseline/test-gate/step2-config-docs-result-line.log`)
-  — and the expected
-  file was not edited. The verdict is
-  the arithmetic (`results == binaries + doctests == expected`), never the tail
-  of the log. `results` counts one top-level `test result:` line per cargo
-  target block; raw `test result:` lines are 309 because
-  `xai_tty_utils`'s `stderr_redirect_roundtrip_subprocess` re-runs its own test
-  binary with inherited stdout. Both cargo steps run with
-  `DEEPSEEK_API_KEY`, `DEEPSEEK_BUILD_API_KEY` and `XAI_API_KEY` unset.
-  Evidence: [`docs/evidence/01-truth-baseline/test-gate/`](docs/evidence/01-truth-baseline/test-gate/).
+- **The gate is `scripts/test-gate.sh`; run it before any release claim.** It
+  runs three named steps: (1) `cargo test --workspace --no-fail-fast --
+  --test-threads=4`; (2) **TEST-02**, the `config-docs` step
+  `cargo test -p xai-grok-shell --lib --features config-docs -j 1` (the
+  workspace run never enables `config-docs` because `xai-grok-shell` has
+  `default = []`); (3) a key-leak scan over `docs/evidence`. The verdict is the
+  arithmetic (`results == binaries + doctests == expected`), never the tail of
+  the log; `results` counts one top-level `test result:` line per cargo target
+  block. Both cargo steps run with `DEEPSEEK_API_KEY`,
+  `DEEPSEEK_BUILD_API_KEY` and `XAI_API_KEY` unset. The last recorded full run
+  was 2026-11-23 (exit 0; `results=308`, `binaries=219`, `doctests=89`; step 1
+  31,913 passed / 0 failed / 386 ignored; `config-docs` 6,201 passed / 0 failed /
+  4 ignored). Raw `test result:` lines were 309 because `xai_tty_utils`'s
+  `stderr_redirect_roundtrip_subprocess` re-runs its own test binary with
+  inherited stdout. Evidence:
+  [`docs/evidence/01-truth-baseline/test-gate/`](docs/evidence/01-truth-baseline/test-gate/).
+  **Those counts are stale for the current tree:** test binaries added after the
+  refresh (`xai-grok-pager-bin`'s `headless_loop_items` and `version_paths`,
+  among others) change the target count, so re-run
+  `scripts/test-gate.sh --refresh-expected` green and commit the new
+  `scripts/test-gate.expected` before quoting a suite size.
 - **The expected count is checked in** at `scripts/test-gate.expected`, with its
   provenance header (refresh command, commit, UTC date, the three numbers). Only
   a fully green `scripts/test-gate.sh --refresh-expected` rewrites it; edit it by
@@ -166,9 +171,10 @@ Launch the binary and approve tool calls as prompted.
   (item [`docs/evidence/01-truth-baseline/determinism/`](docs/evidence/01-truth-baseline/determinism/) —
   cast, `report.json`, notes). No test is quarantined.
 - `cargo check --workspace --tests` is green (all test targets compile).
-  `xai-grok-login` is green (395 / 0 / 1) since the dead OIDC surface was
-  deleted. See [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) and
-  `docs/DROPPED-TESTS.md` before quoting numbers.
+  `xai-grok-login` is green; the dead OIDC/OAuth surface has been deleted, so
+  its old pre-deletion counts are not a current number. See
+  [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) and `docs/DROPPED-TESTS.md` before
+  quoting numbers.
 - Branding gate: `cargo test -p xai-grok-pager-bin --test branding_surface`
   runs the real binary's `--help`, `agent --help`, `--version`, `completions
   bash`, and a keyless headless run, and fails on `grok` / `xai` / `x.ai`.
