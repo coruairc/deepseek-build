@@ -256,6 +256,23 @@ impl ScrollbackState {
         }
     }
 
+    /// Toggle just the selected thinking block (`Ctrl+E` with a thought in front of you).
+    /// Returns `false` when the selected row is not a foldable thinking block, so the caller can fall
+    /// back to [`Self::expand_all_thinking`].
+    pub fn toggle_thinking_selected(&mut self) -> bool {
+        let is_selected_thinking = self
+            .selected
+            .and_then(|i| self.entries.get_index(i))
+            .is_some_and(|(_, entry)| {
+                matches!(entry.block, RenderBlock::Thinking(_)) && entry.is_foldable()
+            });
+        if !is_selected_thinking {
+            return false;
+        }
+        self.toggle_fold_selected();
+        true
+    }
+
     /// Shared implementation for fold operations with scroll anchoring.
     ///
     /// Captures virtual_y before the fold, applies the mutation, rebuilds layout, then either anchors scroll or falls back to ensure_visible.

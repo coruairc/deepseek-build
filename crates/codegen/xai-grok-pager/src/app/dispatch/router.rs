@@ -628,7 +628,11 @@ fn dispatch_inner(action: Action, app: &mut AppView) -> Vec<Effect> {
             vec![]
         }
         Action::ExpandAllThinking => {
-            with_scrollback(app, |s| s.expand_all_thinking());
+            with_scrollback(app, |s| {
+                if !s.toggle_thinking_selected() {
+                    s.expand_all_thinking();
+                }
+            });
             vec![]
         }
         Action::ToggleRaw => {

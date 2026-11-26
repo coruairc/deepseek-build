@@ -4388,6 +4388,136 @@ fn idle_scrollback_pane_double_esc_opens_rewind() {
 fn idle_scrollback_pane_double_esc_opens_rewind_vim_mode() {
     assert_scrollback_double_esc_opens_rewind(true);
 }
+/// Route a key's bubbled action through the real dispatcher, the way the event loop does.
+fn press_and_dispatch(app: &mut AppView, ev: &Event) {
+    match app.handle_input(ev) {
+        InputOutcome::Action(action) => {
+            let _ = crate::app::dispatch::dispatch(action, app);
+        }
+        other => panic!("expected the key to bubble an action, got {other:?}"),
+    }
+}
+/// Ctrl+E over a selected thought toggles that thought only; other thoughts keep their fold state.
+#[test]
+fn ctrl_e_on_selected_thinking_block_toggles_only_it() {
+    use crate::scrollback::block::RenderBlock;
+    use crate::scrollback::types::DisplayMode;
+    let mut app = test_app_with_agent();
+    let id = super::super::agent::AgentId(0);
+    let agent = app.agents.get_mut(&id).unwrap();
+    let first = agent.scrollback.push_block(RenderBlock::thinking("first"));
+    let second = agent.scrollback.push_block(RenderBlock::thinking("second"));
+    for entry_id in [first, second] {
+        agent
+            .scrollback
+            .get_by_id_mut(entry_id)
+            .unwrap()
+            .set_display_mode(DisplayMode::Collapsed);
+    }
+    agent.scrollback.set_selected(Some(0));
+
+    press_and_dispatch(
+        &mut app,
+        &key_event(KeyCode::Char('e'), KeyModifiers::CONTROL),
+    );
+    let agent = app.agents.get(&id).unwrap();
+    assert_eq!(
+        agent.scrollback.get_by_id(first).unwrap().display_mode(),
+        DisplayMode::Expanded,
+        "the selected thought expands"
+    );
+    assert_eq!(
+        agent.scrollback.get_by_id(second).unwrap().display_mode(),
+        DisplayMode::Collapsed,
+        "Ctrl+E over a selected thought must leave the other thoughts alone"
+    );
+
+    press_and_dispatch(
+        &mut app,
+        &key_event(KeyCode::Char('e'), KeyModifiers::CONTROL),
+    );
+    let agent = app.agents.get(&id).unwrap();
+    assert_eq!(
+        agent.scrollback.get_by_id(first).unwrap().display_mode(),
+        DisplayMode::Collapsed,
+        "a second Ctrl+E collapses the same thought"
+    );
+    assert_eq!(
+        agent.scrollback.get_by_id(second).unwrap().display_mode(),
+        DisplayMode::Collapsed,
+        "the other thought stays collapsed on the collapse leg too"
+    );
+}
+/// With nothing selected, Ctrl+E keeps its documented "toggle all thinking blocks" behaviour.
+#[test]
+fn ctrl_e_with_no_scrollback_selection_still_toggles_all_thinking() {
+    use crate::scrollback::block::RenderBlock;
+    use crate::scrollback::types::DisplayMode;
+    let mut app = test_app_with_agent();
+    let id = super::super::agent::AgentId(0);
+    let agent = app.agents.get_mut(&id).unwrap();
+    let first = agent.scrollback.push_block(RenderBlock::thinking("first"));
+    let second = agent.scrollback.push_block(RenderBlock::thinking("second"));
+    for entry_id in [first, second] {
+        agent
+            .scrollback
+            .get_by_id_mut(entry_id)
+            .unwrap()
+            .set_display_mode(DisplayMode::Collapsed);
+    }
+    agent.scrollback.set_selected(None);
+
+    press_and_dispatch(
+        &mut app,
+        &key_event(KeyCode::Char('e'), KeyModifiers::CONTROL),
+    );
+    let agent = app.agents.get(&id).unwrap();
+    assert_eq!(
+        agent.scrollback.get_by_id(first).unwrap().display_mode(),
+        DisplayMode::Expanded
+    );
+    assert_eq!(
+        agent.scrollback.get_by_id(second).unwrap().display_mode(),
+        DisplayMode::Expanded
+    );
+}
+/// A non-thinking row selected: Ctrl+E falls back to the all-thinking toggle.
+#[test]
+fn ctrl_e_on_non_thinking_selection_still_toggles_all_thinking() {
+    use crate::scrollback::block::RenderBlock;
+    use crate::scrollback::types::DisplayMode;
+    let mut app = test_app_with_agent();
+    let id = super::super::agent::AgentId(0);
+    let agent = app.agents.get_mut(&id).unwrap();
+    let first = agent.scrollback.push_block(RenderBlock::thinking("first"));
+    let second = agent.scrollback.push_block(RenderBlock::thinking("second"));
+    for entry_id in [first, second] {
+        agent
+            .scrollback
+            .get_by_id_mut(entry_id)
+            .unwrap()
+            .set_display_mode(DisplayMode::Collapsed);
+    }
+    agent
+        .scrollback
+        .push_block(RenderBlock::agent_message("plain answer"));
+    agent.scrollback.set_selected(Some(2));
+
+    press_and_dispatch(
+        &mut app,
+        &key_event(KeyCode::Char('e'), KeyModifiers::CONTROL),
+    );
+    let agent = app.agents.get(&id).unwrap();
+    assert_eq!(
+        agent.scrollback.get_by_id(first).unwrap().display_mode(),
+        DisplayMode::Expanded,
+        "a non-thinking selection keeps the expand-all behaviour"
+    );
+    assert_eq!(
+        agent.scrollback.get_by_id(second).unwrap().display_mode(),
+        DisplayMode::Expanded
+    );
+}
 /// From the SCROLLBACK pane an idle Esc with a draft in the (unfocused) composer arms NOTHING and leaves the draft intact.
 /// Clear is skipped by the prompt-pane gate, and rewind is skipped by the global empty-composer gate even with turns present.
 /// Never clear or rewind-stash a draft the reader has scrolled past.
