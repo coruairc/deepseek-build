@@ -4,16 +4,16 @@ milestone: v0.1.0
 current_phase: 4
 current_phase_name: Distribution Proof
 status: executing
-stopped_at: Phase 4 plan 04-01 complete (1/5) — v0.1.0-proof1 is pushed tag-only at b14d28eb; run 45724842211 is green (7/7 jobs, macOS 47.8/61.5 min, container success, two prerelease image tags, no :latest) and the release carries exactly six verified assets; next is 04-02 (installer proof)
-last_updated: "2026-11-26T06:10:00.000Z"
+stopped_at: Phase 4 plan 04-02 complete (2/5) — the pinned install is proven against the real v0.1.0-proof1 release (release asset install.sh byte-identical to the tree, tarball sha256 equal to SHA256SUMS and GitHub's digest, installed binary prints 0.1.0-proof1 (b14d28eb2bc7)) and the unpinned latest path's real 404 is recorded; README install truth corrected; next is 04-03 (Homebrew formula)
+last_updated: "2026-11-26T06:24:00.000Z"
 last_activity: 2026-11-26
-last_activity_desc: 04-01 recorded the single throwaway tag push, the green seven-job run, the six-asset pre-release and the absent :latest; REL-02 and the macOS half of REL-03 closed; REL-04 stays Partial (pull environment-blocked, 04-04)
-state_head: 48dec6fcd58cdea05dabf6bd475e13c30dafa675
+last_activity_desc: 04-02 proved the pinned installer against the real release and established the unpinned path's real behaviour (both latest/download URLs 404; the installer exits 22 and installs nothing); REL-06 closed; README install section corrected
+state_head: 54b61199edcfb74d8ede7c024abae61b41fb0258
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 21
-  completed_plans: 17
+  completed_plans: 18
 ---
 
 # Project State
@@ -28,16 +28,16 @@ See: .planning/PROJECT.md (updated 2026-11-23)
 ## Current Position
 
 Phase: 4 — Distribution Proof
-Plan: 04-01 of 5 complete (1/5). Next is 04-02 (installer proof against the real release).
-Status: Plan 04-01 complete — `v0.1.0-proof1` was pushed **tag-only** at `b14d28eb` and produced a green seven-job run (`45724842211`): both macOS legs at 47.8/61.5 min against the 240 min budget with sign+verify steps green (**REL-02 and the macOS half of REL-03 closed**), `container` success pushing only `0.1.0-proof1` + `v0.1.0-proof1` with no `:latest`, and a pre-release with exactly six assets whose bytes match both `SHA256SUMS` and GitHub's digests. REL-04 stays **Partial**: built/published/registry-verified, but the pull is environment-blocked (no Docker daemon) and belongs to 04-04.
-Last activity: 2026-11-26 06:07 UTC — 04-01 added `scripts/distribution-proof.py` and the three Phase-4 evidence items.
+Plan: 04-02 of 5 complete (2/5). Next is 04-03 (Homebrew formula from the real release's Apple digests).
+Status: Plan 04-02 complete — the **pinned** install is proven against the real `v0.1.0-proof1` release: the release asset `install.sh` is byte-identical to this tree (`31e114d4…`), the host tarball's sha256 equals both its `SHA256SUMS` line and GitHub's asset digest (`298c9f27…`), and the installed binary prints `deepseek-build 0.1.0-proof1 (b14d28eb2bc7)`. The **unpinned** path's real behaviour is recorded, not assumed: `releases/latest/download/SHA256SUMS` and `.../install.sh` both return **404** (only pre-releases exist), the installer exits 22 at `Resolving the latest release` and installs nothing. **REL-06 closed.** README's install section now states the pinned tag, the 404 truth (dated 2026-11-26) and the ad-hoc-signed/not-notarized macOS reality. REL-04 stays **Partial** (pull environment-blocked, 04-04).
+Last activity: 2026-11-26 06:24 UTC — 04-02 added `scripts/prove-install.sh`, `scripts/check-readme-distribution.py`, two evidence items and corrected README's install truth.
 
-Progress: [████████░░] 81%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
+- Total plans completed: 18
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -59,6 +59,7 @@ Progress: [████████░░] 81%
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 04 P02 | 15m | 2 tasks | 30 files |
 | Phase 04 P01 | 10m | 3 tasks | 38 files |
 | Phase 03 P04 | 14m | 2 tasks | 5 files |
 | Phase 03 P03 | 5m | 2 tasks | 4 files |
@@ -126,6 +127,10 @@ Full log in PROJECT.md Key Decisions. Those shaping current work:
 - [Phase 04]: The multi-arch index digest is `sha256:8f5c484e…`; the platform manifests inside it are `1d216b60…` (linux/amd64) and `25dc0d25…` (linux/arm64). The `build-push-action` outputs (`7f33b41b…`, `85f9de25…`) are buildkit per-platform **indexes** — don't mix the pairs.
 - [Phase 04]: Registry reads are daemonless: an anonymous ghcr.io pull token over HTTPS, or `docker manifest inspect`. `gh api /users/…/packages/…` 403s on this token (`read:packages` missing) — that is an auth gap, not a missing image.
 - [Phase 04]: A release is trusted only on two independent digests: the release's own `SHA256SUMS` **and** GitHub's asset `digest`. Downloaded tarballs stay outside the repo; evidence is text-only (a `-size +1M` gate enforces it).
+- [Phase 04]: The pinned install is proven from the **release asset** `install.sh` (sha256 `31e114d4…`, byte-identical to the tree), with the host tarball fetched from the real `/releases/download/v0.1.0-proof1/…` URL and its sha256 compared three ways (`298c9f27…` in all three). The installed binary prints `deepseek-build 0.1.0-proof1 (b14d28eb2bc7)`. `scripts/prove-install.sh` refuses to run if the installer's fake-tree hooks are set; their literal names are assembled from a suffix so the plan's grep guard stays meaningful.
+- [Phase 04]: `releases/latest` does **not** 404 in a browser: it 302s to `…/releases` (the index, 200). The two `/releases/latest/download/…` URLs 404, and so does the REST `repos/:owner/:repo/releases/latest`. Record all three; do not compress them into "404".
+- [Phase 04]: README install claims are gated by `scripts/check-readme-distribution.py` (whitespace-normalized so a wrapped phrase still matches). The `container` stage is written now and is 04-04's to satisfy.
+- [Phase 04]: `install.sh` is byte-unchanged. The scratch `HOME` carries a `.curlrc` with `no-progress-meter` so the captured transcript stays readable; it changes curl's verbosity only, never the download or the checksum.
 
 ### Pending Todos
 
@@ -146,7 +151,7 @@ None yet.
   attestation (no API can verify a revocation).
 - **Research base drift:** STACK/ARCHITECTURE read `main` @ `221a1a59`, PITFALLS @ `9e6780d9`. Re-verify `release.yml` edges and manifest versions before Phase 3.
 - **REL-05 / REL-04 pull — environment block (2026-11-26):** this host has the `docker` CLI but **no daemon** (`Cannot connect to the Docker daemon`). The image is proven registry-side; pulling and running it (REL-05, and REL-04's pulled half) is deferred to 04-04's exact-command record and must never be claimed as executed here.
-- **README baseline drift:** `README.md` no longer contains "not codesigned and not notarized" (0 matches; 03-03 wrote the ad-hoc-signed truth). 04-02/04-03 must re-measure, not assert the old value of 1.
+- **README baseline drift — RESOLVED (2026-11-26, 04-02):** `README.md` never contained "not codesigned and not notarized" at this HEAD (03-03 had already written the ad-hoc-signed truth), and its "No release has been published yet" banner was falsified by rc1–rc5 and proof1. 04-02 rewrote the banner, the Status row, the install commands, the unpinned paragraph and the macOS note; `scripts/check-readme-distribution.py --stage install` is 12/12 and rejects the stale claims. 04-03/04-04 must keep it green.
 - **macOS time budget — mitigation landed, proof pending (2026-11-25, 03-03):** `build-macos` now carries 240 minutes (Linux 90) and `release-dist` no longer emits DWARF; no profile override was added. REL-02 still needs the Phase 4 tag run: read both macOS job durations there, and if 240 is still not enough apply `CARGO_PROFILE_RELEASE_DIST_LTO=off` / `CARGO_PROFILE_RELEASE_DIST_CODEGEN_UNITS=16` to `build-macos` only.
 - **Dry-run side effects:** a dry run is a real push. 03-01 removed both known silent paths (the image no longer waits for macOS; the tag list is guarded and the version job rejects non-semver tags). 03-04 closed the tag-shape half locally (`v0.1.0-proof1` is pre-verified as a prerelease with no `:latest`, and the installer URL shape is exercised), so the Phase 4 tag run is the first remaining real-world risk. The dispatch verification must still create no release and move no `:latest`, and no throwaway tag may be created until Phase 4.
 - **`--locked` lock prerequisite — RESOLVED (2026-11-25, 03-02):** both build jobs pass `--locked`; 03-02 regenerated `Cargo.lock` for the `0.1.0` workspace version (exactly four package versions) and `cargo check --workspace --locked` is green, so the Phase 4 tag run will not fail on a stale lock. REL-02 (both macOS legs inside the budget) remains open until that tag run.
@@ -175,6 +180,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-25
-Stopped at: Phase 3 plan 03-04 complete (4/4) — the `v0.1.0` tag shape is proven against `release.yml`'s own derive body (17/17), the installer harness is 58/58 incl. `0.1.0`/`0.1.0-proof1`, the guard fixture is 20/20, and `sh scripts/check-release-pipeline.sh` runs every static gate at pinned tallies. Next: Phase 4 (`04-01`); REL-02 and the macOS half of REL-03 need the Phase 4 tag run.
-Resume file: .planning/phases/03-pipeline-decoupling-version/03-04-SUMMARY.md
+Last session: 2026-11-26
+Stopped at: Phase 4 plan 04-02 complete (2/5) — the pinned install is proven against the real `v0.1.0-proof1` release (release-asset `install.sh` byte-identical to the tree; tarball sha256 equal to `SHA256SUMS` and GitHub's digest; installed binary prints `0.1.0-proof1 (b14d28eb2bc7)`) and the unpinned `latest` path's real 404 is recorded in `docs/evidence/04-distribution-proof/installer-latest/`. README's install truth is corrected and passes `scripts/check-readme-distribution.py --stage install` 12/12. Next: 04-03 (Homebrew formula).
+Resume file: None

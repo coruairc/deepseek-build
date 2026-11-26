@@ -72,7 +72,7 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 - [x] **REL-03**: The macOS binary passes a smoke check from the extracted tarball, and its signature remains valid after any strip or debug-profile change
 - [ ] **REL-04**: The GHCR image is built, published, and pulled from a throwaway pre-release tag
 - [ ] **REL-05**: The container image runs a real headless tool-executing turn with the documented run flags that keep the sandbox on, and the README states the image is headless-only with the mounts it needs
-- [ ] **REL-06**: `install.sh` is proven against a real pre-release tag, and the unpinned `latest` path's actual behaviour is established rather than assumed from the fake-tree harness
+- [x] **REL-06**: `install.sh` is proven against a real pre-release tag, and the unpinned `latest` path's actual behaviour is established rather than assumed from the fake-tree harness
 - [x] **REL-07**: `release-dist` ships no DWARF (`strip`/`debug` resolved, no `.debug`/`.dSYM` sidecar assumption), with the macOS signature risk verified
 - [x] **REL-08**: The `docker/metadata-action` tag list is guarded so an empty list fails loudly instead of producing a silent no-op manifest
 
@@ -200,7 +200,7 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | PKG-04 | Phase 4 — Distribution Proof | Pending |
 | REL-04 | Phase 4 — Distribution Proof | Partial — image built, published and verified registry-side (index sha256:8f5c484e…); the pull is environment-blocked (no Docker daemon) and deferred to 04-04 |
 | REL-05 | Phase 4 — Distribution Proof | Pending |
-| REL-06 | Phase 4 — Distribution Proof | Pending |
+| REL-06 | Phase 4 — Distribution Proof | Complete — pinned install of `v0.1.0-proof1` from the real release (asset `install.sh` byte-identical, tarball sha256 three-way equal, installed binary reports `0.1.0-proof1 (b14d28eb2bc7)`); unpinned `latest` observed: both `latest/download` URLs 404, installer exits 22 and installs nothing (`docs/evidence/04-distribution-proof/installer-{proof,latest}/`) |
 | WIN-01 | Phase 5 — Windows Support | Pending |
 | WIN-02 | Phase 5 — Windows Support | Pending |
 | WIN-03 | Phase 5 — Windows Support | Pending |
