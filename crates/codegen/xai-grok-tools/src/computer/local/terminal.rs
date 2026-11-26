@@ -5111,6 +5111,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)] // parse_login_env_capture is unix-only (login-shell capture)
     fn test_parse_login_env_capture() {
         let stdout = "motd noise\n\x01/opt/rc/bin:/usr/bin\x01\
                       XDG_CONFIG_HOME=/Users/u/.config\0\
