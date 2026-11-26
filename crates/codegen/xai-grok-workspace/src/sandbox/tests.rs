@@ -1,3 +1,6 @@
+#![cfg(unix)]
+// Unix-only fixtures (permissions, symlinks); this module does not compile on Windows.
+
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
