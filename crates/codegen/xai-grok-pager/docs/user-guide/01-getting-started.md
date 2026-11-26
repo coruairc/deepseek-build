@@ -8,8 +8,21 @@ You can use it interactively as a full-screen TUI, run it headlessly for scripti
 
 ## Installation
 
-Build the binary from source in this repository and place it on your `PATH`.
-The previous network installers and the auto-updater were removed.
+Prebuilt releases are packaged per platform:
+
+- **Linux** (x86_64, arm64) and **macOS** (x86_64, arm64): a tarball plus
+  [`install.sh`](https://github.com/coruairc/deepseek-build/blob/main/install.sh).
+- **Windows x86_64**: a `.zip` (`deepseek-build-<version>-x86_64-pc-windows-msvc.zip`,
+  with `deepseek-build.exe` at the top level) plus
+  [`install.ps1`](https://github.com/coruairc/deepseek-build/blob/main/install.ps1).
+  The Windows artifacts are wired into the release workflow but have not been
+  published or executed on a Windows host yet.
+
+You can also build the binary from source in this repository and place it on
+your `PATH`. The auto-updater was removed.
+
+On Windows there is no sandbox backend: only `--sandbox off` is accepted, and
+the session is not sandboxed (see [Sandbox](18-sandbox.md#platform-support)).
 
 Verify the installation:
 

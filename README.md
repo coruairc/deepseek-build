@@ -11,7 +11,10 @@ OpenAI-compatible Chat Completions API. It is a work in progress (see
 > Release [`v0.1.0-proof1`](https://github.com/coruairc/deepseek-build/releases/tag/v0.1.0-proof1)
 > is published as a **pre-release** and is installable today: tarballs for
 > linux-x86_64, linux-aarch64, darwin-arm64 and darwin-x86_64, a `SHA256SUMS`
-> file, and the `install.sh` installer. **`v0.1.0` is not published**, and
+> file, and the `install.sh` installer. Windows x86_64 is wired into the
+> release workflow as a `.zip` plus `install.ps1`, but **no Windows artifact
+> has been published or executed on Windows yet**; see
+> [Windows](#windows-x86_64). **`v0.1.0` is not published**, and
 > GitHub's `releases/latest` resolves only stable releases, so install with
 > `VERSION=v0.1.0-proof1` (see [Install](#install)). Build from source if you
 > prefer (see [Building from source](#building-from-source)).
@@ -115,11 +118,47 @@ sh install.sh --uninstall
 
 This removes both `deepseek-build` and the `dsb` shortcut it created.
 
+### Windows (x86_64)
+
+Windows x86_64 is a package target (`x86_64-pc-windows-msvc`) and ships as
+`deepseek-build-<version>-x86_64-pc-windows-msvc.zip`. The zip's **top level**
+is `deepseek-build.exe` plus `LICENSE`, `NOTICE`, `THIRD-PARTY-NOTICES`, and
+`README.txt` — the same shape as the tarballs (no nested directory).
+
+`install.ps1` mirrors `install.sh`: it detects x86_64 (other architectures are
+rejected), resolves `$env:VERSION` or the latest release, downloads the zip and
+`SHA256SUMS` from `github.com` only, verifies the SHA-256 **before**
+extracting, and installs `deepseek-build.exe` to
+`%LOCALAPPDATA%\deepseek-build\bin` (or `$env:INSTALL_DIR`). It prints a PATH
+hint, supports `-Uninstall`, and never needs elevation.
+
+```powershell
+# Once a tag ships the Windows zip, download, inspect, then run:
+Invoke-WebRequest -Uri "https://github.com/coruairc/deepseek-build/releases/download/<tag>/install.ps1" -OutFile install.ps1
+notepad install.ps1
+$env:VERSION = '<tag>'; .\install.ps1
+```
+
+> **Authored, not executed on Windows yet.** The authoring host has no
+> PowerShell, so `install.ps1` and `scripts/test-install.ps1` are reviewed but
+> unrun. The harness builds a fake release tree over `file://` and asserts
+> success, checksum mismatch (installs nothing), unsupported architecture, and
+> uninstall. Run it on Windows before relying on the installer:
+>
+> ```powershell
+> powershell -ExecutionPolicy Bypass -File scripts/test-install.ps1
+> ```
+
+On Windows the in-process sandbox has no backend: only `--sandbox off` is
+accepted and `/session-info` reports it as unsupported. See
+[`18-sandbox.md`](crates/codegen/xai-grok-pager/docs/user-guide/18-sandbox.md#platform-support).
+
 Manual install, if you prefer to drive every step:
 
 1. Download the tarball for your platform and `SHA256SUMS` from the
    [releases page](https://github.com/coruairc/deepseek-build/releases).
-2. Verify: `SHA256SUMS` lists all four tarballs, so filter to yours:
+2. Verify: `SHA256SUMS` lists all four tarballs and the Windows zip, so filter
+   to yours:
 
    ```sh
    grep <your-tarball> SHA256SUMS | sha256sum -c -
@@ -137,6 +176,7 @@ Manual install, if you prefer to drive every step:
 | `aarch64-unknown-linux-gnu` | Linux arm64, glibc >= 2.35 (Ubuntu 22.04+) |
 | `aarch64-apple-darwin` | macOS 14 (Sonoma)+ on Apple silicon |
 | `x86_64-apple-darwin` | macOS 13 (Ventura)+ on Intel |
+| `x86_64-pc-windows-msvc` | Windows 10/11 x86_64 (`.zip`, `install.ps1`) — **authored, not yet published or executed** |
 
 macOS builds come from macOS 15 runners; the listed minimums are conservative.
 The macOS binaries are **ad-hoc signed** (`codesign --sign -`) so Apple silicon
@@ -214,14 +254,12 @@ docker run --rm ghcr.io/coruairc/deepseek-build@sha256:8f5c484ed067143aab93aa90b
 # deepseek-build 0.1.0-proof1 (b14d28eb2bc7)
 ```
 
-**The image was not executed on the build host.** The Docker CLI is present but
-its daemon is not (`Cannot connect to the Docker daemon at
-unix:///var/run/docker.sock`), so the pull and the in-image turn above were **not
-run** here: the registry facts are proven, the run is deferred with its exact
-commands and expected output in
-[`docs/evidence/04-distribution-proof/image-run-blocked/`](docs/evidence/04-distribution-proof/image-run-blocked/).
-Treat that turn as a command to run later, not as something this project has
-observed.
+**The image was executed on the build host on 2026-11-26.** It was pulled by index
+digest, `--version` printed `deepseek-build 0.1.0-proof1 (b14d28eb2bc7)`, and a real
+headless turn ran `printf 'in-image-ok\n'` and returned it with
+`estimated_cost_usd: 0.000347148`. The image ships no `bubblewrap`, so no in-process
+sandbox can apply inside it; the container boundary is the isolation. Evidence:
+[`docs/evidence/04-distribution-proof/image-run/`](docs/evidence/04-distribution-proof/image-run/).
 
 The image is built from the release tarballs (`docker/Dockerfile`, per-arch
 binary via `TARGETARCH`), contains no API key, and ships the license files in
