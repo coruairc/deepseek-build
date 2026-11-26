@@ -18,8 +18,8 @@ Stages:
     install    this phase's installer proof: v0.1.0-proof1 is the installable
                pre-release, VERSION= is required, latest 404s, the macOS
                binaries are ad-hoc signed and not notarized.
-    container  04-04's container proof: the published image digest, the
-               headless/run recipe, and (for a private package) the login step.
+    container  the published image digest, the headless/run recipe (the image
+               ships no sandbox), and (for a private package) the login step.
 
 Exit status: 0 when every assertion passed, 1 otherwise.
 """
@@ -85,7 +85,10 @@ def stage_container(checks, text, digest, visibility):
         checks.contains(text, digest)
     checks.contains(text, "headless")
     checks.contains(text, "/work")
-    checks.contains(text, "--sandbox devbox")
+    checks.ok(
+        "states the image ships no sandbox (and does not recommend --sandbox devbox)",
+        "ships no sandbox" in text and "--sandbox devbox" not in text,
+    )
     checks.contains(text, "/home/app/.deepseek-build")
     if visibility == "private":
         checks.contains(text, "docker login ghcr.io")
@@ -100,9 +103,9 @@ def main():
     parser.add_argument("--digest", default="", help="image digest for --stage container")
     parser.add_argument(
         "--visibility",
-        default="private",
+        default="public",
         choices=["private", "public"],
-        help="GHCR package visibility (default: private)",
+        help="GHCR package visibility (default: public; the published image is public)",
     )
     args = parser.parse_args()
 

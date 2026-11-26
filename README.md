@@ -1,461 +1,145 @@
 # deepseek-build
 
-A personal, DeepSeek-first terminal coding agent, forked from
-[xai-org/grok-build](https://github.com/xai-org/grok-build) (Apache-2.0).
+An independent, DeepSeek-first terminal coding agent: a full-screen TUI and a
+headless mode for reading and editing code, running shell commands, and
+completing multi-step tasks over DeepSeek's OpenAI-compatible Chat Completions API.
 
-`deepseek-build` is a full-screen TUI that reads and edits your codebase, runs
-shell commands, and manages long-running tasks, driven by DeepSeek's
-OpenAI-compatible Chat Completions API. It is a work in progress (see
-[Status](#status) and [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)).
-
-> Release [`v0.1.0-proof1`](https://github.com/coruairc/deepseek-build/releases/tag/v0.1.0-proof1)
-> is published as a **pre-release** and is installable today: tarballs for
-> linux-x86_64, linux-aarch64, darwin-arm64 and darwin-x86_64, a `SHA256SUMS`
-> file, and the `install.sh` installer. Windows x86_64 is wired into the
-> release workflow as a `.zip` plus `install.ps1`, but **no Windows artifact
-> has been published or executed on Windows yet**; see
-> [Windows](#windows-x86_64). **`v0.1.0` is not published**, and
-> GitHub's `releases/latest` resolves only stable releases, so install with
-> `VERSION=v0.1.0-proof1` (see [Install](#install)). Build from source if you
-> prefer (see [Building from source](#building-from-source)).
-
-## Status
-
-| Area | State |
-|------|-------|
-| Phase 0 - audit & plan | Done (`PLAN.md`, `DECISIONS.md`) |
-| Phase 1 - cleanup | Done: upload/exfil, telemetry/Sentry/OTLP, xAI voice/Imagine/web_search, auto-update, announcements, cloud-config/remote control, session share/relay, and xAI model/endpoint strings are removed or neutralized. **HARD and SOFT egress gates are green**; rebrand (binary, config dir, ACP namespace, strings) done. |
-| Phase 2 - DeepSeek adapter | Core done: Chat Completions-only backend (`Responses`/`Messages` deleted), `thinking` control, `reasoning_content` round-trip + sanitizer, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-flash`), wiremock suite. Live smoke run 8/8 PASS (2026-10-07, author's machine). |
-| Phase 3 - TUI | Implemented: reasoning fold (`e`/`E`/`Ctrl+E`), collapsible thinking, optional status line (off by default; enable `[ui.status_line]` to show cwd, model, context), `/model` `/effort` `/think` `/theme`, Monokai default theme + whale logo. |
-| Phase 4 - harden existing features | Partial: runtime read-before-write guard and dangerous-command warnings are in; plan mode, permissions, resume, subagents, MCP, `AGENTS.md`, and checkpoints exist and need an end-to-end pass. A full `cargo test --workspace` run is **not green yet** (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). |
-| Phase 5 - testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. Pre-release [`v0.1.0-proof1`](https://github.com/coruairc/deepseek-build/releases/tag/v0.1.0-proof1) ships all four tarballs (two Linux, two macOS), `SHA256SUMS`, `install.sh`, and a multi-arch GHCR image (`sha256:8f5c484e…`, linux/amd64 + linux/arm64). The pinned installer is proven end to end against that release, and the image has been pulled by digest and run: a real headless turn executed a shell command and returned `estimated_cost_usd`. The image ships **no `bubblewrap`**, so the in-process sandbox cannot be applied inside it (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). `v0.1.0` is not published. |
-
-See [`AGENTS.md`](AGENTS.md) for a precise resume-from-here handoff.
+This is an independent project, not affiliated with DeepSeek. Apache-2.0,
+forked from [xai-org/grok-build](https://github.com/xai-org/grok-build).
 
 ## Install
 
-Release [`v0.1.0-proof1`](https://github.com/coruairc/deepseek-build/releases/tag/v0.1.0-proof1)
-is a **pre-release** and installs today. It is a proof build, not `v0.1.0`, and
-because GitHub's `releases/latest` excludes pre-releases, **pin the version**.
+The only published artifacts are the pre-release **`v0.1.0-proof1`**. `v0.1.0`
+is not published. GitHub's `latest` path resolves stable releases only, so
+`releases/latest/download/install.sh` returns **404**: pin `VERSION`.
+
+### Linux
 
 ```sh
 curl -fsSL https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-proof1/install.sh \
   | VERSION=v0.1.0-proof1 sh
 ```
 
-Piping curl to `sh` executes whatever that URL serves, at download time, with no
-chance to review it first. The slower, recommended alternative: download,
-inspect, then run.
+The installer verifies the tarball's SHA-256 against `SHA256SUMS` before
+extracting, installs `deepseek-build` to `${INSTALL_DIR:-$HOME/.local/bin}`
+(no sudo), and creates a `dsb` shortcut. `sh install.sh --uninstall` removes
+both. x86_64 and aarch64 tarballs are published.
+
+### macOS (Apple silicon and Intel)
 
 ```sh
-curl -fsSLO https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-proof1/install.sh
-less install.sh        # inspect it
-VERSION=v0.1.0-proof1 sh install.sh
+brew tap coruairc/deepseek-build
+brew trust coruairc/deepseek-build   # Homebrew's trust gate for third-party taps
+brew install deepseek-build
 ```
 
-The installer is plain POSIX `sh`. It:
+The formula installs the prebuilt tarball for the host architecture and a `dsb`
+shortcut; it resolves to `0.1.0-proof1` and never builds from source. The tap is
+macOS-only; Linux uses `install.sh` above.
 
-- detects OS and arch (supported targets below) and picks the matching tarball;
-- downloads the release tarball and `SHA256SUMS` over HTTPS from GitHub
-  Releases;
-- verifies the checksum **before** extracting anything;
-- installs the binary to `${INSTALL_DIR:-$HOME/.local/bin}` (no sudo) as
-  `deepseek-build`, plus a `dsb` shortcut symlink in the same directory (an
-  existing unrelated file or symlink named `dsb` is never replaced), prints a
-  PATH hint if needed, and supports `--uninstall`; rerunning it updates in
-  place;
-- makes no network requests other than those two GitHub downloads - no
-  telemetry.
-
-This exact path is proven against the published release:
-`sh scripts/prove-install.sh --version v0.1.0-proof1` downloads the release
-asset `install.sh`, checks that it is byte-identical to `install.sh` in the
-source tree, compares the tarball's SHA-256 against both `SHA256SUMS` and
-GitHub's own asset digest, runs the installer into a scratch directory, and
-checks that the installed binary prints `deepseek-build 0.1.0-proof1
-(b14d28eb2bc7)`. The recorded transcript is in
-[`docs/evidence/04-distribution-proof/installer-proof/`](docs/evidence/04-distribution-proof/installer-proof/).
-
-### Why `VERSION=` is required today
-
-`https://github.com/coruairc/deepseek-build/releases/latest/...` resolves
-GitHub's newest **stable** release; pre-releases are excluded from `latest` by
-definition. Only pre-releases exist (`v0.1.0-proof1`, `v0.0.1-rc5`, …), so as of
-2026-11-26 `releases/latest/download/SHA256SUMS` and
-`releases/latest/download/install.sh` both return **404**, the REST endpoint
-`repos/coruairc/deepseek-build/releases/latest` returns **404**, and
-`releases/latest` itself redirects (302) to the release index instead of a tag
-page. Running `install.sh` with no `VERSION` therefore stops at
-`Resolving the latest release` with `curl: (22) … 404` and installs nothing.
-Until a stable release is published, pin `VERSION=v0.1.0-proof1`.
-
-After installing, launch it with the short name `dsb` (the canonical name
-`deepseek-build` still works):
+Tarball fallback, if you prefer not to use Homebrew:
 
 ```sh
-dsb
-```
-
-The `VERSION` pin, in both forms:
-
-```sh
-VERSION=v0.1.0-proof1 sh install.sh
 curl -fsSL https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-proof1/install.sh \
   | VERSION=v0.1.0-proof1 sh
 ```
 
-(This works because `VERSION=v0.1.0-proof1` before a command is a POSIX env
-assignment, not shell syntax embedded in the script.)
-
-Uninstall:
-
-```sh
-curl -fsSL https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-proof1/install.sh \
-  | sh -s -- --uninstall
-# or, after downloading:
-sh install.sh --uninstall
-```
-
-This removes both `deepseek-build` and the `dsb` shortcut it created.
-
-### Windows (x86_64)
-
-Windows x86_64 is a package target (`x86_64-pc-windows-msvc`) and ships as
-`deepseek-build-<version>-x86_64-pc-windows-msvc.zip`. The zip's **top level**
-is `deepseek-build.exe` plus `LICENSE`, `NOTICE`, `THIRD-PARTY-NOTICES`, and
-`README.txt` — the same shape as the tarballs (no nested directory).
-
-`install.ps1` mirrors `install.sh`: it detects x86_64 (other architectures are
-rejected), resolves `$env:VERSION` or the latest release, downloads the zip and
-`SHA256SUMS` from `github.com` only, verifies the SHA-256 **before**
-extracting, and installs `deepseek-build.exe` to
-`%LOCALAPPDATA%\deepseek-build\bin` (or `$env:INSTALL_DIR`). It prints a PATH
-hint, supports `-Uninstall`, and never needs elevation.
-
-```powershell
-# Once a tag ships the Windows zip, download, inspect, then run:
-Invoke-WebRequest -Uri "https://github.com/coruairc/deepseek-build/releases/download/<tag>/install.ps1" -OutFile install.ps1
-notepad install.ps1
-$env:VERSION = '<tag>'; .\install.ps1
-```
-
-> **Authored, not executed on Windows yet.** The authoring host has no
-> PowerShell, so `install.ps1` and `scripts/test-install.ps1` are reviewed but
-> unrun. The harness builds a fake release tree over `file://` and asserts
-> success, checksum mismatch (installs nothing), unsupported architecture, and
-> uninstall. Run it on Windows before relying on the installer:
->
-> ```powershell
-> powershell -ExecutionPolicy Bypass -File scripts/test-install.ps1
-> ```
-
-On Windows the in-process sandbox has no backend: only `--sandbox off` is
-accepted and `/session-info` reports it as unsupported. See
-[`18-sandbox.md`](crates/codegen/xai-grok-pager/docs/user-guide/18-sandbox.md#platform-support).
-
-Manual install, if you prefer to drive every step:
-
-1. Download the tarball for your platform and `SHA256SUMS` from the
-   [releases page](https://github.com/coruairc/deepseek-build/releases).
-2. Verify: `SHA256SUMS` lists all four tarballs and the Windows zip, so filter
-   to yours:
-
-   ```sh
-   grep <your-tarball> SHA256SUMS | sha256sum -c -
-   # macOS: grep <your-tarball> SHA256SUMS | shasum -a 256 -c -
-   ```
-
-3. Extract and move `deepseek-build` somewhere on `PATH`. For the short
-   command, also link it: `ln -sf deepseek-build <same-dir>/dsb`.
-
-### Supported platforms
-
-| Target | Typical OS notes |
-|--------|------------------|
-| `x86_64-unknown-linux-gnu` | Linux x86_64, glibc >= 2.35 (Ubuntu 22.04+) |
-| `aarch64-unknown-linux-gnu` | Linux arm64, glibc >= 2.35 (Ubuntu 22.04+) |
-| `aarch64-apple-darwin` | macOS 14 (Sonoma)+ on Apple silicon |
-| `x86_64-apple-darwin` | macOS 13 (Ventura)+ on Intel |
-| `x86_64-pc-windows-msvc` | Windows 10/11 x86_64 (`.zip`, `install.ps1`) — **authored, not yet published or executed** |
-
-macOS builds come from macOS 15 runners; the listed minimums are conservative.
-The macOS binaries are **ad-hoc signed** (`codesign --sign -`) so Apple silicon
-will execute them, and they are **not notarized** and carry **no Developer ID**.
-A tarball fetched with `curl` (or by `install.sh`) is not quarantined by macOS,
-so the installed binary runs directly. A tarball downloaded through a **browser**
-may carry the quarantine attribute; if the first launch is blocked, right-click
-**Open**, or clear the attribute yourself:
+The macOS binaries are ad-hoc signed and not notarized; they carry no Developer
+ID. Homebrew- and curl-fetched tarballs are not quarantined. A browser download
+may be; if macOS blocks the first launch, right-click **Open**, or run:
 
 ```sh
 xattr -d com.apple.quarantine /path/to/deepseek-build
 ```
 
-> Independent project, not affiliated with DeepSeek. "DeepSeek" is a trademark
-> of its respective owner; this project merely uses their public API.
->
-> Forked from [xai-org/grok-build](https://github.com/xai-org/grok-build)
-> (Apache-2.0); see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE) for terms and
-> attribution.
+### Windows
+
+The release workflow authors a `.zip` and `install.ps1` for x86_64, but this
+path is **authored, not yet published or executed**: no Windows artifact exists
+on a release and the installer has not run on Windows. Only `--sandbox off` is
+accepted there; no in-process sandbox is available on Windows.
+
+## Quick start
+
+```sh
+export DEEPSEEK_API_KEY=sk-...   # or DEEPSEEK_BUILD_API_KEY
+cd your-repo
+dsb
+```
+
+Without either variable, the TUI prompts once with a masked field and saves the
+key to `~/.deepseek-build/credentials.json` (mode `0600`); the environment
+wins. Headless runs never prompt.
+
+`deepseek-flash` is the default model. Switch to `deepseek-v4-pro` with
+`/model deepseek-v4-pro` or `-m deepseek-v4-pro`; `/effort low` is the measured
+cost lever. Headless: `dsb -p "..." --output-format json` adds usage and
+`estimated_cost_usd`.
+
+## What it does
+
+- Reads and edits files, runs shell commands, searches the repo, and runs
+  background tasks.
+- Asks before edits and non-read-only shell commands by default; supports
+  permission modes, allow/deny rules, and a plan mode.
+- Persists sessions; `/resume`, `-c`, or `-r <id>` reopens one.
+- Connects user-configured MCP servers over stdio or HTTP.
+- Loads project rules from `AGENTS.md`, plus skills, hooks, and custom agents.
+- Sandbox is opt-in (`--sandbox workspace`, `read-only`, or `strict`),
+  kernel-enforced on Linux (Landlock) and macOS (Seatbelt); off by default.
+- No telemetry or auto-update. The only egress is the model provider,
+  configured MCP servers, and opt-in `web_fetch` hosts.
+- `/usage` reports token usage, the cached input share, and a local cost
+  estimate; the optional status line can show `cache` and `cost`.
+
+## Configuration
+
+| Path | Purpose |
+|------|---------|
+| `~/.deepseek-build/config.toml` | User settings: models, MCP servers, permissions, hooks. `DEEPSEEK_BUILD_HOME` relocates the directory. |
+| `.deepseek/config.toml` | Project scope: MCP servers, plugins, permission rules. `.grok/` is a read-only compatibility fallback. |
+| `~/.deepseek-build/credentials.json` | Saved API key, mode `0600`, written by the TUI prompt. `DEEPSEEK_API_KEY` / `DEEPSEEK_BUILD_API_KEY` win. |
 
 ## Container
-
-Official releases also publish a multi-arch (linux/amd64, linux/arm64) image to
-GitHub Container Registry. It is **not affiliated with DeepSeek**.
-
-Release `v0.1.0-proof1` published the image, and the registry was read from this
-host on 2026-11-26 (a registry read, not a pull):
-
-| Fact | Value |
-|------|-------|
-| Index | `sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be` (`application/vnd.oci.image.index.v1+json`) |
-| linux/amd64 | `sha256:1d216b609ed9c646cb56a5e6294bc3de5276b2823d2a90a0252b49d90b99886e` |
-| linux/arm64 | `sha256:25dc0d256765ff129b14749732f5d158b1757a540828c643410a3f142dcb6f58` |
-| Tags | `0.1.0-proof1`, `v0.1.0-proof1` — there is **no `:latest`** |
-| Visibility | public: an anonymous pull token read the manifest |
-| Config | `WorkingDir=/work`, `User=1000:1000`, `Entrypoint=["deepseek-build"]`, no API key variable |
-
-Pull the digest you can verify rather than a tag that can move:
 
 ```sh
 docker pull ghcr.io/coruairc/deepseek-build@sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be
 ```
 
-The container contract is **headless-only**: one `-p` prompt per invocation.
-(The binary also carries the TUI, but no interactive container recipe is
-provided or tested; the image is built to be driven headless.) Use `-p`, add
-`--output-format json` for usage and `estimated_cost_usd`,
-`--permission-mode auto` so a headless turn may act without a prompt. Do **not**
-add `--sandbox`: the image does not contain `bubblewrap`, so no in-process
-sandbox can be applied inside it — the container boundary is the isolation:
+Public multi-arch image (linux/amd64, linux/arm64), headless only: one `-p`
+prompt per invocation. The image ships no sandbox — it has no `bubblewrap`, so
+do not pass `--sandbox`; the container boundary is the isolation. Mount the repo
+at `/work` and state at `/home/app/.deepseek-build`:
 
 ```sh
-export DEEPSEEK_API_KEY=sk-...
-docker run --rm --user "$(id -u):$(id -g)" \
-  -e DEEPSEEK_API_KEY \
+docker run --rm --user "$(id -u):$(id -g)" -e DEEPSEEK_API_KEY \
   -e DEEPSEEK_BUILD_HOME=/home/app/.deepseek-build \
   -v "$PWD":/work -w /work \
   -v "$HOME/.deepseek-build":/home/app/.deepseek-build \
   ghcr.io/coruairc/deepseek-build@sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be \
-  -p "Run exactly one shell command: printf 'in-image-ok\n' and report its stdout." \
-  --output-format json --permission-mode auto
+  -p "..." --output-format json --permission-mode auto
 ```
 
-Two mounts and one working directory:
+## Build from source
 
-| Mount | Why |
-|-------|-----|
-| `-v "$PWD":/work` with `-w /work` | the repository the agent reads and edits; the image's `WORKDIR` is `/work` |
-| `-v "$HOME/.deepseek-build":/home/app/.deepseek-build` | sessions, logs and config; the image's user is uid 1000 with home `/home/app`. The host directory must be writable by the uid you pass to `--user` |
-
-`--version` is the cheapest check:
+Rust 1.94.0 is pinned by `rust-toolchain.toml`; `protoc`, `cc`, and `make` are
+required. Build the release binary:
 
 ```sh
-docker run --rm ghcr.io/coruairc/deepseek-build@sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be --version
-# deepseek-build 0.1.0-proof1 (b14d28eb2bc7)
+cargo build --release -p xai-grok-pager-bin   # target/release/deepseek-build
 ```
 
-**The image was executed on the build host on 2026-11-26.** It was pulled by index
-digest, `--version` printed `deepseek-build 0.1.0-proof1 (b14d28eb2bc7)`, and a real
-headless turn ran `printf 'in-image-ok\n'` and returned it with
-`estimated_cost_usd: 0.000347148`. The image ships no `bubblewrap`, so no in-process
-sandbox can apply inside it; the container boundary is the isolation. Evidence:
-[`docs/evidence/04-distribution-proof/image-run/`](docs/evidence/04-distribution-proof/image-run/).
+## Documentation
 
-The image is built from the release tarballs (`docker/Dockerfile`, per-arch
-binary via `TARGETARCH`), contains no API key, and ships the license files in
-`/usr/share/doc/deepseek-build/`. To smoke-test locally with a binary you built,
-use `docker/Dockerfile.localtest`.
+- [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) — known gaps and unexercised surfaces.
+- [`TESTING.md`](TESTING.md) — test plan and safe local runs.
+- [`crates/codegen/xai-grok-pager/docs/user-guide/`](crates/codegen/xai-grok-pager/docs/user-guide/README.md) — configuration, commands, sandbox, MCP, headless mode.
+- [`docs/evidence/`](docs/evidence/README.md) — committed proof of distribution and runtime checks.
 
-## Security & network
+## License
 
-There is no telemetry, analytics, or auto-update. The only network destinations
-are:
-
-1. the configured model provider (default `https://api.deepseek.com`),
-2. user-configured MCP servers, and
-3. when you enable the `web_fetch` tool (`[features] web_fetch = true`), the
-   hosts that tool fetches — off by default, limited to a built-in documentation
-   allowlist (`[toolset.web_fetch] allowed_domains` overrides it), and gated per
-   non-allowlisted host by a permission prompt.
-
-See [`SECURITY.md`](SECURITY.md#network--privacy) for the full statement and how
-to verify the boundary. Run the static guard at any time:
-
-```sh
-scripts/check-egress.sh          # HARD gate must be OK; prints a SOFT branding report
-scripts/check-egress.sh --strict # also fails on remaining branding/ACP-namespace strings
-```
-
-To watch runtime egress, run the binary through
-`scripts/sandbox-run.sh` (see [`TESTING.md`](TESTING.md)).
-
-## Requirements
-
-- [`rustup`](https://rustup.rs) with the pinned toolchain (Rust 1.94.0, from
-  `rust-toolchain.toml`). Do not bump it.
-- `protoc` on `PATH` (e.g. `/usr/bin/protoc`). `dotslash` is not needed.
-- A C toolchain (`cc`) and `make`: the bundled jemalloc (`tikv-jemalloc-sys`)
-  is compiled from source, and its build script fails without `make`.
-
-## Building from source
-
-Build from source if you prefer, or if you are on a platform without a release
-asset:
-
-```sh
-# One-time: install the pinned toolchain
-rustup toolchain install 1.94.0 --component rustfmt clippy
-
-# Validate a crate quickly
-cargo check -p xai-grok-pager-bin
-
-# Build the binary (artifact: target/release/deepseek-build)
-cargo build --release -p xai-grok-pager-bin
-
-# Run
-target/release/deepseek-build
-```
-
-> Internal crate/package names still carry the upstream `xai-grok-*` prefix
-> (a deliberate scope decision, see `DECISIONS.md` D2). The user-facing binary,
-> config dir (`~/.deepseek-build`), ACP namespace, and strings are
-> `deepseek-build`.
-
-## Configuration
-
-Set your DeepSeek API key in the environment:
-
-```sh
-export DEEPSEEK_API_KEY=sk-...          # preferred
-# or: export DEEPSEEK_BUILD_API_KEY=sk-...
-```
-
-In the interactive TUI, if neither variable is set and no saved key exists, a
-masked `DeepSeek API key` prompt opens at startup. Enter saves the key to
-`~/.deepseek-build/credentials.json` (mode `0600`, written atomically) and
-continues without a restart; Esc quits with the sign-in message. The
-environment always wins over the saved file, which is read only when neither
-variable is set, so exporting either variable replaces the saved key for that
-run. Headless runs (`-p` / `--output-format`) never prompt.
-
-Models: `deepseek-flash` (default) and `deepseek-v4-pro`, plus a hidden
-`deepseek-v4-flash` legacy alias; each offers `none`/`low`/`high`/`max`
-reasoning effort. A custom OpenAI-compatible `base_url` is supported via model
-config.
-
-Flash is the default because it is cheaper and faster. On the 21-task eval set
-both models pass 63/63, so that set is at its ceiling and cannot show Flash is
-sufficient for harder work. When a task needs more reasoning, switch to Pro with
-`/model deepseek-v4-pro` in the TUI or `-m deepseek-v4-pro` for a headless run.
-See [`docs/TUNING.md`](docs/TUNING.md) for the measurement.
-
-## Quickstart
-
-```sh
-export DEEPSEEK_API_KEY=sk-...     # optional; the TUI can ask on first launch
-cd your-repo
-dsb                                # or: deepseek-build
-```
-
-On first launch the TUI asks for the key (masked) and saves it with mode `0600`
-in `~/.deepseek-build/credentials.json`. Without a key, a headless run stops
-before any model request with
-`Not signed in: set DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) to authenticate.`
-and exit code 1; headless never prompts.
-
-First commands inside the TUI:
-
-| Command | What it does |
-|---------|--------------|
-| `/help` | list commands |
-| `/model` (`/m`) | switch between `deepseek-flash` (default) and `deepseek-v4-pro` |
-| `/effort <level>` | reasoning effort `none` / `low` / `high` / `max` |
-| `/think` | fold or unfold every reasoning block (also `Ctrl+E`; `e` / `E` per entry / all) |
-| `/usage` (`/cost`) | token usage, cached input, reasoning tokens, and cost for the session |
-| `/resume` | reopen an earlier session (or launch with `-c` / `-r <id>`) |
-
-Headless (one prompt, then exit):
-
-```sh
-dsb -p "Reply with exactly: pong"
-dsb -p "summarize this repo" --output-format json   # adds usage + estimated_cost_usd
-dsb -m deepseek-flash --effort low -p "..."
-```
-
-**Sandbox: off by default.** Opt in per run with `--sandbox workspace`
-(write only to the cwd, `~/.deepseek-build/`, and temp dirs), `--sandbox
-read-only`, or `--sandbox strict`, or set `DEEPSEEK_BUILD_SANDBOX`. Kernel
-enforced (Landlock on Linux, Seatbelt on macOS); child-network blocking in
-`read-only` / `strict` is Linux-only. See the user guide's `18-sandbox.md`.
-
-**Supported platforms.** The sandbox is enforced on Linux (Landlock) and macOS
-(Seatbelt) only. Windows builds run with the sandbox unsupported: only
-`--sandbox off` is accepted there, and any other profile (including one set in
-`config.toml` or `DEEPSEEK_BUILD_SANDBOX`) is a startup error. No filesystem or
-network restriction is enforced on Windows.
-
-**Permission modes.** The default mode asks before edits and non-read-only
-shell commands. Cycle modes in the TUI with `Shift+Tab`, or use `/auto` and
-`/always-approve`. On the command line: `--permission-mode
-default|acceptEdits|auto|dontAsk|bypassPermissions|plan`, `--always-approve`
-(alias `--yolo`), plus `--allow` / `--deny` rules. Headless runs cannot prompt,
-so a gated action is cancelled (non-zero exit) unless you pass
-`--always-approve` or a matching allow rule. Dangerous `rm -rf`-class commands
-keep a warning prompt.
-
-**Cost and cache display.** DeepSeek reports tokens but no price, so costs are
-**local estimates** from a peak-rate price table (`DECISIONS.md` D14),
-overridable under `[ui.status_line.pricing.<model>]`. `/usage` shows input
-tokens with the cached share, output with the reasoning share, and the cost.
-The optional status row (off by default) shows `cache` (prompt-cache hit rate)
-and `cost` among other items:
-
-```toml
-# ~/.deepseek-build/config.toml
-[ui.status_line]
-type = "builtin"
-items = ["model", "effort", "tokens", "cache", "cost", "context"]
-```
-
-Headless `--output-format json` carries `estimated_cost_usd` and
-`"estimate": true`.
-
-**`dsb` shortcut.** `install.sh` creates `dsb` as a symlink to `deepseek-build`
-in the install directory; it is never written over an unrelated file. A
-from-source build does not create it: `ln -s deepseek-build ~/.local/bin/dsb`
-(next to wherever you put the binary).
-
-**Uninstall.** `sh install.sh --uninstall` (honours `INSTALL_DIR`) removes
-`deepseek-build` and the `dsb` symlink it owns. Your config, sessions, and logs
-in `~/.deepseek-build/` are left in place; delete that directory yourself to
-remove them.
-
-## Testing the binary safely
-
-`scripts/sandbox-run.sh` runs the binary with only `api.deepseek.com` reachable.
-A manual test plan lives in [`TESTING.md`](TESTING.md) (a 20–30 minute core pass
-plus live-script and release/container checks); known gaps and the surfaces that
-have never been exercised are in [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md).
-
-## Repository layout
-
-Same as upstream (`crates/codegen/...`, `crates/common/...`, `prod/mc/...`).
-Key crates:
-
-| Crate | Purpose |
-|-------|---------|
-| `xai-grok-pager-bin` | binary `deepseek-build` |
-| `xai-grok-pager` | TUI |
-| `xai-grok-shell` | agent runtime, sessions, turns |
-| `xai-grok-sampler` | HTTP/streaming client (`reqwest`) |
-| `xai-grok-sampling-types` | wire + conversation types (DeepSeek adapter lives here) |
-| `xai-grok-tools` | tool implementations |
-| `xai-grok-mcp` | MCP client |
-
-## License & attribution
-
-First-party code is Apache-2.0. See [`LICENSE`](LICENSE),
-[`NOTICE`](NOTICE), [`THIRD-PARTY-NOTICES`](THIRD-PARTY-NOTICES), and
-[`third_party/NOTICE`](third_party/NOTICE). Upstream is
+Apache-2.0. See [`LICENSE`](LICENSE), [`NOTICE`](NOTICE), and
+[`THIRD-PARTY-NOTICES`](THIRD-PARTY-NOTICES). Upstream is
 [xai-org/grok-build](https://github.com/xai-org/grok-build); upstream files are
-not relicensed.
+not relicensed. "DeepSeek" is a trademark of its respective owner; this project
+merely uses DeepSeek's public API.
