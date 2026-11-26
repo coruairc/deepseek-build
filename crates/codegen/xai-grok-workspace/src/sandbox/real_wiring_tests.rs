@@ -177,10 +177,13 @@ impl Fixture {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path().join("ws");
         let grok_home = tmp.path().join("grok-home");
-        std::fs::create_dir_all(root.join(".grok")).unwrap();
+        // Create the parent of the resolved config path: the resolver prefers an existing
+        // legacy .grok file, otherwise .deepseek, so hardcoding either would rot.
+        let config_path = crate::sandbox_mode::workspace_config_path(&root);
+        std::fs::create_dir_all(config_path.parent().expect("config path has a parent")).unwrap();
         std::fs::create_dir_all(&grok_home).unwrap();
         std::fs::write(
-            crate::sandbox_mode::workspace_config_path(&root),
+            config_path,
             format!("[sandbox]\nmode = \"{mode}\"\n"),
         )
         .unwrap();

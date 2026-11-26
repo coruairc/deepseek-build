@@ -183,10 +183,12 @@ async fn handle_with_sandbox(
 ) -> (WorkspaceHandle, Arc<WorkspaceSandbox>) {
     let grok_home = root.join("grok-home");
     let workspace = root.join("ws");
-    std::fs::create_dir_all(workspace.join(".grok")).unwrap();
+    // Create the parent of the resolved config path (see real_wiring_tests).
+    let config_path = crate::sandbox_mode::workspace_config_path(&workspace);
+    std::fs::create_dir_all(config_path.parent().expect("config path has a parent")).unwrap();
     std::fs::create_dir_all(&grok_home).unwrap();
     std::fs::write(
-        crate::sandbox_mode::workspace_config_path(&workspace),
+        config_path,
         format!("[sandbox]\nmode = \"{mode}\"\n"),
     )
     .unwrap();
