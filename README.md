@@ -340,6 +340,12 @@ read-only`, or `--sandbox strict`, or set `DEEPSEEK_BUILD_SANDBOX`. Kernel
 enforced (Landlock on Linux, Seatbelt on macOS); child-network blocking in
 `read-only` / `strict` is Linux-only. See the user guide's `18-sandbox.md`.
 
+**Supported platforms.** The sandbox is enforced on Linux (Landlock) and macOS
+(Seatbelt) only. Windows builds run with the sandbox unsupported: only
+`--sandbox off` is accepted there, and any other profile (including one set in
+`config.toml` or `DEEPSEEK_BUILD_SANDBOX`) is a startup error. No filesystem or
+network restriction is enforced on Windows.
+
 **Permission modes.** The default mode asks before edits and non-read-only
 shell commands. Cycle modes in the TUI with `Shift+Tab`, or use `/auto` and
 `/always-approve`. On the command line: `--permission-mode

@@ -1,6 +1,6 @@
 # Sandbox Mode
 
-Sandbox mode restricts what the agent process and its spawned commands can access on your filesystem and network using OS-level kernel primitives (Landlock on Linux, Seatbelt on macOS). The kernel enforces these limits for the process lifetime.
+Sandbox mode restricts what the agent process and its spawned commands can access on your filesystem and network using OS-level kernel primitives (Landlock on Linux, Seatbelt on macOS). The kernel enforces these limits for the process lifetime. Windows is not supported (see [Platform Support](#platform-support)); only `--sandbox off` is accepted there.
 
 Sandbox mode is off by default.
 
@@ -217,6 +217,14 @@ Profile resolution order for a **new** session:
 | -------- | --------- | ---------------------- |
 | Linux    | Landlock  | Kernel 5.13 or later   |
 | macOS    | Seatbelt  | macOS (all versions)   |
+| Windows  | Not supported | —                  |
+
+On **Windows** there is no sandbox backend. Only `--sandbox off` is accepted:
+an explicit `--sandbox <profile>`, `DEEPSEEK_BUILD_SANDBOX`, a requirements
+pin, or a non-`off` `[sandbox] profile` in `config.toml` is a **startup error**
+before any tool runs. With no explicit request the session runs with the sandbox
+`off`, and `/session-info` reports it as unsupported. No filesystem or network
+limit is enforced on Windows, so do not treat a Windows session as sandboxed.
 
 If the sandbox cannot be applied (e.g., unsupported kernel, missing entitlements), deepseek-build logs a warning and continues without enforcement. The exception is an explicitly-requested **custom profile**: on **both macOS and Linux**, if it cannot be applied (unknown profile, malformed `sandbox.toml`, or — on Linux — `bubblewrap` unavailable for a non-empty `deny`), deepseek-build refuses to start rather than run with its denied paths exposed.
 
