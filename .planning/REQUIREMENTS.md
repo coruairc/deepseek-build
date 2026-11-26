@@ -198,8 +198,8 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | PKG-02 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-03 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-04 | Phase 4 — Distribution Proof | Complete — formula in-tree with the `v0.1.0-proof1` darwin URLs/hashes (`2b61dfab…` / `ffe0f3c5…`), checker 19/19 + self-test 3/3, `brew style`/`brew audit --strict --online` exit 0, `brew fetch` checksum-verified, tap activation documented as the author's step (`brew install` NOT RUN on this Linux host) |
-| REL-04 | Phase 4 — Distribution Proof | Partial — image built, published and verified registry-side (index sha256:8f5c484e…); the pull is environment-blocked (no Docker daemon) and deferred to 04-04 |
-| REL-05 | Phase 4 — Distribution Proof | Pending |
+| REL-04 | Phase 4 — Distribution Proof | **Partial** — built and published by the tag run; 04-04 proved the registry side from the host (index `sha256:8f5c484e…` == CI digest, `linux/amd64` `sha256:1d216b60…` + `linux/arm64` `sha256:25dc0d25…`, two tags, no `:latest`, public, config blob read). **Not pulled**: no Docker daemon (`docker-info.log`); the pull is deferred with REL-05 |
+| REL-05 | Phase 4 — Distribution Proof | **Pending / environment-blocked** — `image-run-blocked` is `result: skipped` with the digest-pinned pull, `--version` and the sandbox-on headless turn recorded; the run did not happen and needs a host with a container runtime |
 | REL-06 | Phase 4 — Distribution Proof | Complete — pinned install of `v0.1.0-proof1` from the real release (asset `install.sh` byte-identical, tarball sha256 three-way equal, installed binary reports `0.1.0-proof1 (b14d28eb2bc7)`); unpinned `latest` observed: both `latest/download` URLs 404, installer exits 22 and installs nothing (`docs/evidence/04-distribution-proof/installer-{proof,latest}/`) |
 | WIN-01 | Phase 5 — Windows Support | Pending |
 | WIN-02 | Phase 5 — Windows Support | Pending |
@@ -236,4 +236,4 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 
 ---
 *Requirements defined: 2026-11-21*
-*Last updated: 2026-11-26 — PKG-04 closed by 04-03 (formula in-tree, Homebrew-checked, tap activation documented as the author's step); earlier the same day, Windows Support (WIN-01…06, Phase 5), the Homebrew tap (PKG-04, Phase 4) and the Documentation Truth & Freeze renumber were added; REL-02/REL-03 closed by the Phase-4 tag run, REL-04 recorded as Partial*
+*Last updated: 2026-11-26 — 04-04 proved the GHCR image registry-side from the host (index `sha256:8f5c484e…` == CI digest, both platform manifests, two tags, no `:latest`, public, config blob read) and recorded the in-image run as environment-blocked (`result: skipped`, exact digest-pinned commands). REL-04 stays **Partial** — the pull did not happen — and REL-05 stays **Pending**. Earlier the same day: PKG-04 closed by 04-03 (formula in-tree, Homebrew-checked, tap activation documented as the author's step); Windows Support (WIN-01…06), the Homebrew tap and the Documentation Truth & Freeze renumber were added; REL-02/REL-03 closed by the Phase-4 tag run*

@@ -4,16 +4,16 @@ milestone: v0.1.0
 current_phase: 4
 current_phase_name: Distribution Proof
 status: executing
-stopped_at: Phase 4 plan 04-03 complete (3/5) — the Homebrew formula is in-tree with the proof release's two darwin URLs and SHA-256 values (2b61dfab… / ffe0f3c5…), checked 19/19 + self-test 3/3, accepted by Homebrew 7.0.16 (style no offenses, audit --strict [--online] exit 0 under HOMEBREW_SIMULATE_MACOS_ON_LINUX=1, both arch branches resolve, brew fetch checksum-verified); brew install NOT RUN (macOS binaries on a Linux host) and the tap repo is the author's documented step; next is 04-04
-last_updated: "2026-11-26T06:41:00.000Z"
+stopped_at: Phase 4 plan 04-04 complete (4/5) — the GHCR image is proven registry-side from the host (anonymous HTTPS read: OCI index sha256:8f5c484e… == the CI digest, linux/amd64 sha256:1d216b60… + linux/arm64 sha256:25dc0d25…, exactly two tags, no :latest [absent after == absent baseline], package public, config blob read with WorkingDir=/work, User=1000:1000, Entrypoint=["deepseek-build"]); the in-image run is image-run-blocked result:skipped with digest-pinned commands because the Docker daemon is absent, and the README container section now carries the real digests, the headless-only contract and both mounts; next is 04-05
+last_updated: "2026-11-26T06:55:00.000Z"
 last_activity: 2026-11-26
-last_activity_desc: 04-03 authored and proved the Homebrew formula against the release SHA256SUMS and against Homebrew itself; PKG-04 closed with the tap activation documented as an author step
-state_head: 1b00b58314ab1d6c88dad0a248daed080c54b9c8
+last_activity_desc: 04-04 proved the GHCR index, platforms, tags and unchanged :latest from the registry without a daemon, recorded REL-05 as environment-blocked with exact commands, and corrected the README container truth; REL-04 stays Partial, REL-05 stays open
+state_head: 1516211baa637fde432de2a79b5cba4c91a17c02
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 21
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # Project State
@@ -28,16 +28,16 @@ See: .planning/PROJECT.md (updated 2026-11-23)
 ## Current Position
 
 Phase: 4 — Distribution Proof
-Plan: 04-03 of 5 complete (3/5). Next is 04-04 (GHCR image record + the container README stage).
-Status: Plan 04-03 complete — the **Homebrew formula** is in-tree at `packaging/homebrew/deepseek-build.rb` with the proof release's two darwin URLs and their real SHA-256 values (`2b61dfab…` arm64, `ffe0f3c5…` x86_64, both lines of `tag-run/SHA256SUMS` and both equal to GitHub's asset digest). `scripts/check-homebrew-formula.py` is **19/19 PASS** with `--online` and **`self-test: 3/3 PASS`**. Homebrew **7.0.16** accepts the formula on a throwaway local tap: `brew style` → *1 file inspected, no offenses detected*; `brew audit --strict --formula` and `brew audit --strict --online` → exit 0 (under `HOMEBREW_SIMULATE_MACOS_ON_LINUX=1`, Homebrew's own switch for a macOS-only formula on Linux); `brew ruby` resolves both arch branches; `brew fetch` downloaded 53,850,000 bytes and its checksum gate accepted `ffe0f3c5…`, while a wrong-hash copy is rejected. **`brew install` is NOT RUN** (macOS Mach-O binaries on a Linux host) and the tap repo `coruairc/homebrew-deepseek-build` does not exist — both are recorded, and `packaging/homebrew/README.md` documents the author's one-time activation plus the `v0.1.0` repoint recipe. **PKG-04 closed** for the formula and the documented activation; the live install stays an author step. REL-04 stays **Partial** (pull environment-blocked, 04-04).
-Last activity: 2026-11-26 06:41 UTC — 04-03 added the formula, the checker, the tap activation doc and the 15-step `homebrew-formula` evidence item.
+Plan: 04-04 of 5 complete (4/5). Next is 04-05 (seal the evidence, keep-prerelease deviation, leak scan).
+Status: Plan 04-04 complete — the **GHCR image is proven registry-side from the host**, without a daemon. An anonymous `ghcr.io` pull token read the manifest: OCI index `sha256:8f5c484ed067…` (**equal to the CI run's `image_digest`**), `linux/amd64` `sha256:1d216b60…` and `linux/arm64` `sha256:25dc0d25…` (both 1810 B, plus two buildx attestation manifests recorded separately), tags exactly `0.1.0-proof1` + `v0.1.0-proof1`, and **`:latest` absent** (`latest_digest: null`, equal to the baseline). The package is **public** (anonymous read), and the config blob was readable: `WorkingDir=/work`, `User=1000:1000`, `Entrypoint=["deepseek-build"]`, env names only `PATH`/`DEBIAN_FRONTEND`. `image-registry` is 8/8 `result: ok`; fixtures are 45/45. **The pull and the in-image turn did not happen**: `docker info` exits 1 (`Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?`), and `image-run-blocked` is **`result: skipped`** with the digest-pinned pull, `--version` and the sandbox-on headless turn (`-p`, `--output-format json`, `--permission-mode auto`, `--sandbox devbox`) recorded for a host with a runtime. The README `## Container` section now carries the real digests, the two tags and the absence of `:latest`, the observed public visibility, the headless-only contract and both mounts (`/work`, `/home/app/.deepseek-build`), and states the image was not executed here (`check-readme-distribution.py --stage container` 7/7; install stage still 12/12). **REL-04 stays Partial** (pull deferred), **REL-05 stays Pending/blocked**, and ROADMAP criterion 1 ("pulled from the registry") is recorded as unmet.
+Last activity: 2026-11-26 06:53 UTC — 04-04 added the `registry` subcommand, the `image-registry` and `image-run-blocked` evidence items, and the corrected README container section.
 
-Progress: [█████████░] 90%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -48,7 +48,7 @@ Progress: [█████████░] 90%
 | 01 | 6 | 6 | - |
 | 02 | 6 | 6 | - |
 | 03 | 4 | 4 | - |
-| 04 | 3 | 5 | - |
+| 04 | 4 | 5 | - |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -59,6 +59,7 @@ Progress: [█████████░] 90%
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 04 P04 | 11m | 2 tasks | 18 files |
 | Phase 04 P03 | 17m | 2 tasks | 22 files |
 | Phase 04 P02 | 15m | 2 tasks | 30 files |
 | Phase 04 P01 | 10m | 3 tasks | 38 files |
@@ -136,6 +137,10 @@ Full log in PROJECT.md Key Decisions. Those shaping current work:
 - [Phase 04]: `livecheck do skip` is explicit. Omitting livecheck is **not** "no other host": `brew livecheck` would then use Homebrew's `:github_latest` strategy and query `api.github.com`. `brew audit --strict --online` still exits 0 with the skip.
 - [Phase 04]: A macOS-only formula cannot be loaded by Homebrew on Linux (`formula requires at least a URL`); evaluate the macOS branches with Homebrew's own `HOMEBREW_SIMULATE_MACOS_ON_LINUX=1`, never by hand-waving. `brew fetch` is the strongest host-available proof (download + checksum gate), and it is paired with a wrong-sha256 control that is rejected (`reports different checksum`). `brew install` stays NOT RUN — macOS Mach-O on a Linux host.
 - [Phase 04]: The tap repository `coruairc/homebrew-deepseek-build` is **not** created; `packaging/homebrew/README.md` holds the author's one-time `gh repo create`/copy/push steps, the consumer `brew tap`/`install`/`test`, the ad-hoc-signed/not-notarized position, and the `v0.1.0` repoint recipe. PKG-04 covers the in-tree formula plus that documented activation.
+- [Phase 04]: The image proof records **which transport answered**. `anonymous-http` (an anonymous ghcr.io pull token + the v2 API) means the package is **public**; `docker manifest inspect` cannot distinguish public from private (the CLI may hold a credential) and cannot print the index digest or tag list; `gh api …/packages` without `read:packages` is a 403 authorization gap, never a registry result. The real read was anonymous, so the README omits `docker login` and the package is documented as public.
+- [Phase 04]: An OCI index is asserted on its **platform** manifests. buildx also writes one `unknown/unknown` attestation manifest per platform (`vnd.docker.reference.type=attestation-manifest`); `registry.json` records those in `attestation_manifests`, and a fixture proves a third real platform is rejected while an attestation is not counted.
+- [Phase 04]: `:latest` is proven against a **recorded baseline**, not an assumption: `latest_status: absent` / `latest_digest: null` after == the baseline's values, and the index digest is never a `latest` target. The baseline's own post-push limitation stays documented.
+- [Phase 04]: REL-05 is environment-blocked and recorded as `result: skipped`, never `ok`. `image-run-blocked/commands.txt` pins the index digest, keeps the sandbox on (`--sandbox devbox`) and sets `DEEPSEEK_BUILD_HOME=/home/app/.deepseek-build` because the image config carries no `HOME`; the notes state in one sentence that the run did not happen. **ROADMAP Phase 4 criterion 1 ("pulled from the registry") stays unmet** and is named in `04-04-SUMMARY.md`.
 
 ### Pending Todos
 
@@ -155,7 +160,7 @@ None yet.
   The author confirmed the rotation/revocation on 2026-11-25; 02-03 records it as a dated
   attestation (no API can verify a revocation).
 - **Research base drift:** STACK/ARCHITECTURE read `main` @ `221a1a59`, PITFALLS @ `9e6780d9`. Re-verify `release.yml` edges and manifest versions before Phase 3.
-- **REL-05 / REL-04 pull — environment block (2026-11-26):** this host has the `docker` CLI but **no daemon** (`Cannot connect to the Docker daemon`). The image is proven registry-side; pulling and running it (REL-05, and REL-04's pulled half) is deferred to 04-04's exact-command record and must never be claimed as executed here.
+- **REL-05 / REL-04 pull — environment block, now recorded (2026-11-26, 04-04):** this host has the `docker` CLI but **no daemon** (`Cannot connect to the Docker daemon at unix:///var/run/docker.sock`, `exit 1`). The image is proven registry-side (`image-registry`, 8/8 ok, index `sha256:8f5c484e…` == the CI digest); the pull and the in-image turn are `image-run-blocked` **`result: skipped`** with digest-pinned commands and must never be claimed as executed here. Closing REL-05 needs a host with a container runtime (`sudo systemctl enable --now docker`); `gh auth refresh -s read:packages` only if the package becomes private (it is public as observed).
 - **README baseline drift — RESOLVED (2026-11-26, 04-02):** `README.md` never contained "not codesigned and not notarized" at this HEAD (03-03 had already written the ad-hoc-signed truth), and its "No release has been published yet" banner was falsified by rc1–rc5 and proof1. 04-02 rewrote the banner, the Status row, the install commands, the unpinned paragraph and the macOS note; `scripts/check-readme-distribution.py --stage install` is 12/12 and rejects the stale claims. 04-03/04-04 must keep it green.
 - **macOS time budget — mitigation landed, proof pending (2026-11-25, 03-03):** `build-macos` now carries 240 minutes (Linux 90) and `release-dist` no longer emits DWARF; no profile override was added. REL-02 still needs the Phase 4 tag run: read both macOS job durations there, and if 240 is still not enough apply `CARGO_PROFILE_RELEASE_DIST_LTO=off` / `CARGO_PROFILE_RELEASE_DIST_CODEGEN_UNITS=16` to `build-macos` only.
 - **Dry-run side effects:** a dry run is a real push. 03-01 removed both known silent paths (the image no longer waits for macOS; the tag list is guarded and the version job rejects non-semver tags). 03-04 closed the tag-shape half locally (`v0.1.0-proof1` is pre-verified as a prerelease with no `:latest`, and the installer URL shape is exercised), so the Phase 4 tag run is the first remaining real-world risk. The dispatch verification must still create no release and move no `:latest`, and no throwaway tag may be created until Phase 4.
@@ -186,5 +191,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-11-26
-Stopped at: Phase 4 plan 04-02 complete (2/5) — the pinned install is proven against the real `v0.1.0-proof1` release (release-asset `install.sh` byte-identical to the tree; tarball sha256 equal to `SHA256SUMS` and GitHub's digest; installed binary prints `0.1.0-proof1 (b14d28eb2bc7)`) and the unpinned `latest` path's real 404 is recorded in `docs/evidence/04-distribution-proof/installer-latest/`. README's install truth is corrected and passes `scripts/check-readme-distribution.py --stage install` 12/12. Next: 04-03 (Homebrew formula).
+Stopped at: Phase 4 plan 04-04 complete (4/5) — the GHCR image is proven registry-side from the host without a daemon (`image-registry`: index `sha256:8f5c484e…` == the CI digest, both platform manifests, exactly two tags, no `:latest`, public, config blob read), the in-image run is recorded as environment-blocked (`image-run-blocked`, `result: skipped`, digest-pinned commands, sandbox on), and the README container section is corrected (`check-readme-distribution.py --stage container` 7/7; install stage 12/12). REL-04 stays Partial and REL-05 Pending; ROADMAP criterion 1 stays unmet. Next: 04-05 (seal the evidence, keep-prerelease deviation, leak scan).
 Resume file: None
