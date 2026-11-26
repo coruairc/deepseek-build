@@ -122,7 +122,7 @@ name = "my-custom-agent"
 # definition = "/path/to/agent.md"   # path wins over name
 ```
 
-`definition` is a markdown file with YAML frontmatter. `name` is a built-in or discovered agent (`~/.deepseek-build/agents/`, `.grok/agents/`). If the named agent is missing, deepseek-build uses `DEEPSEEK_BUILD_AGENT`, then the built-in default. `--agent-profile`, `--plan`, and `--ask-user` still override that session. Field list: [26-config-reference.md](26-config-reference.md).
+`definition` is a markdown file with YAML frontmatter. `name` is a built-in or discovered agent (`~/.deepseek-build/agents/`, `.deepseek/agents/`). If the named agent is missing, deepseek-build uses `DEEPSEEK_BUILD_AGENT`, then the built-in default. `--agent-profile`, `--plan`, and `--ask-user` still override that session. Field list: [26-config-reference.md](26-config-reference.md).
 
 #### Input mode
 
@@ -298,9 +298,9 @@ Remote (HTTP/SSE) servers receive a default `User-Agent: deepseek-build/<version
 valid `User-Agent` entry in `headers` overrides it (Figma servers receive bare
 `deepseek-build`). See [MCP servers](07-mcp-servers.md) for details.
 
-MCP servers can also be set per-project in `.grok/config.toml`. Project-scoped config contributes `[mcp_servers]`, `[plugins]`, and `[permission]` rules; every other section loads only from `~/.deepseek-build/config.toml`.
+MCP servers can also be set per-project in `.deepseek/config.toml`. Project-scoped config contributes `[mcp_servers]`, `[plugins]`, and `[permission]` rules; every other section loads only from `~/.deepseek-build/config.toml`.
 
-Priority for `[mcp_servers]` and `[plugins]`: `.grok/config.toml` (current dir) > `<repo-root>/.grok/config.toml` > `~/.deepseek-build/config.toml`. `[permission]` rules aren't overridden by priority — they merge across all files with `deny` > `ask` > `allow` (see [22-permissions-and-safety.md](22-permissions-and-safety.md)).
+Priority for `[mcp_servers]` and `[plugins]`: `.deepseek/config.toml` (current dir) > `<repo-root>/.deepseek/config.toml` > `~/.deepseek-build/config.toml`. `[permission]` rules aren't overridden by priority — they merge across all files with `deny` > `ask` > `allow` (see [22-permissions-and-safety.md](22-permissions-and-safety.md)).
 
 ### Memory
 
@@ -352,14 +352,14 @@ To pin the model a subagent uses, set its entry under `[subagents.models]`.
 
 `/goal` has two drivers, chosen by the background-workflows setting. With workflows enabled, the host-owned workflow engine evaluates rounds and drives completion verification; with them disabled, `/goal` falls back to the legacy model-facing `update_goal` tool. Whether `/goal` is available at all is a separate switch (the goal feature setting).
 
-Background workflows — the `workflow` tool, named `.grok/workflows/*.rhai` scripts, `/deep-research`, and `/workflow` launches — are **on by default**. Disable with config or env.
+Background workflows — the `workflow` tool, named `.deepseek/workflows/*.rhai` scripts, `/deep-research`, and `/workflow` launches — are **on by default**. Disable with config or env.
 
 ```toml
 [workflows]
 enabled = false                       # disable background workflows (or DEEPSEEK_BUILD_WORKFLOWS=0)
 ```
 
-Project workflows are discovered from `<repo-root>/.grok/workflows/`; user workflows from `~/.deepseek-build/workflows/`. Discovery and invocation key off the script's `meta.name`, so keep each filename aligned with its `meta.name`. Built-ins win over project names, and project names win over user names, so keep names unique across scopes.
+Project workflows are discovered from `<repo-root>/.deepseek/workflows/`; user workflows from `~/.deepseek-build/workflows/`. Discovery and invocation key off the script's `meta.name`, so keep each filename aligned with its `meta.name`. Built-ins win over project names, and project names win over user names, so keep names unique across scopes.
 
 Each launch gets a session-unique display handle such as `deep-research-2`. That handle is what you see in the `/workflow runs` dashboard and pass to `/workflow pause`, `resume`, or `stop` — the internal run IDs never surface in commands. A numbered handle isn't a reusable definition name, so the dashboard disables **save** until you pick a new unique `meta.name` and save the edited script yourself. See [Slash Commands](04-slash-commands.md) for examples.
 
@@ -754,18 +754,18 @@ The key ones. See the README for the complete list.
 | `~/.deepseek-build/agents/` | User-scoped agent definitions |
 | `~/.deepseek-build/lsp.json` | LSP server configuration (user-scoped) |
 | `~/.deepseek-build/logs/` | Internal log files (e.g. `unified.jsonl`, MCP server logs) |
-| `.grok/config.toml` | Project-scoped MCP servers, plugins, and permission rules |
-| `.grok/skills/` | Project-scoped skill definitions |
-| `.grok/plugins/` | Project-scoped plugins |
-| `.grok/agents/` | Project-scoped agent definitions |
-| `.grok/hooks/` | Project-scoped hooks |
-| `.grok/lsp.json` | LSP server configuration |
+| `.deepseek/config.toml` | Project-scoped MCP servers, plugins, and permission rules |
+| `.deepseek/skills/` | Project-scoped skill definitions |
+| `.deepseek/plugins/` | Project-scoped plugins |
+| `.deepseek/agents/` | Project-scoped agent definitions |
+| `.deepseek/hooks/` | Project-scoped hooks |
+| `.deepseek/lsp.json` | LSP server configuration |
 
 ### How deepseek-build saves `config.toml`
 
 Writes to **`~/.deepseek-build/config.toml`** (`/settings`, `/vim-mode`, and other user-config saves) follow a leaf symlink. The atomic rename writes the referent (a file in your dotfiles repo). The link stays a link. If the link is dangling, the write creates the referent as a regular file.
 
-Writes to a **project** `.grok/config.toml` (MCP / plugin / permission edits) **replace** a leaf symlink with a regular file. That keeps a later save from following the link out of the repository.
+Writes to a **project** `.deepseek/config.toml` (MCP / plugin / permission edits) **replace** a leaf symlink with a regular file. That keeps a later save from following the link out of the repository.
 
 A user `config.toml` that cannot be parsed is not overwritten. Fix the syntax (or restore a backup) and save again.
 
@@ -773,19 +773,21 @@ A user `config.toml` that cannot be parsed is not overwritten. Fix the syntax (o
 
 ## Project-scoped configuration
 
-Some settings can be set per-project by placing files in `.grok/` inside your repository:
+Some settings can be set per-project by placing files in `.deepseek/` inside your repository:
 
 | File | What it configures |
 |------|--------------------|
-| `.grok/config.toml` | MCP servers, plugins, permission rules, and the `[mcp] max_output_bytes` tool-result cap (other sections load only from `~/.deepseek-build/config.toml`) |
-| `.grok/skills/` | Project-specific skills |
-| `.grok/hooks/` | Project-specific lifecycle hooks |
-| `.grok/agents/` | Project-specific agent definitions |
-| `.grok/lsp.json` | LSP server configuration |
-| `.grok/sandbox.toml` | Custom sandbox profiles |
+| `.deepseek/config.toml` | MCP servers, plugins, permission rules, and the `[mcp] max_output_bytes` tool-result cap (other sections load only from `~/.deepseek-build/config.toml`) |
+| `.deepseek/skills/` | Project-specific skills |
+| `.deepseek/hooks/` | Project-specific lifecycle hooks |
+| `.deepseek/agents/` | Project-specific agent definitions |
+| `.deepseek/lsp.json` | LSP server configuration |
+| `.deepseek/sandbox.toml` | Custom sandbox profiles |
 | `AGENTS.md` | Project instructions (system prompt) |
 
 Project-scoped MCP servers override global ones with the same name (full replacement, not a merge).
+
+Project configuration is read from `.deepseek/` **first**; the legacy `.grok/` directory is still read as a compatibility fallback, so an existing checkout keeps working. When the same file exists in both, the `.deepseek/` one wins. Within a project directory the precedence is `.deepseek → .grok → .claude / .cursor` (skill discovery also checks `.agents/` between `.grok` and the vendor dirs).
 
 ---
 
@@ -796,12 +798,12 @@ Language servers power passive diagnostics and the optional `lsp` tool (see the 
 | Source | Location | Scope |
 |--------|----------|-------|
 | User | `~/.deepseek-build/lsp.json` | All projects |
-| Project | `.grok/lsp.json` | Current repository |
+| Project | `.deepseek/lsp.json` | Current repository |
 | Plugin | A trusted plugin's `.lsp.json` file, or an inline `lspServers` block in its `plugin.json` | Wherever the plugin is enabled |
 
 When the same server name comes from more than one source, it resolves highest-priority first:
 
-1. **Project** — `.grok/lsp.json`
+1. **Project** — `.deepseek/lsp.json`
 2. **User** — `~/.deepseek-build/lsp.json`
 3. **Plugins** — file-based `.lsp.json`, then inline `lspServers`, in plugin load order
 

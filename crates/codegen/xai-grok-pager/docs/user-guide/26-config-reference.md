@@ -8,7 +8,7 @@ deepseek-build reads its settings as a layered merge; later layers win:
 
 1. Compiled defaults.
 2. `$DEEPSEEK_BUILD_HOME/config.toml` (your settings; `/settings` writes here). Default `$DEEPSEEK_BUILD_HOME` is `~/.deepseek-build`.
-3. Project `.grok/config.toml`: only `[mcp_servers]`, `[plugins]`, `[permission]`, and `[mcp] max_output_bytes`.
+3. Project `.deepseek/config.toml` (legacy fallback `.grok/config.toml`): only `[mcp_servers]`, `[plugins]`, `[permission]`, and `[mcp] max_output_bytes`.
 4. `DEEPSEEK_BUILD_CONFIG` (inline JSON) or `DEEPSEEK_BUILD_CONFIG_PATH` (JSON or TOML file). Allowlisted keys only.
 5. `DEEPSEEK_BUILD_*` environment variables.
 6. CLI flags such as `--model`, `--sandbox`, `--yolo`.
@@ -17,7 +17,7 @@ Run `deepseek-build inspect` or `deepseek-build inspect --json` to see which fil
 
 ## config.toml
 
-User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~/.deepseek-build/config.toml`; Windows `%USERPROFILE%\.deepseek-build\config.toml`). Project-scoped overrides live in `.grok/config.toml` and only contribute `[mcp_servers]`, `[plugins]`, `[permission]`, and `[mcp] max_output_bytes`.
+User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~/.deepseek-build/config.toml`; Windows `%USERPROFILE%\.deepseek-build\config.toml`). Project-scoped overrides live in `.deepseek/config.toml` (legacy `.grok/config.toml` is still read as a fallback, with `.deepseek` winning) and only contribute `[mcp_servers]`, `[plugins]`, `[permission]`, and `[mcp] max_output_bytes`.
 
 **Requirements** marks whether the same key can be set in `requirements.toml`: `pin` cannot be overridden (including env and CLI where the resolver honors the pin); `yes` is accepted in that file; `—` is not read from `requirements.toml`. **Managed** marks whether a fleet `managed_config.toml` value stands (`fleet`) or the user's file wins (`user`).
 
@@ -157,7 +157,7 @@ User-level configuration lives in `$DEEPSEEK_BUILD_HOME/config.toml` (default `~
 | `features.mcp_auto_restart` | `boolean` | `yes` | `user` | Auto-restart stdio MCP servers after transport failure. Also DEEPSEEK_BUILD_MCP_AUTO_RESTART. |
 | `features.mcp_liveness_watchers` | `boolean` | `yes` | `user` | Poll MCP transports and push server_status updates. Emergency kill switch when false. |
 | `features.mcp_push_server_status` | `boolean` | `yes` | `user` | Pager subscribes to MCP server_status push. Process env DEEPSEEK_BUILD_MCP_PUSH_SERVER_STATUS wins at launch. |
-| `features.mcp_recursive_config_watch` | `boolean` | `yes` | `user` | Watch `<cwd>/` and `<cwd>/.grok/` for project MCP config edits. Name is a misnomer; watches are non-recursive. |
+| `features.mcp_recursive_config_watch` | `boolean` | `yes` | `user` | Watch `<cwd>/` and `<cwd>/.deepseek/` (legacy `.grok/`) for project MCP config edits. Name is a misnomer; watches are non-recursive. |
 | `features.non_git_warning` | `boolean` | `yes` | `user` | Show a blocking warning when deepseek-build starts outside a Git repository. |
 | `features.remember_mode` | `boolean` | `—` | `—` | Remember the last permission mode across sessions. Read from user `config.toml` only. |
 | `features.remote_fetch` | `boolean` | `pin` | `fleet` | Allow optional online model-catalog and asset fetch. |
