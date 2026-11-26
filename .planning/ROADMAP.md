@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Truth Baseline** - Sandbox stops aborting, cost and default model stop lying, and the suite is provably green (completed 2026-11-23)
 - [x] **Phase 2: Loop-Item Verification** - Permissions, resume and plan mode proven against a real session, with the egress boundary measured (completed 2026-11-25)
 - [x] **Phase 3: Pipeline Decoupling & Version** - A slow macOS leg can no longer erase the image and the tag shape is settled (completed 2026-11-25; REL-02 closed by Phase 4's tag run 45724842211 on 2026-11-26: macOS legs 47.8 / 61.5 min against the 240 min budget)
-- [ ] **Phase 4: Distribution Proof** - Image, installer and macOS artifacts proven from a throwaway tag (in progress: 04-01 and 04-02 complete — tag pushed, run green, release verified, pinned installer proven against the real release and the unpinned 404 recorded)
+- [ ] **Phase 4: Distribution Proof** - Image, installer and macOS artifacts proven from a throwaway tag (in progress: 04-01, 04-02 and 04-03 complete — tag pushed, run green, release verified, pinned installer proven against the real release and the unpinned 404 recorded, Homebrew formula authored and checked by Homebrew itself)
 - [ ] **Phase 5: Documentation Truth & Freeze** - Docs match the tree, the author signs off, and the freeze marker moves no published tag
 
 ## Phase Details
@@ -112,12 +112,12 @@ Plans:
   2. The pulled image runs a real headless turn that executes a shell command, with the documented run flags that keep the sandbox on, and the README states the image is headless-only with the mounts it needs.
   3. `install.sh` installs a pinned `VERSION=` from the real release and prints that version, and the unpinned `latest` path's actual behaviour is established by checking the real URL rather than the fake-tree harness.
   4. The throwaway tag, its release and the image tag it created are cleaned up, with no `:latest` left pointing at a throwaway build and the dry-run evidence committed.
-**Plans**: 2/5 plans complete
+**Plans**: 3/5 plans complete
 
 Plans:
 - [x] 04-01: Throwaway tag `v0.1.0-proof1` — pushed once (tag-only, target `b14d28eb`); run 45724842211 green (7/7 jobs, macOS 47.8 / 61.5 min, container success, two prerelease image tags, no `:latest`); release is a pre-release with exactly six assets, every byte matching `SHA256SUMS` and GitHub's digest. REL-02 and the macOS half of REL-03 closed. REL-04 stays PARTIAL (pull environment-blocked, 04-04)
 - [x] 04-02: Installer proof against the real release — pinned proof against `v0.1.0-proof1`: the release asset `install.sh` is byte-identical to the tree (`31e114d4…`), the host tarball's sha256 equals both its `SHA256SUMS` line and GitHub's asset digest (`298c9f27…`), and the installed binary prints `deepseek-build 0.1.0-proof1 (b14d28eb2bc7)`. Unpinned `latest` behaviour observed: both `latest/download` URLs 404 and the installer exits 22 having installed nothing. README install truth corrected and gated by `scripts/check-readme-distribution.py` (install stage 12/12). **REL-06 closed.**
-- [ ] 04-03: Homebrew formula with real URLs and SHA-256 values, plus the tap activation doc
+- [x] 04-03: Homebrew formula with real URLs and SHA-256 values, plus the tap activation doc — `packaging/homebrew/deepseek-build.rb` pins the two `v0.1.0-proof1` darwin assets (`2b61dfab…` arm64 / `ffe0f3c5…` x86_64) and installs the tarball with the `dsb` symlink; `scripts/check-homebrew-formula.py` is 19/19 + `self-test: 3/3`; Homebrew 7.0.16 reports `no offenses detected` on `brew style` and exit 0 on `brew audit --strict [--online]` (under `HOMEBREW_SIMULATE_MACOS_ON_LINUX=1`), both arch branches resolve, and `brew fetch` verified 53,850,000 bytes with the wrong-hash control rejected. `brew install` is NOT RUN (macOS binaries on a Linux host); the tap repo is the author's step, documented in `packaging/homebrew/README.md`. **PKG-04 closed.**
 - [ ] 04-04: Registry-side image proof (digest, manifest, tags); the in-image run recorded as environment-blocked with exact commands; README container truth
 - [ ] 04-05: Evidence sealed, the keep-prerelease deviation recorded, leak scan
 

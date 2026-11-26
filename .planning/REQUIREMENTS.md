@@ -84,7 +84,7 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 ### Homebrew
 
-- [ ] **PKG-04**: A Homebrew tap formula for macOS arm64 and x86_64 exists in-tree at `packaging/homebrew/deepseek-build.rb`, pins the real release URLs and SHA-256 values, installs the binary, and its activation command is documented; the tap repository itself is the author's action
+- [x] **PKG-04**: A Homebrew tap formula for macOS arm64 and x86_64 exists in-tree at `packaging/homebrew/deepseek-build.rb`, pins the real release URLs and SHA-256 values, installs the binary, and its activation command is documented; the tap repository itself is the author's action
 
 ### Windows Support
 
@@ -197,7 +197,7 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | PKG-01 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-02 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-03 | Phase 3 — Pipeline Decoupling & Version | Complete |
-| PKG-04 | Phase 4 — Distribution Proof | Pending |
+| PKG-04 | Phase 4 — Distribution Proof | Complete — formula in-tree with the `v0.1.0-proof1` darwin URLs/hashes (`2b61dfab…` / `ffe0f3c5…`), checker 19/19 + self-test 3/3, `brew style`/`brew audit --strict --online` exit 0, `brew fetch` checksum-verified, tap activation documented as the author's step (`brew install` NOT RUN on this Linux host) |
 | REL-04 | Phase 4 — Distribution Proof | Partial — image built, published and verified registry-side (index sha256:8f5c484e…); the pull is environment-blocked (no Docker daemon) and deferred to 04-04 |
 | REL-05 | Phase 4 — Distribution Proof | Pending |
 | REL-06 | Phase 4 — Distribution Proof | Complete — pinned install of `v0.1.0-proof1` from the real release (asset `install.sh` byte-identical, tarball sha256 three-way equal, installed binary reports `0.1.0-proof1 (b14d28eb2bc7)`); unpinned `latest` observed: both `latest/download` URLs 404, installer exits 22 and installs nothing (`docs/evidence/04-distribution-proof/installer-{proof,latest}/`) |
@@ -236,4 +236,4 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 
 ---
 *Requirements defined: 2026-11-21*
-*Last updated: 2026-11-26 — added Windows Support (WIN-01…06, Phase 5), the Homebrew tap (PKG-04, Phase 4), and renumbered Documentation Truth & Freeze to Phase 6; REL-02/REL-03 closed by the Phase-4 tag run, REL-04 recorded as Partial*
+*Last updated: 2026-11-26 — PKG-04 closed by 04-03 (formula in-tree, Homebrew-checked, tap activation documented as the author's step); earlier the same day, Windows Support (WIN-01…06, Phase 5), the Homebrew tap (PKG-04, Phase 4) and the Documentation Truth & Freeze renumber were added; REL-02/REL-03 closed by the Phase-4 tag run, REL-04 recorded as Partial*

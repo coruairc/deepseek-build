@@ -4,16 +4,16 @@ milestone: v0.1.0
 current_phase: 4
 current_phase_name: Distribution Proof
 status: executing
-stopped_at: Phase 4 plan 04-02 complete (2/5) — the pinned install is proven against the real v0.1.0-proof1 release (release asset install.sh byte-identical to the tree, tarball sha256 equal to SHA256SUMS and GitHub's digest, installed binary prints 0.1.0-proof1 (b14d28eb2bc7)) and the unpinned latest path's real 404 is recorded; README install truth corrected; next is 04-03 (Homebrew formula)
-last_updated: "2026-11-26T06:24:00.000Z"
+stopped_at: Phase 4 plan 04-03 complete (3/5) — the Homebrew formula is in-tree with the proof release's two darwin URLs and SHA-256 values (2b61dfab… / ffe0f3c5…), checked 19/19 + self-test 3/3, accepted by Homebrew 7.0.16 (style no offenses, audit --strict [--online] exit 0 under HOMEBREW_SIMULATE_MACOS_ON_LINUX=1, both arch branches resolve, brew fetch checksum-verified); brew install NOT RUN (macOS binaries on a Linux host) and the tap repo is the author's documented step; next is 04-04
+last_updated: "2026-11-26T06:41:00.000Z"
 last_activity: 2026-11-26
-last_activity_desc: 04-02 proved the pinned installer against the real release and established the unpinned path's real behaviour (both latest/download URLs 404; the installer exits 22 and installs nothing); REL-06 closed; README install section corrected
-state_head: 54b61199edcfb74d8ede7c024abae61b41fb0258
+last_activity_desc: 04-03 authored and proved the Homebrew formula against the release SHA256SUMS and against Homebrew itself; PKG-04 closed with the tap activation documented as an author step
+state_head: 1b00b58314ab1d6c88dad0a248daed080c54b9c8
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 21
-  completed_plans: 18
+  completed_plans: 19
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-11-23)
 ## Current Position
 
 Phase: 4 — Distribution Proof
-Plan: 04-02 of 5 complete (2/5). Next is 04-03 (Homebrew formula from the real release's Apple digests).
-Status: Plan 04-02 complete — the **pinned** install is proven against the real `v0.1.0-proof1` release: the release asset `install.sh` is byte-identical to this tree (`31e114d4…`), the host tarball's sha256 equals both its `SHA256SUMS` line and GitHub's asset digest (`298c9f27…`), and the installed binary prints `deepseek-build 0.1.0-proof1 (b14d28eb2bc7)`. The **unpinned** path's real behaviour is recorded, not assumed: `releases/latest/download/SHA256SUMS` and `.../install.sh` both return **404** (only pre-releases exist), the installer exits 22 at `Resolving the latest release` and installs nothing. **REL-06 closed.** README's install section now states the pinned tag, the 404 truth (dated 2026-11-26) and the ad-hoc-signed/not-notarized macOS reality. REL-04 stays **Partial** (pull environment-blocked, 04-04).
-Last activity: 2026-11-26 06:24 UTC — 04-02 added `scripts/prove-install.sh`, `scripts/check-readme-distribution.py`, two evidence items and corrected README's install truth.
+Plan: 04-03 of 5 complete (3/5). Next is 04-04 (GHCR image record + the container README stage).
+Status: Plan 04-03 complete — the **Homebrew formula** is in-tree at `packaging/homebrew/deepseek-build.rb` with the proof release's two darwin URLs and their real SHA-256 values (`2b61dfab…` arm64, `ffe0f3c5…` x86_64, both lines of `tag-run/SHA256SUMS` and both equal to GitHub's asset digest). `scripts/check-homebrew-formula.py` is **19/19 PASS** with `--online` and **`self-test: 3/3 PASS`**. Homebrew **7.0.16** accepts the formula on a throwaway local tap: `brew style` → *1 file inspected, no offenses detected*; `brew audit --strict --formula` and `brew audit --strict --online` → exit 0 (under `HOMEBREW_SIMULATE_MACOS_ON_LINUX=1`, Homebrew's own switch for a macOS-only formula on Linux); `brew ruby` resolves both arch branches; `brew fetch` downloaded 53,850,000 bytes and its checksum gate accepted `ffe0f3c5…`, while a wrong-hash copy is rejected. **`brew install` is NOT RUN** (macOS Mach-O binaries on a Linux host) and the tap repo `coruairc/homebrew-deepseek-build` does not exist — both are recorded, and `packaging/homebrew/README.md` documents the author's one-time activation plus the `v0.1.0` repoint recipe. **PKG-04 closed** for the formula and the documented activation; the live install stays an author step. REL-04 stays **Partial** (pull environment-blocked, 04-04).
+Last activity: 2026-11-26 06:41 UTC — 04-03 added the formula, the checker, the tap activation doc and the 15-step `homebrew-formula` evidence item.
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -48,7 +48,7 @@ Progress: [█████████░] 86%
 | 01 | 6 | 6 | - |
 | 02 | 6 | 6 | - |
 | 03 | 4 | 4 | - |
-| 04 | 1 | 5 | - |
+| 04 | 3 | 5 | - |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -59,6 +59,7 @@ Progress: [█████████░] 86%
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 04 P03 | 17m | 2 tasks | 22 files |
 | Phase 04 P02 | 15m | 2 tasks | 30 files |
 | Phase 04 P01 | 10m | 3 tasks | 38 files |
 | Phase 03 P04 | 14m | 2 tasks | 5 files |
@@ -131,6 +132,10 @@ Full log in PROJECT.md Key Decisions. Those shaping current work:
 - [Phase 04]: `releases/latest` does **not** 404 in a browser: it 302s to `…/releases` (the index, 200). The two `/releases/latest/download/…` URLs 404, and so does the REST `repos/:owner/:repo/releases/latest`. Record all three; do not compress them into "404".
 - [Phase 04]: README install claims are gated by `scripts/check-readme-distribution.py` (whitespace-normalized so a wrapped phrase still matches). The `container` stage is written now and is 04-04's to satisfy.
 - [Phase 04]: `install.sh` is byte-unchanged. The scratch `HOME` carries a `.curlrc` with `no-progress-meter` so the captured transcript stays readable; it changes curl's verbosity only, never the download or the checksum.
+- [Phase 04]: The Homebrew formula is a **binary** formula pinned to `v0.1.0-proof1` — the only published tag with macOS artifacts (`v0.1.0` is 404). Both URLs sit inside `on_macos do on_arm … on_intel … end`, so the formula carries no top-level `url`; two `url` lines, two `sha256` lines, no `head`/`branch`/`patch`, no Xcode dependency.
+- [Phase 04]: `livecheck do skip` is explicit. Omitting livecheck is **not** "no other host": `brew livecheck` would then use Homebrew's `:github_latest` strategy and query `api.github.com`. `brew audit --strict --online` still exits 0 with the skip.
+- [Phase 04]: A macOS-only formula cannot be loaded by Homebrew on Linux (`formula requires at least a URL`); evaluate the macOS branches with Homebrew's own `HOMEBREW_SIMULATE_MACOS_ON_LINUX=1`, never by hand-waving. `brew fetch` is the strongest host-available proof (download + checksum gate), and it is paired with a wrong-sha256 control that is rejected (`reports different checksum`). `brew install` stays NOT RUN — macOS Mach-O on a Linux host.
+- [Phase 04]: The tap repository `coruairc/homebrew-deepseek-build` is **not** created; `packaging/homebrew/README.md` holds the author's one-time `gh repo create`/copy/push steps, the consumer `brew tap`/`install`/`test`, the ad-hoc-signed/not-notarized position, and the `v0.1.0` repoint recipe. PKG-04 covers the in-tree formula plus that documented activation.
 
 ### Pending Todos
 
