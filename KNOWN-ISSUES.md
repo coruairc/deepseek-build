@@ -49,13 +49,10 @@ distribution, container and Windows notes were refreshed 2026-11-26.
   evidence-wrapped gate process survived and completed, and the continuation
   executor adopted it (step record carries the real exit status; counts
   re-derived independently from the log). The `test-gate` evidence item is
-  complete (cast, `report.json`, normalized log, notes). **The checked-in
-  `scripts/test-gate.expected` is stale for the current tree (2026-11-26):** it
-  was refreshed at `c159a3e7` (2026-11-23) with `results=308`, `binaries=219`,
-  and test binaries added since — `xai-grok-pager-bin`'s `headless_loop_items`
-  and `version_paths`, among others — raise the target count. A green
-  `scripts/test-gate.sh --refresh-expected` run must rewrite it before any
-  release claim quotes the suite size.
+  complete (cast, `report.json`, normalized log, notes). **`scripts/test-gate.expected` was refreshed from a green full run on
+  2026-11-26** (`be923015`): `results=310`, `binaries=221`, `doctests=89`, clean
+  tree at `e79aef5b`; both steps (workspace + `config-docs`) and the leak scan
+  passed. It previously read 308/219 at `c159a3e7`.
 - **`xai-grok-sandbox --test deny_paths_e2e` is green: 14 passed / 0 failed /
   1 ignored (2026-11-21).** The previously failing
   `devbox_genuine_reexec_applies_enforcement` now runs a
