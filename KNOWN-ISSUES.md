@@ -312,6 +312,18 @@ distribution, container and Windows notes were refreshed 2026-11-26.
   `build-linux` only. Retry with `gh run rerun 45846745156 --failed`. The Windows zip exists as a
   workflow artifact (`release-x86_64-pc-windows-msvc`).
 
+## Acceptance findings (2026-11-26)
+
+The author signed off the daily loop on `0.1.0 (bc95bc47)` (`docs/acceptance-2026-11-26.md`) and
+reported two follow-ups, both being fixed after the sign-off:
+
+- **`Ctrl+E` did not expand the thought in front of you.** It is bound to
+  `ExpandAllThinking` (scrollback-focused) and toggles every thinking block. The fix makes it toggle
+  the selected block and keep the expand-all behaviour only when nothing is selected.
+- **Focus did not return to the prompt after `Esc` closed a thought.** `Esc` in the scrollback is
+  deliberately swallowed by the input-flow contract; the fix returns focus to the prompt when `Esc`
+  actually dismisses a selection, and leaves the double-Esc rewind and the mid-turn swallow alone.
+
 ## Container image (2026-11-26)
 
 - **The image runs, and the sandbox cannot apply inside it.** `ghcr.io/coruairc/deepseek-build@sha256:8f5c484e…`
