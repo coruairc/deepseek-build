@@ -1,0 +1,65 @@
+name: windows-spike
+
+# Throwaway compile spike (phase 5, plan 05-01). Proves whether the workspace
+# compiles for x86_64-pc-windows-msvc on a real Windows runner. Deleted with the
+# branch after the result is recorded. It creates no release and pushes no image.
+
+on:
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: windows-spike-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: cargo check (x86_64-pc-windows-msvc)
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.94.0 --profile minimal
+          rustup default 1.94.0
+          rustc --version
+          cargo --version
+          rustup show active-toolchain
+
+      - name: cargo check --workspace --all-targets
+        id: check
+        shell: bash
+        run: |
+          set -o pipefail
+          set +e
+          cargo check --workspace --all-targets --message-format=short 2>&1 | tee "$RUNNER_TEMP/check.log"
+          rc=${PIPESTATUS[0]}
+          echo "check_exit=$rc" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Error summary
+        if: always()
+        shell: bash
+        run: |
+          log="$RUNNER_TEMP/check.log"
+          echo "== check_exit: ${{ steps.check.outputs.check_exit }} =="
+          echo "== distinct errors =="
+          grep -aE '^error(\[E[0-9]+\])?:' "$log" | sed -E 's/^error(\[E[0-9]+\])?: //' | sort | uniq -c | sort -rn | head -60 || true
+          echo "== first 40 error lines =="
+          grep -aE '^error' "$log" | head -40 || true
+
+      - name: Upload check log
+        if: always()
+        uses: actions/upload-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: windows-check-log
+          path: ${{ runner.temp }}/check.log
+          if-no-files-found: warn
