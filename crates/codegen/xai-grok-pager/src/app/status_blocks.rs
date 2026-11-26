@@ -6,6 +6,8 @@ use crate::app::agent::{BgTaskState, BgTaskStatus};
 use crate::app::agent_view::AgentView;
 use crate::app::subagent::format_subagent_label;
 use crate::util::{format_duration, group_thousands};
+use xai_grok_shell::extensions::notification::{PromptUsage, PromptUsageModel, ticks_to_usd};
+use xai_grok_status_line::{PricingTable, StatusLineSessionUsage};
 impl BgTaskState {
     pub(crate) fn display_kind(&self) -> &'static str {
         if self.is_monitor { "Monitor" } else { "Task" }
@@ -166,7 +168,9 @@ pub(crate) fn tasks_block_text(agent: &AgentView) -> String {
 }
 /// `/usage` body: per-session token and cost totals, covering the ledger's lifetime (since session start, or since the last `/resume`).
 pub(crate) fn session_usage_block_text(
-    usage: &xai_grok_shell::extensions::notification::PromptUsage,
+    usage: &PromptUsage,
+    pricing: &PricingTable,
+    model_id: Option<&str>,
 ) -> String {
     let t = &usage.totals;
     if t.model_calls == 0 && usage.model_usage.is_empty() {
@@ -197,12 +201,15 @@ pub(crate) fn session_usage_block_text(
         group_thousands(t.model_calls),
         format_duration(std::time::Duration::from_millis(t.api_duration_ms)),
     ));
-    rows.push(format!("  Cost:           {}", format_cost(t)));
+    rows.push(format!(
+        "  Cost:           {}",
+        format_cost_cell(session_cost_cell(usage, pricing, model_id))
+    ));
     if usage.model_usage.len() > 1 {
         rows.push(String::new());
         rows.push("  By model:".to_string());
         for (model, m) in &usage.model_usage {
-            rows.push(format_by_model_row(model, m));
+            rows.push(format_by_model_row(model, m, pricing));
         }
     }
     if usage.usage_is_incomplete {
@@ -213,25 +220,106 @@ pub(crate) fn session_usage_block_text(
         rows,
     )
 }
-/// Formats one `By model:` row. The cost cell is omitted when `cost_usd_ticks` is `None`.
-fn format_by_model_row(
-    model: &str,
-    m: &xai_grok_shell::extensions::notification::PromptUsageModel,
-) -> String {
+/// One model's cost cell: provider-reported ticks, a local estimate, or nothing priceable.
+#[derive(Debug, Clone, Copy)]
+enum CostCell {
+    Reported(f64),
+    Estimated(f64),
+    Unavailable { partial: bool },
+}
+
+/// Formats one `By model:` row. The cost cell is omitted when the model has neither a reported
+/// cost nor enough usage to price.
+fn format_by_model_row(model: &str, m: &PromptUsageModel, pricing: &PricingTable) -> String {
     let tokens = group_thousands(m.total_tokens);
-    if m.cost_usd_ticks.is_some() {
-        format!("    {model}: {tokens} Tokens · {}", format_cost(m))
-    } else {
-        format!("    {model}: {tokens} Tokens")
+    match model_cost_cell(model, m, pricing) {
+        CostCell::Unavailable { .. } => format!("    {model}: {tokens} Tokens"),
+        cell => format!("    {model}: {tokens} Tokens · {}", format_cost_cell(cell)),
     }
 }
-/// Formats the cost cell. Ticks are 1e10 per USD; a partial sum is reported as absent.
-fn format_cost(m: &xai_grok_shell::extensions::notification::PromptUsageModel) -> String {
-    use xai_grok_shell::extensions::notification::ticks_to_usd;
-    match m.cost_usd_ticks {
-        Some(ticks) => format!("${:.4}", ticks_to_usd(ticks)),
-        None if m.cost_is_partial => "not available (not reported for some calls)".to_string(),
-        None => "not available (not reported)".to_string(),
+
+/// A provider-reported cost always wins; otherwise price the model locally with the same table the
+/// status line uses, so `/cost` and the row cannot disagree for the same turn. `None` from
+/// [`PricingTable::cost_usd`] means no tokens were recorded, not a free turn.
+fn model_cost_cell(model_id: &str, m: &PromptUsageModel, pricing: &PricingTable) -> CostCell {
+    if let Some(ticks) = m.cost_usd_ticks {
+        return CostCell::Reported(ticks_to_usd(ticks));
+    }
+    match pricing.cost_usd(model_id, &status_line_usage(m)) {
+        Some(estimate) => CostCell::Estimated(estimate),
+        None => CostCell::Unavailable {
+            partial: m.cost_is_partial,
+        },
+    }
+}
+
+/// The session total, summed from the same per-model cells the `By model:` rows print so the two
+/// lines cannot disagree. A single total with no model breakdown (reported totals-only payloads)
+/// falls back to pricing the totals row with the session model.
+fn session_cost_cell(
+    usage: &PromptUsage,
+    pricing: &PricingTable,
+    model_id: Option<&str>,
+) -> CostCell {
+    if usage.model_usage.is_empty() {
+        return model_cost_cell(model_id.unwrap_or(""), &usage.totals, pricing);
+    }
+    let mut reported = 0.0;
+    let mut estimated = 0.0;
+    let mut any_estimated = false;
+    let mut any_priced = false;
+    for (model, m) in &usage.model_usage {
+        match model_cost_cell(model, m, pricing) {
+            CostCell::Reported(usd) => {
+                reported += usd;
+                any_priced = true;
+            }
+            CostCell::Estimated(usd) => {
+                estimated += usd;
+                any_estimated = true;
+                any_priced = true;
+            }
+            CostCell::Unavailable { .. } => {}
+        }
+    }
+    if any_estimated {
+        CostCell::Estimated(reported + estimated)
+    } else if any_priced {
+        CostCell::Reported(reported)
+    } else {
+        CostCell::Unavailable {
+            partial: usage.totals.cost_is_partial,
+        }
+    }
+}
+
+/// Ticks are 1e10 per USD; an estimate is labelled so it is never mistaken for provider-reported.
+fn format_cost_cell(cell: CostCell) -> String {
+    match cell {
+        CostCell::Reported(usd) => format!("${usd:.4}"),
+        CostCell::Estimated(usd) => format!("${usd:.4} (estimate)"),
+        CostCell::Unavailable { partial: true } => {
+            "not available (not reported for some calls)".to_string()
+        }
+        CostCell::Unavailable { partial: false } => "not available (not reported)".to_string(),
+    }
+}
+
+/// Project an ACP-identity ledger row onto the status line's disjoint token buckets.
+///
+/// `PromptUsageModel::input_tokens` already includes cache reads and cache creation, while
+/// [`StatusLineSessionUsage`] wants fresh input only, so the fresh count is the saturating
+/// difference. Both cache buckets map across unchanged.
+fn status_line_usage(m: &PromptUsageModel) -> StatusLineSessionUsage {
+    StatusLineSessionUsage {
+        input_tokens: m
+            .input_tokens
+            .saturating_sub(m.cached_read_tokens)
+            .saturating_sub(m.cache_creation_tokens),
+        output_tokens: m.output_tokens,
+        cache_creation_input_tokens: m.cache_creation_tokens,
+        cache_read_input_tokens: m.cached_read_tokens,
+        reasoning_tokens: m.reasoning_tokens,
     }
 }
 /// First non-empty, trimmed line of `text` (empty string if none). Collapses a multi-line prompt/command to a single display line.
@@ -263,7 +351,9 @@ fn join_header_rows(header: String, rows: Vec<String>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
     use xai_grok_shell::extensions::notification::{PromptUsage, PromptUsageModel};
+    use xai_grok_status_line::{ModelPricing, PricingTable};
     fn model_row(input: u64, output: u64, ticks: Option<i64>) -> PromptUsageModel {
         PromptUsageModel {
             input_tokens: input,
@@ -279,18 +369,139 @@ mod tests {
             cost_missing_calls: 0,
         }
     }
+    fn single_model_usage(model: &str, row: PromptUsageModel) -> PromptUsage {
+        let mut usage = PromptUsage {
+            totals: row.clone(),
+            ..Default::default()
+        };
+        usage.model_usage.insert(model.to_string(), row);
+        usage
+    }
     #[test]
     fn session_usage_block_empty_ledger() {
         let usage = PromptUsage::default();
         assert_eq!(
-            session_usage_block_text(&usage),
+            session_usage_block_text(&usage, &PricingTable::default(), None),
             "Session usage: no model calls yet in this session."
         );
         let incomplete = PromptUsage {
             usage_is_incomplete: true,
             ..Default::default()
         };
-        assert!(session_usage_block_text(&incomplete).contains("incomplete"));
+        assert!(
+            session_usage_block_text(&incomplete, &PricingTable::default(), None)
+                .contains("incomplete")
+        );
+    }
+    /// The ACP ledger folds cache reads and cache creation into `input_tokens`; the status line wants
+    /// disjoint buckets, so the fresh count is a saturating subtraction.
+    #[test]
+    fn status_line_usage_maps_acp_input_to_disjoint_buckets() {
+        let row = PromptUsageModel {
+            input_tokens: 100,
+            output_tokens: 7,
+            cached_read_tokens: 80,
+            cache_creation_tokens: 50,
+            reasoning_tokens: 3,
+            ..model_row(0, 0, None)
+        };
+        let mapped = status_line_usage(&row);
+        assert_eq!(mapped.input_tokens, 0, "the subtraction must saturate");
+        assert_eq!(mapped.cache_read_input_tokens, 80);
+        assert_eq!(mapped.cache_creation_input_tokens, 50);
+        assert_eq!(mapped.output_tokens, 7);
+        assert_eq!(mapped.reasoning_tokens, 3);
+
+        let row = PromptUsageModel {
+            input_tokens: 100,
+            cached_read_tokens: 40,
+            cache_creation_tokens: 25,
+            ..model_row(0, 0, None)
+        };
+        assert_eq!(status_line_usage(&row).input_tokens, 35);
+    }
+    #[test]
+    fn session_usage_block_estimates_missing_cost_at_the_status_line_rate() {
+        let table = PricingTable::default();
+        let row = model_row(2_000, 500, None);
+        let expected = table
+            .cost_usd("deepseek-v4-pro", &status_line_usage(&row))
+            .expect("estimate");
+        let usage = single_model_usage("deepseek-v4-pro", row);
+        let text = session_usage_block_text(&usage, &table, None);
+        assert!(
+            text.contains(&format!("${expected:.4} (estimate)")),
+            "{text}"
+        );
+        assert!(!text.contains("not available"), "{text}");
+    }
+    #[test]
+    fn session_usage_block_keeps_reported_cost_without_estimate_label() {
+        let row = model_row(1_000, 100, Some(12_345_000_000));
+        let usage = single_model_usage("deepseek-v4-pro", row);
+        let text = session_usage_block_text(&usage, &PricingTable::default(), None);
+        assert!(text.contains("$1.2345"), "{text}");
+        assert!(!text.contains("(estimate)"), "{text}");
+    }
+    #[test]
+    fn session_usage_block_mixed_costs_sum_and_label_estimate() {
+        let table = PricingTable::default();
+        let reported = model_row(1_000_000, 0, Some(10_000_000_000));
+        let estimated = model_row(1_000_000, 0, None);
+        let estimate = table
+            .cost_usd("deepseek-flash", &status_line_usage(&estimated))
+            .expect("estimate");
+        assert!((estimate - 0.30).abs() < 1e-12, "{estimate}");
+        let mut usage = PromptUsage {
+            totals: model_row(2_000_000, 0, None),
+            ..Default::default()
+        };
+        usage.model_usage.insert("deepseek-v4-pro".into(), reported);
+        usage.model_usage.insert("deepseek-flash".into(), estimated);
+        let text = session_usage_block_text(&usage, &table, None);
+        assert!(
+            text.contains("  Cost:           $1.3000 (estimate)"),
+            "{text}"
+        );
+        assert!(
+            text.contains("    deepseek-v4-pro: 1,000,000 Tokens · $1.0000"),
+            "{text}"
+        );
+        assert!(
+            text.contains("    deepseek-flash: 1,000,000 Tokens · $0.3000 (estimate)"),
+            "{text}"
+        );
+    }
+    #[test]
+    fn session_usage_block_no_usage_stays_not_available() {
+        let usage = PromptUsage {
+            totals: model_row(0, 0, None),
+            ..Default::default()
+        };
+        let text = session_usage_block_text(&usage, &PricingTable::default(), None);
+        assert!(
+            text.contains("  Cost:           not available (not reported)"),
+            "{text}"
+        );
+        assert!(!text.contains("$0.0000"), "{text}");
+    }
+    /// Proves the `/cost` estimate reads the same table the status line builds from config, overrides included.
+    #[test]
+    fn session_usage_block_honours_pricing_overrides() {
+        let mut overrides = BTreeMap::new();
+        overrides.insert(
+            "deepseek-flash".to_string(),
+            ModelPricing {
+                cache_hit: 0.0,
+                cache_miss: 10.0,
+                output: 0.0,
+            },
+        );
+        let table = PricingTable::with_overrides(overrides);
+        let usage = single_model_usage("deepseek-flash", model_row(1_000_000, 0, None));
+        let text = session_usage_block_text(&usage, &table, None);
+        assert!(text.contains("$10.0000 (estimate)"), "{text}");
+        assert!(!text.contains("$0.3000"), "{text}");
     }
     #[test]
     fn session_usage_block_formats_tokens_and_cost() {
@@ -303,7 +514,7 @@ mod tests {
             totals,
             ..Default::default()
         };
-        let text = session_usage_block_text(&usage);
+        let text = session_usage_block_text(&usage, &PricingTable::default(), None);
         insta::assert_snapshot!("session_usage_block_full", text);
     }
     #[test]
@@ -318,11 +529,11 @@ mod tests {
         usage
             .model_usage
             .insert("deepseek-4".into(), model_row(50, 5, None));
-        let text = session_usage_block_text(&usage);
+        let text = session_usage_block_text(&usage, &PricingTable::default(), None);
         insta::assert_snapshot!("session_usage_block_by_model", text);
     }
     #[test]
-    fn session_usage_block_by_model_shows_cost_only_when_known() {
+    fn session_usage_block_by_model_reports_or_estimates_each_model() {
         let mut usage = PromptUsage {
             totals: model_row(123_556, 1_010, Some(20_000_000)),
             ..Default::default()
@@ -334,7 +545,11 @@ mod tests {
         usage
             .model_usage
             .insert("deepseek-4".into(), model_row(100, 10, None));
-        let text = session_usage_block_text(&usage);
+        let text = session_usage_block_text(&usage, &PricingTable::default(), None);
+        assert!(
+            text.contains("  Cost:           $0.0022 (estimate)"),
+            "{text}"
+        );
         let rows: Vec<&str> = text
             .lines()
             .skip_while(|line| *line != "  By model:")
@@ -344,7 +559,7 @@ mod tests {
             rows,
             [
                 "    deepseek-4.7-build: 124,456 Tokens · $0.0020",
-                "    deepseek-4: 110 Tokens",
+                "    deepseek-4: 110 Tokens · $0.0002 (estimate)",
             ],
             "{text}"
         );
@@ -352,15 +567,15 @@ mod tests {
     #[test]
     fn session_usage_block_absent_cost_is_unknown_not_free() {
         let usage = PromptUsage {
-            totals: model_row(100, 10, None),
+            totals: model_row(0, 0, None),
             ..Default::default()
         };
-        let text = session_usage_block_text(&usage);
-        insta::assert_snapshot!("session_usage_block_absent_cost", text);
-        assert!(!text.contains("$0"), "{text}");
+        let text = session_usage_block_text(&usage, &PricingTable::default(), None);
+        assert!(text.contains("not available (not reported)"), "{text}");
+        assert!(!text.contains("$0.0000"), "{text}");
     }
     #[test]
-    fn session_usage_block_flags_partial_and_incomplete() {
+    fn session_usage_block_estimates_partial_cost_and_flags_incomplete() {
         let mut totals = model_row(100, 10, None);
         totals.cost_is_partial = true;
         let usage = PromptUsage {
@@ -368,8 +583,8 @@ mod tests {
             usage_is_incomplete: true,
             ..Default::default()
         };
-        let text = session_usage_block_text(&usage);
-        assert!(text.contains("not reported for some calls"), "{text}");
+        let text = session_usage_block_text(&usage, &PricingTable::default(), None);
+        assert!(text.contains("(estimate)"), "{text}");
         assert!(text.contains("usage is incomplete"), "{text}");
     }
     #[test]

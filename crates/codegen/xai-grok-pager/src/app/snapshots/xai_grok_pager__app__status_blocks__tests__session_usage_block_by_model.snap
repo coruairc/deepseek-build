@@ -7,8 +7,8 @@ Session usage (since start or last resume):
   Output tokens:  15 (0 reasoning)
   Total tokens:   165
   Model calls:    1 · API time: 1.0s
-  Cost:           not available (not reported)
+  Cost:           $0.0003 (estimate)
 
   By model:
-    grok-build: 110 Tokens
-    deepseek-4: 55 Tokens
+    grok-build: 110 Tokens · $0.0002 (estimate)
+    deepseek-4: 55 Tokens · $0.0001 (estimate)

@@ -1558,13 +1558,27 @@ pub(super) fn dispatch_task_result(result: TaskResult, app: &mut AppView) -> Vec
             session_id,
             usage,
             nonce,
-        } => handle_session_usage_result(
-            app,
-            agent_id,
-            &session_id,
-            crate::app::status_blocks::session_usage_block_text(&usage),
-            nonce,
-        ),
+        } => {
+            // Same table the status line builds from `[ui.status_line.pricing]`; the session model is
+            // only needed for totals-only payloads with no per-model rows to price from.
+            let pricing = app.current_ui.status_line.pricing();
+            let model_id = app
+                .agents
+                .get(&agent_id)
+                .and_then(|agent| agent.status_context.as_ref())
+                .and_then(|ctx| ctx.model.id.clone());
+            handle_session_usage_result(
+                app,
+                agent_id,
+                &session_id,
+                crate::app::status_blocks::session_usage_block_text(
+                    &usage,
+                    &pricing,
+                    model_id.as_deref(),
+                ),
+                nonce,
+            )
+        }
         TaskResult::SessionUsageFailed {
             agent_id,
             session_id,
