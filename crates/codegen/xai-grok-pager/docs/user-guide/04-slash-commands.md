@@ -397,6 +397,16 @@ Open the agents modal to view and manage agent definitions, set the default, and
 
 Not the live multi-session [Agent Dashboard](23-dashboard.md) (`/dashboard` / `Ctrl+\`).
 
+### `/agent`
+
+Switch the agent running this session, keeping the conversation. Bare `/agent` opens a picker of every discovered agent (built-in, user, project) with the active one marked and the cursor on it:
+
+- `j`/`k` or `↑`/`↓` move, `Enter` or `s` activates the highlighted agent, `/` filters, `Esc` closes without switching.
+
+`/agent <name>` switches straight to that agent; an unknown name lists the valid names. The same switch is available in the agents modal with `u` ("Switch to this agent").
+
+A switch restarts the TUI into the resumed session under the new agent — a brief flicker — and history is preserved. It is refused while a turn is running or cancelling; finish or cancel the turn first. Headless (`-p`) keeps `--agent` instead.
+
 ### `/personas`
 
 Create, edit, and delete personas. A subagent can apply a persona to shape how it behaves.

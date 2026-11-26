@@ -84,7 +84,9 @@ cost lever. Headless: `dsb -p "..." --output-format json` adds usage and
   permission modes, allow/deny rules, and a plan mode.
 - Persists sessions; `/resume`, `-c`, or `-r <id>` reopens one.
 - Connects user-configured MCP servers over stdio or HTTP.
-- Loads project rules from `AGENTS.md`, plus skills, hooks, and custom agents.
+- Loads project rules from `AGENTS.md`, plus skills, hooks, and custom agents;
+  switch agents in-session with `/agent` (history preserved — the TUI relaunches
+  into the resumed session).
 - Sandbox is opt-in (`--sandbox workspace`, `read-only`, or `strict`),
   kernel-enforced on Linux (Landlock) and macOS (Seatbelt); off by default.
 - No telemetry or auto-update. The only egress is the model provider,

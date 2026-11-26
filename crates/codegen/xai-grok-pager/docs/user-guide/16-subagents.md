@@ -23,6 +23,14 @@ An agent defines the session itself. A persona shapes how a subagent behaves wit
 
 Manage both in the agents modal. Open it with `/config-agents` (alias `/agents`), or open the Personas tab directly with `/personas`. The modal has two tabs: **Agents** and **Personas**.
 
+### Switching the session's agent
+
+The Agents tab lists built-in, user, project, and bundled definitions. `u` switches the current session to the highlighted agent ("Switch to this agent"); `Enter`/`o` opens its definition, `s` sets the default for new sessions, `t` enables/disables it, `/` filters, and `Esc` closes.
+
+`/agent` alone opens the same list as a picker: `j`/`k` or `↑`/`↓` move, `Enter` or `s` switches, `/` filters, and `Esc` closes. `/agent <name>` switches directly.
+
+A switch does not rebuild the agent in place: the TUI quits, restores the terminal, and relaunches into the same session with `--resume <id> --agent <name>` (a brief flicker). Conversation history is preserved. The switch is refused while a turn is running or cancelling; finish or cancel the turn first. Headless (`-p`) keeps `--agent` instead of `/agent`.
+
 ---
 
 ## Disabling Subagents
