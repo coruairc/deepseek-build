@@ -320,7 +320,7 @@ pub(super) fn default_actions(
         ActionDef {
             id: ActionId::ExpandAllThinking,
             label: "expand/collapse thinking",
-            description: "Toggle all thinking blocks",
+            description: "Toggle the selected thought, or all thinking blocks",
             default_key: key!('e', CONTROL),
             alt_keys: vec![],
             category: Category::ConversationAction,
@@ -329,7 +329,7 @@ pub(super) fn default_actions(
             hint_key_display: None,
             requires_confirmation: false,
             long_help: Some(
-                "Shows or hides the agent's reasoning (thinking) blocks across the whole transcript in one keypress.\nReveal how the agent reached an answer, or hide reasoning to focus on results.\nSeparate from E, which folds every entry regardless of type.",
+                "Expands or collapses the thought in front of you, leaving the rest of the transcript alone.\nWith no entry selected it toggles every thinking block in one keypress, which also sets the fold mode new thoughts adopt.\nSeparate from E, which folds every entry regardless of type.",
             ),
         },
         ActionDef {

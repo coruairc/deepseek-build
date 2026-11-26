@@ -1,7 +1,7 @@
-//! `/think`: toggle the agent's reasoning (thinking) blocks on or off across the transcript.
+//! `/think`: show or hide the agent's reasoning (thinking) blocks across the transcript.
 //!
-//! This is the slash-command spelling of `Ctrl+E`. It flips the same process-wide appearance
-//! toggle, so the two stay in sync and a session can hide reasoning without a config edit.
+//! This is the visibility switch, separate from the `Ctrl+E` fold shortcut: it flips the
+//! process-wide appearance toggle, so a session can hide reasoning without a config edit.
 //! The persisted default is `[ui].show_thinking_blocks`.
 
 use crate::app::actions::Action;

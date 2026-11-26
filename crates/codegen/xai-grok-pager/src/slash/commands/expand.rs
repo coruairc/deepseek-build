@@ -3,7 +3,8 @@
 //! In minimal mode (`grok --minimal`) finalized blocks are printed once into the terminal's native scrollback.
 //! They print with reasoning collapsed and large tool output truncated.
 //! Committed terminal text can't be mutated, so "expanding" a block re-prints it in full below the conversation.
-//! `/expand` and the `Ctrl+E` chord do the same thing; both walk backwards through the most-recently committed folded blocks.
+//! `/expand` walks backwards through the most-recently committed folded blocks. It is minimal-only: fullscreen
+//! has an interactive scrollback instead, where `Ctrl+E` toggles thinking folds and `→` expands the selected block.
 
 use crate::app::actions::Action;
 use crate::slash::command::{CommandExecCtx, CommandResult, SlashCommand, slash_meta};
