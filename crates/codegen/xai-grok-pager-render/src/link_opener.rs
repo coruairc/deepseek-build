@@ -300,6 +300,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(not(target_os = "windows"))] // Windows reveals via reveal_in_explorer instead
     fn open_path_command_passes_path_as_a_single_arg() {
         // Path with spaces must be one argument, never shell-interpolated.
         let path = std::path::Path::new("/tmp/grok session/image 1.jpg");
