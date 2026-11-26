@@ -1,0 +1,23 @@
+{
+  "item": "image-run-blocked",
+  "requirements": [
+    "REL-05"
+  ],
+  "date": "2026-11-26T06:51:38Z",
+  "host": "Linux/x86_64",
+  "command": "docker info (the pull and run in commands.txt were not executed: no daemon)",
+  "steps": [
+    {
+      "name": "docker info: the daemon is absent, so nothing could be pulled or run",
+      "ok": false,
+      "detail": "exit 1: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/04-distribution-proof/image-run-blocked/commands.txt",
+      "sha256": "93a2849d5198fd8eb3bf70d89dc6144409aed48025e5990b30b895ec0c5c6221"
+    }
+  ],
+  "result": "skipped"
+}

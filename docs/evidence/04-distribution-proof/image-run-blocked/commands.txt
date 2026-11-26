@@ -1,0 +1,14 @@
+# REL-05 — the in-image headless run, digest-pinned to the published proof image.
+#
+# These commands did NOT run on this build host: the Docker CLI is present but
+# the daemon is not (docker info exits 1; see ../image-registry/docker-info.log).
+# They are recorded so a host with a working container runtime can run them
+# unchanged. Index digest: sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be
+#
+# 1. Pull the exact index digest (the tag is not enough: it can be moved).
+docker pull ghcr.io/coruairc/deepseek-build@sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be
+# 2. Cheapest identity check. Expect: deepseek-build 0.1.0-proof1 (b14d28eb2bc7)
+docker run --rm ghcr.io/coruairc/deepseek-build@sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be --version
+# 3. A real headless, tool-executing turn with the sandbox on. Expect: exit 0, a completed
+#    shell tool call whose output contains in-image-ok, and estimated_cost_usd in the JSON.
+docker run --rm --user "$(id -u):$(id -g)" -e DEEPSEEK_API_KEY -e DEEPSEEK_BUILD_HOME=/home/app/.deepseek-build -v "$PWD":/work -w /work -v "$HOME/.deepseek-build":/home/app/.deepseek-build ghcr.io/coruairc/deepseek-build@sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be -p "Run exactly one shell command: printf 'in-image-ok\n' and report its stdout." --output-format json --permission-mode auto --sandbox devbox

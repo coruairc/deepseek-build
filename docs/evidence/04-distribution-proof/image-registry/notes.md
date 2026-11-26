@@ -97,6 +97,16 @@ only a stable tag creates `:latest`.
 | `report.json` | the item record: 8 assertion steps, `result: ok` |
 | `*.log` | per-step assertion output (normalized) |
 
+## README
+
+`README.md` → `## Container` carries this item's facts: the index digest and its content
+type, both platform digests, the tag set with **no `:latest`**, the observed `public`
+visibility, the headless-only run recipe (`-p`, `--output-format json`,
+`--permission-mode auto`, `--sandbox devbox`), the two mounts (`/work` and
+`/home/app/.deepseek-build`), and the explicit statement that the pull/run was not executed
+on this host (linking `../image-run-blocked/`). `python3 scripts/check-readme-distribution.py
+--stage container --digest <index> --visibility public` is 7/7 PASS.
+
 ## Re-run
 
 ```sh

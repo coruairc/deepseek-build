@@ -162,50 +162,70 @@ xattr -d com.apple.quarantine /path/to/deepseek-build
 Official releases also publish a multi-arch (linux/amd64, linux/arm64) image to
 GitHub Container Registry. It is **not affiliated with DeepSeek**.
 
-> **Not yet built or published.** The container job in the release workflow runs
-> only on a tag push and needs every build target to succeed; on `v0.0.1-rc4` the
-> macOS build timed out, so the job was skipped and there is no GHCR image to
-> pull. The `docker pull` commands below cannot work yet (checked 2026-10-24).
-> The production image is assembled from a staged context containing the release
-> tarball's binary as `deepseek-build-amd64`/`deepseek-build-arm64` plus the
-> license files; see `docker/Dockerfile` and the container step in
-> `.github/workflows/release.yml`. To smoke-test locally with a binary you built,
-> use `docker/Dockerfile.localtest` (also not yet exercised — see
-> [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)).
+Release `v0.1.0-proof1` published the image, and the registry was read from this
+host on 2026-11-26 (a registry read, not a pull):
 
-Once a release exists:
+| Fact | Value |
+|------|-------|
+| Index | `sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be` (`application/vnd.oci.image.index.v1+json`) |
+| linux/amd64 | `sha256:1d216b609ed9c646cb56a5e6294bc3de5276b2823d2a90a0252b49d90b99886e` |
+| linux/arm64 | `sha256:25dc0d256765ff129b14749732f5d158b1757a540828c643410a3f142dcb6f58` |
+| Tags | `0.1.0-proof1`, `v0.1.0-proof1` — there is **no `:latest`** |
+| Visibility | public: an anonymous pull token read the manifest |
+| Config | `WorkingDir=/work`, `User=1000:1000`, `Entrypoint=["deepseek-build"]`, no API key variable |
+
+Pull the digest you can verify rather than a tag that can move:
 
 ```sh
-# Pull (replace <owner> with the GitHub account that published it)
-docker pull ghcr.io/<owner>/deepseek-build:latest
+docker pull ghcr.io/coruairc/deepseek-build@sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be
+```
 
-# Interactive session in a repo, key from your environment
-docker run -it --rm \
+The container contract is **headless-only**: one `-p` prompt per invocation.
+(The binary also carries the TUI, but no interactive container recipe is
+provided or tested; the image is built to be driven headless.) Use `-p`, add
+`--output-format json` for usage and `estimated_cost_usd`,
+`--permission-mode auto` so a headless turn may act without a prompt, and
+`--sandbox devbox` to keep the sandbox on:
+
+```sh
+export DEEPSEEK_API_KEY=sk-...
+docker run --rm --user "$(id -u):$(id -g)" \
   -e DEEPSEEK_API_KEY \
-  -v "$PWD":/work \
-  ghcr.io/<owner>/deepseek-build:latest
+  -e DEEPSEEK_BUILD_HOME=/home/app/.deepseek-build \
+  -v "$PWD":/work -w /work \
+  -v "$HOME/.deepseek-build":/home/app/.deepseek-build \
+  ghcr.io/coruairc/deepseek-build@sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be \
+  -p "Run exactly one shell command: printf 'in-image-ok\n' and report its stdout." \
+  --output-format json --permission-mode auto --sandbox devbox
 ```
 
-Host-owned files: the image runs as uid 1000; pass your own ids so files written
-into the mount stay yours.
+Two mounts and one working directory:
+
+| Mount | Why |
+|-------|-----|
+| `-v "$PWD":/work` with `-w /work` | the repository the agent reads and edits; the image's `WORKDIR` is `/work` |
+| `-v "$HOME/.deepseek-build":/home/app/.deepseek-build` | sessions, logs and config; the image's user is uid 1000 with home `/home/app`. The host directory must be writable by the uid you pass to `--user` |
+
+`--version` is the cheapest check:
 
 ```sh
-docker run -it --rm --user "$(id -u):$(id -g)" \
-  -e DEEPSEEK_API_KEY -v "$PWD":/work \
-  ghcr.io/<owner>/deepseek-build:latest
+docker run --rm ghcr.io/coruairc/deepseek-build@sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be --version
+# deepseek-build 0.1.0-proof1 (b14d28eb2bc7)
 ```
 
-`--version` / headless:
-
-```sh
-docker run --rm ghcr.io/<owner>/deepseek-build:latest --version
-docker run --rm -e DEEPSEEK_API_KEY ghcr.io/<owner>/deepseek-build:latest -p "say hi"
-```
+**The image was not executed on the build host.** The Docker CLI is present but
+its daemon is not (`Cannot connect to the Docker daemon at
+unix:///var/run/docker.sock`), so the pull and the in-image turn above were **not
+run** here: the registry facts are proven, the run is deferred with its exact
+commands and expected output in
+[`docs/evidence/04-distribution-proof/image-run-blocked/`](docs/evidence/04-distribution-proof/image-run-blocked/).
+Treat that turn as a command to run later, not as something this project has
+observed.
 
 The image is built from the release tarballs (`docker/Dockerfile`, per-arch
 binary via `TARGETARCH`), contains no API key, and ships the license files in
-`/usr/share/doc/deepseek-build/`. Package visibility depends on the GHCR package
-settings (packages default to private for personal accounts).
+`/usr/share/doc/deepseek-build/`. To smoke-test locally with a binary you built,
+use `docker/Dockerfile.localtest`.
 
 ## Security & network
 
