@@ -1,0 +1,1 @@
+config {'WorkingDir': '/work', 'User': '1000:1000', 'Entrypoint': ['deepseek-build'], 'env_names': ['PATH', 'DEBIAN_FRONTEND']} blob sha256:a3f442dd7160476285a75f6c893c85a93958fd010664112dccca898d062b17f7 4091

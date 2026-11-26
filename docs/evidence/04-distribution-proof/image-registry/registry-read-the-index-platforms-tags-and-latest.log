@@ -1,0 +1,9 @@
+PASS  index digest is sha256 and equals the CI digest
+PASS  index content type is an OCI index or Docker manifest list
+PASS  index carries exactly linux/amd64 + linux/arm64
+PASS  each platform manifest carries a digest and a positive size
+PASS  tag set names the version tag and never 'latest'
+PASS  latest matches the pre-push baseline
+PASS  latest never resolves to this build's index
+PASS  image config matches the Dockerfile contract
+registry: OK transport=anonymous-http visibility=public digest=sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be platforms=['linux/amd64', 'linux/arm64'] tags=['0.1.0-proof1', 'v0.1.0-proof1'] latest=absent config_blob=read

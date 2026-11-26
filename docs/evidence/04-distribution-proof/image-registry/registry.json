@@ -1,0 +1,119 @@
+{
+  "checked_at": "2026-11-26T06:49:59Z",
+  "tag": "v0.1.0-proof1",
+  "version": "0.1.0-proof1",
+  "image": "ghcr.io/coruairc/deepseek-build",
+  "transport": "anonymous-http",
+  "visibility": "public",
+  "index_digest": "sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be",
+  "content_type": "application/vnd.oci.image.index.v1+json",
+  "manifests": [
+    {
+      "platform": "linux/amd64",
+      "digest": "sha256:1d216b609ed9c646cb56a5e6294bc3de5276b2823d2a90a0252b49d90b99886e",
+      "size": 1810,
+      "media_type": "application/vnd.oci.image.manifest.v1+json"
+    },
+    {
+      "platform": "linux/arm64",
+      "digest": "sha256:25dc0d256765ff129b14749732f5d158b1757a540828c643410a3f142dcb6f58",
+      "size": 1810,
+      "media_type": "application/vnd.oci.image.manifest.v1+json"
+    }
+  ],
+  "attestation_manifests": [
+    {
+      "platform": "unknown/unknown",
+      "digest": "sha256:2ca7c01fbfc2a33ac532632997e32254df269d88f27c08e6c7e1adcad84b5aa2",
+      "size": 838,
+      "media_type": "application/vnd.oci.image.manifest.v1+json",
+      "reference_digest": "sha256:1d216b609ed9c646cb56a5e6294bc3de5276b2823d2a90a0252b49d90b99886e",
+      "reference_type": "attestation-manifest"
+    },
+    {
+      "platform": "unknown/unknown",
+      "digest": "sha256:b0ca3b1d32738af71312a7d9fdec4a4150ea1f0620d1464aafa739c2f2ed19df",
+      "size": 838,
+      "media_type": "application/vnd.oci.image.manifest.v1+json",
+      "reference_digest": "sha256:25dc0d256765ff129b14749732f5d158b1757a540828c643410a3f142dcb6f58",
+      "reference_type": "attestation-manifest"
+    }
+  ],
+  "tags_status": 200,
+  "tags": [
+    "0.1.0-proof1",
+    "v0.1.0-proof1"
+  ],
+  "latest_status": "absent",
+  "latest_digest": null,
+  "config_blob": "read",
+  "config": {
+    "digest": "sha256:a3f442dd7160476285a75f6c893c85a93958fd010664112dccca898d062b17f7",
+    "size": 4091,
+    "User": "1000:1000",
+    "WorkingDir": "/work",
+    "Entrypoint": [
+      "deepseek-build"
+    ],
+    "env_names": [
+      "PATH",
+      "DEBIAN_FRONTEND"
+    ]
+  },
+  "baseline": {
+    "latest_status": "absent",
+    "latest_digest": null
+  },
+  "transports_tried": [
+    {
+      "transport": "anonymous-http",
+      "manifest_status": 200
+    },
+    {
+      "transport": "anonymous-http",
+      "latest_status": 404
+    }
+  ],
+  "assertions": [
+    {
+      "assertion": "index digest is sha256 and equals the CI digest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "assertion": "index content type is an OCI index or Docker manifest list",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "assertion": "index carries exactly linux/amd64 + linux/arm64",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "assertion": "each platform manifest carries a digest and a positive size",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "assertion": "tag set names the version tag and never 'latest'",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "assertion": "latest matches the pre-push baseline",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "assertion": "latest never resolves to this build's index",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "assertion": "image config matches the Dockerfile contract",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

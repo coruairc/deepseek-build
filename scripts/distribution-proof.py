@@ -40,7 +40,10 @@ Subcommands
                                     poll the push run, summarize jobs + container log
   release --tag TAG --dir DIR --out FILE
                                     download, checksum, unpack and assert the release
-  registry --tag TAG [--out FILE]   resolved in plan 04-04; exits 2 here
+  registry --tag TAG --baseline FILE --expect-digest SHA256 --out FILE
+                                    registry-side proof: index digest, platform
+                                    manifests, tag set, :latest vs the baseline,
+                                    and the image config blob when readable
 
 Transport summary:
   gh           — release view/download/list, run view/log, `api -i` status probes
@@ -119,6 +122,18 @@ LATEST_LINE_RE = re.compile(r"Pre-release .*:latest unchanged")
 DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 VERSION_OUTPUT_RE = re.compile(r"^deepseek-build [^ ]+ \([0-9a-f]{7,40}\)$")
 PLATFORM_RE = re.compile(r"^(linux/amd64|linux/arm64)$")
+
+# An OCI index / Docker manifest list is the only shape a multi-arch tag may
+# resolve to. buildx also stores one attestation manifest per platform
+# (platform `unknown/unknown`, annotated
+# `vnd.docker.reference.type=attestation-manifest`); those descriptors are
+# recorded separately and are never counted as platforms.
+INDEX_MEDIA_TYPES = (
+    "application/vnd.oci.image.index.v1+json",
+    "application/vnd.docker.distribution.manifest.list.v2+json",
+)
+REQUIRED_PLATFORMS = ("linux/amd64", "linux/arm64")
+ATTESTATION_TYPE = "attestation-manifest"
 
 
 class ProofError(Exception):
@@ -380,30 +395,113 @@ def assert_run(run):
     )
 
 
-def assert_registry(registry, expected_digest):
-    digest = registry.get("digest") or ""
+def assert_index_digest(registry, expected_digest):
+    digest = registry.get("index_digest") or ""
     require(
         DIGEST_RE.fullmatch(digest) is not None,
         f"registry reports no index digest (got {digest!r})",
     )
     require(
         digest == expected_digest,
-        f"registry digest {digest} disagrees with the expected CI digest {expected_digest}",
+        f"registry index digest {digest} disagrees with the expected CI digest {expected_digest}",
     )
-    platforms = {
-        manifest.get("platform")
-        for manifest in registry.get("manifests", [])
-        if PLATFORM_RE.fullmatch(manifest.get("platform") or "") is not None
-    }
+
+
+def assert_index_media_type(registry):
+    media_type = registry.get("content_type") or ""
     require(
-        platforms == {"linux/amd64", "linux/arm64"},
-        f"registry index platforms are {sorted(platforms)}; expected linux/amd64 + linux/arm64",
+        media_type in INDEX_MEDIA_TYPES,
+        f"registry index content type is {media_type!r}; expected one of {list(INDEX_MEDIA_TYPES)}",
     )
+
+
+def assert_platform_set(registry):
+    manifests = registry.get("manifests") or []
+    platforms = [manifest.get("platform") for manifest in manifests]
+    require(
+        len(platforms) == len(set(platforms)),
+        f"registry platform manifests carry duplicate platforms: {platforms}",
+    )
+    require(
+        set(platforms) == set(REQUIRED_PLATFORMS),
+        f"registry index platforms are {sorted(p for p in platforms if p)}; "
+        f"expected exactly {' + '.join(REQUIRED_PLATFORMS)}",
+    )
+    require(
+        len(manifests) == len(REQUIRED_PLATFORMS),
+        f"registry index has {len(manifests)} platform manifests; "
+        f"expected exactly {len(REQUIRED_PLATFORMS)}",
+    )
+
+
+def assert_platform_descriptors(registry):
+    problems = []
+    for manifest in registry.get("manifests") or []:
+        digest = manifest.get("digest") or ""
+        if DIGEST_RE.fullmatch(digest) is None:
+            problems.append(f"{manifest.get('platform')!r} has no sha256 digest ({digest!r})")
+        size = manifest.get("size")
+        if not isinstance(size, int) or size <= 0:
+            problems.append(f"{manifest.get('platform')!r} has no positive size ({size!r})")
+    require(not problems, "; ".join(problems))
+
+
+def assert_tag_set(registry):
     tags = registry.get("tags") or []
+    require(bool(tags), "registry tag list is empty")
     require("latest" not in tags, "registry tags contain 'latest'")
+    tag = registry.get("tag")
     require(
-        registry.get("tag") in tags,
-        f"registry tag list {tags} does not contain {registry.get('tag')!r}",
+        tag in tags,
+        f"registry tag list {tags} does not contain {tag!r}",
+    )
+    version = registry.get("version")
+    if version:
+        require(
+            version in tags,
+            f"registry tag list {tags} does not contain the version tag {version!r}",
+        )
+
+
+def assert_registry(registry, expected_digest):
+    """The composite index assertion: digest, media type, platforms, tags."""
+    assert_index_digest(registry, expected_digest)
+    assert_index_media_type(registry)
+    assert_platform_set(registry)
+    assert_platform_descriptors(registry)
+    assert_tag_set(registry)
+
+
+def assert_latest_not_index(registry):
+    if registry.get("latest_status") != "present":
+        return
+    require(
+        registry.get("latest_digest") != registry.get("index_digest"),
+        "latest resolves to this build's index digest; a pre-release must not move :latest",
+    )
+
+
+def assert_image_config(registry):
+    """Assert the config blob when it was read; a recorded absence is not a pass
+    for the values themselves, but it is the honest state this host can reach."""
+    config_blob = registry.get("config_blob")
+    require(
+        config_blob in ("read", "unavailable"),
+        f"config_blob is {config_blob!r}; expected 'read' or 'unavailable'",
+    )
+    if config_blob == "unavailable":
+        return
+    config = registry.get("config") or {}
+    require(config.get("WorkingDir") == "/work", f"image WorkingDir is {config.get('WorkingDir')!r}, not '/work'")
+    require(config.get("User") == "1000:1000", f"image User is {config.get('User')!r}, not '1000:1000'")
+    require(
+        config.get("Entrypoint") == ["deepseek-build"],
+        f"image Entrypoint is {config.get('Entrypoint')!r}, not ['deepseek-build']",
+    )
+    env_names = config.get("env_names") or []
+    require(
+        not any("API_KEY" in name for name in env_names),
+        f"image config carries an API key variable name: {sorted(n for n in env_names if 'API_KEY' in n)}",
     )
 
 
@@ -519,14 +617,45 @@ def _fixture_run():
 
 def _fixture_registry():
     return {
-        "tag": VALID_VERSION,
-        "digest": "sha256:" + "3" * 64,
-        "media_type": "application/vnd.oci.image.index.v1+json",
+        "tag": VALID_TAG,
+        "version": VALID_VERSION,
+        "index_digest": "sha256:" + "3" * 64,
+        "content_type": "application/vnd.oci.image.index.v1+json",
         "manifests": [
-            {"digest": "sha256:" + "4" * 64, "platform": "linux/amd64"},
-            {"digest": "sha256:" + "5" * 64, "platform": "linux/arm64"},
+            {
+                "platform": "linux/amd64",
+                "digest": "sha256:" + "4" * 64,
+                "size": 1810,
+                "media_type": "application/vnd.oci.image.manifest.v1+json",
+            },
+            {
+                "platform": "linux/arm64",
+                "digest": "sha256:" + "5" * 64,
+                "size": 1810,
+                "media_type": "application/vnd.oci.image.manifest.v1+json",
+            },
+        ],
+        "attestation_manifests": [
+            {
+                "platform": "unknown/unknown",
+                "digest": "sha256:" + "a" * 64,
+                "size": 838,
+                "media_type": "application/vnd.oci.image.manifest.v1+json",
+                "reference_digest": "sha256:" + "4" * 64,
+                "reference_type": ATTESTATION_TYPE,
+            }
         ],
         "tags": [VALID_VERSION, VALID_TAG],
+        "tags_status": 200,
+        "latest_status": "absent",
+        "latest_digest": None,
+        "config_blob": "read",
+        "config": {
+            "User": "1000:1000",
+            "WorkingDir": "/work",
+            "Entrypoint": ["deepseek-build"],
+            "env_names": ["PATH", "DEBIAN_FRONTEND"],
+        },
     }
 
 
@@ -589,6 +718,12 @@ def _fixture_cases():
          lambda: assert_run(run), "pass", None),
         ("registry: a two-platform index is accepted",
          lambda: assert_registry(registry, "sha256:" + "3" * 64), "pass", None),
+        ("registry: attestation manifests are not counted as platforms",
+         lambda: assert_platform_set(registry), "pass", None),
+        ("config: the image contract (uid/workdir/entrypoint) is accepted",
+         lambda: assert_image_config(registry), "pass", None),
+        ("config: an unavailable blob is accepted as recorded-unavailable",
+         lambda: assert_image_config(_mutate(registry, "config_blob", "unavailable")), "pass", None),
         ("baseline: an absent latest that stays absent is accepted",
          lambda: assert_no_latest_movement(before_absent, after_absent), "pass", None),
         ("baseline: a present latest that does not move is accepted",
@@ -655,14 +790,44 @@ def _fixture_cases():
          lambda: assert_registry(_mutate(registry, "manifests", registry["manifests"][:1]),
                                  "sha256:" + "3" * 64),
          "fail", "platform"),
+        ("registry: a third real platform is rejected",
+         lambda: assert_registry(
+             _mutate(registry, "manifests",
+                     registry["manifests"] + [{"platform": "linux/arm/v7",
+                                               "digest": "sha256:" + "b" * 64,
+                                               "size": 1810}]),
+             "sha256:" + "3" * 64),
+         "fail", "platform"),
+        ("registry: a zero-size platform manifest is rejected",
+         lambda: assert_platform_descriptors(_mutate(registry, "manifests.0.size", 0)),
+         "fail", "size"),
+        ("registry: a non-index content type is rejected",
+         lambda: assert_index_media_type(
+             _mutate(registry, "content_type", "application/vnd.oci.image.manifest.v1+json")),
+         "fail", "content type"),
         ("registry: a 'latest' tag is rejected",
          lambda: assert_registry(_mutate(registry, "tags", registry["tags"] + ["latest"]),
                                  "sha256:" + "3" * 64),
          "fail", "latest"),
         ("registry: a digest disagreeing with the CI digest is rejected",
-         lambda: assert_registry(_mutate(registry, "digest", "sha256:" + "9" * 64),
+         lambda: assert_registry(_mutate(registry, "index_digest", "sha256:" + "9" * 64),
                                  "sha256:" + "3" * 64),
          "fail", "expected CI digest"),
+        ("registry: latest equal to this build's index is rejected",
+         lambda: assert_latest_not_index(
+             _mutate(_mutate(registry, "latest_status", "present"),
+                     "latest_digest", registry["index_digest"])),
+         "fail", "latest resolves"),
+        ("config: a root user is rejected",
+         lambda: assert_image_config(_mutate(registry, "config.User", "0:0")),
+         "fail", "User"),
+        ("config: a wrong working directory is rejected",
+         lambda: assert_image_config(_mutate(registry, "config.WorkingDir", "/")),
+         "fail", "WorkingDir"),
+        ("config: an API_KEY env name is rejected",
+         lambda: assert_image_config(
+             _mutate(registry, "config.env_names", ["PATH", "DEEPSEEK_API_KEY"])),
+         "fail", "API key"),
         ("baseline: a moved latest is rejected",
          lambda: assert_no_latest_movement(
              before_present, _mutate(after_present, "latest_digest", "sha256:" + "a" * 64)),
@@ -829,6 +994,77 @@ def registry_tags(token=None):
         return exc.code, []
     except urllib.error.URLError:
         return None, []
+
+
+def registry_blob(blob_digest, token=None):
+    """GET one blob body; None when it cannot be read."""
+    if not blob_digest:
+        return None
+    token = token or registry_token()
+    request = urllib.request.Request(f"https://{REGISTRY_HOST}/v2/{OWNER}/deepseek-build/blobs/{blob_digest}")
+    request.add_header("Authorization", f"Bearer {token}")
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return response.read()
+    except (urllib.error.HTTPError, urllib.error.URLError):
+        return None
+
+
+def split_index_descriptors(manifests):
+    """Split an index's descriptors into platform manifests and attestations.
+
+    buildx writes one `unknown/unknown` attestation manifest per platform,
+    annotated `vnd.docker.reference.type=attestation-manifest`. Those are not
+    runnable platforms and must never be counted as one.
+    """
+    platform_manifests = []
+    attestations = []
+    for descriptor in manifests:
+        platform = descriptor.get("platform") or {}
+        name = f"{platform.get('os', '')}/{platform.get('architecture', '')}".strip("/")
+        annotations = descriptor.get("annotations") or {}
+        entry = {
+            "platform": name,
+            "digest": descriptor.get("digest"),
+            "size": descriptor.get("size"),
+            "media_type": descriptor.get("mediaType"),
+        }
+        if annotations.get("vnd.docker.reference.type") == ATTESTATION_TYPE:
+            entry["reference_digest"] = annotations.get("vnd.docker.reference.digest")
+            entry["reference_type"] = annotations.get("vnd.docker.reference.type")
+            attestations.append(entry)
+        else:
+            platform_manifests.append(entry)
+    return platform_manifests, attestations
+
+
+def read_config_blob(platform_manifests, token):
+    """(config-or-None, 'read'|'unavailable') from the amd64 image manifest."""
+    amd64 = next((m for m in platform_manifests if m.get("platform") == "linux/amd64"), None)
+    if amd64 is None:
+        return None, "unavailable"
+    manifest = registry_manifest(amd64["digest"], token)
+    if manifest["status"] != 200 or not manifest["json"]:
+        return None, "unavailable"
+    descriptor = manifest["json"].get("config") or {}
+    body = registry_blob(descriptor.get("digest"), token)
+    if body is None:
+        return None, "unavailable"
+    try:
+        parsed = json.loads(body).get("config") or {}
+    except json.JSONDecodeError:
+        return None, "unavailable"
+    return (
+        {
+            "digest": descriptor.get("digest"),
+            "size": descriptor.get("size"),
+            "User": parsed.get("User"),
+            "WorkingDir": parsed.get("WorkingDir"),
+            "Entrypoint": parsed.get("Entrypoint"),
+            "env_names": [item.split("=", 1)[0] for item in (parsed.get("Env") or [])],
+        },
+        "read",
+    )
 
 
 def registry_snapshot():
@@ -1202,13 +1438,210 @@ def cmd_release(args):
     return 0
 
 
-def cmd_registry(_args):
-    print(
-        "registry: not implemented in 04-01 — the full registry-side proof "
-        "(anonymous pull, index/platform digests, :latest absence) lands in 04-04",
-        file=sys.stderr,
+def _payload_skeleton(tag, baseline):
+    return {
+        "checked_at": now_utc(),
+        "tag": tag,
+        "version": version_of(tag),
+        "image": IMAGE,
+        "transport": None,
+        "visibility": "unknown",
+        "index_digest": None,
+        "content_type": None,
+        "manifests": [],
+        "attestation_manifests": [],
+        "tags_status": None,
+        "tags": [],
+        "latest_status": "unknown",
+        "latest_digest": None,
+        "config_blob": "unavailable",
+        "config": None,
+        "baseline": {
+            "latest_status": baseline.get("latest_status"),
+            "latest_digest": baseline.get("latest_digest"),
+        },
+        "transports_tried": [],
+    }
+
+
+def registry_via_anonymous(tag, baseline):
+    """Anonymous ghcr.io token -> manifest index, tags, :latest, config blob.
+
+    Pure HTTPS with a pull-scoped token; no Docker daemon and no Docker CLI.
+    A 200 here is what makes the package `public`.
+    """
+    payload = _payload_skeleton(tag, baseline)
+    payload["transport"] = "anonymous-http"
+    try:
+        token = registry_token()
+    except (urllib.error.URLError, OSError) as exc:
+        payload["transports_tried"].append(
+            {"transport": "anonymous-http", "error": f"token endpoint: {type(exc).__name__}"}
+        )
+        return None
+    manifest = registry_manifest(tag, token)
+    payload["transports_tried"].append(
+        {"transport": "anonymous-http", "manifest_status": manifest["status"]}
     )
-    return 2
+    if manifest["status"] != 200 or not manifest["json"]:
+        return None
+
+    body = manifest["json"]
+    payload["index_digest"] = manifest["digest"]
+    payload["content_type"] = body.get("mediaType")
+    payload["manifests"], payload["attestation_manifests"] = split_index_descriptors(
+        body.get("manifests") or []
+    )
+
+    tags_status, tags = registry_tags(token)
+    payload["tags_status"] = tags_status
+    payload["tags"] = tags
+
+    latest = registry_manifest("latest", token)
+    payload["latest_status"] = "present" if latest["status"] == 200 else "absent"
+    payload["latest_digest"] = latest["digest"] if latest["status"] == 200 else None
+    payload["transports_tried"].append(
+        {"transport": "anonymous-http", "latest_status": latest["status"]}
+    )
+
+    config, config_blob = read_config_blob(payload["manifests"], token)
+    payload["config"] = config
+    payload["config_blob"] = config_blob
+    payload["visibility"] = "public"
+    return payload
+
+
+def registry_via_docker_manifest(tag, baseline):
+    """`docker manifest inspect` — a registry client, never a daemon socket.
+
+    The CLI can read this only when the tag is anonymously pullable or the
+    host already holds a credential, so a success here cannot by itself
+    distinguish public from private: `visibility` stays `unknown` unless the
+    anonymous transport also answered.
+    """
+    docker = shutil.which("docker")
+    payload = _payload_skeleton(tag, baseline)
+    payload["transport"] = "docker-manifest-inspect"
+    if not docker:
+        payload["transports_tried"].append(
+            {"transport": "docker-manifest-inspect", "error": "docker not on PATH"}
+        )
+        return None
+    proc = run_cmd([docker, "manifest", "inspect", f"{IMAGE}:{tag}"], check=False, timeout=120)
+    payload["transports_tried"].append(
+        {"transport": "docker-manifest-inspect", "exit": proc.returncode}
+    )
+    if proc.returncode != 0:
+        return None
+    try:
+        body = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return None
+    payload["content_type"] = body.get("mediaType")
+    payload["manifests"], payload["attestation_manifests"] = split_index_descriptors(
+        body.get("manifests") or []
+    )
+    # This subcommand does not print the index digest or the tag list; the
+    # digest is deliberately left None (an assertion will name it) rather than
+    # guessed from a platform digest.
+    latest = run_cmd([docker, "manifest", "inspect", f"{IMAGE}:latest"], check=False, timeout=120)
+    payload["latest_status"] = "present" if latest.returncode == 0 else "absent"
+    payload["visibility"] = "unknown"
+    return payload
+
+
+def registry_via_gh_packages(tag, baseline):
+    """`gh api /users/<owner>/packages/container/deepseek-build/versions`.
+
+    A credentialed read: when it answers, the package is readable with the
+    caller's token. A 403 is an authorization gap, not a registry result.
+    """
+    payload = _payload_skeleton(tag, baseline)
+    payload["transport"] = "gh-api-packages"
+    proc = run_cmd(
+        ["gh", "api", f"/users/{OWNER}/packages/container/deepseek-build/versions"], check=False
+    )
+    payload["transports_tried"].append({"transport": "gh-api-packages", "exit": proc.returncode})
+    if proc.returncode != 0:
+        return None
+    try:
+        versions = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return None
+    tags = []
+    for version in versions:
+        tags.extend(((version.get("metadata") or {}).get("container") or {}).get("tags") or [])
+    payload["tags"] = sorted(set(tags))
+    payload["visibility"] = "private"
+    return payload
+
+
+REGISTRY_ASSERTIONS = (
+    ("index digest is sha256 and equals the CI digest", lambda p, d: assert_index_digest(p, d)),
+    ("index content type is an OCI index or Docker manifest list", lambda p, d: assert_index_media_type(p)),
+    ("index carries exactly linux/amd64 + linux/arm64", lambda p, d: assert_platform_set(p)),
+    ("each platform manifest carries a digest and a positive size", lambda p, d: assert_platform_descriptors(p)),
+    ("tag set names the version tag and never 'latest'", lambda p, d: assert_tag_set(p)),
+    ("latest matches the pre-push baseline", lambda p, d: assert_no_latest_movement(p["baseline"], p)),
+    ("latest never resolves to this build's index", lambda p, d: assert_latest_not_index(p)),
+    ("image config matches the Dockerfile contract", lambda p, d: assert_image_config(p)),
+)
+
+
+def cmd_registry(args):
+    baseline = json.loads(Path(args.baseline).read_text(encoding="utf-8"))
+    payload = None
+    tried = []
+    for builder in (registry_via_anonymous, registry_via_docker_manifest, registry_via_gh_packages):
+        attempt = builder(args.tag, baseline)
+        if attempt is not None:
+            payload = attempt
+            break
+        tried.append(builder.__name__)
+    if payload is None:
+        payload = _payload_skeleton(args.tag, baseline)
+        payload["blocked"] = "package visibility"
+        payload["transports_tried"].append({"order_exhausted": tried})
+        payload["note"] = (
+            "no transport could read the package; this is an authorization or visibility "
+            "gap, not evidence that the image is missing"
+        )
+        write_json(args.out, payload)
+        print(
+            "registry: BLOCKED: package visibility — no transport could read "
+            f"{IMAGE}:{args.tag}; see {args.out} and notes.md for the unblock",
+            file=sys.stderr,
+        )
+        return 1
+
+    results = []
+    for name, check in REGISTRY_ASSERTIONS:
+        try:
+            check(payload, args.expect_digest)
+        except ProofError as exc:
+            results.append({"assertion": name, "ok": False, "detail": str(exc)})
+        else:
+            results.append({"assertion": name, "ok": True, "detail": ""})
+    payload["assertions"] = results
+    write_json(args.out, payload)
+
+    failures = 0
+    for result in results:
+        if result["ok"]:
+            print(f"PASS  {result['assertion']}")
+        else:
+            failures += 1
+            print(f"FAIL  {result['assertion']}: {result['detail']}")
+    if failures:
+        print(f"registry: FAIL: {failures}/{len(results)} assertion(s) failed", file=sys.stderr)
+        return 1
+    print(
+        f"registry: OK transport={payload['transport']} visibility={payload['visibility']} "
+        f"digest={payload['index_digest']} platforms="
+        f"{[m['platform'] for m in payload['manifests']]} tags={payload['tags']} "
+        f"latest={payload['latest_status']} config_blob={payload['config_blob']}"
+    )
+    return 0
 
 
 def build_parser():
@@ -1242,9 +1675,11 @@ def build_parser():
     release.add_argument("--out", required=True)
     release.set_defaults(func=cmd_release)
 
-    registry = sub.add_parser("registry", help="registry-side proof (04-04)")
-    registry.add_argument("--tag", default=None)
-    registry.add_argument("--out", default=None)
+    registry = sub.add_parser("registry", help="registry-side proof: digest, platforms, tags, :latest")
+    registry.add_argument("--tag", required=True)
+    registry.add_argument("--baseline", required=True, help="the pre-push snapshot JSON")
+    registry.add_argument("--expect-digest", required=True, help="the CI-recorded index digest")
+    registry.add_argument("--out", required=True)
     registry.set_defaults(func=cmd_registry)
     return parser
 

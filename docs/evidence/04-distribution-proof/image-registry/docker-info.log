@@ -1,0 +1,12 @@
+Client:
+ Version:    29.10.0
+ Context:    default
+ Debug Mode: false
+ Plugins:
+  compose: Docker Compose (Docker Inc.)
+    Version:  5.8.0
+    Path:     <HOME>/.docker/cli-plugins/docker-compose
+
+Server:
+Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?
+exit=1

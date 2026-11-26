@@ -1,0 +1,62 @@
+{
+  "item": "image-registry",
+  "requirements": [
+    "REL-04"
+  ],
+  "date": "2026-11-26T06:49:59Z",
+  "host": "Linux/x86_64",
+  "command": "python3 scripts/distribution-proof.py fixtures && python3 scripts/distribution-proof.py registry --tag v0.1.0-proof1 --baseline docs/evidence/04-distribution-proof/ghcr-baseline/baseline.json --expect-digest sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be --out docs/evidence/04-distribution-proof/image-registry/registry.json",
+  "steps": [
+    {
+      "name": "fixtures: every assertion rejects its negative",
+      "ok": true,
+      "detail": "exit 0: fixtures: 45/45 PASS"
+    },
+    {
+      "name": "registry: read the index, platforms, tags and :latest",
+      "ok": true,
+      "detail": "exit 0: registry: OK transport=anonymous-http visibility=public digest=sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be platforms=['linux/amd64', 'linux/arm64'] tags=['0.1.0-proof1', 'v0.1.0-proof1'] latest=absent config_blob=read"
+    },
+    {
+      "name": "registry: the index digest equals run.json's CI digest",
+      "ok": true,
+      "detail": "exit 0: index digest sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be == run.json image_digest"
+    },
+    {
+      "name": "registry: exactly the two platform manifests, each with digest and size",
+      "ok": true,
+      "detail": "exit 0: attestations [('sha256:2ca7c01fbfc2a33ac532632997e32254df269d88f27c08e6c7e1adcad84b5aa2', 838), ('sha256:b0ca3b1d32738af71312a7d9fdec4a4150ea1f0620d1464aafa739c2f2ed19df', 838)]"
+    },
+    {
+      "name": "registry: tag set is the two proof names and never latest",
+      "ok": true,
+      "detail": "exit 0: tags ['0.1.0-proof1', 'v0.1.0-proof1'] latest absent"
+    },
+    {
+      "name": "registry: latest equals the pre-push baseline (absent both sides)",
+      "ok": true,
+      "detail": "exit 0: latest absent after == absent before; index digest sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be is not a latest target"
+    },
+    {
+      "name": "registry: the config blob matches the Dockerfile contract",
+      "ok": true,
+      "detail": "exit 0: config {'WorkingDir': '/work', 'User': '1000:1000', 'Entrypoint': ['deepseek-build'], 'env_names': ['PATH', 'DEBIAN_FRONTEND']} blob sha256:a3f442dd7160476285a75f6c893c85a93958fd010664112dccca898d062b17f7 4091"
+    },
+    {
+      "name": "environment: the captured docker info names the absent daemon",
+      "ok": true,
+      "detail": "exit 0: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/04-distribution-proof/image-registry/registry.json",
+      "sha256": "9da69bdd4c96275f819f04f66d8a8e6b80748b8d6da2bed3f168b4185f611a48"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/image-registry/docker-info.log",
+      "sha256": "7485c1beded2368dae165f2f950f3f67f79f86e10801213c9f91939646ae7f2e"
+    }
+  ],
+  "result": "ok"
+}
