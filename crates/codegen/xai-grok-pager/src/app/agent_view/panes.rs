@@ -81,6 +81,20 @@ impl AgentView {
         }
         if key.code == KeyCode::Esc
             && key.modifiers.is_empty()
+            && !self.stoppable_activity_running()
+            && !self.any_cancel_pending()
+            && self.dismiss_scrollback_selection()
+        {
+            // Ask the Esc policy while this pane still owns the keys: its prompt-clear arm is
+            // gated on the prompt pane and must keep seeing the scrollback, exactly as before.
+            // The rewind arm / swallow therefore keep their behavior, and the pane switch below
+            // only hands focus back to the prompt so typing works immediately.
+            let outcome = self.try_handle_esc_policy(key, registry);
+            self.set_active_pane(AgentPane::Prompt, false);
+            return outcome.unwrap_or(InputOutcome::Changed);
+        }
+        if key.code == KeyCode::Esc
+            && key.modifiers.is_empty()
             && self.persistent_text_selection.take().is_some()
         {
             self.table_selection_geometry = None;
@@ -118,6 +132,21 @@ impl AgentView {
             return InputOutcome::ActionThenForward(Action::FocusPrompt);
         }
         InputOutcome::Unchanged
+    }
+    /// Clear scrollback selection state for an idle `Esc`. Returns true when anything was dismissed.
+    /// The selected row counts as a selection: a click selects it, and `Esc` must hand focus back
+    /// to the prompt so typing resumes without another click.
+    fn dismiss_scrollback_selection(&mut self) -> bool {
+        let had_text_selection = self.persistent_text_selection.take().is_some();
+        if had_text_selection {
+            self.table_selection_geometry = None;
+            self.selection_created_at = None;
+        }
+        let had_row_selection = self.scrollback.selected().is_some();
+        if had_row_selection {
+            self.scrollback.set_selected(None);
+        }
+        had_text_selection || had_row_selection
     }
     /// Focus the scrollback pane and open an incremental search over it.
     /// Opens only if the pane switch succeeds: a dirty queued-prompt edit blocks the switch, and the search bar only works with scrollback focused.

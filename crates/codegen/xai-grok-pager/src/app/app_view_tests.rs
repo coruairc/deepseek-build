@@ -4388,6 +4388,181 @@ fn idle_scrollback_pane_double_esc_opens_rewind() {
 fn idle_scrollback_pane_double_esc_opens_rewind_vim_mode() {
     assert_scrollback_double_esc_opens_rewind(true);
 }
+/// Esc that dismisses a scrollback row selection returns focus to the prompt, so typing works at once.
+#[test]
+fn esc_after_selected_scrollback_row_returns_focus_to_prompt() {
+    let mut app = test_app_with_agent();
+    let id = super::super::agent::AgentId(0);
+    let agent = app.agents.get_mut(&id).unwrap();
+    agent.vim_mode = true;
+    agent.set_input_mode(crate::views::agent::InputMode::Vim);
+    agent
+        .scrollback
+        .push_block(crate::scrollback::block::RenderBlock::user_prompt(
+            "earlier",
+        ));
+    agent.scrollback.set_selected(Some(0));
+    assert_eq!(
+        agent.active_pane,
+        crate::views::agent::ActivePane::Scrollback
+    );
+
+    let outcome = app.handle_input(&key_event(KeyCode::Esc, KeyModifiers::NONE));
+    assert!(
+        matches!(
+            outcome,
+            InputOutcome::Changed | InputOutcome::ArmPending { .. }
+        ),
+        "Esc must be consumed by the selection dismissal, got {outcome:?}"
+    );
+    let agent = app.agents.get(&id).unwrap();
+    assert_eq!(
+        agent.active_pane,
+        crate::views::agent::ActivePane::Prompt,
+        "dismissing the selection hands focus to the prompt"
+    );
+    assert_eq!(
+        agent.scrollback.selected(),
+        None,
+        "the dismissed row is no longer selected"
+    );
+
+    // In vim mode a scrollback letter would navigate instead of typing, so this pins the focus move.
+    let _ = app.handle_input(&key_event(KeyCode::Char('x'), KeyModifiers::NONE));
+    assert_eq!(
+        app.agents.get(&id).unwrap().prompt.text(),
+        "x",
+        "a typed character reaches the prompt after the dismiss"
+    );
+}
+/// Esc that dismisses a held text selection in the scrollback also returns focus to the prompt.
+#[test]
+fn esc_after_scrollback_text_selection_returns_focus_to_prompt() {
+    use crate::scrollback::text_selection::{
+        PersistentTextSelection, SelectionEndpoint, SelectionKind, SelectionOrigin,
+    };
+    let mut app = test_app_with_agent();
+    let id = super::super::agent::AgentId(0);
+    let agent = app.agents.get_mut(&id).unwrap();
+    agent.vim_mode = true;
+    agent.set_input_mode(crate::views::agent::InputMode::Vim);
+    agent
+        .scrollback
+        .push_block(crate::scrollback::block::RenderBlock::agent_message(
+            "selected text",
+        ));
+    agent.scrollback.set_selected(Some(0));
+    agent.persistent_text_selection = Some(PersistentTextSelection {
+        entry_idx: 0,
+        range_id: 0,
+        anchor: SelectionEndpoint {
+            block_line_idx: 0,
+            col_within_range: 0,
+        },
+        head: SelectionEndpoint {
+            block_line_idx: 0,
+            col_within_range: 4,
+        },
+        origin: SelectionOrigin::Drag,
+        kind: SelectionKind::Linear,
+    });
+    agent.selection_created_at = Some(std::time::Instant::now());
+
+    let outcome = app.handle_input(&key_event(KeyCode::Esc, KeyModifiers::NONE));
+    assert!(
+        matches!(
+            outcome,
+            InputOutcome::Changed | InputOutcome::ArmPending { .. }
+        ),
+        "Esc must be consumed by the selection dismissal, got {outcome:?}"
+    );
+    let agent = app.agents.get(&id).unwrap();
+    assert!(
+        agent.persistent_text_selection.is_none(),
+        "the held highlight is cleared"
+    );
+    assert_eq!(
+        agent.active_pane,
+        crate::views::agent::ActivePane::Prompt,
+        "dismissing the selection hands focus to the prompt"
+    );
+    let _ = app.handle_input(&key_event(KeyCode::Char('y'), KeyModifiers::NONE));
+    assert_eq!(
+        app.agents.get(&id).unwrap().prompt.text(),
+        "y",
+        "a typed character reaches the prompt after the dismiss"
+    );
+}
+/// The double-Esc rewind gesture survives a selection: the first press dismisses it, the second opens the picker.
+#[test]
+fn double_esc_from_selected_scrollback_still_opens_rewind() {
+    let mut app = test_app_with_agent();
+    let id = super::super::agent::AgentId(0);
+    let agent = app.agents.get_mut(&id).unwrap();
+    agent.vim_mode = true;
+    agent.set_input_mode(crate::views::agent::InputMode::Vim);
+    agent
+        .scrollback
+        .push_block(crate::scrollback::block::RenderBlock::user_prompt(
+            "earlier",
+        ));
+    agent.scrollback.set_selected(Some(0));
+
+    let outcome = app.handle_input(&key_event(KeyCode::Esc, KeyModifiers::NONE));
+    assert!(
+        matches!(outcome, InputOutcome::Changed),
+        "first Esc dismisses the selection silently, got {outcome:?}"
+    );
+    let pending = app
+        .pending_action
+        .as_ref()
+        .expect("first Esc must still arm the rewind picker");
+    assert!(pending.label.is_none(), "the rewind arm stays silent");
+    assert!(matches!(pending.action, Action::RewindShowPicker));
+
+    let outcome = app.handle_input(&key_event(KeyCode::Esc, KeyModifiers::NONE));
+    assert!(
+        matches!(outcome, InputOutcome::Action(Action::RewindShowPicker)),
+        "second Esc within the TTL still opens the rewind picker, got {outcome:?}"
+    );
+}
+/// Mid-turn Esc with a scrollback row selected keeps the mid-turn swallow: hint, no arm, no focus move.
+#[test]
+fn mid_turn_esc_with_scrollback_selection_still_swallows() {
+    let mut app = test_app_with_agent();
+    let id = super::super::agent::AgentId(0);
+    let agent = app.agents.get_mut(&id).unwrap();
+    agent.session.state = AgentState::TurnRunning;
+    agent.vim_mode = true;
+    agent.set_input_mode(crate::views::agent::InputMode::Vim);
+    agent
+        .scrollback
+        .push_block(crate::scrollback::block::RenderBlock::user_prompt(
+            "earlier",
+        ));
+    agent.scrollback.set_selected(Some(0));
+
+    let outcome = app.handle_input(&key_event(KeyCode::Esc, KeyModifiers::NONE));
+    assert!(
+        matches!(outcome, InputOutcome::Changed),
+        "mid-turn Esc must swallow, got {outcome:?}"
+    );
+    assert!(
+        app.pending_action.is_none(),
+        "mid-turn Esc must not arm the idle rewind"
+    );
+    let agent = app.agents.get(&id).unwrap();
+    assert_eq!(
+        agent.active_pane,
+        crate::views::agent::ActivePane::Scrollback,
+        "mid-turn Esc must not move focus"
+    );
+    assert_eq!(
+        agent.scrollback.selected(),
+        Some(0),
+        "mid-turn Esc must not dismiss the row selection"
+    );
+}
 /// Route a key's bubbled action through the real dispatcher, the way the event loop does.
 fn press_and_dispatch(app: &mut AppView, ev: &Event) {
     match app.handle_input(ev) {
