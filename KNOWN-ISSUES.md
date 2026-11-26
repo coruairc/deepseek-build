@@ -306,6 +306,15 @@ distribution, container and Windows notes were refreshed 2026-11-26.
 - **`scripts/test-install.sh`: green locally** (39/39 assertions) against a
   loopback fake release; it never touches the real release pipeline.
 
+## Release CI capacity (2026-11-26)
+
+- **macOS arm64 runners are not always acquirable.** Run 2 (`v0.1.0-proof2`) lost its
+  `build-macos (aarch64-apple-darwin)` job three times to
+  `The job was not acquired by Runner of type hosted` (capacity). `publish` waits for all four
+  builds, so no release was created; the image still published, because `container` depends on
+  `build-linux` only. Retry with `gh run rerun 45846745156 --failed`. The Windows zip exists as a
+  workflow artifact (`release-x86_64-pc-windows-msvc`).
+
 ## Container image (2026-11-26)
 
 - **The image runs, and the sandbox cannot apply inside it.** `ghcr.io/coruairc/deepseek-build@sha256:8f5c484e…`
