@@ -135,13 +135,13 @@ Plans:
   4. The sandbox is honest on Windows: only `off` is accepted, any other `--sandbox` value is a hard error naming the unsupported platform, and the README plus the sandbox user-guide page state the tier. No artifact claims "sandboxed".
   5. `install.ps1` downloads the zip, verifies SHA-256 before extracting, installs to `%LOCALAPPDATA%`, prints a PATH hint and supports `-Uninstall`; `scripts/test-install.ps1` exercises it, and the real proof runs against a throwaway tag.
   6. A Windows acceptance record reports the test-target count and the pass/fail/unix-gated totals (never a tail line), `--version` from the extracted zip, one headless turn with a sentinel, the two `*_windows.rs` PTY scenarios with `--ignored`, and an explicit list of what did not run.
-**Plans**: 1 plan detailed now; the tail is sized by the spike
+**Plans**: 4/5 executed; 05-05 is blocked on a Windows host
 
 Plans:
-- [ ] 05-01: Compile spike on `windows-latest` — `cargo check --all-targets` for the MSVC target, triage every error, produce the definitive file list (no product change)
-- [ ] 05-02: Sandbox honesty — reject non-`off` `--sandbox` on Windows, fix the misleading fallback message, platform note in README and the sandbox guide
-- [ ] 05-03: Long-tail correctness from 05-01's list (temp paths, file-lock slot, search fallback, gated modules)
-- [ ] 05-04: Distribution — `build-windows` job, `.zip`, `install.ps1` + `test-install.ps1`, publish wiring and verify loop
+- [x] 05-01: Compile spike on `windows-latest` — `cargo check --all-targets` for the MSVC target, triage every error, produce the definitive file list (no product change)
+- [x] 05-02: Sandbox honesty — reject non-`off` `--sandbox` on Windows, fix the misleading fallback message, platform note in README and the sandbox guide
+- [x] 05-03: Long-tail correctness from 05-01's list (temp paths, file-lock slot, search fallback, gated modules)
+- [x] 05-04: Distribution — `build-windows` job, `.zip`, `install.ps1` + `test-install.ps1`, publish wiring and verify loop
 - [ ] 05-05: Windows acceptance record and docs, honestly listing what did not run
 
 ### Phase 5.1: Project Directory Rebrand (INSERTED)
@@ -174,9 +174,9 @@ Plans:
 **Plans**: 5/5 plans complete
 
 Plans:
-- [ ] 06-01: `DECISIONS.md` §E/§F rewritten from the tree; `TESTING.md` §2/§6 corrected
-- [ ] 06-02: `KNOWN-ISSUES.md` reconciled — superseded snapshot tag, plan-mode correction, sandbox findings, Windows tier
-- [ ] 06-03: User guide — Flash default with caveat and revert path, estimate label, headless denial, container flags, cost levers, Windows tier
+- [x] 06-01: `DECISIONS.md` §E/§F rewritten from the tree; `TESTING.md` §2/§6 corrected
+- [x] 06-02: `KNOWN-ISSUES.md` reconciled — superseded snapshot tag, plan-mode correction, sandbox findings, Windows tier
+- [x] 06-03: User guide — Flash default with caveat and revert path, estimate label, headless denial, container flags, cost levers, Windows tier
 - [ ] 06-04: Human acceptance — 20–30 minutes in the TUI on a real repo clone, signed note committed (blocks 06-05)
 - [ ] 06-05: Pre-freeze checklist, branch `deepseek-build`, non-triggering marker tag verified against the branch tip, snapshot refs untouched
 
@@ -204,6 +204,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6
 | 2. Loop-Item Verification | 6/6 | Complete | 2026-11-25 |
 | 3. Pipeline Decoupling & Version | 4/4 | Complete (REL-02 proof deferred to Phase 4) | 2026-11-25 |
 | 4. Distribution Proof | 5/5 | REL-04 closed (pulled by digest + run); REL-05 turn proven, sandbox clause unmet | - |
-| 5. Windows Support | 0/5 | In progress — spike found 4 blockers, 3 fixed on the throwaway branch | - |
+| 5. Windows Support | 4/5 | WIN-02/WIN-04 closed; WIN-01/WIN-05 authored not proven; WIN-03/WIN-06 need a Windows host | - |
 | 5.1 Project Directory Rebrand (INSERTED) | 2/2 | Complete | 2026-11-26 |
-| 6. Documentation Truth & Freeze | 0/5 | Not started | - |
+| 6. Documentation Truth & Freeze | 3/5 | Docs reconciled; ACC-01 (author) blocks 06-04/06-05 | - |

@@ -94,19 +94,19 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 ### Windows Support
 
-- [ ] **WIN-01**: A `build-windows` job on `windows-latest` builds `x86_64-pc-windows-msvc` and produces a `.zip` containing the binary and the license files, published as `release-x86_64-pc-windows-msvc` alongside the four existing tarballs
-- [ ] **WIN-02**: The compile spike (`cargo check --workspace --all-targets --target x86_64-pc-windows-msvc`) runs on a Windows runner and its errors are triaged into real gaps, missing `cfg`s and test-only failures, with the definitive file list recorded
+- [ ] **WIN-01**: A `build-windows` job on `windows-latest` builds `x86_64-pc-windows-msvc` and produces a `.zip` containing the binary and the license files, published as `release-x86_64-pc-windows-msvc`. **Authored and gated; no tag run has produced the artifact yet**
+- [x] **WIN-02**: The compile spike (`cargo check --workspace --all-targets --target x86_64-pc-windows-msvc`) runs on a Windows runner and its errors are triaged into real gaps, missing `cfg`s and test-only failures, with the definitive file list recorded
 - [ ] **WIN-03**: The TUI runs under ConPTY on a real Windows terminal: a shell command and a file edit complete through the pager
-- [ ] **WIN-04**: The sandbox is honest on Windows — only `off` is accepted, any other `--sandbox` value is a hard error naming the unsupported platform, and the README and sandbox guide state the tier; no artifact claims "sandboxed"
-- [ ] **WIN-05**: `install.ps1` downloads the zip, verifies SHA-256 before extracting, installs to `%LOCALAPPDATA%`, prints a PATH hint and supports `-Uninstall`; `scripts/test-install.ps1` exercises it and the real proof runs against a throwaway tag
+- [x] **WIN-04**: The sandbox is honest on Windows — only `off` is accepted, any other `--sandbox` value is a hard error naming the unsupported platform, and the README and sandbox guide state the tier; no artifact claims "sandboxed"
+- [ ] **WIN-05**: `install.ps1` downloads the zip, verifies SHA-256 before extracting, installs to `%LOCALAPPDATA%`, prints a PATH hint and supports `-Uninstall`; `scripts/test-install.ps1` exercises it and the real proof runs against a throwaway tag. **Authored and syntax-reviewed; not executed (no PowerShell on the build host)**
 - [ ] **WIN-06**: A Windows acceptance record reports the test-target count and pass/fail/unix-gated totals, `--version` from the extracted zip, a headless turn with a sentinel, the two `*_windows.rs` PTY scenarios with `--ignored`, and an explicit list of what did not run
 
 ### Documentation Truth
 
-- [ ] **DOCS-01**: `DECISIONS.md` §E/§F is rewritten from the tree, keeping D9's personal-tool intent while recording that the release pipeline exists
-- [ ] **DOCS-02**: `TESTING.md` §2/§6 is corrected — no OIDC test counts, no stale sign-in line
-- [ ] **DOCS-03**: `KNOWN-ISSUES.md` is reconciled, including the superseded `deepseek-v0.1-snapshot` tag, the `--permission-mode plan` correction, the sandbox findings, and the Windows tier
-- [ ] **DOCS-04**: The user guide covers the Flash default with its caveat and revert path, the estimate labelling, headless permission failure, container run flags, the measured cost levers (`/model`, `--effort low`), and the Windows tier
+- [x] **DOCS-01**: `DECISIONS.md` §E/§F is rewritten from the tree, keeping D9's personal-tool intent while recording that the release pipeline exists
+- [x] **DOCS-02**: `TESTING.md` §2/§6 is corrected — no OIDC test counts, no stale sign-in line
+- [x] **DOCS-03**: `KNOWN-ISSUES.md` is reconciled, including the superseded `deepseek-v0.1-snapshot` tag, the `--permission-mode plan` correction, the sandbox findings, and the Windows tier
+- [x] **DOCS-04**: The user guide covers the Flash default with its caveat and revert path, the estimate labelling, headless permission failure, container run flags, the measured cost levers (`/model`, `--effort low`), and the Windows tier
 
 ### Human Acceptance
 
@@ -207,16 +207,16 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | REL-04 | Phase 4 — Distribution Proof | Complete — pulled by index digest and run in-image on 2026-11-26 |
 | REL-05 | Phase 4 — Distribution Proof | Partial — the turn is proven; the sandbox clause is unmet (no bwrap in the image) |
 | REL-06 | Phase 4 — Distribution Proof | Complete — pinned install of `v0.1.0-proof1` from the real release (asset `install.sh` byte-identical, tarball sha256 three-way equal, installed binary reports `0.1.0-proof1 (b14d28eb2bc7)`); unpinned `latest` observed: both `latest/download` URLs 404, installer exits 22 and installs nothing (`docs/evidence/04-distribution-proof/installer-{proof,latest}/`) |
-| WIN-01 | Phase 5 — Windows Support | Pending |
-| WIN-02 | Phase 5 — Windows Support | Pending |
-| WIN-03 | Phase 5 — Windows Support | Pending |
-| WIN-04 | Phase 5 — Windows Support | Pending |
-| WIN-05 | Phase 5 — Windows Support | Pending |
-| WIN-06 | Phase 5 — Windows Support | Pending |
-| DOCS-01 | Phase 6 — Documentation Truth & Freeze | Pending |
-| DOCS-02 | Phase 6 — Documentation Truth & Freeze | Pending |
-| DOCS-03 | Phase 6 — Documentation Truth & Freeze | Pending |
-| DOCS-04 | Phase 6 — Documentation Truth & Freeze | Pending |
+| WIN-01 | Phase 5 — Windows Support | Partial — job and zip authored/gated; no artifact produced |
+| WIN-02 | Phase 5 — Windows Support | Complete — compile spike green on windows-latest |
+| WIN-03 | Phase 5 — Windows Support | Pending — needs a Windows host |
+| WIN-04 | Phase 5 — Windows Support | Complete — non-off profiles refused; UI reports unsupported |
+| WIN-05 | Phase 5 — Windows Support | Partial — authored, not executed |
+| WIN-06 | Phase 5 — Windows Support | Pending — needs a Windows host and a tag run |
+| DOCS-01 | Phase 6 — Documentation Truth & Freeze | Complete |
+| DOCS-02 | Phase 6 — Documentation Truth & Freeze | Complete |
+| DOCS-03 | Phase 6 — Documentation Truth & Freeze | Complete |
+| DOCS-04 | Phase 6 — Documentation Truth & Freeze | Complete |
 | ACC-01 | Phase 6 — Documentation Truth & Freeze | Pending |
 | FREEZE-01 | Phase 6 — Documentation Truth & Freeze | Pending |
 | FREEZE-02 | Phase 6 — Documentation Truth & Freeze | Pending |
