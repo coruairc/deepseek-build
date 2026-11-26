@@ -83,6 +83,84 @@ impl ProfileName {
     }
 }
 
+/// The platform whose sandbox backend decides what a requested profile means.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SandboxPlatform {
+    Linux,
+    MacOs,
+    Windows,
+    Other,
+}
+
+impl SandboxPlatform {
+    /// The platform this binary was built for.
+    pub const fn current() -> Self {
+        if cfg!(target_os = "linux") {
+            Self::Linux
+        } else if cfg!(target_os = "macos") {
+            Self::MacOs
+        } else if cfg!(target_os = "windows") {
+            Self::Windows
+        } else {
+            Self::Other
+        }
+    }
+
+    pub const fn is_windows(self) -> bool {
+        matches!(self, Self::Windows)
+    }
+}
+
+/// The exact refusal used for an explicitly requested non-`off` profile on Windows.
+pub const WINDOWS_SANDBOX_UNSUPPORTED: &str =
+    "the sandbox is not supported on Windows; only --sandbox off is accepted";
+
+/// The error for a requested profile that has no backend on `platform`.
+pub fn unsupported_platform_error(platform: SandboxPlatform) -> anyhow::Error {
+    if platform.is_windows() {
+        anyhow::anyhow!(WINDOWS_SANDBOX_UNSUPPORTED)
+    } else {
+        anyhow::anyhow!(
+            "the sandbox is not supported on this platform; only --sandbox off is accepted"
+        )
+    }
+}
+
+/// Resolve the profile a platform can actually honour.
+///
+/// A non-`Windows` platform keeps its existing resolution: the requested profile when one was
+/// supplied, otherwise today's `off` default. Windows has no backend, so an explicit non-`off`
+/// request (CLI, environment, requirements, or config file — [`explicit`] is true for all of
+/// them) is an error before any tool runs, and an absent request resolves to `off`.
+pub fn resolve_profile_for_platform(
+    requested: Option<ProfileName>,
+    explicit: bool,
+    platform: SandboxPlatform,
+) -> anyhow::Result<ProfileName> {
+    if platform.is_windows() {
+        return match requested {
+            Some(profile) if explicit && profile != ProfileName::Off => {
+                Err(unsupported_platform_error(platform))
+            }
+            _ => Ok(ProfileName::Off),
+        };
+    }
+    Ok(requested.unwrap_or(ProfileName::Off))
+}
+
+/// A UI/session-summary note when the build has no sandbox backend for `platform`.
+/// `None` on platforms that can enforce a profile, so no caller changes there.
+pub fn platform_support_note_for(platform: SandboxPlatform) -> Option<&'static str> {
+    platform
+        .is_windows()
+        .then_some("unsupported on this platform (only --sandbox off)")
+}
+
+/// [`platform_support_note_for`] for the platform this binary was built for.
+pub fn platform_support_note() -> Option<&'static str> {
+    platform_support_note_for(SandboxPlatform::current())
+}
+
 impl std::fmt::Display for ProfileName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -582,6 +660,130 @@ impl ProfileName {
 mod tests {
     use super::*;
     use crate::test_util::{network_inheritance_config, skip_if_host_hook_write_deny_unresolvable};
+
+    fn all_profiles() -> Vec<ProfileName> {
+        vec![
+            ProfileName::Workspace,
+            ProfileName::Devbox,
+            ProfileName::ReadOnly,
+            ProfileName::Strict,
+            ProfileName::Off,
+            ProfileName::Custom("project".to_string()),
+        ]
+    }
+
+    /// Windows has no backend: only `off` (or no request at all) is accepted.
+    #[test]
+    fn windows_only_accepts_off() {
+        for requested in [None, Some(ProfileName::Off)] {
+            for explicit in [false, true] {
+                assert_eq!(
+                    resolve_profile_for_platform(
+                        requested.clone(),
+                        explicit,
+                        SandboxPlatform::Windows
+                    )
+                    .expect("off is accepted on Windows"),
+                    ProfileName::Off,
+                    "requested={requested:?} explicit={explicit}"
+                );
+            }
+        }
+        for profile in all_profiles()
+            .into_iter()
+            .filter(|p| *p != ProfileName::Off)
+        {
+            let error =
+                resolve_profile_for_platform(Some(profile.clone()), true, SandboxPlatform::Windows)
+                    .expect_err("non-off must be refused on Windows");
+            assert_eq!(error.to_string(), WINDOWS_SANDBOX_UNSUPPORTED);
+            assert!(
+                error.to_string().contains("Windows") && error.to_string().contains("off"),
+                "the refusal must name the platform and the one supported value: {error}"
+            );
+        }
+    }
+
+    /// No explicit flag on Windows defaults to `off`; a value that is not an explicit request
+    /// (the built-in default pre-filled as `Some`) must not trigger the refusal.
+    #[test]
+    fn windows_absent_request_defaults_to_off() {
+        for explicit in [false, true] {
+            assert_eq!(
+                resolve_profile_for_platform(None, explicit, SandboxPlatform::Windows).unwrap(),
+                ProfileName::Off
+            );
+        }
+        assert_eq!(
+            resolve_profile_for_platform(
+                Some(ProfileName::Strict),
+                false,
+                SandboxPlatform::Windows
+            )
+            .unwrap(),
+            ProfileName::Off
+        );
+    }
+
+    /// A config-file `[sandbox] profile` reaches the resolver as an explicit request, so a
+    /// non-`off` value in `config.toml` is the same hard error as `--sandbox strict`.
+    #[test]
+    fn config_file_profile_is_explicit_and_refused_on_windows() {
+        let error =
+            resolve_profile_for_platform(Some(ProfileName::Strict), true, SandboxPlatform::Windows)
+                .expect_err("config-set strict must be refused on Windows");
+        assert_eq!(error.to_string(), WINDOWS_SANDBOX_UNSUPPORTED);
+    }
+
+    /// Linux/macOS (and every other platform) resolve exactly as before: a requested profile is
+    /// honoured and an absent request keeps today's `off` default.
+    #[test]
+    fn unix_resolution_is_unchanged_for_every_profile() {
+        for platform in [
+            SandboxPlatform::Linux,
+            SandboxPlatform::MacOs,
+            SandboxPlatform::Other,
+        ] {
+            assert_eq!(
+                resolve_profile_for_platform(None, false, platform).unwrap(),
+                ProfileName::Off
+            );
+            for profile in all_profiles() {
+                assert_eq!(
+                    resolve_profile_for_platform(Some(profile.clone()), true, platform).unwrap(),
+                    profile,
+                    "{platform:?} must honour an explicit {profile:?}"
+                );
+                assert_eq!(
+                    resolve_profile_for_platform(Some(profile.clone()), false, platform).unwrap(),
+                    profile,
+                    "{platform:?} must honour a requested {profile:?} regardless of provenance"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn platform_note_only_speaks_for_windows() {
+        for platform in [
+            SandboxPlatform::Linux,
+            SandboxPlatform::MacOs,
+            SandboxPlatform::Other,
+        ] {
+            assert_eq!(platform_support_note_for(platform), None);
+        }
+        let note = platform_support_note_for(SandboxPlatform::Windows).expect("Windows note");
+        assert!(note.contains("unsupported"), "{note}");
+        assert!(note.contains("off"), "{note}");
+    }
+
+    #[test]
+    fn unsupported_platform_error_names_windows_exactly() {
+        assert_eq!(
+            unsupported_platform_error(SandboxPlatform::Windows).to_string(),
+            "the sandbox is not supported on Windows; only --sandbox off is accepted"
+        );
+    }
 
     #[test]
     fn parse_profile_names() {

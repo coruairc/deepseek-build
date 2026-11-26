@@ -45,7 +45,9 @@ pub use network_policy::{
     NetworkPolicySnapshotError, WebsiteAction, WebsiteOrigin, WebsiteOriginError, WebsitePolicy,
 };
 pub use profiles::{
-    ProfileName, SandboxConfig, SandboxProfile, load_sandbox_config, sandbox_profile_conflicts,
+    ProfileName, SandboxConfig, SandboxPlatform, SandboxProfile, WINDOWS_SANDBOX_UNSUPPORTED,
+    load_sandbox_config, platform_support_note, platform_support_note_for,
+    resolve_profile_for_platform, sandbox_profile_conflicts, unsupported_platform_error,
 };
 pub use read_deny_verify::{verify_data_write_deny_enforced, verify_read_deny_enforced};
 pub use types::{SandboxEvent, SandboxEventType, SandboxMetrics};
@@ -168,6 +170,24 @@ pub fn flush() {
 pub fn metrics() -> Option<&'static SandboxMetrics> {
     SANDBOX.get().map(|s| s.logger.metrics())
 }
+/// The non-enforcing `apply` decision, factored out so it is testable on targets that compile the
+/// real enforcement path. `off` is honestly a no-op; every other profile is an error.
+fn stub_apply_result(profile: &ProfileName) -> anyhow::Result<()> {
+    if *profile == ProfileName::Off {
+        tracing::info!("Sandbox disabled (profile: off)");
+        return Ok(());
+    }
+    let platform = SandboxPlatform::current();
+    if platform == SandboxPlatform::Windows {
+        // Windows has no backend at all: this is a platform limitation.
+        return Err(unsupported_platform_error(platform));
+    }
+    // A Unix build without the `enforce` feature is a build choice, not a platform limit;
+    // saying "not supported on this platform" here would be a lie.
+    Err(anyhow::anyhow!(
+        "the sandbox was compiled without the `enforce` feature; only --sandbox off is accepted"
+    ))
+}
 /// Manages the OS-level sandbox. Call `apply()` then `install()`.
 pub struct SandboxManager {
     profile: ProfileName,
@@ -249,14 +269,10 @@ impl SandboxManager {
             }
         }
     }
-    /// Stub when `enforce` feature is disabled; sandbox is not applied.
+    /// Stub when `enforce` feature is disabled; only `off` is accepted, because nothing is applied.
     #[cfg(not(all(feature = "enforce", unix)))]
     pub fn apply(&mut self, _workspace: &Path) -> anyhow::Result<()> {
-        tracing::info!(
-            profile = %self.profile,
-            "Sandbox enforcement unavailable (built without 'enforce' feature)"
-        );
-        Ok(())
+        stub_apply_result(&self.profile)
     }
     /// Store globally for session-lifetime violation logging.
     pub fn install(self) {
@@ -901,6 +917,25 @@ mod tests {
             "should use --dev-bind for /dev passthrough, got args: {args:?}"
         );
     }
+    #[test]
+    fn non_enforcing_stub_accepts_off_and_rejects_every_other_profile() {
+        assert!(stub_apply_result(&ProfileName::Off).is_ok());
+        for profile in [
+            ProfileName::Workspace,
+            ProfileName::Devbox,
+            ProfileName::ReadOnly,
+            ProfileName::Strict,
+            ProfileName::Custom("project".to_string()),
+        ] {
+            let error = stub_apply_result(&profile)
+                .expect_err("the non-enforcing stub must not claim success");
+            assert!(
+                error.to_string().contains("only --sandbox off is accepted"),
+                "unexpected error for {profile}: {error}"
+            );
+        }
+    }
+
     #[test]
     fn profile_confines_only_for_non_off_profiles() {
         assert!(!super::profile_confines("off"));

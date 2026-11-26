@@ -4700,8 +4700,13 @@ fn session_info_fields(
     if let Some(b) = info.data.api_backend.as_deref() {
         push("API Backend", b.to_string(), true);
     }
-    if let Some(profile) = xai_grok_sandbox::profile_name() {
-        push("Sandbox", profile.to_string(), true);
+    match xai_grok_sandbox::profile_name() {
+        Some(profile) => push("Sandbox", profile.to_string(), true),
+        None => {
+            if let Some(note) = xai_grok_sandbox::platform_support_note() {
+                push("Sandbox", note.to_string(), true);
+            }
+        }
     }
     push("Turn", info.data.turn_index.to_string(), true);
     let ctx = &info.data.context;

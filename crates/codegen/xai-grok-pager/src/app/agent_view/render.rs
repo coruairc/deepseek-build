@@ -1401,6 +1401,8 @@ impl AgentView {
                 format!("sandbox:{profile} "),
                 bg.fg(theme.warning),
             ));
+        } else if xai_grok_sandbox::platform_support_note().is_some() {
+            location.push(Span::styled("sandbox:unsupported ", bg.fg(theme.warning)));
         }
         let prefix_width: u16 = location.iter().map(|s| s.width() as u16).sum();
         let path_width = short.width() as u16;

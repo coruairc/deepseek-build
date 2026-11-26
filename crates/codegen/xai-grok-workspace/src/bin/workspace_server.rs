@@ -341,8 +341,15 @@ async fn run(
         tracing::info!("kernel OOM-kill protection not active");
     }
     {
-        use xai_grok_sandbox::{ProfileName, SandboxManager};
-        let profile = match std::env::var("DEEPSEEK_BUILD_SANDBOX_PROFILE").ok() {
+        use xai_grok_sandbox::{
+            ProfileName, SandboxManager, SandboxPlatform, resolve_profile_for_platform,
+        };
+        let configured = std::env::var("DEEPSEEK_BUILD_SANDBOX_PROFILE")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
+        let explicit = configured.is_some();
+        let requested = match configured {
             Some(val) => {
                 let parsed = val
                     .parse::<ProfileName>()
@@ -350,17 +357,40 @@ async fn run(
                 if matches!(parsed, ProfileName::Custom(_)) {
                     tracing::warn!(value = %val,
                         "Unrecognized DEEPSEEK_BUILD_SANDBOX_PROFILE, defaulting to workspace");
-                    ProfileName::Workspace
+                    Some(ProfileName::Workspace)
                 } else {
-                    parsed
+                    Some(parsed)
                 }
             }
-            None if xai_grok_sandbox::trust_bwrap_marker_for_devbox() => ProfileName::Devbox,
-            None => ProfileName::Workspace,
+            None if xai_grok_sandbox::trust_bwrap_marker_for_devbox() => Some(ProfileName::Devbox),
+            None => None,
+        };
+        // Windows has no backend: no request means `off`, and an explicit non-`off` value must
+        // refuse startup instead of logging a warning and running with no enforcement. Other
+        // platforms keep the server's existing `workspace`/`devbox` default.
+        let platform = SandboxPlatform::current();
+        let profile = if platform.is_windows() {
+            match resolve_profile_for_platform(requested, explicit, platform) {
+                Ok(profile) => profile,
+                Err(error) => {
+                    tracing::error!(%error, "refusing to start: the sandbox is unsupported");
+                    eprintln!("error: {error}");
+                    std::process::exit(1);
+                }
+            }
+        } else {
+            requested.unwrap_or(ProfileName::Workspace)
         };
         let profile_name = profile.to_string();
         if profile == ProfileName::Off {
-            tracing::info!(profile = %profile_name, "Sandbox explicitly disabled via DEEPSEEK_BUILD_SANDBOX_PROFILE=off");
+            if explicit {
+                tracing::info!(profile = %profile_name, "Sandbox explicitly disabled via DEEPSEEK_BUILD_SANDBOX_PROFILE=off");
+            } else {
+                tracing::info!(
+                    profile = %profile_name,
+                    "Sandbox off (no backend on this platform; only off is supported)"
+                );
+            }
         } else {
             let mut sandbox = SandboxManager::new(profile, &cwd);
             if let Err(e) = sandbox.apply(&cwd) {

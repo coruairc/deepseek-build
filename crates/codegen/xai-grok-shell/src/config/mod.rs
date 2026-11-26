@@ -1300,6 +1300,45 @@ fn route_bwrap_startup<T>(
         None => BwrapStartup::Continue,
     }
 }
+/// Only the built-in default is not an explicit sandbox request. Every other layer
+/// (requirement, CLI, env, managed/system/user config, overlay, config file, remote) is.
+fn is_explicit_sandbox_source(source: crate::agent::config::ConfigSource) -> bool {
+    source != crate::agent::config::ConfigSource::Default
+}
+
+#[cfg(test)]
+mod sandbox_source_tests {
+    use super::is_explicit_sandbox_source;
+    use crate::agent::config::ConfigSource;
+
+    /// The Windows refusal depends on this mapping: a source wrongly classified as
+    /// Default would silently resolve `off` instead of refusing an explicit request.
+    #[test]
+    fn only_default_is_not_an_explicit_sandbox_request() {
+        use ConfigSource::*;
+        for source in [
+            Requirement,
+            Cli,
+            Env,
+            SystemManagedConfig,
+            ManagedConfig,
+            UserConfig,
+            EnvOverlay,
+            Config,
+            Remote,
+        ] {
+            assert!(
+                is_explicit_sandbox_source(source),
+                "{source:?} must count as an explicit request"
+            );
+        }
+        assert!(
+            !is_explicit_sandbox_source(Default),
+            "the built-in default must not count as an explicit request"
+        );
+    }
+}
+
 /// Resolve sandbox profile and apply OS-level enforcement. Called once at startup.
 /// `cli_profile` is the resumed/forced base profile (a resumed session's saved profile, or an explicit `--sandbox`).
 /// It wins over a fresh env/config read.
@@ -1325,11 +1364,28 @@ pub fn apply_sandbox(
         .and_then(|v| v.get("sandbox")?.get("auto_allow_bash")?.as_bool());
     let resolved = config.resolve_profile(cli_profile, profile_req);
     xai_grok_sandbox::set_auto_allow_bash(config.resolve_auto_allow_bash(auto_allow_req).value);
-    let sandbox_profile: xai_grok_sandbox::ProfileName =
-        resolved.value.parse().unwrap_or_else(|e| {
-            eprintln!("warning: {e}, defaulting to no sandbox");
-            xai_grok_sandbox::ProfileName::Off
-        });
+    let requested = resolved.value.parse::<xai_grok_sandbox::ProfileName>().ok();
+    if requested.is_none() {
+        eprintln!(
+            "warning: unrecognized sandbox profile '{}', defaulting to no sandbox",
+            resolved.value
+        );
+    }
+    // A requirement, CLI flag, environment variable, or config-file value is an explicit request;
+    // only the built-in `off` default is not. On Windows an explicit non-`off` request must refuse
+    // startup (before any tool runs) instead of silently enforcing nothing.
+    let explicit = is_explicit_sandbox_source(resolved.source);
+    let sandbox_profile = match xai_grok_sandbox::resolve_profile_for_platform(
+        requested,
+        explicit,
+        xai_grok_sandbox::SandboxPlatform::current(),
+    ) {
+        Ok(profile) => profile,
+        Err(error) => {
+            eprintln!("error: {error}");
+            std::process::exit(1);
+        }
+    };
     xai_grok_sandbox::set_configured_profile(&resolved.value);
     let workspace = cwd
         .and_then(|p| dunce::canonicalize(p).ok())
