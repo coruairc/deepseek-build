@@ -638,6 +638,28 @@ mod tests {
     }
 
     #[test]
+    fn repo_configs_present_detects_deepseek_markers() {
+        // The current project dir must gate exactly like the legacy `.grok` one.
+        let tmp = repo_tmp();
+        let deepseek = tmp.path().join(".deepseek");
+        std::fs::create_dir_all(deepseek.join("hooks")).unwrap();
+        assert!(
+            repo_config_kinds(tmp.path()).contains(&"hooks"),
+            "`.deepseek/hooks` must gate: {:?}",
+            repo_config_kinds(tmp.path())
+        );
+        std::fs::remove_dir_all(&deepseek).unwrap();
+
+        std::fs::create_dir_all(&deepseek).unwrap();
+        std::fs::write(deepseek.join("lsp.json"), "{}").unwrap();
+        assert!(
+            repo_config_kinds(tmp.path()).contains(&"lsp"),
+            "`.deepseek/lsp.json` must gate: {:?}",
+            repo_config_kinds(tmp.path())
+        );
+    }
+
+    #[test]
     fn repo_configs_present_detects_cursor_mcp_json() {
         let tmp = repo_tmp();
         let cursor = tmp.path().join(".cursor");

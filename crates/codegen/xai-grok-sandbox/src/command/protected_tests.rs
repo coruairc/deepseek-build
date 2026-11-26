@@ -59,6 +59,7 @@ fn protected_table_is_pinned() {
     let own_session = xai_grok_config::sessions_cwd_dir_in(grok_home, "/opt/ws-fixture/ws");
     let mut expected: Vec<Protected> = [
         // the workspace's own agent/editor config trees
+        "/opt/ws-fixture/ws/.deepseek",
         "/opt/ws-fixture/ws/.grok",
         "/opt/ws-fixture/ws/.cursor",
         "/opt/ws-fixture/ws/.claude",

@@ -760,6 +760,45 @@ mod tests {
     }
 
     #[test]
+    fn deepseek_project_workflow_wins_over_legacy_grok_same_name() {
+        let dir = tempfile::tempdir().unwrap();
+        git2::Repository::init(dir.path()).unwrap();
+        for (name, label) in [(".deepseek", "current"), (".grok", "legacy")] {
+            let workflows = dir.path().join(name).join("workflows");
+            std::fs::create_dir_all(&workflows).unwrap();
+            std::fs::write(
+                workflows.join("dup.rhai"),
+                format!(
+                    "let meta = #{{ name: \"dup\", description: \"{label}\" }};\ncomplete(\"ok\");"
+                ),
+            )
+            .unwrap();
+        }
+
+        let registry = WorkflowRegistry::scan(Some(dir.path()));
+        let resolved = registry.resolve_by_name("dup").unwrap();
+        assert_eq!(
+            "current", resolved.meta.description,
+            "`.deepseek/workflows` must win over `.grok/workflows`"
+        );
+    }
+
+    #[test]
+    fn legacy_grok_only_project_workflow_is_discovered() {
+        let dir = tempfile::tempdir().unwrap();
+        git2::Repository::init(dir.path()).unwrap();
+        let workflows = dir.path().join(".grok").join("workflows");
+        std::fs::create_dir_all(&workflows).unwrap();
+        std::fs::write(workflows.join("legacy-only.rhai"), script("legacy-only")).unwrap();
+
+        let registry = WorkflowRegistry::scan(Some(dir.path()));
+        assert_eq!(
+            "legacy-only",
+            registry.resolve_by_name("legacy-only").unwrap().meta.name
+        );
+    }
+
+    #[test]
     fn bundled_workflow_shadows_compiled_in_same_name() {
         let dir = tempfile::tempdir().unwrap();
         let bundled = dir.path().join("workflows");

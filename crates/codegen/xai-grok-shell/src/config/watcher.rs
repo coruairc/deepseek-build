@@ -601,9 +601,7 @@ impl ProjectDiscoveryWatcher {
             .map(|name| project_root.join(name))
             .collect();
         // deepseek-build home's root sees constant unrelated writes from every grok process
-        if let Some(home_project_dir) = project_dirs
-            .iter()
-            .find(|dir| paths_equal(dir, grok_home))
+        if let Some(home_project_dir) = project_dirs.iter().find(|dir| paths_equal(dir, grok_home))
         {
             tracing::debug!(
                 project_dir = %home_project_dir.display(),

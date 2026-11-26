@@ -962,6 +962,25 @@ mod tests {
     }
 
     #[test]
+    fn project_plugin_dirs_prefer_deepseek_then_legacy_grok_then_claude() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cwd = tmp.path().to_path_buf();
+        for name in [".deepseek", ".grok", ".claude"] {
+            std::fs::create_dir_all(cwd.join(name).join("plugins")).unwrap();
+        }
+
+        let dirs = project_plugin_dirs_in(std::slice::from_ref(&cwd));
+        assert_eq!(
+            dirs,
+            vec![
+                cwd.join(".deepseek/plugins"),
+                cwd.join(".grok/plugins"),
+                cwd.join(".claude/plugins"),
+            ]
+        );
+    }
+
+    #[test]
     fn discover_user_plugins() {
         let tmp = tempfile::tempdir().unwrap();
 

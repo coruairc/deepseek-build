@@ -1279,13 +1279,10 @@ impl AgentDefinition {
                 return scope;
             }
         }
-        if xai_grok_brand::project_dir_names()
-            .into_iter()
-            .any(|name| {
-                path_str.contains(&format!("{name}/agents/"))
-                    || path_str.contains(&format!("{name}\\agents\\"))
-            })
-        {
+        if xai_grok_brand::project_dir_names().into_iter().any(|name| {
+            path_str.contains(&format!("{name}/agents/"))
+                || path_str.contains(&format!("{name}\\agents\\"))
+        }) {
             return AgentScope::Project;
         }
         if xai_grok_brand::project_dir_names().into_iter().any(|name| {

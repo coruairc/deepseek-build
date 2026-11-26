@@ -572,6 +572,33 @@ mod tests {
     }
 
     #[test]
+    fn project_hook_sources_list_deepseek_before_legacy_grok() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        for name in [".deepseek/hooks", ".grok/hooks"] {
+            std::fs::create_dir_all(root.join(name)).unwrap();
+        }
+        let options = DiscoveryOptions {
+            git_root: Some(root),
+            ..untrusted_without_git_root()
+        };
+        let paths = discover_hook_source_paths(options);
+        let position = |suffix: &str| {
+            paths.project.iter().position(|source| match source {
+                HookSourceConfig::Directory(path) => path.ends_with(suffix),
+                HookSourceConfig::SettingsFile(path) => path.ends_with(suffix),
+            })
+        };
+        let deepseek = position(".deepseek/hooks").expect("deepseek project hooks listed");
+        let grok = position(".grok/hooks").expect("legacy grok project hooks listed");
+        assert!(
+            deepseek < grok,
+            "`.deepseek/hooks` must come before `.grok/hooks`: {:?}",
+            paths.project
+        );
+    }
+
+    #[test]
     fn gate_events_are_the_known_set() {
         use crate::event::GateKind;
         // Canonicalize first to dedup alias spellings into one set entry (`traits()` itself already canonicalizes, so it's safe on aliases)

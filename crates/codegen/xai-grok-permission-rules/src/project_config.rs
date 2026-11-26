@@ -121,4 +121,31 @@ mod tests {
         };
         assert!(!is_user_grok_config_file(first, Some(&user_home)));
     }
+
+    #[test]
+    fn legacy_grok_only_project_config_is_found() {
+        let project = tempfile::tempdir().unwrap();
+        let legacy = project.path().join(".grok").join("config.toml");
+        std::fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+        std::fs::write(&legacy, "# legacy\n").unwrap();
+
+        let found =
+            find_project_configs_in(&[project.path().to_path_buf()], /*grok_home*/ None);
+        assert_eq!(vec![legacy], found);
+    }
+
+    #[test]
+    fn deepseek_project_config_shadows_legacy_grok_at_the_same_level() {
+        let project = tempfile::tempdir().unwrap();
+        let legacy = project.path().join(".grok").join("config.toml");
+        let current = project.path().join(".deepseek").join("config.toml");
+        for path in [&legacy, &current] {
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, "# config\n").unwrap();
+        }
+
+        let found =
+            find_project_configs_in(&[project.path().to_path_buf()], /*grok_home*/ None);
+        assert_eq!(vec![current], found);
+    }
 }

@@ -455,10 +455,7 @@ fn skill_config_dirs_gates_each_vendor() {
     );
 
     c.claude.skills = false;
-    assert_eq!(
-        vec![".deepseek", ".grok", ".agents"],
-        c.skill_config_dirs()
-    );
+    assert_eq!(vec![".deepseek", ".grok", ".agents"], c.skill_config_dirs());
 
     let mut c2 = CompatConfig::default();
     c2.claude.skills = false;

@@ -822,6 +822,51 @@ mod tests {
     }
 
     #[test]
+    fn legacy_grok_only_agent_is_discovered_and_resolved() {
+        // The user's explicit requirement: a repo with ONLY `.grok/agents/foo.md`
+        // still discovers the agent and can resolve/spawn it by name.
+        let tmp = tempfile::tempdir().unwrap();
+        let agents_dir = tmp.path().join(".grok").join("agents");
+        fs::create_dir_all(&agents_dir).unwrap();
+        write_agent_file(&agents_dir, "legacy-only.md", "legacy-only", "legacy");
+
+        let defs = discover_with_home(tmp.path(), None, None);
+        assert!(
+            defs.iter().any(|d| d.name == "legacy-only"),
+            "legacy `.grok/agents` agent must be discovered: {:?}",
+            defs.iter().map(|d| &d.name).collect::<Vec<_>>()
+        );
+        let def = by_name_in_cwd("legacy-only", tmp.path()).expect("agent must resolve by name");
+        assert_eq!(AgentScope::Project, def.scope);
+        assert!(
+            def.source_path
+                .as_deref()
+                .is_some_and(|p| p.ends_with(".grok/agents/legacy-only.md")),
+            "source: {:?}",
+            def.source_path
+        );
+    }
+
+    #[test]
+    fn deepseek_project_agent_wins_over_legacy_grok_same_name() {
+        let tmp = tempfile::tempdir().unwrap();
+        for (name, dir_name) in [("legacy", ".grok/agents"), ("current", ".deepseek/agents")] {
+            let dir = tmp.path().join(dir_name);
+            fs::create_dir_all(&dir).unwrap();
+            write_agent_file(&dir, "dup.md", "dup", name);
+        }
+
+        let def = by_name_in_cwd("dup", tmp.path()).expect("dup must resolve");
+        assert!(
+            def.source_path
+                .as_deref()
+                .is_some_and(|p| p.ends_with(".deepseek/agents/dup.md")),
+            "`.deepseek` must win; source: {:?}",
+            def.source_path
+        );
+    }
+
+    #[test]
     fn test_discover_ignores_non_md_files() {
         let tmp = tempfile::tempdir().unwrap();
         let agents_dir = tmp.path().join(".grok").join("agents");

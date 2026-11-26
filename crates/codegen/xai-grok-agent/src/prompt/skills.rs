@@ -2500,6 +2500,49 @@ mod tests {
         assert!(ends_with(&dirs, ".grok"), "grok must remain: {dirs:?}");
     }
 
+    #[tokio::test]
+    async fn legacy_grok_only_project_skill_is_discovered() {
+        // The user's explicit requirement: with nothing under `.deepseek`, a project
+        // skill in `.grok/skills` is still discovered.
+        let tmp = tempfile::tempdir().unwrap();
+        let cwd = tmp.path();
+        write_skill_md(
+            &cwd.join(".grok").join("skills").join("legacy-skill"),
+            "legacy-skill",
+        );
+
+        let skills = list_skills(
+            Some(cwd.to_str().unwrap()),
+            &SkillsConfig::default(),
+            CompatConfig::default(),
+            /*project_trusted*/ true,
+        )
+        .await;
+        assert!(
+            skills.iter().any(|s| s.name == "legacy-skill"),
+            "legacy `.grok/skills` skill must be discovered: {:?}",
+            skills.iter().map(|s| &s.name).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn collect_skill_config_dirs_orders_deepseek_before_grok() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cwd = tmp.path();
+        for name in [".grok", ".deepseek"] {
+            fs::create_dir_all(cwd.join(name)).unwrap();
+        }
+        let dirs =
+            collect_skill_config_dirs(Some(cwd), None, tmp.path(), &[], CompatConfig::default());
+        let index_of = |suffix: &str| dirs.iter().position(|d| d.ends_with(suffix));
+        let deepseek = index_of(".deepseek").expect("deepseek dir listed");
+        let grok = index_of(".grok").expect("legacy grok dir listed");
+        assert!(
+            deepseek < grok,
+            "`.deepseek` must be scanned before `.grok`: {dirs:?}"
+        );
+    }
+
     // ── Same-scope frontmatter-name collisions (copied skill dirs) ──────
 
     fn named_skill(name: &str, path: &str, scope: SkillScope) -> SkillInfo {

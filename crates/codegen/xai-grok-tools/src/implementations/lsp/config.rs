@@ -352,6 +352,24 @@ mod tests {
     }
 
     #[test]
+    fn project_lsp_path_prefers_deepseek_then_falls_back_to_legacy_grok() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cwd = tmp.path();
+        let legacy = cwd.join(".grok").join("lsp.json");
+        let current = cwd.join(".deepseek").join("lsp.json");
+
+        // Legacy-only still resolves to the legacy file.
+        std::fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+        std::fs::write(&legacy, "{}").unwrap();
+        assert_eq!(legacy, super::project_lsp_path(cwd));
+
+        // With both present, `.deepseek` wins.
+        std::fs::create_dir_all(current.parent().unwrap()).unwrap();
+        std::fs::write(&current, "{}").unwrap();
+        assert_eq!(current, super::project_lsp_path(cwd));
+    }
+
+    #[test]
     fn untrusted_drops_only_project_keeps_user_and_plugin() {
         let kept = filter_project_lsp_when_untrusted(sourced(), false);
         assert_eq!(kept.len(), 2);
