@@ -323,10 +323,11 @@ distribution, container and Windows notes were refreshed 2026-11-26.
 - **Windows packaging is in the tree but not yet released or accepted.** The release workflow
   carries a `build-windows` job (`windows-latest`, `x86_64-pc-windows-msvc`, 90-minute budget)
   that stages a `.zip` (binary + `LICENSE`, `NOTICE`, `THIRD-PARTY-NOTICES`, `README.txt`) and
-  `install.ps1` exists at the repo root; both were uncommitted working-tree changes at the time
-  of writing. `scripts/test-install.ps1` does not exist yet, no tagged run has produced a
-  Windows `.zip`, and WIN-01…06 are **pending** in `.planning/REQUIREMENTS.md` (Phase 5 is 0/5).
-  Do not tell a user that a Windows `.zip` is downloadable today.
+  `install.ps1` and its harness `scripts/test-install.ps1` exist at the repo root; all three
+  were uncommitted working-tree changes at the time of writing. The harness has **not been run**
+  (the authoring host has no PowerShell), no tagged run has produced a Windows `.zip`, and
+  WIN-01…06 are **pending** in `.planning/REQUIREMENTS.md` (Phase 5 is 0/5). Do not tell a user
+  that a Windows `.zip` is downloadable today.
 - **The sandbox is honest on Windows.** There is no Windows sandbox backend. Only `--sandbox off`
   is accepted; any other profile (including one from `config.toml` or
   `DEEPSEEK_BUILD_SANDBOX`) is a startup error naming the unsupported platform, and
