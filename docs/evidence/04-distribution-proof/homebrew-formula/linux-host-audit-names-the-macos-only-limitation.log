@@ -1,0 +1,3 @@
+Error: local/deepseek-test/deepseek-build: formula requires at least a URL
+Warning: Removed Sorbet lines from backtrace!
+without simulation: a macOS-only formula has no URL on Linux (formula requires at least a URL)

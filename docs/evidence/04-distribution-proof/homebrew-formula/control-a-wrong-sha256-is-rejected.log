@@ -1,0 +1,5 @@
+==> Fetching wrongsha from local/deepseek-test
+✘ Formula wrongsha (0.1.0-proof1)
+Error: Formula wrongsha (0.1.0-proof1) reports different checksum: 2b61dfab870b397b49ed810f53e073714582e01dbf5c6f9d166656367c51324b
+       SHA-256 checksum of downloaded file:                        ffe0f3c5f76be9ee6fa2dff1d53c34de6dce66d3553a094ee62524f58f57b3a7
+control: Homebrew rejected the wrong sha256 (reports different checksum)

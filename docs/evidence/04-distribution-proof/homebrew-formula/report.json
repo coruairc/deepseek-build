@@ -1,0 +1,105 @@
+{
+  "item": "homebrew-formula",
+  "requirements": [
+    "PKG-04"
+  ],
+  "date": "2026-11-26T06:38:41Z",
+  "host": "Linux/x86_64",
+  "command": "Homebrew 7.0.16 on Linux: throwaway local tap, brew style + brew audit --strict [--online] (HOMEBREW_SIMULATE_MACOS_ON_LINUX=1), per-arch brew ruby resolution, brew fetch checksum + mismatch control; brew install NOT RUN (macOS binaries on a Linux host)",
+  "steps": [
+    {
+      "name": "checker: 15 offline assertions",
+      "ok": true,
+      "detail": "exit 0: homebrew-formula: 15/15 PASS"
+    },
+    {
+      "name": "checker: --online 19 assertions",
+      "ok": true,
+      "detail": "exit 0: homebrew-formula: 19/19 PASS"
+    },
+    {
+      "name": "checker: --self-test 3 mutations",
+      "ok": true,
+      "detail": "exit 0: self-test: 3/3 PASS"
+    },
+    {
+      "name": "checker.log: committed log carries 19/19 and 3/3",
+      "ok": true,
+      "detail": "exit 0: checker.log: 19/19 PASS and self-test 3/3 PASS"
+    },
+    {
+      "name": "tap: local/deepseek-test carries the committed formula",
+      "ok": true,
+      "detail": "exit 0: tap formula sha256 matches the in-tree file"
+    },
+    {
+      "name": "brew style: no offenses",
+      "ok": true,
+      "detail": "exit 0: 1 file inspected, no offenses detected"
+    },
+    {
+      "name": "brew audit --strict: exit 0",
+      "ok": true,
+      "detail": "exit 0: brew audit --strict: 0 offenses (exit 0)"
+    },
+    {
+      "name": "brew audit --strict --online: exit 0",
+      "ok": true,
+      "detail": "exit 0: brew audit --strict --online: 0 offenses (exit 0)"
+    },
+    {
+      "name": "brew ruby: on_arm resolves the aarch64 asset",
+      "ok": true,
+      "detail": "exit 0: on_arm: aarch64 url + release sha256"
+    },
+    {
+      "name": "brew ruby: on_intel resolves the x86_64 asset",
+      "ok": true,
+      "detail": "exit 0: on_intel: x86_64 url + release sha256"
+    },
+    {
+      "name": "brew fetch: intel tarball downloads and verifies",
+      "ok": true,
+      "detail": "exit 0: ✔︎ Formula deepseek-build (0.1.0-proof1)"
+    },
+    {
+      "name": "brew fetch: 53,850,000 bytes, sha256 ffe0f3c5",
+      "ok": true,
+      "detail": "exit 0: fetched bytes: 53,850,000, sha256 matches the formula"
+    },
+    {
+      "name": "control: a wrong sha256 is rejected",
+      "ok": true,
+      "detail": "exit 0: control: Homebrew rejected the wrong sha256 (reports different checksum)"
+    },
+    {
+      "name": "linux host: audit names the macOS-only limitation",
+      "ok": true,
+      "detail": "exit 0: without simulation: a macOS-only formula has no URL on Linux (formula requires at least a URL)"
+    },
+    {
+      "name": "brew install: NOT RUN",
+      "ok": true,
+      "detail": "exit 0: On macOS (after the author creates the tap): brew tap coruairc/deepseek-build && brew install deepseek-build && brew test deepseek-build"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "packaging/homebrew/deepseek-build.rb",
+      "sha256": "73d1bd430c805bfc374729cdd52196c56667f8397a388a4298e623208285513a"
+    },
+    {
+      "path": "packaging/homebrew/README.md",
+      "sha256": "a4696234fdfe712cd138e12cff735d6dec8baf7602c7ea647bc4006ace88dd2c"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/homebrew-formula/checker.log",
+      "sha256": "c61e1534c75dc090e58558166efe7e022dde2895d7b438a410218a782deff6c3"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/homebrew-formula/resolve-branch.rb",
+      "sha256": "033fa98a80edc477a2cc157bf26a4ebded20fefbee8f7fb53e4c0e9bdc69477c"
+    }
+  ],
+  "result": "ok"
+}

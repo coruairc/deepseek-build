@@ -1,0 +1,3 @@
+NOT RUN: brew install was not executed.
+Reason: the formula installs macOS Mach-O tarballs and this host is Linux; an install here would copy a darwin binary into a Linux prefix and prove nothing.
+On macOS (after the author creates the tap): brew tap coruairc/deepseek-build && brew install deepseek-build && brew test deepseek-build

@@ -1,0 +1,5 @@
+arch=arm os=macos
+version=0.1.0-proof1
+url=https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-proof1/deepseek-build-0.1.0-proof1-aarch64-apple-darwin.tar.gz
+sha256=2b61dfab870b397b49ed810f53e073714582e01dbf5c6f9d166656367c51324b
+on_arm: aarch64 url + release sha256

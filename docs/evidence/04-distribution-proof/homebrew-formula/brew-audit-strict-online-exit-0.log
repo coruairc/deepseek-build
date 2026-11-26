@@ -1,0 +1,1 @@
+brew audit --strict --online: 0 offenses (exit 0)
