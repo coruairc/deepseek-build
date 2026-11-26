@@ -1,0 +1,25 @@
+# checksums for the v0.1.0-proof1 release — written 2026-11-26T06:03:34Z (UTC)
+# assets downloaded to a temp dir outside the repository; tarballs are not committed
+
+## 1. sha256sum -c SHA256SUMS  (the release's own four-line file, run in the asset dir)
+deepseek-build-0.1.0-proof1-aarch64-apple-darwin.tar.gz: OK
+deepseek-build-0.1.0-proof1-aarch64-unknown-linux-gnu.tar.gz: OK
+deepseek-build-0.1.0-proof1-x86_64-apple-darwin.tar.gz: OK
+deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz: OK
+
+## 2. local sha256 vs the GitHub asset digest (gh release view --json assets)
+asset                                                        local sha256                                                     github digest                                                           verdict
+SHA256SUMS                                                   0183ee9bccae0101945831b4b621aefce7db65a84563c8f0c3c5015bc3b2995a sha256:0183ee9bccae0101945831b4b621aefce7db65a84563c8f0c3c5015bc3b2995a MATCH
+deepseek-build-0.1.0-proof1-aarch64-apple-darwin.tar.gz      2b61dfab870b397b49ed810f53e073714582e01dbf5c6f9d166656367c51324b sha256:2b61dfab870b397b49ed810f53e073714582e01dbf5c6f9d166656367c51324b MATCH
+deepseek-build-0.1.0-proof1-aarch64-unknown-linux-gnu.tar.gz 0cfcf04796fbdaa098c5b23c55b22d4385d3c2af564fa357482fad68837c7e9a sha256:0cfcf04796fbdaa098c5b23c55b22d4385d3c2af564fa357482fad68837c7e9a MATCH
+deepseek-build-0.1.0-proof1-x86_64-apple-darwin.tar.gz       ffe0f3c5f76be9ee6fa2dff1d53c34de6dce66d3553a094ee62524f58f57b3a7 sha256:ffe0f3c5f76be9ee6fa2dff1d53c34de6dce66d3553a094ee62524f58f57b3a7 MATCH
+deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz  298c9f275d695fa43872bd44a0fe9da25ee66bd86a6051ac233689063ccbdaf3 sha256:298c9f275d695fa43872bd44a0fe9da25ee66bd86a6051ac233689063ccbdaf3 MATCH
+install.sh                                                   31e114d4a29dbbeb0d3e2e442a72a6ecc14ad3f4b99956fbff23f42c0cabd5e5 sha256:31e114d4a29dbbeb0d3e2e442a72a6ecc14ad3f4b99956fbff23f42c0cabd5e5 MATCH
+
+## 3. extracted linux-x86_64 binary, executed on this host
+$ <TMP>/opencode/04-assets.Yv4ZRD/extract-linux-x86_64/deepseek-build --version
+deepseek-build 0.1.0-proof1 (b14d28eb2bc7)
+
+## 4. file(1) on the two darwin binaries (cross-checked, not executed here)
+<TMP>/opencode/04-assets.Yv4ZRD/extract-aarch64-apple-darwin/deepseek-build: Mach-O 64-bit arm64 executable, flags:<NOUNDEFS|DYLDLINK|TWOLEVEL|WEAK_DEFINES|BINDS_TO_WEAK|PIE|HAS_TLV_DESCRIPTORS>
+<TMP>/opencode/04-assets.Yv4ZRD/extract-x86_64-apple-darwin/deepseek-build:  Mach-O 64-bit x86_64 executable, flags:<NOUNDEFS|DYLDLINK|TWOLEVEL|WEAK_DEFINES|BINDS_TO_WEAK|PIE|HAS_TLV_DESCRIPTORS>

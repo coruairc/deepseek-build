@@ -1,0 +1,183 @@
+{
+  "tag": "v0.1.0-proof1",
+  "prerelease": true,
+  "draft": false,
+  "published_at": "2026-11-26T00:56:19Z",
+  "url": "https://github.com/coruairc/deepseek-build/releases/tag/v0.1.0-proof1",
+  "asset_count": 6,
+  "assets": [
+    {
+      "name": "deepseek-build-0.1.0-proof1-aarch64-apple-darwin.tar.gz",
+      "size": 49591197,
+      "digest": "sha256:2b61dfab870b397b49ed810f53e073714582e01dbf5c6f9d166656367c51324b"
+    },
+    {
+      "name": "deepseek-build-0.1.0-proof1-aarch64-unknown-linux-gnu.tar.gz",
+      "size": 53622321,
+      "digest": "sha256:0cfcf04796fbdaa098c5b23c55b22d4385d3c2af564fa357482fad68837c7e9a"
+    },
+    {
+      "name": "deepseek-build-0.1.0-proof1-x86_64-apple-darwin.tar.gz",
+      "size": 53850000,
+      "digest": "sha256:ffe0f3c5f76be9ee6fa2dff1d53c34de6dce66d3553a094ee62524f58f57b3a7"
+    },
+    {
+      "name": "deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz",
+      "size": 55967373,
+      "digest": "sha256:298c9f275d695fa43872bd44a0fe9da25ee66bd86a6051ac233689063ccbdaf3"
+    },
+    {
+      "name": "install.sh",
+      "size": 14552,
+      "digest": "sha256:31e114d4a29dbbeb0d3e2e442a72a6ecc14ad3f4b99956fbff23f42c0cabd5e5"
+    },
+    {
+      "name": "SHA256SUMS",
+      "size": 496,
+      "digest": "sha256:0183ee9bccae0101945831b4b621aefce7db65a84563c8f0c3c5015bc3b2995a"
+    }
+  ],
+  "version": "0.1.0-proof1",
+  "sums": [
+    {
+      "name": "deepseek-build-0.1.0-proof1-aarch64-apple-darwin.tar.gz",
+      "sha256": "2b61dfab870b397b49ed810f53e073714582e01dbf5c6f9d166656367c51324b"
+    },
+    {
+      "name": "deepseek-build-0.1.0-proof1-aarch64-unknown-linux-gnu.tar.gz",
+      "sha256": "0cfcf04796fbdaa098c5b23c55b22d4385d3c2af564fa357482fad68837c7e9a"
+    },
+    {
+      "name": "deepseek-build-0.1.0-proof1-x86_64-apple-darwin.tar.gz",
+      "sha256": "ffe0f3c5f76be9ee6fa2dff1d53c34de6dce66d3553a094ee62524f58f57b3a7"
+    },
+    {
+      "name": "deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz",
+      "sha256": "298c9f275d695fa43872bd44a0fe9da25ee66bd86a6051ac233689063ccbdaf3"
+    }
+  ],
+  "files": [
+    {
+      "name": "SHA256SUMS",
+      "sha256": "0183ee9bccae0101945831b4b621aefce7db65a84563c8f0c3c5015bc3b2995a",
+      "matches_sums": null,
+      "matches_asset_digest": true
+    },
+    {
+      "name": "deepseek-build-0.1.0-proof1-aarch64-apple-darwin.tar.gz",
+      "sha256": "2b61dfab870b397b49ed810f53e073714582e01dbf5c6f9d166656367c51324b",
+      "matches_sums": true,
+      "matches_asset_digest": true
+    },
+    {
+      "name": "deepseek-build-0.1.0-proof1-aarch64-unknown-linux-gnu.tar.gz",
+      "sha256": "0cfcf04796fbdaa098c5b23c55b22d4385d3c2af564fa357482fad68837c7e9a",
+      "matches_sums": true,
+      "matches_asset_digest": true
+    },
+    {
+      "name": "deepseek-build-0.1.0-proof1-x86_64-apple-darwin.tar.gz",
+      "sha256": "ffe0f3c5f76be9ee6fa2dff1d53c34de6dce66d3553a094ee62524f58f57b3a7",
+      "matches_sums": true,
+      "matches_asset_digest": true
+    },
+    {
+      "name": "deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz",
+      "sha256": "298c9f275d695fa43872bd44a0fe9da25ee66bd86a6051ac233689063ccbdaf3",
+      "matches_sums": true,
+      "matches_asset_digest": true
+    },
+    {
+      "name": "install.sh",
+      "sha256": "31e114d4a29dbbeb0d3e2e442a72a6ecc14ad3f4b99956fbff23f42c0cabd5e5",
+      "matches_sums": null,
+      "matches_asset_digest": true
+    }
+  ],
+  "sums_verified": 4,
+  "sums_mismatches": [],
+  "tarballs": {
+    "deepseek-build-0.1.0-proof1-aarch64-apple-darwin.tar.gz": {
+      "members": [
+        "deepseek-build",
+        "LICENSE",
+        "NOTICE",
+        "THIRD-PARTY-NOTICES",
+        "README.txt"
+      ],
+      "top_level": [
+        "LICENSE",
+        "NOTICE",
+        "README.txt",
+        "THIRD-PARTY-NOTICES",
+        "deepseek-build"
+      ],
+      "debug_members": []
+    },
+    "deepseek-build-0.1.0-proof1-aarch64-unknown-linux-gnu.tar.gz": {
+      "members": [
+        "deepseek-build",
+        "LICENSE",
+        "NOTICE",
+        "THIRD-PARTY-NOTICES",
+        "README.txt"
+      ],
+      "top_level": [
+        "LICENSE",
+        "NOTICE",
+        "README.txt",
+        "THIRD-PARTY-NOTICES",
+        "deepseek-build"
+      ],
+      "debug_members": []
+    },
+    "deepseek-build-0.1.0-proof1-x86_64-apple-darwin.tar.gz": {
+      "members": [
+        "deepseek-build",
+        "LICENSE",
+        "NOTICE",
+        "THIRD-PARTY-NOTICES",
+        "README.txt"
+      ],
+      "top_level": [
+        "LICENSE",
+        "NOTICE",
+        "README.txt",
+        "THIRD-PARTY-NOTICES",
+        "deepseek-build"
+      ],
+      "debug_members": []
+    },
+    "deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz": {
+      "members": [
+        "deepseek-build",
+        "LICENSE",
+        "NOTICE",
+        "THIRD-PARTY-NOTICES",
+        "README.txt"
+      ],
+      "top_level": [
+        "LICENSE",
+        "NOTICE",
+        "README.txt",
+        "THIRD-PARTY-NOTICES",
+        "deepseek-build"
+      ],
+      "debug_members": []
+    }
+  },
+  "linux_version_output": "deepseek-build 0.1.0-proof1 (b14d28eb2bc7)",
+  "darwin_file_output": {
+    "aarch64-apple-darwin": "/tmp/opencode/04-assets.Yv4ZRD/extract-aarch64-apple-darwin/deepseek-build: Mach-O 64-bit arm64 executable, flags:<NOUNDEFS|DYLDLINK|TWOLEVEL|WEAK_DEFINES|BINDS_TO_WEAK|PIE|HAS_TLV_DESCRIPTORS>",
+    "x86_64-apple-darwin": "/tmp/opencode/04-assets.Yv4ZRD/extract-x86_64-apple-darwin/deepseek-build: Mach-O 64-bit x86_64 executable, flags:<NOUNDEFS|DYLDLINK|TWOLEVEL|WEAK_DEFINES|BINDS_TO_WEAK|PIE|HAS_TLV_DESCRIPTORS>"
+  },
+  "v0_1_0_status": 404,
+  "latest_status": 404,
+  "latest_tag": null,
+  "release_list_tags": [
+    "v0.1.0-proof1",
+    "v0.0.1-rc5",
+    "v0.0.1-rc4"
+  ],
+  "checked_at": "2026-11-26T06:03:20Z"
+}

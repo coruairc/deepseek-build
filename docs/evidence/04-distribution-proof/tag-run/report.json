@@ -1,0 +1,75 @@
+{
+  "item": "tag-run",
+  "requirements": [
+    "REL-04"
+  ],
+  "date": "2026-11-26T06:05:01Z",
+  "host": "Linux/x86_64",
+  "command": "python3 scripts/distribution-proof.py run --sha b14d28eb2bc71a046b789e0a705848d651685d35 --out run.json; python3 scripts/distribution-proof.py release --tag v0.1.0-proof1 --dir <TMP>/assets --out release.json; sha256sum -c SHA256SUMS in the asset dir",
+  "steps": [
+    {
+      "name": "run: green with the container job and both macOS legs under 240",
+      "ok": true,
+      "detail": "exit 0: run 45724842211 success; container success; macos {'aarch64-apple-darwin': 47.8, 'x86_64-apple-darwin': 61.5}"
+    },
+    {
+      "name": "run: the guard approved a two-name prerelease list with no latest",
+      "ok": true,
+      "detail": "exit 0: guard-image-tags: OK 2 names (prerelease) | Pre-release — :latest unchanged"
+    },
+    {
+      "name": "release: prerelease classification and exactly six assets",
+      "ok": true,
+      "detail": "exit 0: prerelease=True draft=False asset_count=6"
+    },
+    {
+      "name": "release: every digest agrees with SHA256SUMS and the GitHub asset digest",
+      "ok": true,
+      "detail": "exit 0: sums_verified=4; all 6 files match the GitHub digest"
+    },
+    {
+      "name": "release: each tarball carries five entries and no debug artifact",
+      "ok": true,
+      "detail": "exit 0: 4 tarballs: five top-level entries each, no debug members"
+    },
+    {
+      "name": "release: the extracted linux binary reports the tag version",
+      "ok": true,
+      "detail": "exit 0: deepseek-build 0.1.0-proof1 (b14d28eb2bc7)"
+    },
+    {
+      "name": "release: no v0.1.0 release and no latest release",
+      "ok": true,
+      "detail": "exit 0: v0.1.0 -> 404; releases/latest -> 404; list = ['v0.1.0-proof1', 'v0.0.1-rc5', 'v0.0.1-rc4']"
+    },
+    {
+      "name": "assets: sha256sum -c against the release's own SHA256SUMS",
+      "ok": true,
+      "detail": "exit 0: deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz: OK"
+    },
+    {
+      "name": "evidence: nothing over 1 MiB is committed",
+      "ok": true,
+      "detail": "exit 0: no file over 1 MiB under docs/evidence/04-distribution-proof"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/04-distribution-proof/tag-run/run.json",
+      "sha256": "9c560cab5e853fbb7f1099da1e5594404e82d948c4e42e5dd53bdf9c56637eea"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/tag-run/release.json",
+      "sha256": "c5c198ec0e52ac5d50caabe8b33fb9d92b24ec874b04bda33010493ada37411e"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/tag-run/SHA256SUMS",
+      "sha256": "0183ee9bccae0101945831b4b621aefce7db65a84563c8f0c3c5015bc3b2995a"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/tag-run/checksums.log",
+      "sha256": "7d33ce63aa48606ee776caaf35a2c5a5f7e3fbe01db392080b444276ec8648ac"
+    }
+  ],
+  "result": "ok"
+}

@@ -1,0 +1,526 @@
+{
+  "run_id": 45724842211,
+  "url": "https://github.com/coruairc/deepseek-build/actions/runs/45724842211",
+  "event": "push",
+  "ref": "v0.1.0-proof1",
+  "head_sha": "b14d28eb2bc71a046b789e0a705848d651685d35",
+  "status": "completed",
+  "conclusion": "success",
+  "created_at": "2026-11-25T23:54:21Z",
+  "updated_at": "2026-11-26T00:56:27Z",
+  "jobs": [
+    {
+      "name": "Derive release version",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-25T23:54:24Z",
+      "completed_at": "2026-11-25T23:54:27Z",
+      "minutes": 0.1,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Derive version from the pushed tag",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "build-macos (aarch64-apple-darwin)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-25T23:54:30Z",
+      "completed_at": "2026-11-26T00:42:16Z",
+      "minutes": 47.8,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Checkout tag",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install system dependencies",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Rust toolchain",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Restore cargo cache",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build release-dist binary",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Ad-hoc sign the macOS binary",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Smoke-check the built binary",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Package tarball",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify the packaged macOS artifact",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload tarball as a job artifact",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Restore cargo cache",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Checkout tag",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "build-macos (x86_64-apple-darwin)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-25T23:54:30Z",
+      "completed_at": "2026-11-26T00:56:01Z",
+      "minutes": 61.5,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Checkout tag",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install system dependencies",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Rust toolchain",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Restore cargo cache",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build release-dist binary",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Ad-hoc sign the macOS binary",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Smoke-check the built binary",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Package tarball",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify the packaged macOS artifact",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload tarball as a job artifact",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Restore cargo cache",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Checkout tag",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "build-linux (aarch64-unknown-linux-gnu)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-25T23:54:32Z",
+      "completed_at": "2026-11-26T00:18:23Z",
+      "minutes": 23.9,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Checkout tag",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install system dependencies",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Rust toolchain",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Restore cargo cache",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build release-dist binary",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Smoke-check the built binary",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Package tarball",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload tarball as a job artifact",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Restore cargo cache",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Checkout tag",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "build-linux (x86_64-unknown-linux-gnu)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-25T23:54:30Z",
+      "completed_at": "2026-11-26T00:22:30Z",
+      "minutes": 28.0,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Checkout tag",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install system dependencies",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Rust toolchain",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Restore cargo cache",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build release-dist binary",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Smoke-check the built binary",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Package tarball",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload tarball as a job artifact",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Restore cargo cache",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Checkout tag",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "Build and push container image",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-26T00:22:32Z",
+      "completed_at": "2026-11-26T00:25:44Z",
+      "minutes": 3.2,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Checkout tag",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Fetch linux/amd64 tarball",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Fetch linux/arm64 tarball",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stage per-arch build contexts",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Docker Buildx",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Log in to GHCR",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Extract metadata (tags + labels)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Guard the resolved image tag list",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build and push linux/amd64",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build and push linux/arm64",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Assemble multi-arch manifest",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Build and push linux/arm64",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Build and push linux/amd64",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Log in to GHCR",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Docker Buildx",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Checkout tag",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "Publish GitHub release",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-26T00:56:04Z",
+      "completed_at": "2026-11-26T00:56:26Z",
+      "minutes": 0.4,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Checkout tag",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Fetch packaged tarballs",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify all 4 tarballs arrived",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Guard \u2014 repo-root install.sh must exist to be published",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Generate SHA256SUMS",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Create the GitHub release",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Checkout tag",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "macos_minutes": {
+    "aarch64-apple-darwin": 47.8,
+    "x86_64-apple-darwin": 61.5
+  },
+  "macos_steps_ok": {
+    "aarch64-apple-darwin": {
+      "Ad-hoc sign the macOS binary": "success",
+      "Verify the packaged macOS artifact": "success"
+    },
+    "x86_64-apple-darwin": {
+      "Ad-hoc sign the macOS binary": "success",
+      "Verify the packaged macOS artifact": "success"
+    }
+  },
+  "container": {
+    "name": "Build and push container image",
+    "present": true,
+    "conclusion": "success",
+    "skipped": false,
+    "guard_step_conclusion": "success"
+  },
+  "guard_line": "guard-image-tags: OK 2 names (prerelease)",
+  "guard_names": [
+    "0.1.0-proof1",
+    "v0.1.0-proof1"
+  ],
+  "latest_line": "Pre-release \u2014 :latest unchanged",
+  "image_digest": "sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be",
+  "build_digests": {
+    "amd64": "sha256:7f33b41bad8811fd7550808fa8a21fd5247480b7defacb793ea385bc8c566f7b",
+    "arm64": "sha256:85f9de25a9863bc5c33340ccb6b0f39a4f44adc14125cf5805deda926c264410"
+  },
+  "checked_at": "2026-11-26T06:02:58Z"
+}
