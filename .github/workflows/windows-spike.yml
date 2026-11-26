@@ -1,0 +1,78 @@
+name: windows-spike
+
+# Throwaway compile spike (phase 5, plan 05-01). Answers one question: does the
+# product compile for x86_64-pc-windows-msvc on a real Windows runner? The test
+# targets are reported separately because a Unix-only test is a gating job for
+# phase 5, not a product defect. Creates no release, pushes no image.
+
+on:
+  push:
+    branches: [ci/windows-spike2]
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: windows-spike-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: cargo check (x86_64-pc-windows-msvc)
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.94.0 --profile minimal
+          rustup default 1.94.0
+          rustc --version
+
+      - name: Install protoc (hard-required by xai-proto-build in CI)
+        shell: bash
+        run: |
+          set -euo pipefail
+          choco install protoc -y --no-progress
+          protoc_path="$(command -v protoc || true)"
+          if [ -z "$protoc_path" ]; then
+            protoc_path="/c/ProgramData/chocolatey/bin/protoc.exe"
+          fi
+          test -x "$protoc_path" || { echo "::error::protoc not found after choco install"; exit 1; }
+          "$protoc_path" --version
+          echo "PROTOC=$protoc_path" >> "$GITHUB_ENV"
+
+      # THE GATE: libraries, binaries and examples. A failure here is a product defect.
+      - name: "cargo check (product: libs, bins, examples)"
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo check --workspace --lib --bins --examples --message-format=short 2>&1 | tee "$RUNNER_TEMP/product.log"
+
+      # INFORMATIONAL: test targets. A Unix-only test must be gated, which is
+      # phase-5 work, not a product defect, so it does not fail this job.
+      - name: cargo check (all targets, informational)
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          cargo check --workspace --all-targets --message-format=short 2>&1 | tee "$RUNNER_TEMP/all-targets.log"
+          echo "all_targets_exit=${PIPESTATUS[0]}"
+          echo "== failing test/example targets =="
+          grep -aE '^error: could not compile' "$RUNNER_TEMP/all-targets.log" | sort -u || true
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: windows-check-logs
+          path: |
+            ${{ runner.temp }}/product.log
+            ${{ runner.temp }}/all-targets.log
+          if-no-files-found: warn
