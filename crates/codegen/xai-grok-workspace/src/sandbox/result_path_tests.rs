@@ -187,11 +187,7 @@ async fn handle_with_sandbox(
     let config_path = crate::sandbox_mode::workspace_config_path(&workspace);
     std::fs::create_dir_all(config_path.parent().expect("config path has a parent")).unwrap();
     std::fs::create_dir_all(&grok_home).unwrap();
-    std::fs::write(
-        config_path,
-        format!("[sandbox]\nmode = \"{mode}\"\n"),
-    )
-    .unwrap();
+    std::fs::write(config_path, format!("[sandbox]\nmode = \"{mode}\"\n")).unwrap();
     let sandbox = Arc::new(
         WorkspaceSandbox::open(WorkspaceSandboxConfig {
             workspace_root: workspace.clone(),

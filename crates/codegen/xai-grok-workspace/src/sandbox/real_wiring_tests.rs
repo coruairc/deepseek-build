@@ -182,11 +182,7 @@ impl Fixture {
         let config_path = crate::sandbox_mode::workspace_config_path(&root);
         std::fs::create_dir_all(config_path.parent().expect("config path has a parent")).unwrap();
         std::fs::create_dir_all(&grok_home).unwrap();
-        std::fs::write(
-            config_path,
-            format!("[sandbox]\nmode = \"{mode}\"\n"),
-        )
-        .unwrap();
+        std::fs::write(config_path, format!("[sandbox]\nmode = \"{mode}\"\n")).unwrap();
         Fixture {
             _tmp: tmp,
             root,

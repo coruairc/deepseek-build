@@ -101,6 +101,12 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 - [ ] **WIN-05**: `install.ps1` downloads the zip, verifies SHA-256 before extracting, installs to `%LOCALAPPDATA%`, prints a PATH hint and supports `-Uninstall`; `scripts/test-install.ps1` exercises it and the real proof runs against a throwaway tag. **Authored and syntax-reviewed; not executed (no PowerShell on the build host)**
 - [ ] **WIN-06**: A Windows acceptance record reports the test-target count and pass/fail/unix-gated totals, `--version` from the extracted zip, a headless turn with a sentinel, the two `*_windows.rs` PTY scenarios with `--ignored`, and an explicit list of what did not run
 
+### API Key Entry (INSERTED 2026-11-26)
+
+- [ ] **AUTH-01**: When no key is available (neither `DEEPSEEK_API_KEY` nor `DEEPSEEK_BUILD_API_KEY` and no saved key), the interactive TUI opens a modal with a masked input field; Esc cancels with the existing message, Enter saves and continues without a restart, and headless mode never prompts
+- [ ] **AUTH-02**: A submitted key is stored at `~/.deepseek-build/credentials.json` with mode 0600, written atomically, read only as a fallback after both environment variables, and refused with a `chmod 600` hint if the file is group/other-readable
+- [ ] **AUTH-03**: The key never appears in logs, saved sessions, evidence, panic text or committed files; `Debug` redacts it, errors name only the path, and `scripts/key-leak-check.sh --scan` stays green
+
 ### Documentation Truth
 
 - [x] **DOCS-01**: `DECISIONS.md` §E/§F is rewritten from the tree, keeping D9's personal-tool intent while recording that the release pipeline exists
@@ -213,6 +219,9 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | WIN-04 | Phase 5 — Windows Support | Complete — non-off profiles refused; UI reports unsupported |
 | WIN-05 | Phase 5 — Windows Support | Partial — authored, not executed |
 | WIN-06 | Phase 5 — Windows Support | Pending — needs a Windows host and a tag run |
+| AUTH-01 | Phase 5.2 — API Key Entry (INSERTED) | Pending |
+| AUTH-02 | Phase 5.2 — API Key Entry (INSERTED) | Pending |
+| AUTH-03 | Phase 5.2 — API Key Entry (INSERTED) | Pending |
 | DOCS-01 | Phase 6 — Documentation Truth & Freeze | Complete |
 | DOCS-02 | Phase 6 — Documentation Truth & Freeze | Complete |
 | DOCS-03 | Phase 6 — Documentation Truth & Freeze | Complete |
@@ -223,8 +232,8 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | FREEZE-03 | Phase 6 — Documentation Truth & Freeze | Pending |
 
 **Coverage:**
-- v1 requirements: 51 total
-- Mapped to phases: 51
+- v1 requirements: 54 total
+- Mapped to phases: 54
 - Unmapped: 0 ✓
 - Duplicates: 0 ✓
 
@@ -239,7 +248,7 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | 5 — Windows Support | WIN-01, WIN-02, WIN-03, WIN-04, WIN-05, WIN-06 | 6 |
 | 5.1 — Project Directory Rebrand (INSERTED) | BRAND-01, BRAND-02, BRAND-03 | 3 |
 | 6 — Documentation Truth & Freeze | DOCS-01, DOCS-02, DOCS-03, DOCS-04, ACC-01, FREEZE-01, FREEZE-02, FREEZE-03 | 8 |
-| **Total** | | **51** |
+| **Total** | | **54** |
 
 ---
 *Requirements defined: 2026-11-21*
