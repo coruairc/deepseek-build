@@ -12,9 +12,19 @@
 //! cargo run -p xai-grok-sandbox --example sandbox_smoke_test -- read-only
 //! ```
 
+#[cfg(target_os = "linux")]
 use std::path::Path;
+#[cfg(target_os = "linux")]
 use xai_grok_sandbox::{ProfileName, SandboxManager};
 
+// The sandbox backends are kilL-only: bwrap on Linux, Seatbelt on macOS. This smoke test
+// drives bwrap directly, so it is Linux-only; on other targets it is a no-op example.
+#[cfg(not(target_os = "linux"))]
+fn main() {
+    eprintln!("sandbox_smoke_test is Linux-only (bwrap); nothing to run on this platform.");
+}
+
+#[cfg(target_os = "linux")]
 fn main() {
     // Parse profile from args (default: workspace).
     let profile_name = std::env::args()
@@ -121,6 +131,7 @@ fn main() {
     println!("\n✅ Smoke test complete");
 }
 
+#[cfg(target_os = "linux")]
 fn test_read(label: &str, path: &Path) {
     if path.is_file() {
         match std::fs::read(path) {
@@ -150,6 +161,7 @@ fn test_read(label: &str, path: &Path) {
     }
 }
 
+#[cfg(target_os = "linux")]
 fn test_write(label: &str, path: &Path) {
     match std::fs::write(path, b"sandbox-test") {
         Ok(()) => {
