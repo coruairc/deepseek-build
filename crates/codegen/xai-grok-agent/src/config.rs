@@ -1279,12 +1279,19 @@ impl AgentDefinition {
                 return scope;
             }
         }
-        if path_str.contains(".grok/agents/") || path_str.contains(".grok\\agents\\") {
+        if xai_grok_brand::project_dir_names()
+            .into_iter()
+            .any(|name| {
+                path_str.contains(&format!("{name}/agents/"))
+                    || path_str.contains(&format!("{name}\\agents\\"))
+            })
+        {
             return AgentScope::Project;
         }
-        if path_str.contains(".grok/bundled/agents/")
-            || path_str.contains(".grok\\bundled\\agents\\")
-        {
+        if xai_grok_brand::project_dir_names().into_iter().any(|name| {
+            path_str.contains(&format!("{name}/bundled/agents/"))
+                || path_str.contains(&format!("{name}\\bundled\\agents\\"))
+        }) {
             return AgentScope::Bundled;
         }
         AgentScope::BuiltIn

@@ -6,6 +6,7 @@ edition.workspace = true
 description = "OS-level sandboxing for deepseek-build using kernel primitives (Landlock/Seatbelt) via nono"
 
 [dependencies]
+xai-grok-brand = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true, features = ["serde"] }
 xai-dirs = { workspace = true }

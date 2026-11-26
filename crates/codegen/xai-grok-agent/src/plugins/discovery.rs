@@ -220,7 +220,7 @@ fn user_plugin_dirs(home: Option<&Path>, grok: Option<&Path>) -> Vec<(PathBuf, P
     dirs
 }
 
-/// Origin for a project plugins parent dir: `.claude/plugins` vs `.grok/plugins`.
+/// Origin for a project plugins parent dir: `.claude/plugins` vs `.deepseek/plugins` / `.grok/plugins`.
 fn project_plugins_dir_origin(plugins_dir: &Path) -> PluginOrigin {
     let is_claude = plugins_dir
         .parent()
@@ -244,10 +244,15 @@ pub fn project_plugin_dirs(cwd: Option<&Path>) -> (Vec<PathBuf>, Option<PathBuf>
     (project_plugin_dirs_in(&chain.dirs), chain.git_root)
 }
 
-/// Existing project plugin parent dirs (`.grok/plugins`, `.claude/plugins`) under each dir of a precomputed [`crate::repo::RepoDirChain`].
+/// Existing project plugin parent dirs (`.deepseek/plugins`, `.grok/plugins`, `.claude/plugins`) under each dir of a precomputed [`crate::repo::RepoDirChain`].
 /// The folder-trust gate reuses its one shared chain here so detection and discovery can never drift.
 pub fn project_plugin_dirs_in(chain_dirs: &[PathBuf]) -> Vec<PathBuf> {
-    crate::repo::existing_subdirs_along(chain_dirs, &[".grok/plugins", ".claude/plugins"])
+    let subdirs: Vec<String> = xai_grok_brand::project_dir_names()
+        .into_iter()
+        .map(|name| format!("{name}/plugins"))
+        .chain(std::iter::once(".claude/plugins".to_string()))
+        .collect();
+    crate::repo::existing_subdirs_along(chain_dirs, &subdirs)
 }
 
 /// `cwd` is used to find the git worktree root for project-scope plugins.

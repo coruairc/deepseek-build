@@ -1,6 +1,7 @@
 //! The `[sandbox]` table of the workspace daemon's own settings file, `workspaced.toml`
-//! (`<grok_home>/workspaced.toml` for the user layer, `<workspace>/.grok/workspaced.toml` for the
-//! folder's own, tighten-only layer). The daemon owns this file outright: nothing here is read
+//! (`<grok_home>/workspaced.toml` for the user layer, `<workspace>/.deepseek/workspaced.toml` for the
+//! folder's own, tighten-only layer; the legacy `.grok/` location is still read). The daemon owns this
+//! file outright: nothing here is read
 //! from or written to `config.toml`, whose `[sandbox]` table (`profile`, `auto_allow_bash`) stays
 //! the `grok` CLI's.
 
@@ -8,7 +9,12 @@ use serde::{Deserialize, Serialize};
 pub use xai_grok_config::sandbox_mode::optional_sandbox_mode;
 use xai_grok_sandbox::command::SandboxMode;
 
-/// The daemon's settings file name, under the grok home and under a folder's `.grok/`: the one
+/// Project-scoped directory names that may hold a `workspaced.toml`, in precedence order.
+pub fn workspace_config_dir_names() -> Vec<&'static str> {
+    xai_grok_brand::project_dir_names()
+}
+
+/// The daemon's settings file name, under the grok home and under a folder's `.deepseek/`: the one
 /// name the loader reads and the floor protects.
 pub use xai_grok_sandbox::command::protected::DAEMON_SETTINGS_FILENAME as WORKSPACED_CONFIG_FILENAME;
 

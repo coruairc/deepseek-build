@@ -56,11 +56,14 @@ impl StartupProjectSources {
 /// Existing `<dir>/<subdir>` directories under each dir of a precomputed cwd-to-git-root chain ([`RepoDirChain::dirs`]).
 /// Results are in chain order: cwd-first, then each `subdirs` entry in order.
 /// The project plugin/agent dir walkers share this body so the byte-identical double-loop lives in one place.
-pub(crate) fn existing_subdirs_along(chain_dirs: &[PathBuf], subdirs: &[&str]) -> Vec<PathBuf> {
+pub(crate) fn existing_subdirs_along<S: AsRef<str>>(
+    chain_dirs: &[PathBuf],
+    subdirs: &[S],
+) -> Vec<PathBuf> {
     let mut found = Vec::new();
     for dir in chain_dirs {
         for subdir in subdirs {
-            let candidate = dir.join(subdir);
+            let candidate = dir.join(subdir.as_ref());
             if candidate.is_dir() {
                 found.push(candidate);
             }

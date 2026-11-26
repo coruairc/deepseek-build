@@ -111,7 +111,21 @@ impl std::str::FromStr for ProfileName {
     }
 }
 
-/// Load sandbox config from `~/.grok/sandbox.toml` and `.grok/sandbox.toml`. Project config may add new profile names
+/// The project sandbox config file: `<workspace>/.deepseek/sandbox.toml`, falling
+/// back to the legacy `.grok/sandbox.toml` when only that file exists.
+fn project_sandbox_config_path(workspace: &Path) -> PathBuf {
+    xai_grok_brand::project_dir_names()
+        .into_iter()
+        .map(|name| workspace.join(name).join(SANDBOX_CONFIG_FILENAME))
+        .find(|path| path.is_file())
+        .unwrap_or_else(|| {
+            workspace
+                .join(xai_grok_brand::PROJECT_DIR_NAME)
+                .join(SANDBOX_CONFIG_FILENAME)
+        })
+}
+
+/// Load sandbox config from `~/.grok/sandbox.toml` and the project sandbox config (`.deepseek/sandbox.toml`, legacy `.grok/sandbox.toml`). Project config may add new profile names
 /// only. It cannot redefine a name already present in the global config. Last-write-wins would let a malicious workspace
 /// hollow out a user/enterprise custom profile while keeping the trusted name.
 pub fn load_sandbox_config(workspace: &Path) -> SandboxConfig {
@@ -123,8 +137,8 @@ pub fn load_sandbox_config(workspace: &Path) -> SandboxConfig {
         config = global;
     }
 
-    // Project config: <workspace>/.grok/sandbox.toml (additive only)
-    let project_path = workspace.join(".grok").join(SANDBOX_CONFIG_FILENAME);
+    // Project config: <workspace>/.deepseek/sandbox.toml (additive only)
+    let project_path = project_sandbox_config_path(workspace);
     if let Some(project) = load_config_file(&project_path) {
         merge_project_profiles(&mut config, project);
     }
@@ -134,8 +148,7 @@ pub fn load_sandbox_config(workspace: &Path) -> SandboxConfig {
 
 pub fn sandbox_profile_conflicts(workspace: &Path) -> Vec<String> {
     let global = load_config_file(&grok_home().join(SANDBOX_CONFIG_FILENAME)).unwrap_or_default();
-    let project = load_config_file(&workspace.join(".grok").join(SANDBOX_CONFIG_FILENAME))
-        .unwrap_or_default();
+    let project = load_config_file(&project_sandbox_config_path(workspace)).unwrap_or_default();
     mismatched_profile_names(&global, &project)
 }
 

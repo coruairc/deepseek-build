@@ -1,9 +1,20 @@
-//! LSP server configuration from `.grok/lsp.json`.
+//! LSP server configuration from `.deepseek/lsp.json` (legacy `.grok/lsp.json`).
 
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
+
+/// Project-scoped `lsp.json`: `.deepseek/lsp.json` when present, else the legacy
+/// `.grok/lsp.json`. With neither, the current project dir is returned so logs and
+/// error text point at where the file belongs.
+fn project_lsp_path(cwd: &Path) -> PathBuf {
+    xai_grok_brand::project_dir_names()
+        .into_iter()
+        .map(|name| cwd.join(name).join("lsp.json"))
+        .find(|path| path.is_file())
+        .unwrap_or_else(|| cwd.join(xai_grok_brand::PROJECT_DIR_NAME).join("lsp.json"))
+}
 
 pub const DEFAULT_STARTUP_TIMEOUT_MS: u64 = 15_000;
 pub const DEFAULT_SHUTDOWN_TIMEOUT_MS: u64 = 5_000;
@@ -27,7 +38,7 @@ pub fn load_servers_with_plugins_sourced(
     );
 
     let user_path = crate::util::grok_home::grok_home().join("lsp.json");
-    let project_path = cwd.join(".grok").join("lsp.json");
+    let project_path = project_lsp_path(cwd);
 
     // User-level servers
     let mut servers: BTreeMap<String, (LspServerConfig, ConfigSource)> = load_file(&user_path)
@@ -124,11 +135,12 @@ pub fn filter_project_lsp_when_untrusted(
         .collect()
 }
 
-/// Load LSP server configs from `~/.grok/lsp.json` and `<cwd>/.grok/lsp.json`.
+/// Load LSP server configs from `~/.grok/lsp.json` and the project `lsp.json`
+/// (`.deepseek/lsp.json`, else legacy `.grok/lsp.json`).
 /// Project config overrides user config for the same server name.
 pub fn load_servers(cwd: &Path) -> BTreeMap<String, LspServerConfig> {
     let user_path = crate::util::grok_home::grok_home().join("lsp.json");
-    let project_path = cwd.join(".grok").join("lsp.json");
+    let project_path = project_lsp_path(cwd);
 
     let mut merged = load_file(&user_path);
     let project = load_file(&project_path);

@@ -346,34 +346,38 @@ fn parent_is_dir(parent: Option<&Path>, dir: &Path) -> bool {
     parent == dir || dunce::canonicalize(parent).is_ok_and(|p| p == dir)
 }
 
-/// Add the two non-recursive watches for a project root. Both watches are best-effort and log-and-continue on failure (missing directory, quota exhausted, permission denied, etc.).
+/// Add the non-recursive watches for a project root (the cwd and each project config dir). The watches are best-effort and log-and-continue on failure (missing directory, quota exhausted, permission denied, etc.).
 /// The caller has no reasonable recovery path beyond the existing user-triggered refresh.
-/// **Known limitation:** if `<cwd>/.grok/` does not yet exist at session-open time, the `.grok/` watch fails ENOENT and is swallowed at `debug!`. A later `mkdir <cwd>/.grok/` followed by a write to `<cwd>/.grok/config.toml` will NOT be observed. The `<cwd>/` watch is non-recursive, so creating a subdirectory doesn't trigger a watch-add.
+/// **Known limitation:** if `<cwd>/.deepseek/` (or legacy `.grok/`) does not yet exist at session-open time, that directory watch fails ENOENT and is swallowed at `debug!`. A later `mkdir <cwd>/.deepseek/` followed by a write to `<cwd>/.deepseek/config.toml` will NOT be observed. The `<cwd>/` watch is non-recursive, so creating a subdirectory doesn't trigger a watch-add.
 fn watch_cwd_dirs(debouncer: &mut Debouncer<AccessFilteredWatcher>, cwd: &Path) {
     if let Err(e) = debouncer.watcher().watch(cwd, RecursiveMode::NonRecursive) {
         log_watch_error(&e, "failed to watch project cwd (non-recursive)");
     }
-    let grok_dir = cwd.join(".grok");
-    if let Err(e) = debouncer
-        .watcher()
-        .watch(&grok_dir, RecursiveMode::NonRecursive)
-    {
-        log_watch_error(
-            &e,
-            "failed to watch project .grok directory (non-recursive)",
-        );
+    for name in xai_grok_brand::project_dir_names() {
+        let config_dir = cwd.join(name);
+        if let Err(e) = debouncer
+            .watcher()
+            .watch(&config_dir, RecursiveMode::NonRecursive)
+        {
+            log_watch_error(
+                &e,
+                "failed to watch project config directory (non-recursive)",
+            );
+        }
     }
 }
 
-/// Remove the two non-recursive watches added by [`watch_cwd_dirs`].
+/// Remove the non-recursive watches added by [`watch_cwd_dirs`].
 /// Best-effort: a `WatchNotFound` (never watched / already removed) is expected and logged at `debug!`.
 fn unwatch_cwd_dirs(debouncer: &mut Debouncer<AccessFilteredWatcher>, cwd: &Path) {
     if let Err(e) = debouncer.watcher().unwatch(cwd) {
         tracing::debug!(error = %e, "failed to unwatch project cwd");
     }
-    let grok_dir = cwd.join(".grok");
-    if let Err(e) = debouncer.watcher().unwatch(&grok_dir) {
-        tracing::debug!(error = %e, "failed to unwatch project .grok directory");
+    for name in xai_grok_brand::project_dir_names() {
+        let config_dir = cwd.join(name);
+        if let Err(e) = debouncer.watcher().unwatch(&config_dir) {
+            tracing::debug!(error = %e, "failed to unwatch project config directory");
+        }
     }
 }
 
@@ -425,7 +429,7 @@ fn discovery_change_for_path(path: &Path) -> Option<DiscoveryChange> {
 }
 
 /// Known vendor config root basenames; kept in sync with `collect_skill_config_dirs`.
-const VENDOR_CONFIG_ROOT_NAMES: &[&str] = &[".grok", ".agents", ".claude", ".cursor"];
+const VENDOR_CONFIG_ROOT_NAMES: &[&str] = &[".deepseek", ".grok", ".agents", ".claude", ".cursor"];
 
 /// `bundled` is the synced bundle root in grok home, so its appearance means skills changed.
 const SKILL_DISCOVERY_BASENAMES: &[&str] = &["skills", "commands", "SKILL.md", "bundled"];
@@ -465,9 +469,12 @@ fn vendor_skill_refresh_dirs(config_dir: &Path) -> [(PathBuf, RecursiveMode); 3]
 }
 
 fn project_grok_refresh_dirs(project_root: &Path) -> Vec<(PathBuf, RecursiveMode)> {
-    let project_grok = project_root.join(".grok");
-    let mut dirs = vec![(project_grok.clone(), RecursiveMode::NonRecursive)];
-    dirs.extend(vendor_skill_refresh_dirs(&project_grok));
+    let mut dirs = Vec::new();
+    for name in xai_grok_brand::project_dir_names() {
+        let project_grok = project_root.join(name);
+        dirs.push((project_grok.clone(), RecursiveMode::NonRecursive));
+        dirs.extend(vendor_skill_refresh_dirs(&project_grok));
+    }
     dirs
 }
 
@@ -589,24 +596,34 @@ impl ProjectDiscoveryWatcher {
         grok_home: &Path,
     ) -> Option<(Self, mpsc::UnboundedReceiver<DiscoveryChange>)> {
         let project_root = crate::session::workflow::registry::project_root(cwd);
-        let project_grok = project_root.join(".grok");
+        let project_dirs: Vec<PathBuf> = xai_grok_brand::project_dir_names()
+            .into_iter()
+            .map(|name| project_root.join(name))
+            .collect();
         // deepseek-build home's root sees constant unrelated writes from every grok process
-        if paths_equal(&project_grok, grok_home) {
+        if let Some(home_project_dir) = project_dirs
+            .iter()
+            .find(|dir| paths_equal(dir, grok_home))
+        {
             tracing::debug!(
-                project_grok = %project_grok.display(),
-                "project .grok is grok home; skills watcher owns it"
+                project_dir = %home_project_dir.display(),
+                "project config dir is grok home; skills watcher owns it"
             );
             return None;
         }
         let (tx, rx) = mpsc::unbounded_channel();
-        let project_grok_for_events = project_grok.clone();
+        let project_dirs_for_events = project_dirs.clone();
         let mut debouncer =
             new_filtered_debouncer(SKILLS_DEBOUNCE, move |res: DebounceEventResult| {
                 let Ok(events) = res else { return };
                 let mut change = None;
                 for next in events
                     .iter()
-                    .filter(|event| event.path.starts_with(&project_grok_for_events))
+                    .filter(|event| {
+                        project_dirs_for_events
+                            .iter()
+                            .any(|dir| event.path.starts_with(dir))
+                    })
                     .filter_map(|event| discovery_change_for_path(&event.path))
                 {
                     if next == DiscoveryChange::Skills {
@@ -622,11 +639,11 @@ impl ProjectDiscoveryWatcher {
             .map_err(|error| tracing::warn!(%error, "failed to create project workflow watcher"))
             .ok()?;
 
-        let initial = if project_grok.is_dir() {
-            project_grok.clone()
-        } else {
-            project_root.clone()
-        };
+        let initial = project_dirs
+            .iter()
+            .find(|dir| dir.is_dir())
+            .cloned()
+            .unwrap_or_else(|| project_root.clone());
         if let Err(error) = debouncer
             .watcher()
             .watch(&initial, RecursiveMode::NonRecursive)
@@ -879,24 +896,29 @@ mod tests {
     #[test]
     fn project_grok_refresh_dirs_matches_vendor_layout() {
         let project = Path::new("/tmp/repo");
+        let deepseek = project.join(".deepseek");
         let grok = project.join(".grok");
-        let dirs = project_grok_refresh_dirs(project);
-
-        assert_eq!(dirs.len(), 4);
-        let [first, rest @ ..] = dirs.as_slice() else {
-            panic!("expected four refresh dirs: {dirs:?}");
-        };
-        assert_eq!(first, &(grok.clone(), RecursiveMode::NonRecursive));
         assert_eq!(
-            rest,
-            [
+            project_grok_refresh_dirs(project),
+            vec![
+                (deepseek.clone(), RecursiveMode::NonRecursive),
+                (deepseek.join("skills"), RecursiveMode::Recursive),
+                (deepseek.join("commands"), RecursiveMode::NonRecursive),
+                (deepseek.join("workflows"), RecursiveMode::NonRecursive),
+                (grok.clone(), RecursiveMode::NonRecursive),
                 (grok.join("skills"), RecursiveMode::Recursive),
                 (grok.join("commands"), RecursiveMode::NonRecursive),
                 (grok.join("workflows"), RecursiveMode::NonRecursive),
             ]
-            .as_slice()
         );
-        assert_eq!(rest, vendor_skill_refresh_dirs(&grok).as_slice());
+        assert_eq!(
+            project_grok_refresh_dirs(project)[1..4].to_vec(),
+            vendor_skill_refresh_dirs(&deepseek)
+        );
+        assert_eq!(
+            project_grok_refresh_dirs(project)[5..8].to_vec(),
+            vendor_skill_refresh_dirs(&grok)
+        );
     }
 
     #[test]
@@ -1039,7 +1061,7 @@ mod tests {
                 .into_iter()
                 .chain(vendor_skill_refresh_dirs(&project_grok))
                 .collect();
-        for name in [".agents", ".cursor"] {
+        for name in [".deepseek", ".agents", ".cursor"] {
             let root = project.join(name);
             expected_refresh.push((root.clone(), RecursiveMode::NonRecursive));
             expected_refresh.extend(vendor_skill_refresh_dirs(&root));
@@ -1163,7 +1185,7 @@ mod tests {
         assert_eq!(plan.project_parent_watch.as_deref(), Some(project));
 
         let mut expected = vendor_skill_refresh_dirs(&project_claude).to_vec();
-        for name in [".grok", ".agents", ".cursor"] {
+        for name in [".deepseek", ".grok", ".agents", ".cursor"] {
             let root = project.join(name);
             expected.push((root.clone(), RecursiveMode::NonRecursive));
             expected.extend(vendor_skill_refresh_dirs(&root));
@@ -1197,7 +1219,7 @@ mod tests {
                 .refresh_dirs
                 .contains(&(project_grok.clone(), RecursiveMode::NonRecursive))
         );
-        for name in [".agents", ".claude", ".cursor"] {
+        for name in [".deepseek", ".agents", ".claude", ".cursor"] {
             let root = project.join(name);
             assert!(
                 plan.refresh_dirs

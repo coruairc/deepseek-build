@@ -485,8 +485,11 @@ fn collect_repo_config_kinds(cwd: &Path, first_only: bool) -> Vec<&'static str> 
             hit!("permission");
         }
     }
-    // Project `.grok/lsp.json`.
-    if cwd.join(".grok").join("lsp.json").is_file() {
+    // Project `.deepseek/lsp.json` (legacy `.grok/lsp.json`).
+    if xai_grok_brand::project_dir_names()
+        .into_iter()
+        .any(|name| cwd.join(name).join("lsp.json").is_file())
+    {
         hit!("lsp");
     }
     // Project `.cursor/mcp.json`: vendor MCP loading is default-on and tagged `Project`, so a repo shipping ONLY this file must still be gated
@@ -508,7 +511,9 @@ fn collect_repo_config_kinds(cwd: &Path, first_only: bool) -> Vec<&'static str> 
     // must not resolve trusted. Presence is type-agnostic: a directory or
     // symlink at a vendor hook path must gate too.
     let hook_root = chain.git_root.as_deref().unwrap_or(cwd);
-    if crate::util::path_present_or_uncertain(&hook_root.join(".grok").join("hooks"))
+    if xai_grok_brand::project_dir_names()
+        .into_iter()
+        .any(|name| crate::util::path_present_or_uncertain(&hook_root.join(name).join("hooks")))
         || crate::util::path_present_or_uncertain(&hook_root.join(".cursor").join("hooks.json"))
     {
         hit!("hooks");
@@ -526,15 +531,17 @@ fn collect_repo_config_kinds(cwd: &Path, first_only: bool) -> Vec<&'static str> 
         hit!("agents");
     }
     // Presence matches exact-cwd discovery without parsing repository content.
-    let grok = cwd.join(".grok");
-    if directory_present_or_uncertain(&grok.join("roles")) {
-        hit!("roles");
-    }
-    if directory_present_or_uncertain(&grok.join("personas")) {
-        hit!("personas");
-    }
-    if directory_present_or_uncertain(&hook_root.join(".grok").join("workflows")) {
-        hit!("workflows");
+    for name in xai_grok_brand::project_dir_names() {
+        let project_dir = cwd.join(name);
+        if directory_present_or_uncertain(&project_dir.join("roles")) {
+            hit!("roles");
+        }
+        if directory_present_or_uncertain(&project_dir.join("personas")) {
+            hit!("personas");
+        }
+        if directory_present_or_uncertain(&hook_root.join(name).join("workflows")) {
+            hit!("workflows");
+        }
     }
     if xai_grok_agent::prompt::agents_md::has_project_instruction_markers_in(
         project_sources.instruction_dirs(),

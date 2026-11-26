@@ -120,11 +120,18 @@ pub fn user_config_path(grok_home: &Path) -> PathBuf {
     grok_home.join(WORKSPACED_CONFIG_FILENAME)
 }
 
-/// The workspace layer's file: `<workspace_root>/.grok/workspaced.toml`.
+/// The workspace layer's file: `<workspace_root>/.deepseek/workspaced.toml`, falling
+/// back to the legacy `.grok/workspaced.toml` when only that file exists.
 pub fn workspace_config_path(workspace_root: &Path) -> PathBuf {
-    workspace_root
-        .join(".grok")
-        .join(WORKSPACED_CONFIG_FILENAME)
+    xai_grok_config_types::workspace_config_dir_names()
+        .into_iter()
+        .map(|name| workspace_root.join(name).join(WORKSPACED_CONFIG_FILENAME))
+        .find(|path| std::fs::symlink_metadata(path).is_ok())
+        .unwrap_or_else(|| {
+            workspace_root
+                .join(xai_grok_brand::PROJECT_DIR_NAME)
+                .join(WORKSPACED_CONFIG_FILENAME)
+        })
 }
 
 /// The managed layer's file: `<grok_home>/managed_config.toml`, the organisation's config (the
@@ -269,11 +276,14 @@ pub fn write_workspace_sandbox_mode_in(
     grok_home: &Path,
     mode: SandboxMode,
 ) -> Result<PathBuf, SandboxModeWriteError> {
-    let path = workspace_config_path(workspace_root);
+    let write_dir_name = xai_grok_brand::PROJECT_DIR_NAME;
+    let path = workspace_root
+        .join(write_dir_name)
+        .join(WORKSPACED_CONFIG_FILENAME);
     // SECURITY: for the home folder the workspace file is the user layer; a folder's write may
     // only tighten that folder, never switch every folder's mode
     if is_same_path(
-        &canonical_path(&workspace_root.join(".grok")),
+        &canonical_path(&workspace_root.join(write_dir_name)),
         &canonical_path(grok_home),
     ) {
         return Err(SandboxModeWriteError::UserLayer { path });
@@ -282,11 +292,11 @@ pub fn write_workspace_sandbox_mode_in(
     AFTER_USER_LAYER_CHECK.with_borrow_mut(|hook| hook.as_mut().map(|hook| hook()));
     let anchor = canonical_path(workspace_root);
     let create_dir = |source| SandboxModeWriteError::CreateDir {
-        path: workspace_root.join(".grok"),
+        path: workspace_root.join(write_dir_name),
         source,
     };
-    let dir =
-        HeldDir::open(&anchor, &anchor.join(".grok"), FileOwner::Any, true).map_err(create_dir)?;
+    let dir = HeldDir::open(&anchor, &anchor.join(write_dir_name), FileOwner::Any, true)
+        .map_err(create_dir)?;
     // The root may have been relinked since the check above; the held handle cannot be
     if dir.is(grok_home).map_err(create_dir)? {
         return Err(SandboxModeWriteError::UserLayer { path });

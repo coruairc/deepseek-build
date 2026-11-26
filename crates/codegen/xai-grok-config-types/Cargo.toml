@@ -6,6 +6,7 @@ edition.workspace = true
 description = "Leaf configuration value types for the grok CLI, extracted from xai-grok-shell for dependency inversion."
 
 [dependencies]
+xai-grok-brand = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 strum = { workspace = true }

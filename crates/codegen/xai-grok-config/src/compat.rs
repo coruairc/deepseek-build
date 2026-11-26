@@ -400,10 +400,11 @@ impl CompatConfig {
         }
     }
 
-    /// Config directories that may contain `skills/` subdirectories, in priority order. `.grok` and `.agents` are always included; `.claude` and
+    /// Config directories that may contain `skills/` subdirectories, in priority order. `.deepseek` (then legacy `.grok`) and `.agents` are always included; `.claude` and
     /// `.cursor` are gated on their respective `skills` cell.
     pub fn skill_config_dirs(&self) -> Vec<&'static str> {
-        let mut dirs = vec![".grok", ".agents"];
+        let mut dirs = xai_grok_brand::project_dir_names();
+        dirs.push(".agents");
         if self.claude.skills {
             dirs.push(".claude");
         }
@@ -413,10 +414,17 @@ impl CompatConfig {
         dirs
     }
 
-    /// Subdirectories scanned for `*.md` rules files. `.grok/rules` is always included;
+    /// Subdirectories scanned for `*.md` rules files. `.deepseek/rules` (then legacy `.grok/rules`) is always included;
     /// `.claude/rules` and `.cursor/rules` are gated on their respective `rules` cell.
     pub fn rules_dirs(&self) -> Vec<&'static str> {
-        let mut dirs = vec![".grok/rules"];
+        let mut dirs: Vec<&'static str> = xai_grok_brand::project_dir_names()
+            .into_iter()
+            .map(|name| match name {
+                ".deepseek" => ".deepseek/rules",
+                ".grok" => ".grok/rules",
+                _ => ".deepseek/rules",
+            })
+            .collect();
         if self.claude.rules {
             dirs.push(".claude/rules");
         }

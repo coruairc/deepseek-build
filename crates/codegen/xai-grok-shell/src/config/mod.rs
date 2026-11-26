@@ -201,11 +201,13 @@ impl SubagentsConfig {
     pub fn get_persona(&self, name: &str) -> Option<&SubagentPersona> {
         self.personas.get(name)
     }
-    /// Discover personas from `.grok/personas/` directory. File-based personas are loaded from `{cwd}/.grok/personas/*.toml`. Each file defines a single `SubagentPersona`. The file stem becomes the persona name.
+    /// Discover personas from the project config dirs. File-based personas are loaded from `{cwd}/.deepseek/personas/*.toml` with the legacy `{cwd}/.grok/personas/*.toml` as a fallback. Each file defines a single `SubagentPersona`. The file stem becomes the persona name.
     /// Inline config takes precedence.
     pub(crate) fn discover_personas(&mut self, cwd: &std::path::Path) {
-        let dir = cwd.join(".grok").join("personas");
-        self.discover_personas_in_dir(&dir);
+        for name in xai_grok_brand::project_dir_names() {
+            let dir = cwd.join(name).join("personas");
+            self.discover_personas_in_dir(&dir);
+        }
     }
     /// Validate all role definitions. Returns a list of (role_name, error_message) for invalid entries.
     pub fn validate_roles(&self) -> Vec<(String, String)> {
@@ -238,11 +240,13 @@ impl SubagentsConfig {
         }
         errors
     }
-    /// Discover roles from `.grok/roles/` directory and merge with inline config. File-based roles are loaded from `{cwd}/.grok/roles/*.toml`.
-    /// Each file defines a single `SubagentRole` (same schema as inline `[subagents.roles.*]`). The file stem becomes the role name. Precedence: inline config roles override file-based roles with the same name.
+    /// Discover roles from the project config dirs and merge with inline config. File-based roles are loaded from `{cwd}/.deepseek/roles/*.toml` with the legacy `{cwd}/.grok/roles/*.toml` as a fallback.
+    /// Each file defines a single `SubagentRole` (same schema as inline `[subagents.roles.*]`). The file stem becomes the role name. Precedence: inline config roles override file-based roles with the same name; `.deepseek` overrides `.grok`.
     pub(crate) fn discover_roles(&mut self, cwd: &std::path::Path) {
-        let roles_dir = cwd.join(".grok").join("roles");
-        self.discover_roles_in_dir(&roles_dir);
+        for name in xai_grok_brand::project_dir_names() {
+            let roles_dir = cwd.join(name).join("roles");
+            self.discover_roles_in_dir(&roles_dir);
+        }
     }
     pub const ENV_MAX_DEPTH: &'static str = "DEEPSEEK_BUILD_SUBAGENTS_MAX_DEPTH";
     pub const DEFAULT_MAX_DEPTH: u32 = 1;

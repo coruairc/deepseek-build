@@ -550,7 +550,9 @@ fn instruction_file_type(file_path: &str, grok_home: &Path, claude_imported: boo
     if path
         .parent()
         .is_some_and(|parent| parent == grok_home.join("rules"))
-        || has_rules_directory(file_path, ".grok")
+        || xai_grok_brand::project_dir_names()
+            .into_iter()
+            .any(|name| has_rules_directory(file_path, name))
         || has_rules_directory(file_path, ".cursor")
         || (!claude_imported && has_rules_directory(file_path, ".claude"))
     {

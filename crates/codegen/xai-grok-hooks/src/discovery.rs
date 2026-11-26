@@ -394,7 +394,12 @@ pub fn discover_hook_source_paths(options: DiscoveryOptions<'_>) -> HookSourcePa
                 root.join(".claude").join("settings.local.json"),
             ));
         }
-        project.push(classify_grok_hook_source(root.join(".grok").join("hooks")));
+        project.push(classify_grok_hook_source(
+            root.join(xai_grok_brand::PROJECT_DIR_NAME).join("hooks"),
+        ));
+        for legacy in xai_grok_brand::LEGACY_PROJECT_DIR_NAMES {
+            project.push(classify_grok_hook_source(root.join(legacy).join("hooks")));
+        }
         if include_cursor {
             project.push(HookSourceConfig::SettingsFile(
                 root.join(".cursor").join("hooks.json"),

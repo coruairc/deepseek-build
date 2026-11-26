@@ -139,7 +139,10 @@ impl WorkflowRegistry {
         if let Some(cwd) = session_cwd
             && crate::agent::folder_trust::project_scope_allowed(cwd)
         {
-            dirs.push((project_root(cwd).join(".grok").join("workflows"), "project"));
+            let root = project_root(cwd);
+            for name in xai_grok_brand::project_dir_names() {
+                dirs.push((root.join(name).join("workflows"), "project"));
+            }
         }
         dirs.push((user_workflow_dir(), "user"));
 
@@ -522,7 +525,9 @@ pub(crate) fn save_project_workflow(
         path: root.display().to_string(),
         error: error.to_string(),
     })?;
-    let dir = canonical_root.join(".grok").join("workflows");
+    let dir = canonical_root
+        .join(xai_grok_brand::PROJECT_DIR_NAME)
+        .join("workflows");
     create_contained_workflow_dir(&canonical_root, &dir)?;
     let canonical_dir = dunce::canonicalize(&dir).map_err(|error| ResolveError::Io {
         path: dir.display().to_string(),
@@ -938,7 +943,7 @@ mod tests {
         let path = save_project_workflow(&linked, "safe", &script("safe")).unwrap();
         assert_eq!(
             dunce::canonicalize(path).unwrap(),
-            project.join(".grok/workflows/safe.rhai")
+            project.join(".deepseek/workflows/safe.rhai")
         );
     }
 
@@ -950,9 +955,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let project = dir.path().join("project");
         let attacker = dir.path().join("attacker");
-        std::fs::create_dir_all(project.join(".grok")).unwrap();
+        std::fs::create_dir_all(project.join(".deepseek")).unwrap();
         std::fs::create_dir_all(&attacker).unwrap();
-        symlink(&attacker, project.join(".grok/workflows")).unwrap();
+        symlink(&attacker, project.join(".deepseek/workflows")).unwrap();
 
         assert!(matches!(
             save_project_workflow(&project, "safe", &script("safe")),

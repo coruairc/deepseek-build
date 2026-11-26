@@ -12,10 +12,17 @@ use crate::config::{AgentDefinition, AgentScope, BuiltinAgentName};
 use crate::error::AgentBuildError;
 use crate::prompt::context::TemplateOverride;
 
-/// Project-level agent directories to scan (`.grok/agents/` plus `.claude/agents/` for compat).
-const PROJECT_AGENT_SUBDIRS: &[&str] = &[".grok/agents", ".claude/agents"];
+/// Project-level agent directories to scan. `.deepseek/agents` is highest priority,
+/// `.grok/agents` is the legacy fallback, and `.claude/agents` is vendor compat.
+fn project_agent_subdirs() -> Vec<String> {
+    xai_grok_brand::project_dir_names()
+        .into_iter()
+        .map(|name| format!("{name}/agents"))
+        .chain(std::iter::once(".claude/agents".to_string()))
+        .collect()
+}
 
-/// Existing project-level agent dirs (`.grok/agents` / `.claude/agents`), walked from `cwd` up to the git worktree root (inclusive).
+/// Existing project-level agent dirs (`.deepseek/agents`, `.grok/agents`, `.claude/agents`), walked from `cwd` up to the git worktree root (inclusive).
 /// Returns `(existing dirs, git_root)`.
 /// Mirrors [`crate::plugins::project_plugin_dirs`].
 pub fn project_agent_dirs(cwd: Option<&Path>) -> (Vec<PathBuf>, Option<PathBuf>) {
@@ -27,9 +34,9 @@ pub fn project_agent_dirs(cwd: Option<&Path>) -> (Vec<PathBuf>, Option<PathBuf>)
 }
 
 /// Existing project agent dirs under each dir of a cwd-to-git-root chain.
-/// The only place that walks `PROJECT_AGENT_SUBDIRS`. The folder-trust detector reuses it so detection cannot drift from discovery.
+/// The only place that walks the project agent subdirs. The folder-trust detector reuses it so detection cannot drift from discovery.
 pub fn project_agent_dirs_in(chain_dirs: &[PathBuf]) -> Vec<PathBuf> {
-    crate::repo::existing_subdirs_along(chain_dirs, PROJECT_AGENT_SUBDIRS)
+    crate::repo::existing_subdirs_along(chain_dirs, &project_agent_subdirs())
 }
 
 // ── Subagent entry types ─────────────────────────────────────────────

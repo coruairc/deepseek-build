@@ -54,8 +54,9 @@ fn is_user_grok_config_file(config_path: &Path, grok_home: Option<&Path>) -> boo
     canonical_config == canonical_user
 }
 
-/// Find `.grok/config.toml` from `cwd` up to the git repo root, repo-root (lowest) to cwd (highest), matching skills and AGENTS.md discovery.
-/// No repo: only `cwd/.grok/config.toml`. Excludes user-global config so `cwd == $HOME` is not a project overlay.
+/// Find the project config file from `cwd` up to the git repo root, repo-root (lowest) to cwd (highest), matching skills and AGENTS.md discovery.
+/// At each level `.deepseek/config.toml` wins over the legacy `.grok/config.toml`; a level contributes at most one file.
+/// No repo: only `cwd/.deepseek/config.toml` (or legacy `.grok/config.toml`). Excludes user-global config so `cwd == $HOME` is not a project overlay.
 pub fn find_project_configs(cwd: &Path) -> Vec<PathBuf> {
     find_project_configs_under(
         cwd,
@@ -75,13 +76,18 @@ pub fn find_project_configs_under(
 /// [`find_project_configs`] over a precomputed [`RepoDirChain`], repo-root-first.
 /// Excludes user-global config so `cwd == $HOME` is not a project overlay. `pub` for the folder-trust gate.
 pub fn find_project_configs_in(chain_dirs: &[PathBuf], grok_home: Option<&Path>) -> Vec<PathBuf> {
-    // `dirs` is cwd-first; reverse so repo root comes first (lowest priority) and cwd last (highest)
+    // `dirs` is cwd-first; reverse so repo root comes first (lowest priority) and cwd last (highest).
+    // Within one level the current project dir shadows the legacy one.
     chain_dirs
         .iter()
         .rev()
-        .map(|dir| dir.join(".grok").join("config.toml"))
-        .filter(|config_path| {
-            config_path.is_file() && !is_user_grok_config_file(config_path, grok_home)
+        .filter_map(|dir| {
+            xai_grok_brand::project_dir_names()
+                .into_iter()
+                .map(|name| dir.join(name).join("config.toml"))
+                .find(|config_path| {
+                    config_path.is_file() && !is_user_grok_config_file(config_path, grok_home)
+                })
         })
         .collect()
 }
