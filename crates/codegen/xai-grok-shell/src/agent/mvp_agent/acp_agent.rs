@@ -317,17 +317,47 @@ impl acp::Agent for MvpAgent {
         );
         if !self.cfg.borrow().grok_com_config.api_key_auth_disabled()
             && auth_method::read_xai_api_key_env().is_err()
-            && let Some(api_key) = xai_grok_login::read_api_key(
-                &crate::util::grok_home::grok_home(),
-            )
         {
-            xai_grok_login::auth_method::set_runtime_xai_api_key(&api_key);
-            tracing::info!("auth: loaded API key from auth.json (xai::api_key scope)");
-            xai_grok_telemetry::unified_log::info(
-                "auth: loaded API key from auth.json (xai::api_key scope)",
-                None,
-                None,
-            );
+            if let Some(api_key) = xai_grok_login::read_api_key(
+                &crate::util::grok_home::grok_home(),
+            ) {
+                xai_grok_login::auth_method::set_runtime_xai_api_key(&api_key);
+                tracing::info!("auth: loaded API key from auth.json (xai::api_key scope)");
+                xai_grok_telemetry::unified_log::info(
+                    "auth: loaded API key from auth.json (xai::api_key scope)",
+                    None,
+                    None,
+                );
+            } else {
+                // Env always wins; the saved credentials file is the last fallback.
+                match xai_grok_login::credentials_store::read_saved_api_key() {
+                    Ok(Some(api_key)) => {
+                        xai_grok_login::auth_method::set_runtime_xai_api_key(&api_key);
+                        tracing::info!(
+                            "auth: loaded API key from {}",
+                            xai_grok_login::credentials_store::CREDENTIALS_FILE_NAME
+                        );
+                        xai_grok_telemetry::unified_log::info(
+                            "auth: loaded API key from saved credentials",
+                            None,
+                            None,
+                        );
+                    }
+                    Ok(None) => {}
+                    Err(error) => {
+                        // Display names the path and fix, never the key.
+                        tracing::warn!(
+                            error = %error,
+                            "auth: saved API key is unavailable"
+                        );
+                        xai_grok_telemetry::unified_log::warn(
+                            "auth: saved API key is unavailable",
+                            None,
+                            Some(serde_json::json!({ "error": error.to_string() })),
+                        );
+                    }
+                }
+            }
         }
         let disable_api_key_auth = self
             .cfg
@@ -645,9 +675,16 @@ impl acp::Agent for MvpAgent {
                             .data("API-key auth is disabled by your administrator."),
                     );
                 }
+                let resolved_api_key = match auth_method::resolve_xai_api_key() {
+                    Ok(api_key) => api_key,
+                    Err(error) => {
+                        emit_login_span(false, "api_key", None, Some("invalid_credentials"));
+                        return Err(acp::Error::auth_required().data(error.to_string()));
+                    }
+                };
                 let mut sampling_config = self.sampling_config.borrow_mut();
                 if sampling_config.api_key.is_none() {
-                    if let Ok(api_key) = auth_method::read_xai_api_key_env() {
+                    if let Some(api_key) = resolved_api_key {
                         sampling_config.api_key = Some(api_key.clone());
                         if let Err(e) = xai_grok_login::store_api_key(
                             &crate::util::grok_home::grok_home(),

@@ -56,3 +56,88 @@ pub fn read_xai_api_key_env() -> Result<String, std::env::VarError> {
 pub fn has_xai_api_key_env() -> bool {
     read_xai_api_key_env().is_ok()
 }
+
+/// Resolve the API key with the documented precedence: `DEEPSEEK_API_KEY`,
+/// then `DEEPSEEK_BUILD_API_KEY`, then the saved credentials file.
+///
+/// `load_saved` is injected so tests can exercise precedence without touching
+/// the process-wide deepseek-build home.
+pub fn resolve_xai_api_key_with(
+    load_saved: impl FnOnce() -> Result<Option<String>, crate::credentials_store::CredentialsError>,
+) -> Result<Option<String>, crate::credentials_store::CredentialsError> {
+    if let Ok(key) = read_xai_api_key_env() {
+        return Ok(Some(key));
+    }
+    load_saved()
+}
+
+/// Resolve the API key from the environment, falling back to the saved file.
+///
+/// File errors (for example insecure permissions) are returned so the caller can
+/// show the path and the fix; the key itself is never part of the error.
+pub fn resolve_xai_api_key() -> Result<Option<String>, crate::credentials_store::CredentialsError> {
+    resolve_xai_api_key_with(crate::credentials_store::read_saved_api_key)
+}
+
+/// Whether an environment or saved key is available.
+pub fn has_xai_api_key() -> bool {
+    matches!(resolve_xai_api_key(), Ok(Some(_)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+    use xai_grok_test_support::EnvGuard;
+
+    fn clear_env() -> (EnvGuard, EnvGuard) {
+        (
+            EnvGuard::unset(XAI_API_KEY_ENV_VAR),
+            EnvGuard::unset(LEGACY_XAI_API_KEY_ENV_VAR),
+        )
+    }
+
+    #[test]
+    #[serial]
+    fn primary_env_wins_over_saved_file() {
+        let _env = clear_env();
+        let _primary = EnvGuard::set(XAI_API_KEY_ENV_VAR, "env-primary");
+        let resolved = resolve_xai_api_key_with(|| Ok(Some("saved-key".into()))).unwrap();
+        assert_eq!(resolved.as_deref(), Some("env-primary"));
+    }
+
+    #[test]
+    #[serial]
+    fn legacy_env_wins_over_saved_file() {
+        let _env = clear_env();
+        let _legacy = EnvGuard::set(LEGACY_XAI_API_KEY_ENV_VAR, "env-legacy");
+        let resolved = resolve_xai_api_key_with(|| Ok(Some("saved-key".into()))).unwrap();
+        assert_eq!(resolved.as_deref(), Some("env-legacy"));
+    }
+
+    #[test]
+    #[serial]
+    fn saved_file_is_used_only_when_no_env_is_set() {
+        let _env = clear_env();
+        let resolved = resolve_xai_api_key_with(|| Ok(Some("saved-key".into()))).unwrap();
+        assert_eq!(resolved.as_deref(), Some("saved-key"));
+    }
+
+    #[test]
+    #[serial]
+    fn no_env_and_no_file_is_none() {
+        let _env = clear_env();
+        let resolved = resolve_xai_api_key_with(|| Ok(None)).unwrap();
+        assert_eq!(resolved, None);
+    }
+
+    #[test]
+    #[serial]
+    fn file_error_is_propagated_when_no_env_is_set() {
+        let _env = clear_env();
+        let err =
+            resolve_xai_api_key_with(|| Err(crate::credentials_store::CredentialsError::EmptyKey))
+                .unwrap_err();
+        assert!(err.to_string().contains("must not be empty"));
+    }
+}

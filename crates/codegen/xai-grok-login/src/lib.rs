@@ -18,6 +18,7 @@ pub mod auth_provider;
 pub mod backend;
 pub mod config;
 pub mod credential_provider;
+pub mod credentials_store;
 pub mod error;
 pub mod external_auth;
 pub mod flow;

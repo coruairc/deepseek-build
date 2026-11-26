@@ -19,7 +19,8 @@ pub(crate) fn new_shared_auth_method_id(initial: Option<acp::AuthMethodId>) -> S
 // (auth needs them without pulling in shell's `ModelEntry`); re-exported here so
 // `crate::agent::auth_method::{XAI_API_KEY_ENV_VAR, ..}` call sites keep resolving.
 pub use xai_grok_login::auth_method::{
-    LEGACY_XAI_API_KEY_ENV_VAR, XAI_API_KEY_ENV_VAR, has_xai_api_key_env, read_xai_api_key_env,
+    LEGACY_XAI_API_KEY_ENV_VAR, XAI_API_KEY_ENV_VAR, has_xai_api_key, has_xai_api_key_env,
+    read_xai_api_key_env, resolve_xai_api_key,
 };
 
 /// Whether `xai.api_key` should be advertised (and pushed FIRST) when building the `auth_methods` list at `initialize()` time.
