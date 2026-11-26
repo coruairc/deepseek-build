@@ -1,0 +1,1 @@
+PASS: release asset install.sh is byte-identical to the working tree and to GitHub's digest

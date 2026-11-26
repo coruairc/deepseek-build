@@ -1,0 +1,72 @@
+{
+  "item": "installer-proof",
+  "requirements": [
+    "REL-06"
+  ],
+  "date": "2026-11-26T06:17:31Z",
+  "host": "Linux/x86_64",
+  "command": "sh scripts/prove-install.sh --version v0.1.0-proof1 --workdir <TMP>/dsb-proof1.3T82SU (plus the v0.0.1-rc5 thin slice) — real github.com release assets, scratch HOME/INSTALL_DIR, no fake-tree hook",
+  "steps": [
+    {
+      "name": "install.sh asset matches the working tree and GitHub digest",
+      "ok": true,
+      "detail": "exit 0: PASS: release asset install.sh is byte-identical to the working tree and to GitHub's digest"
+    },
+    {
+      "name": "pinned install exits 0 and installs binary and dsb symlink",
+      "ok": true,
+      "detail": "exit 0: PASS: exit 0, executable deepseek-build, dsb symlink in INSTALL_DIR"
+    },
+    {
+      "name": "installed binary reports the tag version",
+      "ok": true,
+      "detail": "exit 0:   installed --version: deepseek-build 0.1.0-proof1 (b14d28eb2bc7)"
+    },
+    {
+      "name": "three-way checksum agrees for the host tarball",
+      "ok": true,
+      "detail": "exit 0: result: all three tarball values agree"
+    },
+    {
+      "name": "sha256sum -c against the release SHA256SUMS is OK",
+      "ok": true,
+      "detail": "exit 0: deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz: OK"
+    },
+    {
+      "name": "the exact release download URL is recorded",
+      "ok": true,
+      "detail": "exit 0: url:    https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-proof1/deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz"
+    },
+    {
+      "name": "both transcripts report 13/13 PASS",
+      "ok": true,
+      "detail": "exit 0: 2 transcripts, both: prove-install: 13/13 PASS"
+    },
+    {
+      "name": "prove-install.sh contains no fake-tree hook name",
+      "ok": true,
+      "detail": "exit 0: no literal fake-tree hook name in scripts/prove-install.sh"
+    },
+    {
+      "name": "shellcheck is clean",
+      "ok": true,
+      "detail": "exit 0: shellcheck --shell=sh: clean"
+    },
+    {
+      "name": "working-tree install.sh is unmodified",
+      "ok": true,
+      "detail": "exit 0: git status --porcelain install.sh: empty"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/04-distribution-proof/installer-proof/install.log",
+      "sha256": "03d911a41fb04f8c2d8a0e5534ebc5da3accd03c33fef44dbb7d6d6f3afc42a5"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/installer-proof/checksum-comparison.log",
+      "sha256": "f584a53a5a03f671344e7d77beb29f0502af73dfd86b3a873fe0faa06000b6c2"
+    }
+  ],
+  "result": "ok"
+}

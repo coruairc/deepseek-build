@@ -1,0 +1,25 @@
+prove-install: three-way checksum comparison
+date:   2026-11-26T06:15:23Z
+tag:    v0.1.0-proof1
+host:   Linux/x86_64 -> x86_64-unknown-linux-gnu
+url:    https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-proof1/deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz
+
+file:   deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz
+size:   55967373 bytes (downloaded) / 55967373 bytes (GitHub asset metadata)
+
+source                          sha256
+local sha256sum (downloaded)    298c9f275d695fa43872bd44a0fe9da25ee66bd86a6051ac233689063ccbdaf3
+SHA256SUMS (release asset)      298c9f275d695fa43872bd44a0fe9da25ee66bd86a6051ac233689063ccbdaf3
+GitHub asset digest             298c9f275d695fa43872bd44a0fe9da25ee66bd86a6051ac233689063ccbdaf3
+
+sha256sum -c (host tarball line from the release SHA256SUMS):
+deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz: OK
+
+file:   install.sh
+size:   14552 bytes
+
+local sha256sum (downloaded)    31e114d4a29dbbeb0d3e2e442a72a6ecc14ad3f4b99956fbff23f42c0cabd5e5
+working tree install.sh         31e114d4a29dbbeb0d3e2e442a72a6ecc14ad3f4b99956fbff23f42c0cabd5e5
+GitHub asset digest             31e114d4a29dbbeb0d3e2e442a72a6ecc14ad3f4b99956fbff23f42c0cabd5e5
+
+result: all three tarball values agree
