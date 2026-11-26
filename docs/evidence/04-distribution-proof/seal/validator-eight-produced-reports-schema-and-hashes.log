@@ -1,0 +1,31 @@
+PASS  ghcr-baseline
+  PASS  docs/evidence/04-distribution-proof/ghcr-baseline/baseline.json (sha256 fbd55d555db253b39a78112e7c47b92b23378978437a78553cd7529a1ff8b8d6, 536 B)
+  PASS  docs/evidence/04-distribution-proof/ghcr-baseline/probe-rc5.json (sha256 d66b52e9f63acf710b4c94fd67fe59674b972596f22f13490c1da8a2a4f726a6, 898 B)
+PASS  homebrew-formula
+  PASS  packaging/homebrew/deepseek-build.rb (sha256 73d1bd430c805bfc374729cdd52196c56667f8397a388a4298e623208285513a, 2147 B)
+  PASS  packaging/homebrew/README.md (sha256 a4696234fdfe712cd138e12cff735d6dec8baf7602c7ea647bc4006ace88dd2c, 5910 B)
+  PASS  docs/evidence/04-distribution-proof/homebrew-formula/checker.log (sha256 c61e1534c75dc090e58558166efe7e022dde2895d7b438a410218a782deff6c3, 1602 B)
+  PASS  docs/evidence/04-distribution-proof/homebrew-formula/resolve-branch.rb (sha256 033fa98a80edc477a2cc157bf26a4ebded20fefbee8f7fb53e4c0e9bdc69477c, 889 B)
+PASS  image-registry
+  PASS  docs/evidence/04-distribution-proof/image-registry/registry.json (sha256 9da69bdd4c96275f819f04f66d8a8e6b80748b8d6da2bed3f168b4185f611a48, 3302 B)
+  PASS  docs/evidence/04-distribution-proof/image-registry/docker-info.log (sha256 7485c1beded2368dae165f2f950f3f67f79f86e10801213c9f91939646ae7f2e, 309 B)
+PASS  image-run-blocked
+  PASS  docs/evidence/04-distribution-proof/image-run-blocked/commands.txt (sha256 93a2849d5198fd8eb3bf70d89dc6144409aed48025e5990b30b895ec0c5c6221, 1446 B)
+PASS  installer-latest
+  PASS  docs/evidence/04-distribution-proof/installer-latest/probe.log (sha256 2cb3e6d3e7b5cd4bcc2ae074bd9c6474cd123467cfc27860b103648dde4b347a, 1204 B)
+  PASS  docs/evidence/04-distribution-proof/installer-latest/install-latest.log (sha256 921f0ad7b946673f9d07fbf29f8e76e408f62f3925465e54693ffd219371177f, 1193 B)
+PASS  installer-proof
+  PASS  docs/evidence/04-distribution-proof/installer-proof/install.log (sha256 55866ba92a3f611479f9f026c2c9503eb8c356b2cfd4484c875ae49ad8a968bd, 6659 B)
+  PASS  docs/evidence/04-distribution-proof/installer-proof/checksum-comparison.log (sha256 89151d41fa099ee31a664caef5fe2aec559a3486557b486ee24acb1ecbe9af00, 1264 B)
+PASS  tag-push
+  PASS  docs/evidence/04-distribution-proof/tag-push/expected-sha.txt (sha256 b22968b7e834982c1e576eebd14c24b12298ffa7493719d2a24cb0dd2a393620, 41 B)
+  PASS  docs/evidence/04-distribution-proof/tag-push/main-before.txt (sha256 de9f99d53771425637af8cd3ead69f3ccbd1cec8e44dc02c65d127805f919f06, 57 B)
+  PASS  docs/evidence/04-distribution-proof/tag-push/snapshot-before.txt (sha256 7e8dc71d24dbdcd4852d437c54dce48b0b36bbe122b4d0ae2840e77d23be88d1, 151 B)
+  PASS  docs/evidence/04-distribution-proof/tag-push/push.log (sha256 a674e19974b134ba131318c2f4106a6cab5f6c4d4b32ad530c2f5ec7854065e6, 6244 B)
+PASS  tag-run
+  PASS  docs/evidence/04-distribution-proof/tag-run/run.json (sha256 9c560cab5e853fbb7f1099da1e5594404e82d948c4e42e5dd53bdf9c56637eea, 14056 B)
+  PASS  docs/evidence/04-distribution-proof/tag-run/release.json (sha256 c5c198ec0e52ac5d50caabe8b33fb9d92b24ec874b04bda33010493ada37411e, 5769 B)
+  PASS  docs/evidence/04-distribution-proof/tag-run/SHA256SUMS (sha256 0183ee9bccae0101945831b4b621aefce7db65a84563c8f0c3c5015bc3b2995a, 496 B)
+  PASS  docs/evidence/04-distribution-proof/tag-run/checksums.log (sha256 7d33ce63aa48606ee776caaf35a2c5a5f7e3fbe01db392080b444276ec8648ac, 2663 B)
+distribution-evidence: 8/8 PASS
+8 reports validated

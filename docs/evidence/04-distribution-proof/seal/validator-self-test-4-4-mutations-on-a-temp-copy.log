@@ -1,0 +1,5 @@
+PASS  self-test: missing artifact rejected (does not exist)
+PASS  self-test: corrupted recorded sha256 rejected (sha256 mismatch)
+PASS  self-test: REL-05 marked ok without a pull rejected (no successful pull step)
+PASS  self-test: NUL byte in an artifact rejected (NUL byte)
+self-test: 4/4 PASS

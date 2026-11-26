@@ -4,6 +4,11 @@
 - `check-release-pipeline.sh` — one command that runs every static release gate (actionlint, shellcheck, the two checkers, the guard fixture, the installer harness) with each tally pinned.
 - `check-release-workflow.py` — static assertions over `.github/workflows/release.yml`: job graph, `needs:`, matrix legs, artifact names, tag-guard placement, SHA pins.
 - `check-release-tag-shape.py` — the `v0.1.0` tag shape: trigger, the `version` job's own derive body run against stable/prerelease/rejection fixtures, and release gating.
+- `distribution-proof.py` — daemonless release/run/registry proofs with an offline fixture mode (`fixtures`, `probe`, `baseline`, `run`, `release`, `registry`).
+- `prove-install.sh` — real-release pinned installer proof and the unpinned-`latest` behaviour probe; refuses the fake-tree hooks.
+- `check-readme-distribution.py` — whitespace-normalized README assertions, `install` and `container` stages.
+- `check-homebrew-formula.py` — formula text/hash cross-check against the release `SHA256SUMS`, with a self-test and an optional `--online` mode.
+- `check-distribution-evidence.py` — evidence schema/hash/text validator for a phase directory, with a four-case `--self-test`.
 - `guard-image-tags.sh` — pre-push guard for the `docker/metadata-action` tag list (`:latest` only on a stable release; prints the resolved names).
 - `test-guard-image-tags.sh` — fixture suite for `guard-image-tags.sh` (stable, prerelease 2-name and 4-name incl. `0.1.0-proof1`, and every rejection).
 - `test-gate.sh` — the phase test gate: workspace + `config-docs` runs, completeness checked against the build graph and a checked-in count.

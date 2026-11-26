@@ -1,0 +1,7 @@
+baseline: transport=anonymous-http tags_status=200 tags=['0.1.0-proof1', 'v0.1.0-proof1'] latest=absent digest=None
+registry: exactly the two proof tags, :latest absent
+remote: no refs/tags/v0.1.0
+remote: deepseek-v0.1-snapshot still peels to 4b305bd0
+remote: deepseek branch still 4b305bd0
+releases: no v0.1.0 (tags: v0.1.0-proof1 v0.0.1-rc5 v0.0.1-rc4 )
+releases/latest: 404 (every release is a pre-release)

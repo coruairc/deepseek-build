@@ -1,0 +1,51 @@
+{
+  "item": "seal",
+  "requirements": [
+    "REL-04",
+    "REL-06",
+    "PKG-04"
+  ],
+  "date": "2026-11-26T07:04:26Z",
+  "host": "Linux/x86_64",
+  "command": "python3 scripts/check-distribution-evidence.py docs/evidence/04-distribution-proof --self-test (8/8 at seal time; 9/9 after the seal report); scripts/key-leak-check.sh --scan docs/evidence .planning/phases/04-distribution-proof; sh docs/evidence/04-distribution-proof/seal/retention-check.sh",
+  "steps": [
+    {
+      "name": "validator: self-test 4/4 mutations on a temp copy",
+      "ok": true,
+      "detail": "exit 0: self-test: 4/4 PASS"
+    },
+    {
+      "name": "validator: eight produced reports schema and hashes",
+      "ok": true,
+      "detail": "exit 0: 8 reports validated"
+    },
+    {
+      "name": "retention: no latest, no v0.1.0, snapshot and deepseek untouched",
+      "ok": true,
+      "detail": "exit 0: releases/latest: 404 (every release is a pre-release)"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/04-distribution-proof/seal/seal.log",
+      "sha256": "25028ba0eb1e602c190de400fa48d082a1cceeeb139874674e8c5a2753b6b4ae"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/README.md",
+      "sha256": "78828b22be42e82fc2709715c5681523d77f3e4d57e313de801d704125a2ec9e"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/DEVIATION-keep-prerelease.md",
+      "sha256": "c72f1f2242bef37d3fc28bc7cc3702b90773995841674c1b9e7ebd11407b93a6"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/seal/notes.md",
+      "sha256": "941d5e0a7ca9571c63cd37d70e8ca52acd1cf10df823a25ceacb1439314f4991"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/seal/retention-check.sh",
+      "sha256": "01301ecbe2952282cf775310a1dce5158a0d3d9d75d2e262831db5af43256902"
+    }
+  ],
+  "result": "ok"
+}
