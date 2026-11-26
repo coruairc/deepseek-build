@@ -94,6 +94,9 @@ pub struct AgentBuilder {
     persisted_announced_skill_names: Option<std::collections::HashSet<String>>,
     /// Parent-inherited skills; `build()` uses them instead of running `list_skills_with_plugins()`.
     preloaded_skills: Option<Vec<xai_grok_tools::implementations::skills::types::SkillInfo>>,
+    /// Test-only: replaces filesystem subagent discovery in `build()`; `None` means discover from the project and home dirs.
+    #[cfg(test)]
+    injected_subagents: Option<Vec<crate::discovery::SubagentEntry>>,
     /// Startup folder-trust verdict; hosts without this gate must opt in explicitly.
     project_trusted: bool,
 }
@@ -339,6 +342,8 @@ impl AgentBuilder {
             system_reminder_tag: xai_grok_tools::reminders::DEFAULT_REMINDER_TAG,
             persisted_announced_skill_names: None,
             preloaded_skills: None,
+            #[cfg(test)]
+            injected_subagents: None,
             project_trusted: false,
         }
     }
@@ -567,6 +572,15 @@ impl AgentBuilder {
     /// Disabled strips the `TaskTool` from the tool config, so the model cannot spawn child agent sessions.
     pub fn with_subagents_enabled(mut self, enabled: bool) -> Self {
         self.subagents_enabled = enabled;
+        self
+    }
+    /// Test-only: use this subagent list instead of scanning the project and home agent directories.
+    #[cfg(test)]
+    pub(crate) fn with_subagents_for_test(
+        mut self,
+        subagents: Vec<crate::discovery::SubagentEntry>,
+    ) -> Self {
+        self.injected_subagents = Some(subagents);
         self
     }
     pub fn with_background_workflows_enabled(mut self, enabled: bool) -> Self {
@@ -842,12 +856,21 @@ impl AgentBuilder {
             task_stripped = true;
         } else {
             subagents = {
-                let _subagent_timer = build_step_timer!("subagent_discovery");
-                crate::discovery::all_subagents_with_plugins(
-                    &self.working_directory,
-                    &self.subagent_toggle,
-                    self.plugin_registry.as_deref(),
-                )
+                #[cfg(test)]
+                let injected = self.injected_subagents.take();
+                #[cfg(not(test))]
+                let injected: Option<Vec<crate::discovery::SubagentEntry>> = None;
+                match injected {
+                    Some(entries) => entries,
+                    None => {
+                        let _subagent_timer = build_step_timer!("subagent_discovery");
+                        crate::discovery::all_subagents_with_plugins(
+                            &self.working_directory,
+                            &self.subagent_toggle,
+                            self.plugin_registry.as_deref(),
+                        )
+                    }
+                }
             };
             if subagents.is_empty() {
                 tool_config.tools.retain(|tc| tc.id != task_tool_id);
@@ -2352,6 +2375,26 @@ mod tests {
         assert!(!d.hosted_tool_allowed("web_search"));
     }
     const AGENT_TOOLS_BASE: &[&str] = &["read_file", "run_terminal_cmd"];
+    /// What subagent discovery returns on a host with no project or user agent files: the built-ins only.
+    /// Injected so `build()` never reads the real home directory and the test does not depend on the host.
+    fn clean_host_subagents() -> Vec<crate::discovery::SubagentEntry> {
+        use crate::config::BuiltinAgentName;
+        use crate::discovery::{SubagentEntry, SubagentSource};
+        use xai_grok_tools::types::config_source::ConfigSource;
+        BuiltinAgentName::subagent_variants()
+            .iter()
+            .map(|builtin| {
+                let definition = builtin.definition();
+                SubagentEntry {
+                    name: definition.name,
+                    description: definition.description,
+                    source: SubagentSource::Builtin(*builtin),
+                    shadows_builtin: None,
+                    config_source: ConfigSource::Builtin,
+                }
+            })
+            .collect()
+    }
     #[tokio::test]
     async fn agent_type_restricted_to_listed_types() {
         let mut tools: Vec<String> = AGENT_TOOLS_BASE.iter().map(|s| s.to_string()).collect();
@@ -2404,6 +2447,7 @@ mod tests {
             )
             .from_definition(def)
             .with_subagents_enabled(true)
+            .with_subagents_for_test(clean_host_subagents())
             .build()
             .await
             .unwrap()
@@ -2447,6 +2491,7 @@ mod tests {
         )
         .from_definition(crate::config::AgentDefinition::default_grok_build())
         .with_subagents_enabled(true)
+        .with_subagents_for_test(clean_host_subagents())
         .with_subagent_toggle(toggle)
         .with_bash_params(bash_params)
         .build()
@@ -2495,6 +2540,7 @@ mod tests {
         )
         .from_definition(crate::config::AgentDefinition::default_grok_build())
         .with_subagents_enabled(true)
+        .with_subagents_for_test(clean_host_subagents())
         .with_subagent_toggle(toggle)
         .with_bash_params(bash_params)
         .build()
