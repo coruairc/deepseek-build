@@ -419,8 +419,8 @@ mod tests {
             "https://api.deepseek.com/v1/chat/completions"
         ));
         assert!(!is_xai_api_url("https://x.ai"));
-        assert!(!is_xai_api_url("https://api.x.ai/v1"));
-        assert!(!is_xai_api_url("https://grok.com"));
+        assert!(!is_xai_api_url("https://api.x.ai/v1")); // egress-allow: negative assertion; proves legacy xAI hosts are not first-party
+        assert!(!is_xai_api_url("https://grok.com")); // egress-allow: negative assertion; proves legacy branding hosts are not first-party
         assert!(!is_xai_api_url("https://deepseek.com.evil.io"));
         assert!(!is_xai_api_url("https://foo.deepseek.com"));
         assert!(is_xai_api_url(

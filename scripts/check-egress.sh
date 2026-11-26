@@ -9,6 +9,12 @@
 #
 # HARD gate: legacy xAI / telemetry / upload destinations. Must be zero
 #   everywhere except attribution text (LICENSE / NOTICE / THIRD-PARTY-*).
+#
+#   A line may opt out with an auditable, reasoned marker:
+#       egress-allow: <at least 8 characters of reason>
+#   It is intended for test fixtures that must name a forbidden host to prove it
+#   is rejected — never for production code. The marker is visible in review, so
+#   weakening the gate requires a deliberate, explained line.
 # SOFT report: the ACP `x.ai/*` namespace and `grok` branding. Cleared by the
 #   rebrand slice; pass `--strict` to make it fatal (used after rebrand).
 #
@@ -33,11 +39,18 @@ EXCLUDES=(-g '!**/THIRD_PARTY*' -g '!**/THIRD-PARTY*' -g '!**/NOTICE*' -g '!**/L
 
 scan() {
   local pattern="$1"
+  # A line may opt out with an auditable, reasoned marker:
+  #     egress-allow: <at least 8 characters of reason>
+  # It is for test fixtures that must name a forbidden host to prove it is
+  # rejected — never for production code. The marker is visible in review.
+  local allow='egress-allow: .{8,}'
   if command -v rg >/dev/null 2>&1; then
-    rg --no-heading -n -i -e "$pattern" crates prod third_party "${EXCLUDES[@]}" 2>/dev/null || true
+    rg --no-heading -n -i -e "$pattern" crates prod third_party "${EXCLUDES[@]}" 2>/dev/null \
+      | grep -vE "$allow" || true
   else
     grep -rIniE "$pattern" crates prod third_party 2>/dev/null \
-      | grep -vE 'THIRD_PARTY|THIRD-PARTY|NOTICE|LICENSE|\.md:' || true
+      | grep -vE 'THIRD_PARTY|THIRD-PARTY|NOTICE|LICENSE|\.md:' \
+      | grep -vE "$allow" || true
   fi
 }
 

@@ -2765,7 +2765,7 @@ fn telemetry_legacy_sink_keys_are_ignored() {
             otel_traces_exporter = "none"
             otel_traces_export_interval = 5000
             trace_upload_url = "https://traces.example"
-            trace_upload_bucket = "gs://bucket"
+            trace_upload_bucket = "gs://bucket" # egress-allow: config fixture for the removed upload path; asserts the key is ignored
             trace_upload_region = "us-east-1"
             trace_upload_credentials_file = "/var/creds"
             trace_upload_credentials = "secret"
