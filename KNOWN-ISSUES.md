@@ -283,6 +283,18 @@ rebrand/docs notes refreshed 2026-10-21 against `main` (`90586ab0`).
 - **`scripts/test-install.sh`: green locally** (39/39 assertions) against a
   loopback fake release; it never touches the real release pipeline.
 
+## Container image (2026-11-26)
+
+- **The image runs, and the sandbox cannot apply inside it.** `ghcr.io/coruairc/deepseek-build@sha256:8f5c484e…`
+  was pulled and run: `--version` prints `0.1.0-proof1 (b14d28eb2bc7)`, and a headless turn ran
+  `printf 'in-image-ok\n'` and returned it with `estimated_cost_usd`. The image contains **no
+  `bubblewrap`**, so the in-process sandbox is unavailable there; the container boundary is the
+  isolation. `--sandbox` is accepted but not enforced, and the README now says so. Evidence:
+  `docs/evidence/04-distribution-proof/image-run/`.
+- **Adding bwrap would not be enough.** bwrap needs user namespaces, which a default unprivileged
+  container blocks; enabling it requires `--cap-add SYS_ADMIN` or `--privileged`, i.e. weakening the
+  container's own isolation. That trade-off is deliberately not made.
+
 ## Rebrand / config
 
 - Binary (`deepseek-build`), config dir (`~/.deepseek-build`), ACP namespace

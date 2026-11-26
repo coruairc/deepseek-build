@@ -25,7 +25,7 @@ OpenAI-compatible Chat Completions API. It is a work in progress (see
 | Phase 2 - DeepSeek adapter | Core done: Chat Completions-only backend (`Responses`/`Messages` deleted), `thinking` control, `reasoning_content` round-trip + sanitizer, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-flash`), wiremock suite. Live smoke run 8/8 PASS (2026-10-07, author's machine). |
 | Phase 3 - TUI | Implemented: reasoning fold (`e`/`E`/`Ctrl+E`), collapsible thinking, optional status line (off by default; enable `[ui.status_line]` to show cwd, model, context), `/model` `/effort` `/think` `/theme`, Monokai default theme + whale logo. |
 | Phase 4 - harden existing features | Partial: runtime read-before-write guard and dangerous-command warnings are in; plan mode, permissions, resume, subagents, MCP, `AGENTS.md`, and checkpoints exist and need an end-to-end pass. A full `cargo test --workspace` run is **not green yet** (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). |
-| Phase 5 - testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. Pre-release [`v0.1.0-proof1`](https://github.com/coruairc/deepseek-build/releases/tag/v0.1.0-proof1) ships all four tarballs (two Linux, two macOS), `SHA256SUMS`, `install.sh`, and a multi-arch GHCR image (`sha256:8f5c484e…`, linux/amd64 + linux/arm64). The pinned installer is proven end to end against that release; the image is **registry-verified only** — this build host has no container runtime, so the `docker pull` / `docker run` check is still owed (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). `v0.1.0` is not published. |
+| Phase 5 - testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. Pre-release [`v0.1.0-proof1`](https://github.com/coruairc/deepseek-build/releases/tag/v0.1.0-proof1) ships all four tarballs (two Linux, two macOS), `SHA256SUMS`, `install.sh`, and a multi-arch GHCR image (`sha256:8f5c484e…`, linux/amd64 + linux/arm64). The pinned installer is proven end to end against that release, and the image has been pulled by digest and run: a real headless turn executed a shell command and returned `estimated_cost_usd`. The image ships **no `bubblewrap`**, so the in-process sandbox cannot be applied inside it (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). `v0.1.0` is not published. |
 
 See [`AGENTS.md`](AGENTS.md) for a precise resume-from-here handoff.
 
@@ -184,8 +184,9 @@ The container contract is **headless-only**: one `-p` prompt per invocation.
 (The binary also carries the TUI, but no interactive container recipe is
 provided or tested; the image is built to be driven headless.) Use `-p`, add
 `--output-format json` for usage and `estimated_cost_usd`,
-`--permission-mode auto` so a headless turn may act without a prompt, and
-`--sandbox devbox` to keep the sandbox on:
+`--permission-mode auto` so a headless turn may act without a prompt. Do **not**
+add `--sandbox`: the image does not contain `bubblewrap`, so no in-process
+sandbox can be applied inside it — the container boundary is the isolation:
 
 ```sh
 export DEEPSEEK_API_KEY=sk-...
@@ -196,7 +197,7 @@ docker run --rm --user "$(id -u):$(id -g)" \
   -v "$HOME/.deepseek-build":/home/app/.deepseek-build \
   ghcr.io/coruairc/deepseek-build@sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be \
   -p "Run exactly one shell command: printf 'in-image-ok\n' and report its stdout." \
-  --output-format json --permission-mode auto --sandbox devbox
+  --output-format json --permission-mode auto
 ```
 
 Two mounts and one working directory:

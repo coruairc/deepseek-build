@@ -1,0 +1,26 @@
+{
+  "text": "The command exited with status 0 and printed:\n\n```\nin-image-ok\n```",
+  "stopReason": "end_turn",
+  "sessionId": "01a21846-3a84-7b72-8896-14c2a4a24b3a",
+  "requestId": "e93316e1-7496-47b2-8b9d-b40138630d70",
+  "usage": {
+    "input_tokens": 389,
+    "cache_read_input_tokens": 20608,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 89,
+    "reasoning_tokens": 0,
+    "total_tokens": 21086
+  },
+  "num_turns": 2,
+  "modelUsage": {
+    "deepseek-flash": {
+      "inputTokens": 389,
+      "outputTokens": 89,
+      "cacheReadInputTokens": 20608,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 2
+    }
+  },
+  "estimated_cost_usd": 0.000347148,
+  "estimate": true
+}

@@ -70,8 +70,8 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 - [x] **REL-01**: The build matrix is split into `build-linux` and `build-macos`, and `container` depends on `build-linux` only, so a slow macOS leg can no longer skip the image
 - [x] **REL-02**: Both macOS targets (aarch64 and x86_64) produce tarballs inside the job timeout, including one cache-warming run if cold-cache is the cause
 - [x] **REL-03**: The macOS binary passes a smoke check from the extracted tarball, and its signature remains valid after any strip or debug-profile change
-- [ ] **REL-04**: The GHCR image is built, published, and pulled from a throwaway pre-release tag
-- [ ] **REL-05**: The container image runs a real headless tool-executing turn with the documented run flags that keep the sandbox on, and the README states the image is headless-only with the mounts it needs
+- [x] **REL-04**: The GHCR image is built, published, and pulled from a throwaway pre-release tag (pulled by index digest `sha256:8f5c484e…` on 2026-11-26)
+- [ ] **REL-05**: The container image runs a real headless tool-executing turn. The turn is **proven** (`docs/evidence/04-distribution-proof/image-run/`), but the sandbox clause is **unmet**: the image ships no `bwrap`, so `--sandbox` cannot be enforced inside it, and the README says so
 - [x] **REL-06**: `install.sh` is proven against a real pre-release tag, and the unpinned `latest` path's actual behaviour is established rather than assumed from the fake-tree harness
 - [x] **REL-07**: `release-dist` ships no DWARF (`strip`/`debug` resolved, no `.debug`/`.dSYM` sidecar assumption), with the macOS signature risk verified
 - [x] **REL-08**: The `docker/metadata-action` tag list is guarded so an empty list fails loudly instead of producing a silent no-op manifest
@@ -204,8 +204,8 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | PKG-02 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-03 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-04 | Phase 4 — Distribution Proof | Complete — formula in-tree with the `v0.1.0-proof1` darwin URLs/hashes (`2b61dfab…` / `ffe0f3c5…`), checker 19/19 + self-test 3/3, `brew style`/`brew audit --strict --online` exit 0, `brew fetch` checksum-verified, tap activation documented as the author's step (`brew install` NOT RUN on this Linux host) |
-| REL-04 | Phase 4 — Distribution Proof | **Partial** — built and published by the tag run; 04-04 proved the registry side from the host (index `sha256:8f5c484e…` == CI digest, `linux/amd64` `sha256:1d216b60…` + `linux/arm64` `sha256:25dc0d25…`, two tags, no `:latest`, public, config blob read). **Not pulled**: no Docker daemon (`docker-info.log`); the pull is deferred with REL-05. 04-05 re-validated the evidence (`seal`, 9/9 PASS) and re-asserted `:latest` absent — the pull still has not happened |
-| REL-05 | Phase 4 — Distribution Proof | **Pending / environment-blocked** — `image-run-blocked` is `result: skipped` with the digest-pinned pull, `--version` and the sandbox-on headless turn recorded; the run did not happen and needs a host with a container runtime. 04-05 sealed the record; it does not close the requirement |
+| REL-04 | Phase 4 — Distribution Proof | Complete — pulled by index digest and run in-image on 2026-11-26 |
+| REL-05 | Phase 4 — Distribution Proof | Partial — the turn is proven; the sandbox clause is unmet (no bwrap in the image) |
 | REL-06 | Phase 4 — Distribution Proof | Complete — pinned install of `v0.1.0-proof1` from the real release (asset `install.sh` byte-identical, tarball sha256 three-way equal, installed binary reports `0.1.0-proof1 (b14d28eb2bc7)`); unpinned `latest` observed: both `latest/download` URLs 404, installer exits 22 and installs nothing (`docs/evidence/04-distribution-proof/installer-{proof,latest}/`) |
 | WIN-01 | Phase 5 — Windows Support | Pending |
 | WIN-02 | Phase 5 — Windows Support | Pending |

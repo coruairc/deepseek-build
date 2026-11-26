@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Truth Baseline** - Sandbox stops aborting, cost and default model stop lying, and the suite is provably green (completed 2026-11-23)
 - [x] **Phase 2: Loop-Item Verification** - Permissions, resume and plan mode proven against a real session, with the egress boundary measured (completed 2026-11-25)
 - [x] **Phase 3: Pipeline Decoupling & Version** - A slow macOS leg can no longer erase the image and the tag shape is settled (completed 2026-11-25; REL-02 closed by Phase 4's tag run 45724842211 on 2026-11-26: macOS legs 47.8 / 61.5 min against the 240 min budget)
-- [ ] **Phase 4: Distribution Proof** - Image, installer and macOS artifacts proven from a throwaway tag (5/5 plans executed, 2 requirements partially/blocked — REL-04 is registry-proven with the pull not executed and REL-05 is environment-blocked; the pre-release is kept by recorded deviation, so the phase is **not** fully complete)
+- [ ] **Phase 4: Distribution Proof** - Image, installer and macOS artifacts proven from a throwaway tag (5/5 plans executed; REL-04 closed after the image was pulled by digest and run; REL-05's turn is proven but its sandbox clause is unmet because the image ships no bwrap; the pre-release is kept by recorded deviation)
 - [ ] **Phase 5: Windows Support** - Builds, installs and runs on Windows at a named tier, with the sandbox refusing honestly instead of no-opping
 - [ ] **Phase 5.1: Project Directory Rebrand (INSERTED)** - Project-local config is `.deepseek/`, `.grok` stays as a compatibility fallback, and one constant flips to `.ob` for open-build
 - [ ] **Phase 6: Documentation Truth & Freeze** - Docs match the tree, the author signs off, and the freeze marker moves no published tag
@@ -171,7 +171,7 @@ Plans:
   3. **Blocking gate:** the author has used the TUI for 20–30 minutes on a clone of a real repo and the signed acceptance note is committed; **FREEZE-01/02/03 do not run until that commit exists**, so no branch and no marker tag can precede the sign-off.
   4. Only after the acceptance note is committed, the pre-freeze checklist passes — completeness-asserted clean suite, `check-egress.sh --strict` exit 0 with a dated record (the three test-only strings must be resolved by a recorded decision, not by weakening the gate silently), `branding_surface`, `key-leak-check.sh`, `cargo-deny`, the runtime proof artifacts and the Phase 4 dry-run evidence.
   5. Branch **`deepseek-build`** exists at the freeze commit on `main`; a non-triggering marker tag sits on that commit with `git rev-parse <tag>^{}` equal to the branch tip; the pre-existing `deepseek` branch and `deepseek-v0.1-snapshot` tag at `4b305bd0` are unchanged and recorded as superseded; the marker triggered no workflow run and `v0.1.0` was not published.
-**Plans**: 5 plans
+**Plans**: 5/5 plans complete
 
 Plans:
 - [ ] 06-01: `DECISIONS.md` §E/§F rewritten from the tree; `TESTING.md` §2/§6 corrected
@@ -203,7 +203,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6
 | 1. Truth Baseline | 6/6 | Complete    | 2026-11-23 |
 | 2. Loop-Item Verification | 6/6 | Complete | 2026-11-25 |
 | 3. Pipeline Decoupling & Version | 4/4 | Complete (REL-02 proof deferred to Phase 4) | 2026-11-25 |
-| 4. Distribution Proof | 5/5 | Executed — REL-04 Partial (pull not executed), REL-05 blocked | - |
+| 4. Distribution Proof | 5/5 | REL-04 closed (pulled by digest + run); REL-05 turn proven, sandbox clause unmet | - |
 | 5. Windows Support | 0/5 | In progress — spike found 4 blockers, 3 fixed on the throwaway branch | - |
 | 5.1 Project Directory Rebrand (INSERTED) | 0/2 | In progress | - |
 | 6. Documentation Truth & Freeze | 0/5 | Not started | - |

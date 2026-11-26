@@ -1,0 +1,51 @@
+{
+  "item": "image-run",
+  "requirements": [
+    "REL-05"
+  ],
+  "date": "2026-11-26T14:34:32Z",
+  "host": "Linux/x86_64",
+  "command": "docker pull + docker run (--version, then a headless shell turn) against ghcr.io/coruairc/deepseek-build@sha256:8f5c484e… on 2026-11-26; sandbox availability checked inside the image",
+  "steps": [
+    {
+      "name": "image: pulled by index digest",
+      "ok": true,
+      "detail": "exit 0: ghcr.io/coruairc/deepseek-build@sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be"
+    },
+    {
+      "name": "image: binary reports the tag version",
+      "ok": true,
+      "detail": "exit 0: deepseek-build 0.1.0-proof1 (b14d28eb2bc7)"
+    },
+    {
+      "name": "image: headless turn ran a shell command",
+      "ok": true,
+      "detail": "exit 0:   \"text\": \"The command exited with status 0 and printed:\\n\\n```\\nin-image-ok\\n```\","
+    },
+    {
+      "name": "image: cost estimate present",
+      "ok": true,
+      "detail": "exit 0:   \"estimate\": true"
+    },
+    {
+      "name": "image: bwrap absent (sandbox cannot apply inside the container)",
+      "ok": true,
+      "detail": "exit 0: "
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/04-distribution-proof/image-run/turn.stdout.json",
+      "sha256": "07acdfdc4f5abb9d73d9cabe7d8b32f93e2c54767a420d4f261b36430ec7ec23"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/image-run/turn.stderr.txt",
+      "sha256": "6713c62fcb9d1d074c352649705ee18066f8dcaf8aeae01b6ab7527cc77a03b4"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/image-run/notes.md",
+      "sha256": "019acd013afd557a8a01b4feac617dded96b07d314ab669ee023d161d2beddf6"
+    }
+  ],
+  "result": "ok"
+}
