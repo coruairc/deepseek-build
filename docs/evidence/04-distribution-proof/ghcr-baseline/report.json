@@ -1,0 +1,37 @@
+{
+  "item": "ghcr-baseline",
+  "requirements": [
+    "REL-04"
+  ],
+  "date": "2026-11-26T06:00:17Z",
+  "host": "Linux/x86_64",
+  "command": "python3 scripts/distribution-proof.py fixtures && python3 scripts/distribution-proof.py probe --tag v0.0.1-rc5 --out docs/evidence/04-distribution-proof/ghcr-baseline/probe-rc5.json && python3 scripts/distribution-proof.py baseline --out docs/evidence/04-distribution-proof/ghcr-baseline/baseline.json",
+  "steps": [
+    {
+      "name": "fixtures: every assertion rejects its negative",
+      "ok": true,
+      "detail": "exit 0: fixtures: 35/35 PASS"
+    },
+    {
+      "name": "probe rc5: download and double digest check",
+      "ok": true,
+      "detail": "exit 0: probe: OK v0.0.1-rc5 — 4 assets, 2 verified against SHA256SUMS, 0 mismatches"
+    },
+    {
+      "name": "baseline: GHCR tags and :latest state",
+      "ok": true,
+      "detail": "exit 0: baseline: transport=anonymous-http tags_status=200 tags=['0.1.0-proof1', 'v0.1.0-proof1'] latest=absent digest=None"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/04-distribution-proof/ghcr-baseline/baseline.json",
+      "sha256": "fbd55d555db253b39a78112e7c47b92b23378978437a78553cd7529a1ff8b8d6"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/ghcr-baseline/probe-rc5.json",
+      "sha256": "d66b52e9f63acf710b4c94fd67fe59674b972596f22f13490c1da8a2a4f726a6"
+    }
+  ],
+  "result": "ok"
+}

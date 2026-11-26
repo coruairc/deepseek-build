@@ -1,0 +1,1 @@
+baseline: transport=anonymous-http tags_status=200 tags=['0.1.0-proof1', 'v0.1.0-proof1'] latest=absent digest=None

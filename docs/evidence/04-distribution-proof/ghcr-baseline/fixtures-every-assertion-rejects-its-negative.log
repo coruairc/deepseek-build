@@ -1,0 +1,36 @@
+PASS  release: valid asset set is accepted
+PASS  release: prerelease classification is accepted
+PASS  release: SHA256SUMS agrees with the asset digests
+PASS  release: downloaded bytes agree with both digests
+PASS  release: no v0.1.0 release exists
+PASS  tarball: exactly five top-level entries are accepted
+PASS  version: the stamped version is accepted
+PASS  macho: a Mach-O arm64 binary is accepted
+PASS  run: a green run with a successful container job is accepted
+PASS  registry: a two-platform index is accepted
+PASS  baseline: an absent latest that stays absent is accepted
+PASS  baseline: a present latest that does not move is accepted
+PASS  release: an extra asset is rejected  [release carries extra asset(s): EXTRA]
+PASS  release: a missing tarball is rejected  [release is missing asset(s): SHA256SUMS, install.sh]
+PASS  release: prerelease false is rejected  [release v0.1.0-proof1 is not classified prerelease (prerelease=False)]
+PASS  release: draft true is rejected  [release v0.1.0-proof1 is a draft (draft=True)]
+PASS  release: an asset digest disagreeing with SHA256SUMS is rejected  [asset digest disagrees with SHA256SUMS: deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz: SHA256SUMS 1bb87e07be9e52fc0dca53a1c0718fac23e8b4202b9c346e12f075762507a544 != GitHub digest sha256:8888888888888888888888888888888888888888888888888888888888888888]
+PASS  release: a downloaded file disagreeing with SHA256SUMS is rejected  [downloaded file disagrees with its recorded digest: deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz: downloaded 0000000000000000000000000000000000000000000000000000000000000000 != GitHub digest sha256:1bb87e07be9e52fc0dca53a1c0718fac23e8b4202b9c346e12f075762507a544; deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz: downloaded 0000000000000000000000000000000000000000000000000000000000000000 != SHA256SUMS 1bb87e07be9e52fc0dca53a1c0718fac23e8b4202b9c346e12f075762507a544]
+PASS  release: a v0.1.0 release is rejected  [releases/tags/v0.1.0 answered 200, expected 404]
+PASS  tarball: a debug member is rejected  [tarball bad.tar.gz carries debug artifact(s): deepseek-build.dSYM/Contents]
+PASS  tarball: a sixth entry is rejected  [tarball bad.tar.gz top-level entries are ['LICENSE', 'NOTICE', 'README.txt', 'THIRD-PARTY-NOTICES', 'deepseek-build', 'extra.txt'], expected exactly the five entries ['LICENSE', 'NOTICE', 'README.txt', 'THIRD-PARTY-NOTICES', 'deepseek-build']]
+PASS  version: a wrong version is rejected  [extracted binary reports 'deepseek-build 0.0.1-rc5 (4b305bd0c1ab)', not the release version '0.1.0-proof1']
+PASS  run: a skipped container job is rejected  [container job concluded 'skipped'; it must succeed (the Phase-3 split must not hide the image behind a macOS failure)]
+PASS  run: a macOS leg over 240 minutes is rejected  [macOS leg aarch64-apple-darwin took 241.0 min, over the 240 minute budget]
+PASS  run: a failing macOS verify step is rejected  [macOS leg aarch64-apple-darwin verify/sign step 'Verify the packaged macOS artifact' concluded 'failure']
+PASS  run: a missing guard step is rejected  [guard step concluded None]
+PASS  run: a guard line that does not match is rejected  [guard line 'guard-image-tags: nothing to say' does not match 'guard-image-tags: OK <n> names (prerelease)']
+PASS  run: 'latest' among the pushed names is rejected  [pushed tag name 'latest' is present; a prerelease must never move :latest]
+PASS  run: a missing ':latest unchanged' line is rejected  [container log has no prerelease ':latest unchanged' line (recorded '')]
+PASS  run: an empty guard name list is rejected  [no image tag name parsed from the container log]
+PASS  registry: a single-platform index is rejected  [registry index platforms are ['linux/amd64']; expected linux/amd64 + linux/arm64]
+PASS  registry: a 'latest' tag is rejected  [registry tags contain 'latest']
+PASS  registry: a digest disagreeing with the CI digest is rejected  [registry digest sha256:9999999999999999999999999999999999999999999999999999999999999999 disagrees with the expected CI digest sha256:3333333333333333333333333333333333333333333333333333333333333333]
+PASS  baseline: a moved latest is rejected  [latest moved from sha256:6666666666666666666666666666666666666666666666666666666666666666 to sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]
+PASS  baseline: an absent latest that appears is rejected  [latest appeared after the tag push]
+fixtures: 35/35 PASS

@@ -1,0 +1,31 @@
+{
+  "tag": "v0.0.1-rc5",
+  "prerelease": true,
+  "draft": false,
+  "asset_count": 4,
+  "assets": [
+    {
+      "name": "deepseek-build-0.0.1-rc5-aarch64-unknown-linux-gnu.tar.gz",
+      "size": 193582467,
+      "digest": "sha256:d63f98f362312335f3b04f2174ed639c44eb40f7b9b5ed392e60839b47229cce"
+    },
+    {
+      "name": "deepseek-build-0.0.1-rc5-x86_64-unknown-linux-gnu.tar.gz",
+      "size": 212380839,
+      "digest": "sha256:ba13c8bcc43a05ec26de490b5c4ffabedd5cba6ce6a702907eccc3c998396ed8"
+    },
+    {
+      "name": "install.sh",
+      "size": 14552,
+      "digest": "sha256:31e114d4a29dbbeb0d3e2e442a72a6ecc14ad3f4b99956fbff23f42c0cabd5e5"
+    },
+    {
+      "name": "SHA256SUMS",
+      "size": 247,
+      "digest": "sha256:52cfe310cf7d258a2726c505c96a9def239d5c0836dee920d44a39ce73424c31"
+    }
+  ],
+  "sums_verified": 2,
+  "sums_mismatches": [],
+  "checked_at": "2026-11-26T06:00:41Z"
+}

@@ -1,0 +1,23 @@
+{
+  "checked_at": "2026-11-26T06:00:43Z",
+  "transport": "anonymous-http",
+  "tags_status": 200,
+  "tags": [
+    "0.1.0-proof1",
+    "v0.1.0-proof1"
+  ],
+  "latest_status": "absent",
+  "latest_digest": null,
+  "transports_tried": [
+    {
+      "transport": "anonymous-http",
+      "tags_status": 200
+    },
+    {
+      "transport": "anonymous-http",
+      "latest_status": 404
+    }
+  ],
+  "image": "ghcr.io/coruairc/deepseek-build",
+  "note": "no Docker daemon is contacted; see notes.md for what this snapshot can and cannot prove"
+}
