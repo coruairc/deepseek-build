@@ -1228,8 +1228,33 @@ pub(crate) async fn run(
     app.auth_methods = connection.auth_methods.clone();
     let force_login = args.force_login && !connection.auth_methods.is_empty();
     let needs_interactive_login = connection.needs_login || force_login;
+    // Startup only: when the agent says a login is required but no env or saved
+    // key exists, ask for the key in the TUI instead of the unsupported
+    // interactive-login dead end. A saved key is always last behind both env vars.
+    let startup_api_key_prompt = connection.needs_login && !force_login;
+    let api_key_resolution =
+        startup_api_key_prompt.then(xai_grok_login::auth_method::resolve_xai_api_key);
+    let show_api_key_prompt = api_key_resolution.as_ref().is_some_and(|resolution| {
+        crate::views::api_key_modal::should_show_prompt(
+            connection.needs_login,
+            force_login,
+            resolution,
+        )
+    });
+    let api_key_prompt_error = match &api_key_resolution {
+        Some(Err(error)) => Some(error.to_string()),
+        _ => None,
+    };
     if needs_interactive_login {
         app.welcome_prompt_focused = false;
+        if show_api_key_prompt {
+            app.auth_state = super::app_view::AuthState::Pending {
+                error: api_key_prompt_error.clone(),
+            };
+            app.api_key_modal = Some(crate::views::api_key_modal::ApiKeyModalState::new(
+                api_key_prompt_error.clone(),
+            ));
+        }
         if connection.needs_login {
             app.login_label = connection.login_label;
             app.login_method_id = connection.login_method_id;
@@ -1268,7 +1293,9 @@ pub(crate) async fn run(
             "auto-triggering login at startup"
         );
     }
-    let mut post_render_effects = if needs_interactive_login {
+    let mut post_render_effects = if show_api_key_prompt {
+        vec![]
+    } else if needs_interactive_login {
         if connection.auth_methods.is_empty() {
             app.auth_state = super::app_view::AuthState::Pending {
                 error: Some(

@@ -1,7 +1,7 @@
 //! Top-level action router: maps actions and action results to handlers.
 use super::auth::{
-    dispatch_cancel_login, dispatch_login, dispatch_logout, dispatch_submit_auth_code,
-    dispatch_switch_account,
+    dispatch_cancel_api_key_prompt, dispatch_cancel_login, dispatch_login, dispatch_logout,
+    dispatch_submit_api_key, dispatch_submit_auth_code, dispatch_switch_account,
 };
 use super::ctx::{
     active_agent_session_id, get_active_agent_mut, navigate_clearing_selection, open_url_or_show,
@@ -1185,6 +1185,8 @@ fn dispatch_inner(action: Action, app: &mut AppView) -> Vec<Effect> {
             vec![]
         }
         Action::Login => dispatch_login(app),
+        Action::SubmitApiKey(key) => dispatch_submit_api_key(app, key),
+        Action::CancelApiKeyPrompt => dispatch_cancel_api_key_prompt(app),
         Action::CancelLogin => dispatch_cancel_login(app),
         Action::SubmitAuthCode(code) => dispatch_submit_auth_code(app, code),
         Action::CopyAuthUrl => {

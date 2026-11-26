@@ -65,6 +65,10 @@ pub enum Action {
     },
     /// Quit without double-press confirmation (e.g., from command palette or pre-login screens).
     QuitConfirmed,
+    /// Save the API key entered in the startup prompt, then authenticate with it.
+    SubmitApiKey(String),
+    /// Dismiss the startup API-key prompt and quit with the sign-in hint.
+    CancelApiKeyPrompt,
     /// Create a new session from the welcome screen.
     NewSession,
     /// Leave the welcome screen for the optimistic home session, or create one if none exists.

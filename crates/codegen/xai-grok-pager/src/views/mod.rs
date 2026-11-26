@@ -1,6 +1,7 @@
 pub mod agent;
 pub mod agent_status;
 pub mod agents_modal;
+pub mod api_key_modal;
 pub mod block_viewer;
 pub mod btw_overlay;
 pub mod completion_dropdown;

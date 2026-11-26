@@ -870,6 +870,8 @@ pub struct AppView {
     pub mouse_captured: bool,
     /// Active "New Worktree" dialog on the welcome screen.
     pub new_worktree_dialog: Option<NewWorktreeDialogState>,
+    /// Masked API-key prompt shown at startup when no env or saved key exists.
+    pub api_key_modal: Option<crate::views::api_key_modal::ApiKeyModalState>,
     /// Default all ON.
     /// Resolved at startup and on settings toggles.
     /// Precedence: `GROK_CONTEXTUAL_HINTS` (master) > `[ui.contextual_hints]` user config > remote tier > default.
@@ -1430,6 +1432,7 @@ impl AppView {
             welcome_history_load_as_build: false,
             mouse_captured: true,
             new_worktree_dialog: None,
+            api_key_modal: None,
             contextual_hints: Default::default(),
             remote_contextual_hints: None,
             tip_seen_counts: Default::default(),
@@ -2090,6 +2093,28 @@ impl AppView {
         );
         #[cfg(feature = "local-workspace")]
         let session_picker_open = self.session_picker_entries.is_some() || sp_loading;
+        if let Some(modal) = self.api_key_modal.as_mut() {
+            use crate::views::api_key_modal::ApiKeyModalOutcome;
+            let outcome = match ev {
+                Event::Key(key) if key.kind != KeyEventKind::Release => modal.handle_key(key),
+                Event::Paste(text) => modal.insert_paste(text),
+                Event::Resize(_, _) => return InputOutcome::Changed,
+                _ => ApiKeyModalOutcome::Unchanged,
+            };
+            return match outcome {
+                ApiKeyModalOutcome::Submitted(key) => {
+                    self.api_key_modal = None;
+                    InputOutcome::Action(Action::SubmitApiKey(key))
+                }
+                ApiKeyModalOutcome::Cancelled => {
+                    self.api_key_modal = None;
+                    InputOutcome::Action(Action::CancelApiKeyPrompt)
+                }
+                ApiKeyModalOutcome::Changed => InputOutcome::Changed,
+                ApiKeyModalOutcome::Unchanged => InputOutcome::Unchanged,
+            };
+        }
+
         let outcome = match self.active_view {
             ActiveView::Welcome => handle_welcome_input(
                 ev,
@@ -4245,6 +4270,14 @@ impl AppView {
                                     view_area,
                                     f.buffer_mut(),
                                     dialog,
+                                );
+                            }
+                            if let Some(modal) = self.api_key_modal.as_mut() {
+                                crate::views::api_key_modal::render_api_key_modal(
+                                    f.buffer_mut(),
+                                    view_area,
+                                    modal,
+                                    compact,
                                 );
                             }
                             if let Some(crate::views::modal::ActiveModal::DocViewer {

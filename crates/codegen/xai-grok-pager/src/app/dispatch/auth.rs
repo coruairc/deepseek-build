@@ -211,6 +211,69 @@ pub(super) fn strip_trailing_auth_error_blocks(agent: &mut AgentView) {
     }
 }
 
+/// Persist the key entered in the startup prompt, then authenticate the running
+/// agent with it. A leader process reads the saved file; an embedded agent also
+/// sees the runtime override.
+pub(super) fn dispatch_submit_api_key(app: &mut AppView, key: String) -> Vec<Effect> {
+    submit_api_key_with(
+        app,
+        key,
+        |key| xai_grok_login::credentials_store::save_api_key(key).map(|_| ()),
+        xai_grok_login::auth_method::set_runtime_xai_api_key,
+    )
+}
+
+/// Splits persistence and the runtime override (both injected for tests) from
+/// the in-memory transition.
+pub(crate) fn submit_api_key_with(
+    app: &mut AppView,
+    key: String,
+    save: impl FnOnce(&str) -> Result<(), xai_grok_login::credentials_store::CredentialsError>,
+    on_saved: impl FnOnce(&str),
+) -> Vec<Effect> {
+    if let Err(error) = save(&key) {
+        // Keep the prompt open so the user can correct the key. The error names
+        // the path and fix, never the value.
+        if let Some(modal) = app.api_key_modal.as_mut() {
+            modal.set_error(error.to_string());
+        }
+        return vec![];
+    }
+
+    on_saved(&key);
+    app.api_key_modal = None;
+
+    let request_seq = app.next_auth_request_seq;
+    app.next_auth_request_seq += 1;
+    app.auth_code_input.reset();
+    app.auth_state = AuthState::Authenticating {
+        request_seq,
+        handle: None,
+        auth_url: None,
+        mode: AuthMode::Pending,
+    };
+
+    vec![Effect::Authenticate {
+        request_seq,
+        method_id: agent_client_protocol::AuthMethodId::new(
+            xai_grok_shell::agent::auth_method::XAI_API_KEY_METHOD_ID,
+        ),
+        use_oauth: false,
+        force_interactive: false,
+    }]
+}
+
+/// Esc / Ctrl-C on the startup prompt: quit with the same clear message the
+/// headless path uses when no key is configured.
+pub(super) fn dispatch_cancel_api_key_prompt(app: &mut AppView) -> Vec<Effect> {
+    app.api_key_modal = None;
+    app.trust_quit_error = Some(
+        "Not signed in: set DEEPSEEK_API_KEY (or DEEPSEEK_BUILD_API_KEY) to authenticate."
+            .to_string(),
+    );
+    super::router::confirmed_quit(app)
+}
+
 /// Start an interactive login flow. Triggered by pressing 'l' on the welcome screen or by the `/login` slash command.
 /// Only the welcome view renders the auth UI (the external auth provider's sign-in URL and status).
 /// A mid-session invocation therefore stashes the caller's view in `auth_return_view` and switches to `Welcome` so the flow is visible.

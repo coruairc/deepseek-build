@@ -519,6 +519,20 @@ async fn spawn_agent(
     let _ = options;
     spawn_grok_shell(agent_config, cancel, memory_config).await
 }
+/// Pick the headless auth method, failing closed before any UI when interactive
+/// login would be required. Headless never prompts.
+fn select_headless_auth_method(
+    auths: &[acp::AuthMethod],
+    default_auth_method_id: Option<&acp::AuthMethodId>,
+) -> anyhow::Result<acp::AuthMethodId> {
+    let method_id = crate::acp::select_eager_auth_method(auths, default_auth_method_id)
+        .ok_or_else(|| anyhow::anyhow!("{}", auth_required_message()))?;
+    if AuthMethodKind::from_id(&method_id).needs_interactive_login() {
+        anyhow::bail!("{}", auth_required_message());
+    }
+    Ok(method_id)
+}
+
 /// Authenticate via the agent's `defaultAuthMethodId`, failing closed when none is available.
 /// Returns whether the selected method is API-key auth.
 async fn authenticate(
@@ -526,13 +540,8 @@ async fn authenticate(
     auths: &[acp::AuthMethod],
     default_auth_method_id: Option<&acp::AuthMethodId>,
 ) -> anyhow::Result<bool> {
-    let method_id = crate::acp::select_eager_auth_method(auths, default_auth_method_id)
-        .ok_or_else(|| anyhow::anyhow!("{}", auth_required_message()))?;
-    let kind = AuthMethodKind::from_id(&method_id);
-    if kind.needs_interactive_login() {
-        anyhow::bail!("{}", auth_required_message());
-    }
-    let is_api_key_auth = kind.is_api_key();
+    let method_id = select_headless_auth_method(auths, default_auth_method_id)?;
+    let is_api_key_auth = AuthMethodKind::from_id(&method_id).is_api_key();
     let _resp: acp::AuthenticateResponse = acp_send(
         acp::AuthenticateRequest::new(method_id)
             .meta(serde_json::json!({"headless": true}).as_object().cloned()),

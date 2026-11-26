@@ -838,3 +838,80 @@ fn auth_complete_preserves_show_resolved_model_when_absent() {
 
     assert!(!app.show_resolved_model);
 }
+
+/// Enter on the startup prompt persists through the injected writer, clears
+/// the modal, and starts `xai.api_key` auth without a restart.
+#[test]
+fn submit_api_key_persists_then_starts_api_key_auth() {
+    let mut app = test_app();
+    app.api_key_modal = Some(crate::views::api_key_modal::ApiKeyModalState::new(None));
+    app.auth_state = AuthState::Pending { error: None };
+    let mut saved = None;
+    let mut runtime = None;
+
+    let effects = crate::app::dispatch::auth::submit_api_key_with(
+        &mut app,
+        "sk-test-value".into(),
+        |key| {
+            saved = Some(key.to_owned());
+            Ok(())
+        },
+        |key| runtime = Some(key.to_owned()),
+    );
+
+    assert_eq!(saved.as_deref(), Some("sk-test-value"));
+    assert_eq!(runtime.as_deref(), Some("sk-test-value"));
+    assert!(app.api_key_modal.is_none());
+    assert!(matches!(
+        app.auth_state,
+        AuthState::Authenticating {
+            mode: crate::app::app_view::AuthMode::Pending,
+            ..
+        }
+    ));
+    let method = effects
+        .iter()
+        .find_map(|effect| match effect {
+            Effect::Authenticate { method_id, .. } => Some(method_id.clone()),
+            _ => None,
+        })
+        .expect("must authenticate with the saved key");
+    assert_eq!(
+        method.0.as_ref(),
+        xai_grok_shell::agent::auth_method::XAI_API_KEY_METHOD_ID
+    );
+}
+
+/// A store failure keeps the prompt open and reports the path/fix.
+#[test]
+fn submit_api_key_store_failure_keeps_the_prompt_open() {
+    let mut app = test_app();
+    app.api_key_modal = Some(crate::views::api_key_modal::ApiKeyModalState::new(None));
+
+    let effects = crate::app::dispatch::auth::submit_api_key_with(
+        &mut app,
+        "sk-test-value".into(),
+        |_| Err(xai_grok_login::credentials_store::CredentialsError::EmptyKey),
+        |_| panic!("runtime override must not be set on failure"),
+    );
+
+    assert!(effects.is_empty());
+    assert!(app.api_key_modal.is_some());
+}
+
+/// Esc / Ctrl-C quits with the existing sign-in message.
+#[test]
+fn cancel_api_key_prompt_quits_with_the_sign_in_message() {
+    let mut app = test_app();
+    app.api_key_modal = Some(crate::views::api_key_modal::ApiKeyModalState::new(None));
+
+    let effects = dispatch(Action::CancelApiKeyPrompt, &mut app);
+
+    assert!(effects.iter().any(|effect| matches!(effect, Effect::Quit)));
+    assert!(app.api_key_modal.is_none());
+    let message = app
+        .trust_quit_error
+        .as_deref()
+        .expect("post-restore exit message");
+    assert!(message.contains("DEEPSEEK_API_KEY"));
+}

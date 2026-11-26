@@ -140,6 +140,7 @@ fn test_app() -> AppView {
         ask_user: false,
         mouse_captured: true,
         new_worktree_dialog: None,
+        api_key_modal: None,
         contextual_hints: Default::default(),
         remote_contextual_hints: None,
         tip_seen_counts: Default::default(),

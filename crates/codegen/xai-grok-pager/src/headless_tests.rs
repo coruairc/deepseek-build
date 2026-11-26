@@ -1,5 +1,30 @@
 use pretty_assertions::assert_eq;
 
+fn auth_method(id: &str, name: &str) -> acp::AuthMethod {
+    let agent = acp::AuthMethodAgent::new(acp::AuthMethodId::new(id), name.to_string());
+    acp::AuthMethod::Agent(agent)
+}
+
+/// Headless never prompts: an interactive login method fails with the existing
+/// message and exit-code path instead of opening the TUI key prompt.
+#[test]
+fn interactive_login_returns_the_existing_error_without_prompting() {
+    let auths = vec![auth_method("grok", "Sign in")];
+    let err = super::select_headless_auth_method(&auths, Some(&acp::AuthMethodId::new("grok")))
+        .expect_err("interactive login must fail headless");
+    assert_eq!(err.to_string(), super::auth_required_message());
+    assert!(err.to_string().contains("DEEPSEEK_API_KEY"));
+}
+
+#[test]
+fn api_key_auth_is_selected_without_prompting() {
+    let auths = vec![auth_method("xai.api_key", "API key")];
+    let method =
+        super::select_headless_auth_method(&auths, Some(&acp::AuthMethodId::new("xai.api_key")))
+            .expect("api key method");
+    assert_eq!(method.0.as_ref(), "xai.api_key");
+}
+
 #[tokio::test(start_paused = true)]
 async fn signalled_exit_stops_waiting_on_a_log_flush_that_never_answers() {
     let prompt_unacknowledged = false;
