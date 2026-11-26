@@ -1,0 +1,57 @@
+==> 1/6 actionlint: .github/workflows/release.yml
+==> 2/6 shellcheck: install.sh and the phase's shell scripts
+==> 3/6 release-workflow structure checker (plus the macOS artifact fixture)
+PASS: A1 jobs are exactly version/build-linux/build-macos/publish/container
+PASS: A2 build-linux: needs [version], two Linux legs, fail-fast false
+PASS: A3 build-macos: needs [version], two macOS legs, fail-fast false
+PASS: A4 build jobs have no runner.os conditionals left
+PASS: A5 publish needs [version, build-linux, build-macos] and has no if
+PASS: A6 container needs [version, build-linux] and is tag-gated
+PASS: A7 one --locked release-dist cargo build per build job, stamped with the version
+PASS: A8 each build job uploads release-${{ matrix.target }} with if-no-files-found=error
+PASS: A9 publish merges release-* and verifies all four tarballs
+PASS: A10 container downloads exactly the two Linux release-* artifacts
+PASS: A11 version derives the prerelease flag; the release step is tag-gated
+PASS: A12 no run body invokes strip or dsymutil
+PASS: A13 every uses: value is pinned to a 40-hex SHA
+PASS: A14 the tag-list guard sits between metadata-action and both pushes
+PASS: A15 the version job's derive step carries the strict semver gate
+PASS: A16 build-macos signs the binary ad-hoc after the build and before 'Package tarball'
+PASS: A17 the packaged macOS artifact is verified after packaging and before the upload
+PASS: A18 build-macos budget is 240 minutes; build-linux keeps 90
+PASS: A19 no CARGO_PROFILE_* override lands in a build job
+artifact-step fixture: 5/5 PASS
+release-workflow: 19/19 assertions PASS
+==> 4/6 image tag-list guard fixture
+20/20 assertions passed, 0 failed
+==> 5/6 v0.1.0 tag-shape checker
+PASS: A1 the trigger keys are exactly {push, workflow_dispatch}
+PASS: A2 push.tags is exactly ['v*'] with no second tag pattern
+PASS: A3 no string in the trigger contains 'deepseek'
+PASS: A4 the derive step (id: derive) is present and has a run body
+PASS: A5 v0.1.0 -> version=0.1.0, is_prerelease=false (the stable release)
+      observed: exit 0, $GITHUB_OUTPUT={'version': '0.1.0', 'is_prerelease': 'false'}, stdout='RELEASE_VERSION=0.1.0'
+PASS: A6 v0.1.0-rc1 -> version=0.1.0-rc1, is_prerelease=true
+      observed: exit 0, $GITHUB_OUTPUT={'version': '0.1.0-rc1', 'is_prerelease': 'true'}, stdout='RELEASE_VERSION=0.1.0-rc1'
+PASS: A7 v0.1.0-proof1 -> version=0.1.0-proof1, is_prerelease=true (the Phase 4 tag)
+      observed: exit 0, $GITHUB_OUTPUT={'version': '0.1.0-proof1', 'is_prerelease': 'true'}, stdout='RELEASE_VERSION=0.1.0-proof1'
+PASS: A8 v0.1 is rejected with the named semver error
+      observed: exit 1, stdout="::error::release tag 'v0.1' is not a semver tag (expected vX.Y.Z or vX.Y.Z-<pre>)"
+PASS: A9 v1 is rejected with the named semver error
+      observed: exit 1, stdout="::error::release tag 'v1' is not a semver tag (expected vX.Y.Z or vX.Y.Z-<pre>)"
+PASS: A10 v0.1.0.0 is rejected with the named semver error
+      observed: exit 1, stdout="::error::release tag 'v0.1.0.0' is not a semver tag (expected vX.Y.Z or vX.Y.Z-<pre>)"
+PASS: A11 v0.1.0+build.5 is rejected: build metadata would mismatch the release assets
+      observed: exit 1, stdout="::error::release tag 'v0.1.0+build.5' is not a semver tag (expected vX.Y.Z or vX.Y.Z-<pre>)"
+PASS: A12 branch ref (main, sha abcdef1234) -> version=0.0.0-abcdef1, is_prerelease=true
+      observed: exit 0, $GITHUB_OUTPUT={'version': '0.0.0-abcdef1', 'is_prerelease': 'true'}, stdout='RELEASE_VERSION=0.0.0-abcdef1'
+PASS: A13 1.0.0 (no leading v) is rejected by the v* case
+      observed: exit 1, stdout="::error::release tags must match 'v*' (got '1.0.0')"
+PASS: A14 the release step is tag-gated (if: github.ref_type == 'tag')
+PASS: A15 the release step passes prerelease from needs.version.outputs.is_prerelease
+PASS: A16 publish has no job-level if
+PASS: A17 container is tag-gated
+tag-shape: 17/17 assertions PASS
+==> 6/6 installer harness (loopback fake release tree)
+ALL PASS (58/58 assertions)
+==> release-pipeline: all gates PASS

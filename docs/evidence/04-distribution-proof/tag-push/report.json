@@ -1,0 +1,75 @@
+{
+  "item": "tag-push",
+  "requirements": [
+    "REL-04"
+  ],
+  "date": "2026-11-26T06:02:24Z",
+  "host": "Linux/x86_64",
+  "command": "read-only re-measurement of the single tag push: sh scripts/check-release-pipeline.sh, scripts/guard-image-tags.sh on the pushed and predicted tag lists, git ls-remote for the tag/main/snapshot/v0.1.0 refs, and gh run list for the push run",
+  "steps": [
+    {
+      "name": "pre-flight: every static release gate passes",
+      "ok": true,
+      "detail": "exit 0: ==> release-pipeline: all gates PASS"
+    },
+    {
+      "name": "tag: the local tag peels to expected-sha",
+      "ok": true,
+      "detail": "exit 0: tag peels to b14d28eb2bc71a046b789e0a705848d651685d35"
+    },
+    {
+      "name": "remote: the peeled tag equals expected-sha",
+      "ok": true,
+      "detail": "exit 0: b14d28eb2bc71a046b789e0a705848d651685d35\trefs/tags/v0.1.0-proof1^{}"
+    },
+    {
+      "name": "policy: origin/main did not move",
+      "ok": true,
+      "detail": "exit 0: 6e9d8d88dca11bda39afea8d3b82a8f80111d207\trefs/heads/main"
+    },
+    {
+      "name": "policy: no v0.1.0 tag exists on origin",
+      "ok": true,
+      "detail": "exit 0: no refs/tags/v0.1.0 and no refs/tags/v0.1.0^{} on origin"
+    },
+    {
+      "name": "policy: deepseek-v0.1-snapshot is unchanged",
+      "ok": true,
+      "detail": "exit 0: 4b305bd0c1ab2fbb55468df14ab6a7e94d7c8d0b\trefs/tags/deepseek-v0.1-snapshot^{}"
+    },
+    {
+      "name": "guard: the pushed two-name prerelease list is accepted",
+      "ok": true,
+      "detail": "exit 0: guard-image-tags: OK 2 names (prerelease)"
+    },
+    {
+      "name": "guard: the predicted four-name list is also accepted",
+      "ok": true,
+      "detail": "exit 0: guard-image-tags: OK 4 names (prerelease)"
+    },
+    {
+      "name": "run: exactly one push run for the commit",
+      "ok": true,
+      "detail": "exit 0: one push run: 45724842211 success https://github.com/coruairc/deepseek-build/actions/runs/45724842211"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/04-distribution-proof/tag-push/expected-sha.txt",
+      "sha256": "b22968b7e834982c1e576eebd14c24b12298ffa7493719d2a24cb0dd2a393620"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/tag-push/main-before.txt",
+      "sha256": "de9f99d53771425637af8cd3ead69f3ccbd1cec8e44dc02c65d127805f919f06"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/tag-push/snapshot-before.txt",
+      "sha256": "7e8dc71d24dbdcd4852d437c54dce48b0b36bbe122b4d0ae2840e77d23be88d1"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/tag-push/push.log",
+      "sha256": "a674e19974b134ba131318c2f4106a6cab5f6c4d4b32ad530c2f5ec7854065e6"
+    }
+  ],
+  "result": "ok"
+}
