@@ -366,6 +366,11 @@ pub enum Action {
     /// Open the agents modal (listing all agent definitions).
     /// Optionally opens directly on a specific tab.
     OpenConfigAgentsModal(Option<crate::views::agents_modal::AgentsTab>),
+    /// `/agent` with no argument: open the interactive agent picker.
+    OpenAgentPicker,
+    /// `/agent <name>` or the agents-modal switch action: quit and re-exec into the current
+    /// session with `--agent <name>`. Refused while a turn is running or cancelling.
+    SwitchAgent(String),
     /// Trigger OAuth for an MCP server from the modal.
     McpAuthTrigger {
         server_name: String,

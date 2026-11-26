@@ -216,6 +216,8 @@ pub(crate) struct TerminalState {
     pub relaunched_into_minimal: bool,
     /// One-shot `/fullscreen` re-exec (env override already consumed).
     pub relaunched_into_fullscreen: bool,
+    /// Agent name from an agent-switch re-exec; shown as a one-line notice on the first agent view.
+    pub agent_switch: Option<String>,
     /// Do NOT re-resolve via `theme::cache::resolve_initial_theme()` here: its OSC 11 fallback reads stdin and competes with the input reader.
     pub initial_theme: ThemeKind,
     /// Type-ahead captured by `init_terminal` AFTER raw mode was enabled (the one field here computed post-takeover).
@@ -231,6 +233,9 @@ pub(crate) struct RunResult {
     /// When set, the process should re-exec into the other screen mode after terminal restore.
     /// See `/minimal` and `/fullscreen`.
     pub relaunch: Option<super::app_view::ScreenModeRelaunch>,
+    /// When set, the process should re-exec into the same session under another agent after
+    /// terminal restore. See `/agent <name>` and the agents-modal switch action.
+    pub agent_relaunch: Option<super::app_view::AgentRelaunch>,
 }
 /// In-flight reconnect re-initialization, tied to the agents whose reload windows it opened.
 /// Completion lands on them even if the user switches views (or closes one) while the re-init runs.
@@ -1019,6 +1024,40 @@ fn run_pending_mode_switch(
         }
     }
 }
+/// Consume a pending `/agent <name>` switch. Returns `true` when the caller must quit so the
+/// process can re-exec into the same session under the new agent.
+fn run_pending_agent_switch(
+    app: &mut AppView,
+    tasks: &mut JoinSet<TaskResult>,
+    progress_tx: &tokio::sync::mpsc::UnboundedSender<effects::RestoreProgressMsg>,
+) -> bool {
+    let Some(request) = app.pending_agent_switch.take() else {
+        return false;
+    };
+    tracing::info!(
+        agent = %request.agent,
+        session = %request.session_id,
+        "agent switch: re-exec into resumed session"
+    );
+    app.agent_relaunch = Some(crate::app::app_view::AgentRelaunch {
+        session_id: request.session_id,
+        agent: request.agent,
+    });
+    let effs: Vec<super::actions::Effect> = app
+        .agents
+        .values()
+        .filter_map(|a| {
+            a.session.session_id.as_ref().map(|sid| {
+                super::actions::Effect::UnregisterActiveSession {
+                    session_id: sid.clone(),
+                }
+            })
+        })
+        .collect();
+    let _ = process_effects(effs, tasks, app, progress_tx);
+    true
+}
+
 /// Minimal mode opens an empty session after the welcome branch (now, or post-auth via the deferred drain), so that session create ends startup.
 fn minimal_will_open_session(term_state: &TerminalState, app: &AppView) -> bool {
     term_state.screen_mode.is_minimal()
@@ -1069,6 +1108,9 @@ pub(crate) async fn run(
         app.screen_mode_switch_hint = Some("Switched to minimal mode · /fullscreen to go back");
     } else if term_state.relaunched_into_fullscreen && !app.screen_mode.is_minimal() {
         app.screen_mode_switch_hint = Some("Switched to fullscreen mode · /minimal to go back");
+    }
+    if let Some(name) = term_state.agent_switch.as_deref() {
+        app.agent_switch_hint = Some(format!("Switched to agent '{name}' · history preserved"));
     }
     let remote_permission_mode = remote_settings
         .as_ref()
@@ -1907,6 +1949,9 @@ pub(crate) async fn run(
             &mut status_line_refresh_interval,
             &mut status_line_refresh_at,
         ) {
+            break;
+        }
+        if run_pending_agent_switch(&mut app, &mut tasks, &progress_tx) {
             break;
         }
         let want_gboom_keyboard = app.gboom_active();
@@ -3002,6 +3047,7 @@ fn finish_run(app: &mut AppView) -> RunResult {
         quit_for_update: app.quit_for_update,
         trust_quit_error: app.trust_quit_error.clone(),
         relaunch: app.relaunch.clone(),
+        agent_relaunch: app.agent_relaunch.clone(),
     }
 }
 /// Result of draining and processing terminal events.

@@ -216,6 +216,19 @@ pub(super) fn surface_yolo_launch_block_notice(app: &mut AppView, target: AgentI
         agent.show_toast(warning);
     }
     surface_screen_mode_switch_hint(app, target);
+    surface_agent_switch_hint(app, target);
+}
+
+/// Show the one-shot "switched agent" notice after an agent re-exec.
+pub(super) fn surface_agent_switch_hint(app: &mut AppView, target: AgentId) {
+    if let Some(hint) = app.agent_switch_hint.take()
+        && let Some(agent) = app.agents.get_mut(&target)
+    {
+        agent
+            .scrollback
+            .push_block(crate::scrollback::block::RenderBlock::system(hint.clone()));
+        agent.show_toast(&hint);
+    }
 }
 
 /// Show a one-shot switch-back toast after a screen-mode relaunch (fullscreen only).

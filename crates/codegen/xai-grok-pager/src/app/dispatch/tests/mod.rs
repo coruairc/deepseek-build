@@ -1,4 +1,5 @@
 //! Tests for the dispatch module tree: shared fixtures and per-domain test modules.
+mod agents;
 mod auth;
 mod billing;
 mod cta_e2e;
@@ -122,6 +123,7 @@ fn test_app() -> AppView {
         yolo_policy_block: None,
         yolo_launch_block_notice: None,
         screen_mode_switch_hint: None,
+        agent_switch_hint: None,
         require_plan_approval: false,
         plan_mode: false,
         chat_mode: false,
@@ -282,6 +284,8 @@ fn test_app() -> AppView {
         quit_for_update: false,
         trust_quit_error: None,
         relaunch: None,
+        agent_relaunch: None,
+        pending_agent_switch: None,
         import_claude_modal: None,
         welcome_doc_viewer: None,
         screen_mode: crate::app::ScreenMode::Inline,

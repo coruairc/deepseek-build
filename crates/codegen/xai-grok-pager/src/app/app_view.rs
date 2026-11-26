@@ -470,6 +470,24 @@ pub struct ScreenModeRelaunch {
     /// Active session to reopen via `--resume`.
     pub session_id: String,
 }
+/// A validated `/agent <name>` switch waiting for the event loop to quit and re-exec.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AgentSwitchRequest {
+    /// Active session to reopen via `--resume`.
+    pub session_id: String,
+    /// Agent definition to start the resumed session under (`--agent`).
+    pub agent: String,
+}
+/// Pending re-exec into the same session under a different agent.
+/// Deliberately separate from [`ScreenModeRelaunch`]: both may exist in theory, and the argv
+/// rebuild for an agent switch must replace `--agent` while preserving unrelated flags.
+#[derive(Debug, Clone)]
+pub struct AgentRelaunch {
+    /// Active session to reopen via `--resume`.
+    pub session_id: String,
+    /// Agent definition to start the resumed session under (`--agent`).
+    pub agent: String,
+}
 /// The coding-data write in flight. Its reply owns the banner ack; it holds the rollback a failure reverts to.
 /// `opted_in` is independent of `coding_data_retention_opt_out`, which is optimistic and which auth-meta refreshes rewrite mid-flight.
 /// `rollback_to_opted_in` starts from that mirror when idle and is inherited when this write replaces a pending one.
@@ -1032,6 +1050,13 @@ pub struct AppView {
     /// Driven by `/minimal` and `/fullscreen`.
     /// Captures the session id at action time so a later teardown cannot drop `--resume`.
     pub relaunch: Option<ScreenModeRelaunch>,
+    /// When set, the event loop quits and the process re-execs into the same session under this agent.
+    /// Armed by `/agent <name>` and the agents-modal "Switch to this agent" action.
+    pub agent_relaunch: Option<AgentRelaunch>,
+    /// Validated agent switch waiting to be consumed by the event loop (which arms `agent_relaunch`).
+    pub(crate) pending_agent_switch: Option<AgentSwitchRequest>,
+    /// One-shot "switched agent" notice after an agent re-exec, shown on the first agent view.
+    pub agent_switch_hint: Option<String>,
     /// Whether importable `.claude/` settings were detected at startup.
     pub has_claude_import: bool,
     /// When set, the welcome screen renders an interactive import modal instead of normal content.
@@ -1502,6 +1527,9 @@ impl AppView {
             quit_for_update: false,
             trust_quit_error: None,
             relaunch: None,
+            agent_relaunch: None,
+            pending_agent_switch: None,
+            agent_switch_hint: None,
             has_claude_import: false,
             import_claude_modal: None,
             welcome_doc_viewer: None,

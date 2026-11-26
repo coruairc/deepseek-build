@@ -1,6 +1,7 @@
 //! Agents modal popup: lists all agent definitions (built-in, user, project, bundled).
 //!
-//! Opened by `/config-agents` (alias `/agents`).
+//! Opened by `/config-agents` (alias `/agents`) to manage definitions, and by `/agent` in
+//! [`AgentsModalMode::Switch`] as the agent picker.
 //! Uses the shared [`ModalWindow`](super::modal_window) chrome.
 //! Blocks all input until closed with `Esc`.
 use crate::app::bundle::{BundleState, PersonaDetail};
@@ -23,6 +24,20 @@ use xai_grok_tools::implementations::skills::discovery::extract_first_paragraph;
 use xai_grok_tools::registry::types::ToolServerConfig;
 use xai_grok_tools::types::template_renderer::TemplateRenderer;
 use xai_grok_tools::types::tool::ToolKind;
+/// How the agents modal is being used: manage definitions, or pick an agent to switch to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AgentsModalMode {
+    /// `/config-agents` and `/agents`: view, create/edit/delete, set default, toggle.
+    #[default]
+    Manage,
+    /// `/agent`: Enter/`s` switches the session to the highlighted agent.
+    Switch,
+}
+impl AgentsModalMode {
+    pub fn is_switch(self) -> bool {
+        matches!(self, Self::Switch)
+    }
+}
 /// Which tab is active in the agents modal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AgentsTab {
@@ -112,6 +127,10 @@ pub enum AgentsModalOutcome {
         source_path: Option<PathBuf>,
         /// Fallback: in-memory markdown content (for built-in agents).
         content: Option<String>,
+    },
+    /// Switch the current session to the highlighted agent (same relaunch as `/agent <name>`).
+    SwitchAgent {
+        name: String,
     },
     /// Open the persona detail/edit modal.
     OpenPersonaDetail {
@@ -230,6 +249,8 @@ pub enum PersonaConfirmAction {
 /// Modal state for the agents listing.
 pub struct AgentsModalState {
     pub window: ModalWindowState,
+    /// Whether this modal manages definitions or picks an agent to switch to.
+    pub mode: AgentsModalMode,
     /// Currently active tab (source of truth). `window.active_tab` (a `usize` index) is derived from
     /// this in the render path via `AgentsTab::ALL.position()`. Only this field should be mutated by
     /// input handlers; the window's copy is a rendering hint synced each frame.
@@ -294,6 +315,7 @@ impl AgentsModalState {
         let default_agent = resolve_default_agent_name(cwd, model_agent_type);
         Self {
             window: ModalWindowState::with_tabs(AgentsTab::ALL.len()),
+            mode: AgentsModalMode::Manage,
             active_tab: AgentsTab::Agents,
             agents,
             selected: 0,
@@ -316,6 +338,25 @@ impl AgentsModalState {
             persona_scroll: 0,
             persona_expanded: std::collections::HashSet::new(),
         }
+    }
+    /// Turn this modal into the `/agent` picker: Agents tab only, cursor on the active agent.
+    pub fn open_switch_mode(&mut self, active: Option<&str>) {
+        self.mode = AgentsModalMode::Switch;
+        self.active_tab = AgentsTab::Agents;
+        self.active_agent = active.map(str::to_owned);
+        // Plugin agents are not selectable session agents and never appear here (plugins: None).
+        self.agents.retain(|entry| entry.enabled);
+        let target = active
+            .and_then(|name| self.agents.iter().position(|entry| entry.name == name))
+            .or_else(|| {
+                self.agents
+                    .iter()
+                    .position(|entry| entry.name == self.default_agent)
+            });
+        self.selected = target.unwrap_or(0);
+        self.scroll = 0;
+        self.search.reset();
+        self.search_active = false;
     }
     /// Rebuild agent list from disk after a mutation.
     fn rebuild_agents(&mut self) {
@@ -472,6 +513,16 @@ pub fn build_agent_list(
         }
     }
     entries
+}
+/// Agents a running session can switch to (`/agent <name>` / the picker).
+/// Built-in top-level agents plus file-discovered project/user/bundled definitions, minus entries
+/// the user disabled. Plugin agents are excluded: they are spawned as subagents, not session agents.
+pub fn switchable_agents(cwd: &Path) -> Vec<AgentListEntry> {
+    let toggle = load_agent_toggle();
+    build_agent_list(cwd, &toggle, None)
+        .into_iter()
+        .filter(|entry| entry.enabled)
+        .collect()
 }
 /// Base persona list from bundle status (bundled cache catalog).
 fn personas_from_bundle(bundle: &BundleState) -> Vec<PersonaDetail> {
@@ -1053,9 +1104,15 @@ pub fn render_agents_modal(
         AgentsTab::Agents => build_agents_tab_shortcuts(state),
         AgentsTab::Personas => build_personas_tab_shortcuts(state),
     };
+    let switch_mode = state.mode.is_switch();
     let config = ModalWindowConfig {
-        title: "Agents",
-        tabs: Some(&tab_labels),
+        title: if switch_mode {
+            "Switch agent"
+        } else {
+            "Agents"
+        },
+        // The picker only selects among agents; the Personas tab has no meaning there.
+        tabs: (!switch_mode).then_some(tab_labels.as_slice()),
         shortcuts: &shortcuts,
         sizing: modal_sizing(compact),
         fold_info: None,
@@ -1078,6 +1135,32 @@ pub fn render_agents_modal(
 }
 /// Build footer shortcuts for the Agents tab.
 fn build_agents_tab_shortcuts<'a>(state: &AgentsModalState) -> Vec<Shortcut<'a>> {
+    if state.mode.is_switch() {
+        let mut shortcuts = vec![
+            Shortcut {
+                label: "j/k nav",
+                clickable: false,
+                id: 0,
+            },
+            Shortcut {
+                label: "Enter/s switch",
+                clickable: false,
+                id: 0,
+            },
+            Shortcut {
+                label: "/ search",
+                clickable: false,
+                id: 0,
+            },
+            Shortcut {
+                label: "Esc close",
+                clickable: false,
+                id: 0,
+            },
+        ];
+        modal_window::push_vim_nav_search_hint(&mut shortcuts, state.search_active);
+        return shortcuts;
+    }
     let mut shortcuts = vec![
         Shortcut {
             label: "j/k nav",
@@ -1111,6 +1194,11 @@ fn build_agents_tab_shortcuts<'a>(state: &AgentsModalState) -> Vec<Shortcut<'a>>
         },
         Shortcut {
             label: "s default",
+            clickable: false,
+            id: 0,
+        },
+        Shortcut {
+            label: "u switch",
             clickable: false,
             id: 0,
         },
@@ -1998,10 +2086,11 @@ pub fn handle_agents_key(state: &mut AgentsModalState, key: &KeyEvent) -> Agents
         let outcome = state.search.handle_key(key);
         return finish_search_edit(state, outcome);
     }
+    let switch_mode = state.mode.is_switch();
     let tab_labels: Vec<&str> = AgentsTab::ALL.iter().map(|t| t.label()).collect();
     let config = ModalWindowConfig {
         title: "Agents",
-        tabs: Some(&tab_labels),
+        tabs: (!switch_mode).then_some(tab_labels.as_slice()),
         shortcuts: &[],
         sizing: modal_sizing(false),
         fold_info: None,
@@ -2019,15 +2108,17 @@ pub fn handle_agents_key(state: &mut AgentsModalState, key: &KeyEvent) -> Agents
         }
         _ => {}
     }
-    if crate::input::key::KeyShortcut::key(KeyCode::Tab).matches(key) {
-        let tab = state.active_tab.next();
-        switch_agents_tab(state, tab);
-        return AgentsModalOutcome::Changed;
-    }
-    if crate::input::key::is_shift_tab(key) {
-        let tab = state.active_tab.prev();
-        switch_agents_tab(state, tab);
-        return AgentsModalOutcome::Changed;
+    if !switch_mode {
+        if crate::input::key::KeyShortcut::key(KeyCode::Tab).matches(key) {
+            let tab = state.active_tab.next();
+            switch_agents_tab(state, tab);
+            return AgentsModalOutcome::Changed;
+        }
+        if crate::input::key::is_shift_tab(key) {
+            let tab = state.active_tab.prev();
+            switch_agents_tab(state, tab);
+            return AgentsModalOutcome::Changed;
+        }
     }
     match state.active_tab {
         AgentsTab::Agents => handle_agents_tab_key(state, key),
@@ -2114,6 +2205,20 @@ fn handle_agents_tab_key(state: &mut AgentsModalState, key: &KeyEvent) -> Agents
             }
             AgentsModalOutcome::Changed
         }
+        // In `/agent` pick mode, Enter or `s` switches the session to the highlighted agent.
+        KeyCode::Enter | KeyCode::Char('s')
+            if state.mode.is_switch()
+                && (key.code == KeyCode::Enter || key.modifiers.is_empty()) =>
+        {
+            state
+                .agents
+                .get(state.selected)
+                .map_or(AgentsModalOutcome::Unchanged, |entry| {
+                    AgentsModalOutcome::SwitchAgent {
+                        name: entry.name.clone(),
+                    }
+                })
+        }
         KeyCode::Enter | KeyCode::Char('o') => {
             if let Some(entry) = state.agents.get(state.selected) {
                 if let Some(ref path) = entry.source_path {
@@ -2137,12 +2242,23 @@ fn handle_agents_tab_key(state: &mut AgentsModalState, key: &KeyEvent) -> Agents
                 AgentsModalOutcome::Unchanged
             }
         }
+        KeyCode::Char('u') if key.modifiers.is_empty() && !state.mode.is_switch() => state
+            .agents
+            .get(state.selected)
+            .map_or(AgentsModalOutcome::Unchanged, |entry| {
+                AgentsModalOutcome::SwitchAgent {
+                    name: entry.name.clone(),
+                }
+            }),
         KeyCode::Char('/') | KeyCode::Char('i') if key.modifiers.is_empty() => {
             state.search_active = true;
             AgentsModalOutcome::Changed
         }
         KeyCode::Char('q') => AgentsModalOutcome::Close,
         KeyCode::Char('s') => {
+            if state.mode.is_switch() {
+                return AgentsModalOutcome::Unchanged;
+            }
             if let Some(entry) = state.agents.get(state.selected) {
                 if entry.definition.plugin_name.is_some() {
                     state.message = Some(AgentsModalMessage::info(
@@ -2181,6 +2297,9 @@ fn handle_agents_tab_key(state: &mut AgentsModalState, key: &KeyEvent) -> Agents
             AgentsModalOutcome::Changed
         }
         KeyCode::Char('t') => {
+            if state.mode.is_switch() {
+                return AgentsModalOutcome::Unchanged;
+            }
             if let Some(entry) = state.agents.get(state.selected) {
                 let new_enabled = !entry.enabled;
                 let name = entry.name.clone();
@@ -2749,6 +2868,7 @@ mod tests {
         let make_state = |query: &str| -> AgentsModalState {
             let mut state = AgentsModalState {
                 window: ModalWindowState::with_tabs(2),
+                mode: AgentsModalMode::Manage,
                 active_tab: AgentsTab::Personas,
                 agents: Vec::new(),
                 selected: 0,
@@ -2791,6 +2911,7 @@ mod tests {
     ) -> AgentsModalState {
         let mut state = AgentsModalState {
             window: ModalWindowState::with_tabs(2),
+            mode: AgentsModalMode::Manage,
             active_tab: AgentsTab::Personas,
             agents: Vec::new(),
             selected: 0,
@@ -3402,5 +3523,147 @@ mod tests {
             .find(|e| e.name == "my-plugin:reviewer")
             .expect("disabled plugin agent stays visible in the list");
         assert!(!entry.enabled);
+    }
+
+    fn picker_entry(builtin: BuiltinAgentName) -> AgentListEntry {
+        let definition = builtin.definition();
+        AgentListEntry {
+            name: definition.name.clone(),
+            description: definition.description.clone(),
+            scope: AgentScope::BuiltIn,
+            source_path: None,
+            enabled: true,
+            is_builtin: true,
+            expanded: false,
+            definition,
+        }
+    }
+    /// `/agent` picker fixture: four built-ins with `active` selected.
+    fn picker_state(active: &str) -> AgentsModalState {
+        let agents = [
+            BuiltinAgentName::GrokBuild,
+            BuiltinAgentName::GeneralPurpose,
+            BuiltinAgentName::Explore,
+            BuiltinAgentName::Plan,
+        ]
+        .into_iter()
+        .map(picker_entry)
+        .collect();
+        let mut state = AgentsModalState {
+            window: ModalWindowState::with_tabs(2),
+            mode: AgentsModalMode::Manage,
+            active_tab: AgentsTab::Agents,
+            agents,
+            selected: 0,
+            scroll: 0,
+            search: LineEditor::default(),
+            search_active: false,
+            row_map: Vec::new(),
+            content_rect: None,
+            persona_input: None,
+            persona_confirm: None,
+            message: None,
+            cwd: PathBuf::new(),
+            bundle: BundleState::default(),
+            default_agent: xai_grok_shell::agent::config::DEFAULT_AGENT_TYPE.to_string(),
+            active_agent: None,
+            model_agent_type: None,
+            plugin_registry: None,
+            personas: Vec::new(),
+            persona_selected: 0,
+            persona_scroll: 0,
+            persona_expanded: std::collections::HashSet::new(),
+        };
+        state.open_switch_mode(Some(active));
+        state
+    }
+    fn buffer_text(buf: &Buffer) -> String {
+        let area = buf.area();
+        (0..area.height)
+            .flat_map(|y| (0..area.width).map(move |x| (x, y)))
+            .filter_map(|(x, y)| buf.cell((x, y)).map(|c| c.symbol().to_string()))
+            .collect()
+    }
+    #[test]
+    fn picker_opens_on_the_active_agent_and_marks_it() {
+        let mut state = picker_state("explore");
+        let expected = state
+            .agents
+            .iter()
+            .position(|entry| entry.name == "explore")
+            .expect("explore listed");
+        assert_eq!(
+            state.selected, expected,
+            "cursor starts on the active agent"
+        );
+        assert_eq!(state.active_agent.as_deref(), Some("explore"));
+
+        let mut buf = Buffer::empty(Rect::new(0, 0, 80, 24));
+        let theme = Theme::current();
+        render_agents_modal(&mut buf, Rect::new(0, 0, 80, 24), &mut state, false, &theme);
+        let text = buffer_text(&buf);
+        assert!(text.contains("Switch agent"), "picker title: {text}");
+        assert!(text.contains("active"), "active marker missing: {text}");
+        assert!(text.contains("Enter/s switch"), "footer hint: {text}");
+    }
+    #[test]
+    fn picker_j_k_moves_and_enter_requests_a_switch() {
+        let mut state = picker_state("explore");
+        let start = state.selected;
+        let outcome = handle_agents_key(
+            &mut state,
+            &KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE),
+        );
+        assert!(matches!(outcome, AgentsModalOutcome::Changed));
+        assert_eq!(state.selected, start + 1, "j moves down");
+        let highlighted = state.agents.get(state.selected).unwrap().name.clone();
+        match handle_agents_key(
+            &mut state,
+            &KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
+        ) {
+            AgentsModalOutcome::SwitchAgent { name } => assert_eq!(name, highlighted),
+            _ => panic!("Enter must request a switch"),
+        }
+    }
+    #[test]
+    fn picker_s_activates_and_esc_closes() {
+        let mut state = picker_state("explore");
+        let highlighted = state.agents.get(state.selected).unwrap().name.clone();
+        match handle_agents_key(
+            &mut state,
+            &KeyEvent::new(KeyCode::Char('s'), KeyModifiers::NONE),
+        ) {
+            AgentsModalOutcome::SwitchAgent { name } => assert_eq!(name, highlighted),
+            _ => panic!("s must switch to the highlighted agent"),
+        }
+        assert!(matches!(
+            handle_agents_key(&mut state, &KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)),
+            AgentsModalOutcome::Close
+        ));
+    }
+    #[test]
+    fn manage_mode_u_switches_to_the_highlighted_agent() {
+        let mut state = picker_state("explore");
+        state.mode = AgentsModalMode::Manage;
+        let highlighted = state.agents.get(state.selected).unwrap().name.clone();
+        match handle_agents_key(
+            &mut state,
+            &KeyEvent::new(KeyCode::Char('u'), KeyModifiers::NONE),
+        ) {
+            AgentsModalOutcome::SwitchAgent { name } => assert_eq!(name, highlighted),
+            _ => panic!("u must request a switch"),
+        }
+    }
+    #[test]
+    fn picker_keeps_manage_actions_inactive() {
+        let mut state = picker_state("explore");
+        // `t` (enable/disable) and `s`-as-default must not run in pick mode.
+        assert!(!matches!(
+            handle_agents_key(
+                &mut state,
+                &KeyEvent::new(KeyCode::Char('t'), KeyModifiers::NONE)
+            ),
+            AgentsModalOutcome::Changed
+        ));
     }
 }

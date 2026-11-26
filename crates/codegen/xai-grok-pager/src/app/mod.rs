@@ -11,6 +11,7 @@
 //! - [`event_loop`] — biased tokio::select! loop
 pub mod actions;
 pub mod agent;
+pub(crate) mod agent_relaunch;
 pub mod agent_view;
 pub mod app_view;
 pub mod bundle;
@@ -577,6 +578,7 @@ async fn bounded_connect(
 /// The load replays the session's history; sessions not found locally are restored from remote storage.
 pub async fn run(mut args: PagerArgs) -> anyhow::Result<bool> {
     let screen_mode_override = screen_mode_relaunch::take_screen_mode_env_override();
+    let agent_switch_override = agent_relaunch::take_agent_switch_env_override();
     let cancel = CancellationToken::new();
     let startup_start = std::time::Instant::now();
     let raw_config = xai_grok_shell::config::load_effective_config()
@@ -992,6 +994,7 @@ pub async fn run(mut args: PagerArgs) -> anyhow::Result<bool> {
         screen_mode,
         relaunched_into_minimal,
         relaunched_into_fullscreen,
+        agent_switch: agent_switch_override,
         initial_theme: crate::theme::cache::current_kind(),
         startup_typeahead,
     };
@@ -1013,7 +1016,13 @@ pub async fn run(mut args: PagerArgs) -> anyhow::Result<bool> {
     .await;
     signal_handler::clear_quit_notify();
     let forced_exit_code = match &result {
-        Ok(run_result) if run_result.quit_for_update || run_result.relaunch.is_some() => None,
+        Ok(run_result)
+            if run_result.quit_for_update
+                || run_result.relaunch.is_some()
+                || run_result.agent_relaunch.is_some() =>
+        {
+            None
+        }
         Ok(_) => Some(0),
         Err(_) => Some(1),
     };
@@ -1059,6 +1068,23 @@ pub async fn run(mut args: PagerArgs) -> anyhow::Result<bool> {
             }
             if run_result.quit_for_update {
                 return Ok(true);
+            }
+            if let Some(relaunch) = run_result.agent_relaunch.as_ref() {
+                // The terminal is restored above; a successful exec never returns.
+                if let Err(e) =
+                    agent_relaunch::exec_agent_relaunch(&relaunch.session_id, &relaunch.agent)
+                {
+                    tracing::error!(error = %e, agent = %relaunch.agent, "agent relaunch failed");
+                    return Err(anyhow::anyhow!(
+                        "Failed to switch to agent '{}': {e}\nResume this session with:\n  {}",
+                        relaunch.agent,
+                        agent_relaunch::agent_relaunch_resume_hint(
+                            &relaunch.session_id,
+                            &relaunch.agent
+                        ),
+                    ));
+                }
+                return Ok(false);
             }
             if let Some(relaunch) = run_result.relaunch.as_ref() {
                 if let Err(e) = screen_mode_relaunch::exec_screen_mode_relaunch(

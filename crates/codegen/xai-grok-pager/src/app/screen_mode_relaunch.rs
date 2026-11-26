@@ -49,7 +49,7 @@ fn value_taking_flag_tokens() -> &'static HashSet<String> {
     })
 }
 
-fn flag_takes_value(flag: &str) -> bool {
+pub(crate) fn flag_takes_value(flag: &str) -> bool {
     value_taking_flag_tokens().contains(flag)
 }
 

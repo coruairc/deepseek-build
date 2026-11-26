@@ -103,9 +103,9 @@ use super::status::{
 use super::task_result::{dispatch_task_result, unregister_all_active_sessions};
 use super::transcript::{
     dispatch_copy_assistant_message, dispatch_copy_block_content, dispatch_copy_block_meta,
-    dispatch_dump_input_log, dispatch_export_conversation, dispatch_open_block_viewer,
-    dispatch_open_config_agents_modal, dispatch_open_extensions_modal,
-    dispatch_open_transcript_pager,
+    dispatch_dump_input_log, dispatch_export_conversation, dispatch_open_agent_picker,
+    dispatch_open_block_viewer, dispatch_open_config_agents_modal, dispatch_open_extensions_modal,
+    dispatch_open_transcript_pager, dispatch_switch_agent,
 };
 use super::turn::{
     dispatch_cancel_scheduled_task, dispatch_cancel_turn, dispatch_cancel_turn_choice,
@@ -725,6 +725,8 @@ fn dispatch_inner(action: Action, app: &mut AppView) -> Vec<Effect> {
             dispatch_open_extensions_modal(app, tab, trigger)
         }
         Action::OpenConfigAgentsModal(tab) => dispatch_open_config_agents_modal(app, tab),
+        Action::OpenAgentPicker => dispatch_open_agent_picker(app),
+        Action::SwitchAgent(name) => dispatch_switch_agent(app, name),
         Action::McpAuthTrigger { server_name } => {
             let ActiveView::Agent(id) = app.active_view else {
                 return vec![];

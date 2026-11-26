@@ -1,4 +1,5 @@
 //! Each command lives in its own submodule. This module re-exports command structs and provides `builtin_commands()` for registry construction.
+pub mod agent;
 pub mod always_approve;
 pub mod auto;
 pub mod btw;
@@ -120,6 +121,7 @@ pub fn builtin_commands() -> Vec<Arc<dyn SlashCommand>> {
         Arc::new(workflow::WorkflowCommand),
         Arc::new(personas::PersonasCommand),
         Arc::new(config_agents::ConfigAgentsCommand),
+        Arc::new(agent::AgentCommand),
         // Settings and display.
         Arc::new(theme::ThemeCommand),
         Arc::new(auto::AutoCommand),

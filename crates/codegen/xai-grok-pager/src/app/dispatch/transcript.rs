@@ -513,24 +513,24 @@ pub(super) fn dispatch_open_extensions_modal(
     extensions_modal_tab_fetches(modal, id, session_id)
 }
 
-/// Open the agents modal, showing all agent definitions.
-pub(super) fn dispatch_open_config_agents_modal(
+/// Build a fresh agents modal for the active session.
+/// `with_plugins` lists plugin-provided agents (the manage modal); the `/agent` picker passes
+/// `false` because plugin agents cannot be the session agent.
+fn build_agents_modal(
     app: &mut AppView,
-    initial_tab: Option<crate::views::agents_modal::AgentsTab>,
-) -> Vec<Effect> {
+    with_plugins: bool,
+) -> Option<(
+    AgentId,
+    crate::views::agents_modal::AgentsModalState,
+    Option<acp::SessionId>,
+)> {
     use crate::views::agents_modal::{AgentsModalState, load_agent_toggle};
 
     let ActiveView::Agent(id) = app.active_view else {
-        toast_session_only_slash(app, config_agents_slash_name(initial_tab));
-        return vec![];
+        return None;
     };
     let bundle = app.bundle_state.clone();
-    let Some(agent) = app.agents.get_mut(&id) else {
-        return vec![];
-    };
-
-    // Mutual exclusivity with extensions_modal
-    agent.extensions_modal = None;
+    let agent = app.agents.get(&id)?;
 
     let cwd = agent.session.cwd.clone();
     let toggle = load_agent_toggle();
@@ -542,11 +542,15 @@ pub(super) fn dispatch_open_config_agents_modal(
         .and_then(|id| agent.session.models.available.get(id))
         .and_then(model_agent_type_from_info);
     let session_id = agent.session.session_id.clone();
-    let active_agent = agent.session_agent_name.clone();
+    let active_agent = agent
+        .session_agent_name
+        .clone()
+        .or_else(|| agent_override_name(app.agent_override.as_ref()));
     // One-shot plugin discovery (same gating as `/mcp doctor` and `inspect`) so plugin-provided agents are listed alongside native ones
-    let plugin_registry = xai_grok_shell::util::config::load_cli_plugin_registry(&cwd);
-    let plugin_registry = (!plugin_registry.is_empty()).then_some(plugin_registry);
-    let mut modal = AgentsModalState::new(
+    let plugin_registry = with_plugins
+        .then(|| xai_grok_shell::util::config::load_cli_plugin_registry(&cwd))
+        .filter(|registry| !registry.is_empty());
+    let modal = AgentsModalState::new(
         &cwd,
         &toggle,
         &bundle,
@@ -554,17 +558,152 @@ pub(super) fn dispatch_open_config_agents_modal(
         active_agent,
         plugin_registry,
     );
+    Some((id, modal, session_id))
+}
+
+/// `--agent` override as a name (a string name, or the `name` field of a definition object).
+fn agent_override_name(value: Option<&serde_json::Value>) -> Option<String> {
+    match value? {
+        serde_json::Value::String(name) => Some(name.clone()),
+        serde_json::Value::Object(map) => {
+            map.get("name").and_then(|v| v.as_str()).map(str::to_owned)
+        }
+        _ => None,
+    }
+}
+
+/// Open the agents modal, showing all agent definitions.
+pub(super) fn dispatch_open_config_agents_modal(
+    app: &mut AppView,
+    initial_tab: Option<crate::views::agents_modal::AgentsTab>,
+) -> Vec<Effect> {
+    let Some((id, mut modal, session_id)) = build_agents_modal(app, true) else {
+        toast_session_only_slash(app, config_agents_slash_name(initial_tab));
+        return vec![];
+    };
     if let Some(tab) = initial_tab {
         modal.active_tab = tab;
     }
-    agent.agents_modal = Some(modal);
-    if let Some(session_id) = session_id {
-        return vec![Effect::FetchSessionAgentName {
-            agent_id: id,
-            session_id,
-        }];
+    if let Some(agent) = app.agents.get_mut(&id) {
+        // Mutual exclusivity with extensions_modal
+        agent.extensions_modal = None;
+        agent.agents_modal = Some(modal);
     }
+    fetch_agent_name_effect(id, session_id)
+        .into_iter()
+        .collect()
+}
+
+/// `/agent` with no argument: open the interactive picker with the cursor on the active agent.
+pub(super) fn dispatch_open_agent_picker(app: &mut AppView) -> Vec<Effect> {
+    let ActiveView::Agent(id) = app.active_view else {
+        toast_session_only_slash(app, "agent");
+        return vec![];
+    };
+    let busy = app.agents.get(&id).is_some_and(agent_turn_busy);
+    if busy {
+        show_agent_switch_refusal(app, id, TURN_BUSY_SWITCH_REFUSAL);
+        return vec![];
+    }
+    let Some((id, mut modal, session_id)) = build_agents_modal(app, false) else {
+        return vec![];
+    };
+    let active = app
+        .agents
+        .get(&id)
+        .and_then(|agent| agent.session_agent_name.clone())
+        .or_else(|| agent_override_name(app.agent_override.as_ref()));
+    modal.open_switch_mode(active.as_deref());
+    if let Some(agent) = app.agents.get_mut(&id) {
+        agent.extensions_modal = None;
+        agent.agents_modal = Some(modal);
+    }
+    fetch_agent_name_effect(id, session_id)
+        .into_iter()
+        .collect()
+}
+
+/// `/agent <name>` and the agents-modal switch action: validate, then arm the relaunch.
+pub(super) fn dispatch_switch_agent(app: &mut AppView, name: String) -> Vec<Effect> {
+    use crate::views::agents_modal::switchable_agents;
+
+    let ActiveView::Agent(id) = app.active_view else {
+        toast_session_only_slash(app, "agent");
+        return vec![];
+    };
+    let Some((busy, session_id, cwd)) = app.agents.get(&id).map(|agent| {
+        (
+            agent_turn_busy(agent),
+            agent.session.session_id.clone(),
+            agent.session.cwd.clone(),
+        )
+    }) else {
+        return vec![];
+    };
+    if busy {
+        show_agent_switch_refusal(app, id, TURN_BUSY_SWITCH_REFUSAL);
+        return vec![];
+    }
+    let Some(session_id) = session_id.map(|sid| sid.0.to_string()) else {
+        show_agent_switch_refusal(
+            app,
+            id,
+            "This session isn't ready yet. Try again once it loads.",
+        );
+        return vec![];
+    };
+    let valid = switchable_agents(&cwd);
+    if !valid.iter().any(|entry| entry.name == name) {
+        let mut names: Vec<&str> = valid.iter().map(|entry| entry.name.as_str()).collect();
+        if names.is_empty() {
+            names.push("no agents found");
+        }
+        show_agent_switch_refusal(
+            app,
+            id,
+            &format!("Unknown agent '{name}'. Available: {}", names.join(", ")),
+        );
+        return vec![];
+    }
+    app.pending_agent_switch = Some(crate::app::app_view::AgentSwitchRequest {
+        session_id,
+        agent: name,
+    });
     vec![]
+}
+
+/// A local turn, `/compact`, or a streaming wake is running.
+fn agent_turn_busy(agent: &crate::app::agent_view::AgentView) -> bool {
+    agent.stoppable_activity_running() || agent.any_cancel_pending()
+}
+
+pub(super) const TURN_BUSY_SWITCH_REFUSAL: &str =
+    "Finish or cancel the running turn before switching agents.";
+
+/// Show a refusal in the open agents modal when there is one, and in the scrollback.
+fn show_agent_switch_refusal(app: &mut AppView, id: AgentId, msg: &str) {
+    if let Some(modal) = app
+        .agents
+        .get_mut(&id)
+        .and_then(|agent| agent.agents_modal.as_mut())
+    {
+        modal.message = Some(crate::views::agents_modal::AgentsModalMessage::error(
+            msg.to_string(),
+        ));
+    }
+    if let Some(agent) = app.agents.get_mut(&id) {
+        super::queue::push_and_page_flip(
+            &mut agent.scrollback,
+            RenderBlock::system(msg.to_string()),
+        );
+    }
+}
+
+fn fetch_agent_name_effect(id: AgentId, session_id: Option<acp::SessionId>) -> Option<Effect> {
+    session_id.map(|session_id| Effect::FetchSessionAgentName {
+        agent_id: id,
+        session_id,
+    })
 }
 
 /// `agentType` / `agent_type` from a catalog `ModelInfo` meta blob.
