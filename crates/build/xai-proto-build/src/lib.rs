@@ -152,10 +152,17 @@ impl XaiProtoBuilder {
 
         // Can only process one input file when using --dependency_out=FILE.
         for proto in protos {
+            // Portable output paths: /dev/stdout and /dev/null do not exist on
+            // Windows, so both products are written to a temp directory and the
+            // dependency file is read back from disk.
+            let tmp = tempfile::tempdir().context("temp dir for protoc outputs")?;
+            let dep_out = tmp.path().join("deps.d");
+            let descriptor_out = tmp.path().join("descriptor.pb");
+
             let mut command = Command::new(protoc.unwrap_or(Path::new("protoc")));
             command
-                .arg("--dependency_out=/dev/stdout")
-                .arg("--descriptor_set_out=/dev/null")
+                .arg(format!("--dependency_out={}", dep_out.display()))
+                .arg(format!("--descriptor_set_out={}", descriptor_out.display()))
                 // Same reason as in configure(): protoc 3.12 needs this for proto3 optional.
                 .arg("--experimental_allow_proto3_optional");
 
@@ -180,23 +187,35 @@ impl XaiProtoBuilder {
 
             let output = command.output().context("protoc command failed")?;
             if !output.status.success() {
-                return Err(anyhow::anyhow!("protoc command failed"));
+                return Err(anyhow::anyhow!(
+                    "protoc command failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                ));
             }
 
-            let output =
-                String::from_utf8(output.stdout).context("protoc command output not UTF-8")?;
+            let output = fs::read_to_string(&dep_out).context("dependency file not readable")?;
 
             let mut lines = output.lines();
-            let first_line = lines.next().context("protoc command output is empty")?;
-            let prefix = "/dev/null:";
-            // protoc 3.12 omits the "/dev/null:" target and writes only the
-            // dependency list; newer protoc prefixes it. Accept both, nothing else.
-            let rem = match first_line.strip_prefix(prefix) {
+            let first_line = lines.next().context("protoc dependency file is empty")?;
+            // The rule's target is the descriptor-set path we passed. protoc 3.12
+            // omits it and writes only the dependency list; newer protoc prefixes
+            // it. Accept the exact target (either separator) or the omission,
+            // nothing else.
+            let forward = descriptor_out.display().to_string().replace('\\', "/");
+            let target = descriptor_out.display().to_string();
+            let rem = match first_line
+                .strip_prefix(&target)
+                .and_then(|rest| rest.strip_prefix(':'))
+                .or_else(|| {
+                    first_line
+                        .strip_prefix(&forward)
+                        .and_then(|rest| rest.strip_prefix(':'))
+                }) {
                 Some(rem) => rem,
                 None if !first_line.contains(':') => first_line,
                 None => {
                     return Err(anyhow::anyhow!(
-                        "protoc command output must start with /dev/null: {output:?}"
+                        "protoc dependency file must start with the descriptor path: {first_line:?}"
                     ));
                 }
             };
