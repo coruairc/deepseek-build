@@ -5,6 +5,8 @@ name: windows-spike
 # branch after the result is recorded. It creates no release and pushes no image.
 
 on:
+  push:
+    branches: [ci/windows-spike]
   workflow_dispatch: {}
 
 permissions: {}
