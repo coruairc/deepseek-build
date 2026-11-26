@@ -4,16 +4,16 @@ milestone: v0.1.0
 current_phase: 4
 current_phase_name: Distribution Proof
 status: executing
-stopped_at: Phase 4 plan 04-04 complete (4/5) — the GHCR image is proven registry-side from the host (anonymous HTTPS read: OCI index sha256:8f5c484e… == the CI digest, linux/amd64 sha256:1d216b60… + linux/arm64 sha256:25dc0d25…, exactly two tags, no :latest [absent after == absent baseline], package public, config blob read with WorkingDir=/work, User=1000:1000, Entrypoint=["deepseek-build"]); the in-image run is image-run-blocked result:skipped with digest-pinned commands because the Docker daemon is absent, and the README container section now carries the real digests, the headless-only contract and both mounts; next is 04-05
-last_updated: "2026-11-26T06:55:00.000Z"
+stopped_at: Phase 4 plan 04-05 complete (5/5 executed) — the evidence is sealed: `scripts/check-distribution-evidence.py` validates nine reports against the eight-key schema and recomputed hashes (self-test 4/4, 9/9 PASS, no file over 1 MiB), the nine-item index carries each item's requirements/result/re-run command, `DEVIATION-keep-prerelease.md` records the retained `v0.1.0-proof1` release against ROADMAP Phase 4 Success Criteria item 4, leak scans over `docs/evidence` and the phase directory exit 0, and `:latest`/`v0.1.0`/`deepseek`/`deepseek-v0.1-snapshot` are unchanged read-only; REL-04 stays Partial (pull not executed) and REL-05 stays blocked, so Phase 4 is not fully complete
+last_updated: "2026-11-26T07:10:00.000Z"
 last_activity: 2026-11-26
-last_activity_desc: 04-04 proved the GHCR index, platforms, tags and unchanged :latest from the registry without a daemon, recorded REL-05 as environment-blocked with exact commands, and corrected the README container truth; REL-04 stays Partial, REL-05 stays open
-state_head: 1516211baa637fde432de2a79b5cba4c91a17c02
+last_activity_desc: 04-05 sealed the Phase 4 evidence and recorded the keep-prerelease deviation; 9/9 reports validate, leak scans green, retention invariants re-asserted; REL-04 Partial and REL-05 blocked remain open
+state_head: 13002b2f0d6657870e7b18d42583114825237df2
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 21
-  completed_plans: 20
+  completed_plans: 21
 ---
 
 # Project State
@@ -28,16 +28,16 @@ See: .planning/PROJECT.md (updated 2026-11-23)
 ## Current Position
 
 Phase: 4 — Distribution Proof
-Plan: 04-04 of 5 complete (4/5). Next is 04-05 (seal the evidence, keep-prerelease deviation, leak scan).
-Status: Plan 04-04 complete — the **GHCR image is proven registry-side from the host**, without a daemon. An anonymous `ghcr.io` pull token read the manifest: OCI index `sha256:8f5c484ed067…` (**equal to the CI run's `image_digest`**), `linux/amd64` `sha256:1d216b60…` and `linux/arm64` `sha256:25dc0d25…` (both 1810 B, plus two buildx attestation manifests recorded separately), tags exactly `0.1.0-proof1` + `v0.1.0-proof1`, and **`:latest` absent** (`latest_digest: null`, equal to the baseline). The package is **public** (anonymous read), and the config blob was readable: `WorkingDir=/work`, `User=1000:1000`, `Entrypoint=["deepseek-build"]`, env names only `PATH`/`DEBIAN_FRONTEND`. `image-registry` is 8/8 `result: ok`; fixtures are 45/45. **The pull and the in-image turn did not happen**: `docker info` exits 1 (`Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?`), and `image-run-blocked` is **`result: skipped`** with the digest-pinned pull, `--version` and the sandbox-on headless turn (`-p`, `--output-format json`, `--permission-mode auto`, `--sandbox devbox`) recorded for a host with a runtime. The README `## Container` section now carries the real digests, the two tags and the absence of `:latest`, the observed public visibility, the headless-only contract and both mounts (`/work`, `/home/app/.deepseek-build`), and states the image was not executed here (`check-readme-distribution.py --stage container` 7/7; install stage still 12/12). **REL-04 stays Partial** (pull deferred), **REL-05 stays Pending/blocked**, and ROADMAP criterion 1 ("pulled from the registry") is recorded as unmet.
-Last activity: 2026-11-26 06:53 UTC — 04-04 added the `registry` subcommand, the `image-registry` and `image-run-blocked` evidence items, and the corrected README container section.
+Plan: 04-05 of 5 complete (5/5 plans executed). Phase 4 is **not fully complete**: REL-04 is Partial and REL-05 is blocked.
+Status: Plan 04-05 complete — the **evidence is sealed**. `scripts/check-distribution-evidence.py` re-read all nine reports against the eight-key contract, refused the four self-test mutations (`self-test: 4/4 PASS`) and recomputed every artifact sha256 (`distribution-evidence: 9/9 PASS`, `9 reports validated`); every artifact is relative, UTF-8 text at most 1 MiB, and no file over 1 MiB is committed. `docs/evidence/04-distribution-proof/README.md` indexes the nine items with requirement ids, results, one sentence each and the verbatim re-run command from `report.json`. `DEVIATION-keep-prerelease.md` names **ROADMAP Phase 4 Success Criteria item 4** and `04-CONTEXT.md` §Cleanup, lists the retained tag `v0.1.0-proof1`, its six-asset pre-release and its two GHCR tags (the milestone's only macOS artifact), and records the invariants: `v0.1.0` unpublished, no stable release (`releases/latest` 404), `:latest` absent before and after. Leak scans over `docs/evidence/04-distribution-proof`, over `docs/evidence` + the phase planning directory, and over all of `docs/evidence` exit 0. `seal/retention-check.sh` re-asserted read-only that `:latest` is absent, no `v0.1.0` tag/release exists, and the `deepseek` branch and `deepseek-v0.1-snapshot` tag are still `4b305bd0`. **No cleanup was performed.** REL-04 stays **Partial** (the pull did not happen), REL-05 stays **blocked** (no daemon).
+Last activity: 2026-11-26 07:10 UTC — 04-05 added the evidence checker and nine-item index, the keep-prerelease deviation, the seal item and the five `scripts/README.md` entries.
 
-Progress: [██████████] 95%
+Progress: [██████████] 100% plans executed (Phase 4 remains open on REL-04's pull and REL-05)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
+- Total plans completed: 21
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -48,7 +48,7 @@ Progress: [██████████] 95%
 | 01 | 6 | 6 | - |
 | 02 | 6 | 6 | - |
 | 03 | 4 | 4 | - |
-| 04 | 4 | 5 | - |
+| 04 | 5 | 5 | - |
 
 **Recent Trend:**
 - Last 5 plans: —
@@ -59,6 +59,7 @@ Progress: [██████████] 95%
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 04 P05 | 13m | 2 tasks | 12 files |
 | Phase 04 P04 | 11m | 2 tasks | 18 files |
 | Phase 04 P03 | 17m | 2 tasks | 22 files |
 | Phase 04 P02 | 15m | 2 tasks | 30 files |
@@ -124,7 +125,10 @@ Full log in PROJECT.md Key Decisions. Those shaping current work:
 - [Phase 03]: `v0.1.0-proof1` is the Phase 4 throwaway tag: covered in the derive matrix, the image-tag guard fixture (exactly `{0.1.0-proof1, v0.1.0-proof1}`, no `latest`) and the installer harness (`deepseek-build-0.1.0-proof1-<target>.tar.gz`).
 - [Phase 03]: `install.sh`'s `VERSION=0.1` leniency is recorded, not fixed — it passes the `v[0-9]*` prefix check and then 404s; the `version` job's semver gate makes that shape unreachable for a real release. `install.sh` is byte-unchanged and the installer harness is 58/58.
 - [Phase 03]: `scripts/check-release-pipeline.sh` is the one-command static gate (actionlint, shellcheck, workflow checker 19/19 + fixture 5/5, guard 20/20, tag-shape 17/17, installer 58/58) with every tally pinned, so a shrunken checker fails the gate.
-- [Phase 04]: The one tag is `v0.1.0-proof1`, pushed **tag-only** at `b14d28eb`; `origin/main` (`6e9d8d88…`) and `deepseek-v0.1-snapshot` (`4b305bd0…`) are unchanged and no `v0.1.0` tag/release exists. The release is kept (CONTEXT.md decision) — deletion is recorded as a deviation in 04-05.
+- [Phase 04]: The one tag is `v0.1.0-proof1`, pushed **tag-only** at `b14d28eb`; `origin/main` (`6e9d8d88…`) and `deepseek-v0.1-snapshot` (`4b305bd0…`) are unchanged and no `v0.1.0` tag/release exists. The release is kept (CONTEXT.md decision) — the deviation is recorded by name against ROADMAP Phase 4 Success Criteria item 4 in `docs/evidence/04-distribution-proof/DEVIATION-keep-prerelease.md` (04-05), with no cleanup performed.
+- [Phase 04]: The seal's checker refuses `result: ok` for any item claiming REL-05 unless a step named `pull` recorded `ok: true`. The plan's `seal` item was therefore recorded with `requirements: REL-04, REL-06, PKG-04` and not REL-05 — listing REL-05 on an `ok` report would be exactly the false pass the rule exists to reject. The plan's literal `--requirements` string and its own invariant contradicted each other; the invariant wins.
+- [Phase 04]: `seal/seal.log` records the eight-report validator run (`8/8 PASS`), not the nine-report one: a report cannot hash a log that attests the report that hashes it. The nine-report run (`9/9 PASS`, `9 reports validated`) is the post-`finish` verification command, recorded in `notes.md`.
+- [Phase 04]: The evidence index (`docs/evidence/04-distribution-proof/README.md`) quotes each item's `report.json.command` verbatim as its re-run recipe, so the index cannot drift from the record it points at.
 - [Phase 04]: The pinned `docker/metadata-action` collapses a pre-release's tag list to **two** names (`0.1.0-proof1`, `v0.1.0-proof1`), not four; the guard accepts both shapes. Assert pushed names from the container log's `pushing manifest` lines, never from the workflow patterns.
 - [Phase 04]: The multi-arch index digest is `sha256:8f5c484e…`; the platform manifests inside it are `1d216b60…` (linux/amd64) and `25dc0d25…` (linux/arm64). The `build-push-action` outputs (`7f33b41b…`, `85f9de25…`) are buildkit per-platform **indexes** — don't mix the pairs.
 - [Phase 04]: Registry reads are daemonless: an anonymous ghcr.io pull token over HTTPS, or `docker manifest inspect`. `gh api /users/…/packages/…` 403s on this token (`read:packages` missing) — that is an auth gap, not a missing image.
@@ -160,7 +164,7 @@ None yet.
   The author confirmed the rotation/revocation on 2026-11-25; 02-03 records it as a dated
   attestation (no API can verify a revocation).
 - **Research base drift:** STACK/ARCHITECTURE read `main` @ `221a1a59`, PITFALLS @ `9e6780d9`. Re-verify `release.yml` edges and manifest versions before Phase 3.
-- **REL-05 / REL-04 pull — environment block, now recorded (2026-11-26, 04-04):** this host has the `docker` CLI but **no daemon** (`Cannot connect to the Docker daemon at unix:///var/run/docker.sock`, `exit 1`). The image is proven registry-side (`image-registry`, 8/8 ok, index `sha256:8f5c484e…` == the CI digest); the pull and the in-image turn are `image-run-blocked` **`result: skipped`** with digest-pinned commands and must never be claimed as executed here. Closing REL-05 needs a host with a container runtime (`sudo systemctl enable --now docker`); `gh auth refresh -s read:packages` only if the package becomes private (it is public as observed).
+- **REL-05 / REL-04 pull — environment block, recorded and sealed (2026-11-26, 04-04/04-05):** this host has the `docker` CLI but **no daemon** (`Cannot connect to the Docker daemon at unix:///var/run/docker.sock`, `exit 1`). The image is proven registry-side (`image-registry`, 8/8 ok, index `sha256:8f5c484e…` == the CI digest); the pull and the in-image turn are `image-run-blocked` **`result: skipped`** with digest-pinned commands and must never be claimed as executed here. 04-05 sealed the record and re-asserted read-only that `:latest` is absent and no `v0.1.0` exists. Closing REL-05 needs a host with a container runtime (`sudo systemctl enable --now docker`); `gh auth refresh -s read:packages` only if the package becomes private (it is public as observed).
 - **README baseline drift — RESOLVED (2026-11-26, 04-02):** `README.md` never contained "not codesigned and not notarized" at this HEAD (03-03 had already written the ad-hoc-signed truth), and its "No release has been published yet" banner was falsified by rc1–rc5 and proof1. 04-02 rewrote the banner, the Status row, the install commands, the unpinned paragraph and the macOS note; `scripts/check-readme-distribution.py --stage install` is 12/12 and rejects the stale claims. 04-03/04-04 must keep it green.
 - **macOS time budget — mitigation landed, proof pending (2026-11-25, 03-03):** `build-macos` now carries 240 minutes (Linux 90) and `release-dist` no longer emits DWARF; no profile override was added. REL-02 still needs the Phase 4 tag run: read both macOS job durations there, and if 240 is still not enough apply `CARGO_PROFILE_RELEASE_DIST_LTO=off` / `CARGO_PROFILE_RELEASE_DIST_CODEGEN_UNITS=16` to `build-macos` only.
 - **Dry-run side effects:** a dry run is a real push. 03-01 removed both known silent paths (the image no longer waits for macOS; the tag list is guarded and the version job rejects non-semver tags). 03-04 closed the tag-shape half locally (`v0.1.0-proof1` is pre-verified as a prerelease with no `:latest`, and the installer URL shape is exercised), so the Phase 4 tag run is the first remaining real-world risk. The dispatch verification must still create no release and move no `:latest`, and no throwaway tag may be created until Phase 4.
@@ -191,5 +195,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-11-26
-Stopped at: Phase 4 plan 04-04 complete (4/5) — the GHCR image is proven registry-side from the host without a daemon (`image-registry`: index `sha256:8f5c484e…` == the CI digest, both platform manifests, exactly two tags, no `:latest`, public, config blob read), the in-image run is recorded as environment-blocked (`image-run-blocked`, `result: skipped`, digest-pinned commands, sandbox on), and the README container section is corrected (`check-readme-distribution.py --stage container` 7/7; install stage 12/12). REL-04 stays Partial and REL-05 Pending; ROADMAP criterion 1 stays unmet. Next: 04-05 (seal the evidence, keep-prerelease deviation, leak scan).
+Stopped at: Phase 4 plan 04-05 complete (5/5 plans executed) — the evidence is sealed (`distribution-evidence: 9/9 PASS`, self-test 4/4, leak scans exit 0), the keep-prerelease deviation is recorded against ROADMAP Phase 4 Success Criteria item 4, and the retention invariants were re-asserted (`:latest` absent, no `v0.1.0`, `deepseek`/`deepseek-v0.1-snapshot` unchanged). Phase 4 is **not fully complete**: REL-04 Partial (no pull) and REL-05 blocked (no daemon). Next: Phase 5 (Windows Support) or a container-host run to close REL-04/REL-05.
 Resume file: None
