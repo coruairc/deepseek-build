@@ -1,5 +1,7 @@
 # Plugins
 
+> Project plugins live under `.deepseek/`; `.grok/` is read as a compatibility fallback.
+
 A plugin bundles skills, slash commands, agents, hooks, and MCP servers into one installable unit. You get plugins from a marketplace, install the ones you want, and deepseek-build loads what they add. To build and share your own, see [Create your own marketplace](#create-your-own-marketplace).
 
 ---
@@ -122,7 +124,7 @@ In the **Marketplace** tab, browse and install from your sources:
 
 Component summaries in the Marketplace tab appear only for marketplaces that publish a [`plugin-index.json`](#add-a-catalog-optional) catalog. Destructive actions ask for confirmation: press lowercase `y` to confirm, any other key (including `Esc`) to cancel.
 
-In the **Workflows** tab (open it directly with `/workflows`, or `Tab` from the commands above), browse the saved workflows deepseek-build discovered: built-ins, project `.grok/workflows/`, and user `~/.deepseek-build/workflows/`. Each row shows the workflow's name, source, and description; press `Enter` to expand its path and when-to-use notes, `r` to reload the list, and `/` to search. Rows are browse-only — run one with `/workflow <name>` or its own slash command.
+In the **Workflows** tab (open it directly with `/workflows`, or `Tab` from the commands above), browse the saved workflows deepseek-build discovered: built-ins, project `.deepseek/workflows/`, and user `~/.deepseek-build/workflows/`. Each row shows the workflow's name, source, and description; press `Enter` to expand its path and when-to-use notes, `r` to reload the list, and `/` to search. Rows are browse-only — run one with `/workflow <name>` or its own slash command.
 
 ### Turn plugins on or off in config
 
@@ -145,7 +147,7 @@ To hide the plugins and hooks interface entirely, set `disable_plugins = true` i
 
 Plugins run with your privileges, so treat them like any software you install: only add marketplaces and install plugins from sources you trust.
 
-Enabled plugins require trust to load skills, commands, hooks, MCP servers, and LSP servers. Untrusted plugin agents remain listed with frontmatter only. deepseek-build trusts plugins in `~/.deepseek-build/plugins/` automatically; project plugins in `.grok/plugins/` require trust. Install with `--trust` to grant it:
+Enabled plugins require trust to load skills, commands, hooks, MCP servers, and LSP servers. Untrusted plugin agents remain listed with frontmatter only. deepseek-build trusts plugins in `~/.deepseek-build/plugins/` automatically; project plugins in `.deepseek/plugins/` require trust. Install with `--trust` to grant it:
 
 ```bash
 deepseek-build plugin install <source> --trust
@@ -280,7 +282,7 @@ deepseek-build discovers plugins from these locations, in priority order. The `.
 |----------|-------|-------|
 | `_meta.pluginDirs` (`session/new` / `session/load`) | Session, that session only | Trusted automatically |
 | `--plugin-dir` (the `deepseek-build agent … stdio` flag) | Process, that agent process only | Trusted automatically |
-| `.grok/plugins/` | Project, shared through version control | Requires trust |
+| `.deepseek/plugins/` | Project, shared through version control | Requires trust |
 | `~/.deepseek-build/plugins/` | User, every project | Trusted automatically |
 | `[plugins].paths` (config) | Custom directories you add | Depends on location |
 

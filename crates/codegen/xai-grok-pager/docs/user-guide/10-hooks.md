@@ -1,5 +1,7 @@
 # Hooks
 
+> Project hooks live under `.deepseek/hooks/`; `.grok/hooks/` is read as a compatibility fallback.
+
 Hooks let you run a script or send an HTTP request at key moments in a deepseek-build session. Use them to automate tasks, enforce safety checks, log activity, send notifications, and integrate your own tools.
 
 ---
@@ -66,7 +68,7 @@ Hooks are discovered from several places (all are merged):
 | Global | `~/.deepseek-build/hooks/*.json` | Always | Personal hooks |
 | Global | `~/.claude/settings.json` (and `settings.local.json`) | Always | Claude Code compatibility (configurable) |
 | Global | `~/.cursor/hooks.json` | Always | Cursor compatibility (configurable) |
-| Project | `<project>/.grok/hooks/*.json` | Requires trust | Per-repo automation |
+| Project | `<project>/.deepseek/hooks/*.json` | Requires trust | Per-repo automation |
 | Project | `<project>/.claude/settings.json` (and `settings.local.json`) | Requires trust | Claude compatibility (configurable) |
 | Project | `<project>/.cursor/hooks.json` | Requires trust | Cursor compatibility (configurable) |
 | Config | `~/.deepseek-build/config.toml` | Always | Your hooks alongside the rest of your config |
@@ -644,7 +646,7 @@ echo '{"decision": "allow"}'
 2. **Use explicit `deny` to block**: hooks fail-open on any error, so a hook that crashes will not block the tool. To enforce policy, your hook must run to completion and emit `{"decision":"deny","reason":"..."}` on stdout. Always handle errors inside your script so it can return an explicit decision.
 3. **Use absolute paths or relative to hook file**: scripts in `bin/` next to the JSON file are portable.
 4. **Test with the modal**: press `Ctrl+L` (non–VS Code family) or run `/hooks` to verify hooks are loaded and matching before relying on them.
-5. **Version control project hooks**: commit `.grok/hooks/` (but never secrets).
+5. **Version control project hooks**: commit `.deepseek/hooks/` (but never secrets).
 
 ---
 
