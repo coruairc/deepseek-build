@@ -86,6 +86,12 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 - [x] **PKG-04**: A Homebrew tap formula for macOS arm64 and x86_64 exists in-tree at `packaging/homebrew/deepseek-build.rb`, pins the real release URLs and SHA-256 values, installs the binary, and its activation command is documented; the tap repository itself is the author's action
 
+### Project Directory (INSERTED 2026-11-26)
+
+- [ ] **BRAND-01**: The project-local config directory is `.deepseek`, resolved through one constant in `xai-grok-brand`; agents, skills, plugins, workflows, project config, hooks, LSP and `workspaced.toml` all resolve it, and `.grok` remains a lower-priority compatibility fallback
+- [ ] **BRAND-02**: Precedence is deterministic and tested — `.deepseek` wins over `.grok`, the pre-existing `.claude`/`.cursor`/`.agents` reads keep their relative order, and the home directory stays `~/.deepseek-build`
+- [ ] **BRAND-03**: The user guide and config reference name `.deepseek/` for project scope, state the `.grok` fallback, keep the `config_docs` test green, and the open-build variant changes exactly one constant (`.ob`)
+
 ### Windows Support
 
 - [ ] **WIN-01**: A `build-windows` job on `windows-latest` builds `x86_64-pc-windows-msvc` and produces a `.zip` containing the binary and the license files, published as `release-x86_64-pc-windows-msvc` alongside the four existing tarballs
@@ -217,8 +223,8 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | FREEZE-03 | Phase 6 — Documentation Truth & Freeze | Pending |
 
 **Coverage:**
-- v1 requirements: 48 total
-- Mapped to phases: 48
+- v1 requirements: 51 total
+- Mapped to phases: 51
 - Unmapped: 0 ✓
 - Duplicates: 0 ✓
 
@@ -231,8 +237,9 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | 3 — Pipeline Decoupling & Version | REL-01, REL-02, REL-03, REL-07, REL-08, PKG-01, PKG-02, PKG-03 | 8 |
 | 4 — Distribution Proof | REL-04, REL-05, REL-06, PKG-04 | 4 |
 | 5 — Windows Support | WIN-01, WIN-02, WIN-03, WIN-04, WIN-05, WIN-06 | 6 |
+| 5.1 — Project Directory Rebrand (INSERTED) | BRAND-01, BRAND-02, BRAND-03 | 3 |
 | 6 — Documentation Truth & Freeze | DOCS-01, DOCS-02, DOCS-03, DOCS-04, ACC-01, FREEZE-01, FREEZE-02, FREEZE-03 | 8 |
-| **Total** | | **48** |
+| **Total** | | **51** |
 
 ---
 *Requirements defined: 2026-11-21*
