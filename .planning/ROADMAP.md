@@ -37,7 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Pipeline Decoupling & Version** - A slow macOS leg can no longer erase the image and the tag shape is settled (completed 2026-11-25; REL-02 closed by Phase 4's tag run 45724842211 on 2026-11-26: macOS legs 47.8 / 61.5 min against the 240 min budget)
 - [ ] **Phase 4: Distribution Proof** - Image, installer and macOS artifacts proven from a throwaway tag (5/5 plans executed; REL-04 closed after the image was pulled by digest and run; REL-05's turn is proven but its sandbox clause is unmet because the image ships no bwrap; the pre-release is kept by recorded deviation)
 - [ ] **Phase 5: Windows Support** - Builds, installs and runs on Windows at a named tier, with the sandbox refusing honestly instead of no-opping
-- [ ] **Phase 5.1: Project Directory Rebrand (INSERTED)** - Project-local config is `.deepseek/`, `.grok` stays as a compatibility fallback, and one constant flips to `.ob` for open-build
+- [x] **Phase 5.1: Project Directory Rebrand (INSERTED)** - Project-local config is `.deepseek/`, `.grok` stays as a compatibility fallback, and one constant flips to `.ob` for open-build (completed 2026-11-26)
 - [ ] **Phase 6: Documentation Truth & Freeze** - Docs match the tree, the author signs off, and the freeze marker moves no published tag
 
 ## Phase Details
@@ -154,11 +154,11 @@ Plans:
   2. Precedence is deterministic and tested: `.deepseek` wins over `.grok`, `.claude`/`.cursor`/`.agents` keep their relative order, and a repo with both directories resolves the `.deepseek` file.
   3. The home directory is unchanged (`~/.deepseek-build`), and the user guide plus the config reference name `.deepseek/` for project scope and state the fallback, with the `config_docs` test green.
   4. The open-build variant requires exactly one edit: `PROJECT_DIR_NAME` → `.ob`.
-**Plans**: 2 plans
+**Plans**: 2/2 plans complete
 
 Plans:
-- [ ] 05.1-01: Brand constant, agent/plugin/skill/workflow/project-config/hook/LSP/workspaced resolution with `.grok` fallback, precedence tests
-- [ ] 05.1-02: User guide and config reference rewrite to `.deepseek/`, fallback documented, `config_docs` gate
+- [x] 05.1-01: Brand constant, agent/plugin/skill/workflow/project-config/hook/LSP/workspaced resolution with `.grok` fallback, precedence tests
+- [x] 05.1-02: User guide and config reference rewrite to `.deepseek/`, fallback documented, `config_docs` gate
 
 ### Phase 6: Documentation Truth & Freeze
 **Goal:** As the author, I want the docs to describe the tree that exists, my own acceptance session signed off, and the DeepSeek entity cut onto a `deepseek-build` branch with a non-triggering marker tag that moves no published ref, so that the freeze is defensible.
@@ -205,5 +205,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6
 | 3. Pipeline Decoupling & Version | 4/4 | Complete (REL-02 proof deferred to Phase 4) | 2026-11-25 |
 | 4. Distribution Proof | 5/5 | REL-04 closed (pulled by digest + run); REL-05 turn proven, sandbox clause unmet | - |
 | 5. Windows Support | 0/5 | In progress — spike found 4 blockers, 3 fixed on the throwaway branch | - |
-| 5.1 Project Directory Rebrand (INSERTED) | 0/2 | In progress | - |
+| 5.1 Project Directory Rebrand (INSERTED) | 2/2 | Complete | 2026-11-26 |
 | 6. Documentation Truth & Freeze | 0/5 | Not started | - |

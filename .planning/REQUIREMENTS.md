@@ -88,9 +88,9 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 ### Project Directory (INSERTED 2026-11-26)
 
-- [ ] **BRAND-01**: The project-local config directory is `.deepseek`, resolved through one constant in `xai-grok-brand`; agents, skills, plugins, workflows, project config, hooks, LSP and `workspaced.toml` all resolve it, and `.grok` remains a lower-priority compatibility fallback
-- [ ] **BRAND-02**: Precedence is deterministic and tested — `.deepseek` wins over `.grok`, the pre-existing `.claude`/`.cursor`/`.agents` reads keep their relative order, and the home directory stays `~/.deepseek-build`
-- [ ] **BRAND-03**: The user guide and config reference name `.deepseek/` for project scope, state the `.grok` fallback, keep the `config_docs` test green, and the open-build variant changes exactly one constant (`.ob`)
+- [x] **BRAND-01**: The project-local config directory is `.deepseek`, resolved through one constant in `xai-grok-brand`; agents, skills, plugins, workflows, project config, hooks, LSP and `workspaced.toml` all resolve it, and `.grok` remains a lower-priority compatibility fallback
+- [x] **BRAND-02**: Precedence is deterministic and tested — `.deepseek` wins over `.grok`, the pre-existing `.claude`/`.cursor`/`.agents` reads keep their relative order, and the home directory stays `~/.deepseek-build`
+- [x] **BRAND-03**: The user guide and config reference name `.deepseek/` for project scope, state the `.grok` fallback, keep the `config_docs` test green, and the open-build variant changes exactly one constant (`.ob`)
 
 ### Windows Support
 
