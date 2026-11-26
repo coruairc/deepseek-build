@@ -62,7 +62,7 @@ shellcheck --shell=sh \
 say "3/6 release-workflow structure checker (plus the macOS artifact fixture)"
 capture "release-workflow checker" python3 scripts/check-release-workflow.py
 printf '%s\n' "$CAP_OUT"
-expect "release-workflow checker" "$CAP_OUT" "release-workflow: 19/19 assertions PASS"
+expect "release-workflow checker" "$CAP_OUT" "release-workflow: 21/21 assertions PASS"
 expect "macOS artifact fixture" "$CAP_OUT" "artifact-step fixture: 5/5 PASS"
 
 say "4/6 image tag-list guard fixture"

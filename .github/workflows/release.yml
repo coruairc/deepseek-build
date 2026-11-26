@@ -1,15 +1,17 @@
 # deepseek-build release pipeline.
 #
-# Trigger: pushing a `v*` tag builds the `release-dist` binary for 4 targets
-# (each on a NATIVE runner — no cross-compilation, no qemu), packages tarballs,
-# then attaches them + SHA256SUMS + the repo-root install.sh to a GitHub release
-# for that tag. `workflow_dispatch` runs the same pipeline for manual testing;
-# it creates NO release (release creation is tag-only).
+# Trigger: pushing a `v*` tag builds the `release-dist` binary for 5 targets
+# (each on a NATIVE runner — no cross-compilation, no qemu), packages four
+# tarballs and one Windows .zip, then attaches them + SHA256SUMS + the
+# repo-root install.sh/install.ps1 to a GitHub release for that tag.
+# `workflow_dispatch` runs the same pipeline for manual testing; it creates NO
+# release (release creation is tag-only).
 #
-# The four targets are split across two jobs, `build-linux` and `build-macos`,
-# so a slow or failed macOS leg cannot erase the container image: `container`
-# needs only `build-linux`, while `publish` waits for both because its verify
-# step names all four tarballs. Artifact names stay `release-<target>`.
+# The targets are split across three jobs, `build-linux`, `build-macos` and
+# `build-windows`, so a slow or failed macOS/Windows leg cannot erase the
+# container image: `container` needs only `build-linux`, while `publish` waits
+# for all three because its verify step names all four tarballs and the zip.
+# Artifact names stay `release-<target>`.
 #
 # ══ HARD CONSTRAINT (stakeholder) — NO OTHER UPLOADS ═════════════════════════
 # This workflow must not upload anything anywhere else. The ONLY upload paths
@@ -104,9 +106,10 @@ jobs:
             echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # Two matrix jobs split by OS family so `container` can depend on the Linux
-  # one alone; every leg runs on a NATIVE runner for its target (no
-  # cross-compilation): linux gnu on ubuntu-22.04 (older glibc base) and linux
+  # Two matrix jobs split by OS family (plus the single-leg `build-windows`
+  # below) so `container` can depend on the Linux one alone; every leg runs on
+  # a NATIVE runner for its target (no cross-compilation): linux gnu on
+  # ubuntu-22.04 (older glibc base) and linux
   # arm64 on the free-for-public-repos native arm runner in `build-linux`; both
   # macOS targets on macOS 15 runners (macos-13 is retired; macos-15-intel still
   # exists and runs natively on Intel hardware) in `build-macos`. Artifact names
@@ -453,13 +456,163 @@ jobs:
           path: deepseek-build-*.tar.gz
           if-no-files-found: error
 
+  # Windows leg: a native windows-latest runner builds x86_64-pc-windows-msvc
+  # and packages a .zip whose top level matches the tarballs (binary + the
+  # license files). protoc must be installed explicitly: the repo's bin/protoc
+  # is a dotslash shell wrapper, not a PE, and xai-proto-build fails in CI
+  # without a real protoc on PATH. Rust 1.94.0 is the pinned toolchain
+  # (rust-toolchain.toml); rustup is preinstalled on windows-latest.
+  build-windows:
+    name: build-windows (x86_64-pc-windows-msvc)
+    needs: version
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      # Tag ref -> HEAD is the tag commit, so `git rev-parse HEAD` in build.rs
+      # stamps the commit correctly at the default shallow fetch-depth (1).
+      - name: Checkout tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      # protoc is HARD-REQUIRED on GitHub Actions: crates/build/xai-proto-build
+      # returns an error when GITHUB_ACTIONS is set and no protoc is found.
+      # Chocolatey's shim may not be on PATH in this same step, so fall back to
+      # its install location; find_protoc checks $PROTOC first and never
+      # reaches the repo's dotslash wrapper.
+      - name: Install protoc
+        shell: bash
+        run: |
+          set -euo pipefail
+          choco install protoc -y --no-progress
+          protoc_path="$(command -v protoc || true)"
+          if [ -z "${protoc_path}" ]; then
+            protoc_path="/c/ProgramData/chocolatey/bin/protoc.exe"
+          fi
+          if [ ! -x "${protoc_path}" ]; then
+            echo "::error::protoc was not installed by chocolatey"
+            exit 1
+          fi
+          "${protoc_path}" --version
+          # find_protoc does PathBuf::try_exists on PROTOC, so it must be a WINDOWS path:
+          # a Git-Bash "/c/..." form resolves to C:\c\... and the override is silently skipped.
+          protoc_win="$(cygpath -w "${protoc_path}")"
+          echo "PROTOC=${protoc_win}" >> "$GITHUB_ENV"
+
+      - name: Install Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.94.0 --profile minimal
+          rustup default 1.94.0
+
+      # Per-target cache key so this leg never thrashes the Unix caches.
+      - name: Restore cargo cache
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          key: x86_64-pc-windows-msvc
+          cache-on-failure: true
+
+      # GROK_VERSION stamps the release version into the binary (build.rs +
+      # xai-grok-version); --locked turns a stale Cargo.lock into a red job
+      # instead of a silent regenerate.
+      - name: Build release-dist binary
+        shell: bash
+        run: cargo build --profile release-dist --locked -p xai-grok-pager-bin
+        env:
+          GROK_VERSION: ${{ needs.version.outputs.version }}
+
+      # `deepseek-build <version> (<shortcommit>)` — strip the CR so the
+      # end-anchored shape check matches Windows line endings.
+      - name: Smoke-check the built binary
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          out="$(target/release-dist/deepseek-build.exe --version | tr -d '\r')"
+          printf 'binary reports: %s\n' "${out}"
+          if ! printf '%s\n' "${out}" | grep -Fq "deepseek-build ${RELEASE_VERSION} ("; then
+            echo "::error::--version does not report the release version: wanted 'deepseek-build ${RELEASE_VERSION} (...)', got '${out}'"
+            exit 1
+          fi
+          if ! printf '%s\n' "${out}" | grep -Eq '^deepseek-build [^ ]+ \([0-9a-f]{7,40}\)$'; then
+            echo "::error::--version output has unexpected shape (name version (commit)): '${out}'"
+            exit 1
+          fi
+
+      # Stage the zip's top level exactly like the tarballs: no nested
+      # directory, binary + licenses + README. THIRD-PARTY-NOTICES ships
+      # because vendored libgit2's GPL-2.0-with-linking-exception text lives
+      # there.
+      - name: Stage zip contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="stage-zip"
+          rm -rf "$stage"
+          mkdir -p "$stage"
+          cp target/release-dist/deepseek-build.exe "$stage/"
+          cp LICENSE NOTICE THIRD-PARTY-NOTICES "$stage/"
+          cat > "$stage/README.txt" <<'EOF'
+          deepseek-build
+          ==============
+
+          A terminal coding assistant for DeepSeek models (deepseek-v4-pro / deepseek-flash).
+
+          This binary is an independent project, not affiliated with DeepSeek.
+
+          It is built from source derived from xai-org/grok-build (Apache-2.0). The
+          LICENSE, NOTICE, and THIRD-PARTY-NOTICES files in this archive carry the
+          full license and attribution details, including the vendored libgit2
+          license (GPL-2.0-with-linking-exception).
+
+          Quick start (PowerShell):
+
+              $env:DEEPSEEK_API_KEY = '...'    # or DEEPSEEK_BUILD_API_KEY
+              .\deepseek-build.exe
+
+          Configuration, sessions, and logs live under %USERPROFILE%\.deepseek-build.
+          At runtime the binary only talks to api.deepseek.com over HTTPS.
+          Source and docs: https://github.com/coruairc/deepseek-build
+          EOF
+          ls -la "$stage"
+
+      - name: Package zip
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = "deepseek-build-${env:RELEASE_VERSION}-x86_64-pc-windows-msvc.zip"
+          Compress-Archive -Path 'stage-zip/*' -DestinationPath $zip -Force
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zipPath = (Resolve-Path -LiteralPath $zip).Path
+          $entries = [System.IO.Compression.ZipFile]::OpenRead($zipPath).Entries.FullName
+          $entries | ForEach-Object { Write-Host "archive entry: $_" }
+          foreach ($name in @('deepseek-build.exe', 'LICENSE', 'NOTICE', 'THIRD-PARTY-NOTICES', 'README.txt')) {
+            if ($entries -notcontains $name) {
+              Write-Error "zip is missing the top-level entry $name"
+              exit 1
+            }
+          }
+
+      # GitHub-internal artifact transport only (see the hard constraint above).
+      - name: Upload zip as a job artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-x86_64-pc-windows-msvc
+          path: deepseek-build-*.zip
+          if-no-files-found: error
+
   # Publish job: runs on ubuntu-22.04 (pinned, not ubuntu-latest, for
   # consistency with the build matrix; it only hashes and re-uploads files, so
   # the base image age is irrelevant). Needs the least privilege that exists:
   # contents: write to create the release, nothing else.
   publish:
     name: Publish GitHub release
-    needs: [version, build-linux, build-macos]
+    needs: [version, build-linux, build-macos, build-windows]
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     permissions:
@@ -471,15 +624,15 @@ jobs:
           ref: ${{ github.ref }}
           persist-credentials: false
 
-      # Merge all 4 release-* artifacts into one flat directory.
-      - name: Fetch packaged tarballs
+      # Merge all 5 release-* artifacts into one flat directory.
+      - name: Fetch packaged artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: release-*
           merge-multiple: true
           path: dist
 
-      - name: Verify all 4 tarballs arrived
+      - name: Verify all four tarballs and the Windows zip arrived
         env:
           RELEASE_VERSION: ${{ needs.version.outputs.version }}
         run: |
@@ -492,22 +645,30 @@ jobs:
               exit 1
             fi
           done
-
-      - name: Guard — repo-root install.sh must exist to be published
-        run: |
-          set -euo pipefail
-          if [ ! -f install.sh ]; then
-            echo "::error::install.sh is missing at the repo root; it must be published as a release asset"
+          zip="dist/deepseek-build-${RELEASE_VERSION}-x86_64-pc-windows-msvc.zip"
+          if [ ! -f "${zip}" ]; then
+            echo "::error::missing Windows zip: ${zip}"
+            ls -la dist || true
             exit 1
           fi
 
+      - name: Guard — repo-root installers must exist to be published
+        run: |
+          set -euo pipefail
+          for installer in install.sh install.ps1; do
+            if [ ! -f "${installer}" ]; then
+              echo "::error::${installer} is missing at the repo root; it must be published as a release asset"
+              exit 1
+            fi
+          done
+
       # Bare filenames in SHA256SUMS (no path prefix), matching the tarball
-      # names as published on the release.
+      # and zip names as published on the release.
       - name: Generate SHA256SUMS
         working-directory: dist
         run: |
           set -euo pipefail
-          sha256sum deepseek-build-*.tar.gz > SHA256SUMS
+          sha256sum deepseek-build-*.tar.gz deepseek-build-*.zip > SHA256SUMS
           cat SHA256SUMS
 
       # The release is only created for tag runs (workflow_dispatch is for
@@ -530,7 +691,9 @@ jobs:
           files: |
             dist/SHA256SUMS
             dist/deepseek-build-*.tar.gz
+            dist/deepseek-build-*.zip
             install.sh
+            install.ps1
         env:
           GITHUB_TOKEN: ${{ github.token }}
 

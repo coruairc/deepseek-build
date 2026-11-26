@@ -9,12 +9,15 @@ only surfaced on a real tag push — where `container` had already skipped or a
 release had already been created. This script parses the workflow with PyYAML
 and asserts the structure Phase 3 promised (REL-01, REL-08):
 
-  - exactly five jobs: version, build-linux, build-macos, publish, container;
-  - each build job owns only its own OS matrix and has no `runner.os`
+  - exactly six jobs: version, build-linux, build-macos, build-windows,
+    publish, container;
+  - each matrix build job owns only its own OS matrix and has no `runner.os`
     conditionals left behind;
-  - `publish` needs both build jobs (its verify step names all four tarballs)
-    and `container` needs only the Linux one (a slow macOS leg must not erase
-    the image);
+  - `build-windows` is a single native windows-latest leg that installs protoc,
+    builds `--locked`, smokes the exe, and packages/uploads a `.zip`;
+  - `publish` needs all three build jobs (its verify step names all four
+    tarballs and the Windows zip) and `container` needs only the Linux one (a
+    slow macOS/Windows leg must not erase the image);
   - the `release-<target>` artifact contract survives the split;
   - `--locked` is passed to the CI build so a stale Cargo.lock fails the job
     instead of being regenerated;
@@ -24,8 +27,11 @@ and asserts the structure Phase 3 promised (REL-01, REL-08):
   - `build-macos` signs the linked binary ad-hoc after the build and before
     packaging, and verifies the *extracted tarball* (signature, version
     needles, no `__DWARF` segment, no `.dSYM`) before it uploads;
-  - the macOS job carries its own 240-minute budget while the Linux job keeps
-    90, and no `CARGO_PROFILE_*` override landed in a build job by accident;
+  - the macOS job carries its own 240-minute budget while the Linux and
+    Windows jobs keep 90, and no `CARGO_PROFILE_*` override landed in a build
+    job by accident;
+  - the Windows zip is hashed into SHA256SUMS and attached to the release with
+    install.ps1;
   - no `run:` body invokes `strip`/`dsymutil`, and every `uses:` stays pinned
     to a full-length commit SHA.
 
@@ -63,7 +69,14 @@ DEFAULT_WORKFLOW = (
     Path(__file__).resolve().parent.parent / ".github" / "workflows" / "release.yml"
 )
 
-EXPECTED_JOBS = {"version", "build-linux", "build-macos", "publish", "container"}
+EXPECTED_JOBS = {
+    "version",
+    "build-linux",
+    "build-macos",
+    "build-windows",
+    "publish",
+    "container",
+}
 
 LINUX_LEGS = {
     ("x86_64-unknown-linux-gnu", "ubuntu-22.04"),
@@ -73,12 +86,14 @@ MACOS_LEGS = {
     ("aarch64-apple-darwin", "macos-15"),
     ("x86_64-apple-darwin", "macos-15-intel"),
 }
-ALL_TARGETS = [
+TARBALL_TARGETS = [
     "x86_64-unknown-linux-gnu",
     "aarch64-unknown-linux-gnu",
     "aarch64-apple-darwin",
     "x86_64-apple-darwin",
 ]
+WINDOWS_TARGET = "x86_64-pc-windows-msvc"
+ALL_TARGETS = [*TARBALL_TARGETS, WINDOWS_TARGET]
 
 # The macOS artifact contract (REL-03, REL-02) names these explicitly, and the
 # fixture drives the verify step through the same variables the step declares.
@@ -88,6 +103,7 @@ ARTIFACT_VERIFY_DIR_ENV = "ARTIFACT_VERIFY_DIR"
 FIXTURE_TARGET = "x86_64-apple-darwin"
 LINUX_TIMEOUT_MINUTES = 90
 MACOS_TIMEOUT_MINUTES = 240
+WINDOWS_TIMEOUT_MINUTES = 90
 
 # Kept byte-identical to the derive step so a rewrite of one side fails here.
 PRERELEASE_RE_TEXT = r"^[0-9]+\.[0-9]+\.[0-9]+-"
@@ -218,7 +234,7 @@ def a5_publish_needs(doc: Workflow) -> list[str]:
     if not isinstance(publish, dict):
         return ["job 'publish' is missing"]
     problems: list[str] = []
-    expected = ["version", "build-linux", "build-macos"]
+    expected = ["version", "build-linux", "build-macos", "build-windows"]
     if needs_of(publish) != expected:
         problems.append(f"needs is {needs_of(publish)!r}, expected {expected!r}")
     if "if" in publish:
@@ -248,7 +264,7 @@ def a6_container_needs(doc: Workflow) -> list[str]:
 def a7_cargo_build(doc: Workflow) -> list[str]:
     problems: list[str] = []
     jobs = jobs_of(doc)
-    for job_name in ("build-linux", "build-macos"):
+    for job_name in ("build-linux", "build-macos", "build-windows"):
         job = jobs.get(job_name)
         if not isinstance(job, dict):
             problems.append(f"job '{job_name}' is missing")
@@ -302,6 +318,34 @@ def a8_upload_artifact(doc: Workflow) -> list[str]:
                 f"{job_name} upload-artifact with.if-no-files-found is "
                 f"{options.get('if-no-files-found')!r}, expected 'error'"
             )
+    windows = jobs.get("build-windows")
+    if not isinstance(windows, dict):
+        problems.append("job 'build-windows' is missing")
+        return problems
+    uploads = [
+        s for s in steps_of(windows) if uses_of(s).startswith("actions/upload-artifact@")
+    ]
+    if len(uploads) != 1:
+        problems.append(
+            f"build-windows has {len(uploads)} upload-artifact step(s), expected exactly 1"
+        )
+        return problems
+    options = with_of(uploads[0])
+    if options.get("name") != f"release-{WINDOWS_TARGET}":
+        problems.append(
+            f"build-windows upload-artifact with.name is {options.get('name')!r}, "
+            f"expected 'release-{WINDOWS_TARGET}'"
+        )
+    if options.get("path") != "deepseek-build-*.zip":
+        problems.append(
+            f"build-windows upload-artifact with.path is {options.get('path')!r}, "
+            "expected 'deepseek-build-*.zip'"
+        )
+    if options.get("if-no-files-found") != "error":
+        problems.append(
+            "build-windows upload-artifact with.if-no-files-found is "
+            f"{options.get('if-no-files-found')!r}, expected 'error'"
+        )
     return problems
 
 
@@ -327,9 +371,18 @@ def a9_publish_download_and_verify(doc: Workflow) -> list[str]:
             "publish has no download-artifact step with pattern 'release-*' and "
             f"merge-multiple true; found {described!r}"
         )
-    verifiers = [s for s in steps if all(t in run_of(s) for t in ALL_TARGETS)]
+    verifiers = [
+        s
+        for s in steps
+        if all(t in run_of(s) for t in TARBALL_TARGETS)
+        and WINDOWS_TARGET in run_of(s)
+        and ".zip" in run_of(s)
+    ]
     if not verifiers:
-        problems.append("publish has no verify step naming all four targets")
+        problems.append(
+            "publish has no verify step naming all four tarball targets and the "
+            "Windows .zip"
+        )
     return problems
 
 
@@ -603,6 +656,7 @@ def a18_build_timeouts(doc: Workflow) -> list[str]:
     for job_name, expected in (
         ("build-linux", LINUX_TIMEOUT_MINUTES),
         ("build-macos", MACOS_TIMEOUT_MINUTES),
+        ("build-windows", WINDOWS_TIMEOUT_MINUTES),
     ):
         job = jobs.get(job_name)
         if not isinstance(job, dict):
@@ -620,7 +674,7 @@ def a19_no_profile_overrides(doc: Workflow) -> list[str]:
     """No `CARGO_PROFILE_*` override may land in a build job by accident."""
     problems: list[str] = []
     jobs = jobs_of(doc)
-    for job_name in ("build-linux", "build-macos"):
+    for job_name in ("build-linux", "build-macos", "build-windows"):
         job = jobs.get(job_name)
         if not isinstance(job, dict):
             continue
@@ -640,6 +694,140 @@ def a19_no_profile_overrides(doc: Workflow) -> list[str]:
                         f"{job_name} step {index} ({step.get('name', '?')!r}) env "
                         f"{key!r} = {value!r}"
                     )
+    return problems
+
+
+def a20_build_windows(doc: Workflow) -> list[str]:
+    """WIN-01: a native Windows leg installs protoc, builds, and zips."""
+    jobs = jobs_of(doc)
+    job = jobs.get("build-windows")
+    if not isinstance(job, dict):
+        return ["job 'build-windows' is missing"]
+    problems: list[str] = []
+    if job.get("runs-on") != "windows-latest":
+        problems.append(f"runs-on is {job.get('runs-on')!r}, expected 'windows-latest'")
+    if needs_of(job) != ["version"]:
+        problems.append(f"needs is {needs_of(job)!r}, expected ['version']")
+    steps = steps_of(job)
+
+    checkouts = [s for s in steps if uses_of(s).startswith("actions/checkout@")]
+    publish = jobs.get("publish")
+    publish_checkouts = (
+        [s for s in steps_of(publish) if uses_of(s).startswith("actions/checkout@")]
+        if isinstance(publish, dict)
+        else []
+    )
+    if len(checkouts) != 1:
+        problems.append(
+            f"build-windows has {len(checkouts)} checkout step(s), expected exactly 1"
+        )
+    elif publish_checkouts and uses_of(checkouts[0]) != uses_of(publish_checkouts[0]):
+        problems.append(
+            f"build-windows checkout is {uses_of(checkouts[0])!r}, expected the "
+            f"same pinned action as publish ({uses_of(publish_checkouts[0])!r})"
+        )
+
+    runs = "\n".join(run_of(s) for s in steps)
+    if "1.94.0" not in runs:
+        problems.append("build-windows never installs the pinned 1.94.0 toolchain")
+    if "choco install protoc" not in runs or "PROTOC=" not in runs:
+        problems.append(
+            "build-windows does not install protoc with chocolatey and export PROTOC"
+        )
+    # find_protoc does PathBuf::try_exists on PROTOC, so a Git-Bash "/c/..." path is a silent
+    # no-op on Windows: the override must be converted with cygpath -w before export.
+    if "cygpath -w" not in runs:
+        problems.append(
+            "build-windows exports PROTOC without `cygpath -w`; a POSIX path is silently ignored"
+        )
+
+    caches = [s for s in steps if uses_of(s).startswith("Swatinem/rust-cache@")]
+    if len(caches) != 1:
+        problems.append(
+            f"build-windows has {len(caches)} rust-cache step(s), expected exactly 1"
+        )
+    elif with_of(caches[0]).get("key") != WINDOWS_TARGET:
+        problems.append(
+            f"build-windows rust-cache key is {with_of(caches[0]).get('key')!r}, "
+            f"expected {WINDOWS_TARGET!r}"
+        )
+
+    smokes = [
+        s
+        for s in steps
+        if "deepseek-build.exe --version" in run_of(s)
+        and env_of(s).get("RELEASE_VERSION") == "${{ needs.version.outputs.version }}"
+    ]
+    if not smokes:
+        problems.append(
+            "build-windows has no step that runs the built exe with --version and "
+            "RELEASE_VERSION=needs.version.outputs.version"
+        )
+
+    for name in (
+        "deepseek-build.exe",
+        "LICENSE",
+        "NOTICE",
+        "THIRD-PARTY-NOTICES",
+        "README.txt",
+    ):
+        if name not in runs:
+            problems.append(f"build-windows never stages the top-level entry {name!r}")
+
+    packagers = [s for s in steps if "Compress-Archive" in run_of(s)]
+    if len(packagers) != 1:
+        problems.append(
+            f"build-windows has {len(packagers)} Compress-Archive step(s), expected exactly 1"
+        )
+    elif f"{WINDOWS_TARGET}.zip" not in run_of(packagers[0]):
+        problems.append(
+            "the Compress-Archive step does not name "
+            f"deepseek-build-<version>-{WINDOWS_TARGET}.zip"
+        )
+    return problems
+
+
+def a21_publish_zip_wiring(doc: Workflow) -> list[str]:
+    """WIN-01: the zip is hashed and attached to the release."""
+    publish = jobs_of(doc).get("publish")
+    if not isinstance(publish, dict):
+        return ["job 'publish' is missing"]
+    steps = steps_of(publish)
+    problems: list[str] = []
+    sums = [
+        s
+        for s in steps
+        if "sha256sum" in run_of(s) and "SHA256SUMS" in run_of(s)
+    ]
+    if len(sums) != 1:
+        problems.append(
+            f"publish has {len(sums)} SHA256SUMS step(s), expected exactly 1"
+        )
+    else:
+        body = run_of(sums[0])
+        for needle in ("deepseek-build-*.tar.gz", "deepseek-build-*.zip"):
+            if needle not in body:
+                problems.append(
+                    f"the SHA256SUMS step does not hash {needle!r}: {body.strip()!r}"
+                )
+    releases = [
+        s for s in steps if uses_of(s).startswith("softprops/action-gh-release@")
+    ]
+    if len(releases) != 1:
+        problems.append(
+            f"publish has {len(releases)} release step(s), expected exactly 1"
+        )
+        return problems
+    files = str(with_of(releases[0]).get("files") or "")
+    for needle in (
+        "dist/SHA256SUMS",
+        "dist/deepseek-build-*.tar.gz",
+        "dist/deepseek-build-*.zip",
+        "install.sh",
+        "install.ps1",
+    ):
+        if needle not in files:
+            problems.append(f"the release files list is missing {needle!r}")
     return problems
 
 
@@ -779,7 +967,11 @@ def run_artifact_step_fixture(doc: Workflow) -> list[str]:
 
 
 ASSERTIONS: list[Assertion] = [
-    ("A1", "jobs are exactly version/build-linux/build-macos/publish/container", a1_job_set),
+    (
+        "A1",
+        "jobs are exactly version/build-linux/build-macos/build-windows/publish/container",
+        a1_job_set,
+    ),
     (
         "A2",
         "build-linux: needs [version], two Linux legs, fail-fast false",
@@ -791,7 +983,11 @@ ASSERTIONS: list[Assertion] = [
         check_build_job("build-macos", MACOS_LEGS),
     ),
     ("A4", "build jobs have no runner.os conditionals left", a4_no_runner_os_conditionals),
-    ("A5", "publish needs [version, build-linux, build-macos] and has no if", a5_publish_needs),
+    (
+        "A5",
+        "publish needs [version, build-linux, build-macos, build-windows] and has no if",
+        a5_publish_needs,
+    ),
     (
         "A6",
         "container needs [version, build-linux] and is tag-gated",
@@ -804,12 +1000,12 @@ ASSERTIONS: list[Assertion] = [
     ),
     (
         "A8",
-        "each build job uploads release-${{ matrix.target }} with if-no-files-found=error",
+        "build jobs upload release-<target>; build-windows uploads the zip, if-no-files-found=error",
         a8_upload_artifact,
     ),
     (
         "A9",
-        "publish merges release-* and verifies all four tarballs",
+        "publish merges release-* and verifies the four tarballs and the Windows zip",
         a9_publish_download_and_verify,
     ),
     (
@@ -842,10 +1038,20 @@ ASSERTIONS: list[Assertion] = [
     ),
     (
         "A18",
-        "build-macos budget is 240 minutes; build-linux keeps 90",
+        "build-macos budget is 240 minutes; build-linux and build-windows keep 90",
         a18_build_timeouts,
     ),
     ("A19", "no CARGO_PROFILE_* override lands in a build job", a19_no_profile_overrides),
+    (
+        "A20",
+        "build-windows: protoc, pinned toolchain, exe smoke, zip with the five top-level entries",
+        a20_build_windows,
+    ),
+    (
+        "A21",
+        "publish hashes the zip and attaches it (plus install.ps1) to the release",
+        a21_publish_zip_wiring,
+    ),
 ]
 
 
