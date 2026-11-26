@@ -68,8 +68,8 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 ### Release Pipeline
 
 - [x] **REL-01**: The build matrix is split into `build-linux` and `build-macos`, and `container` depends on `build-linux` only, so a slow macOS leg can no longer skip the image
-- [ ] **REL-02**: Both macOS targets (aarch64 and x86_64) produce tarballs inside the job timeout, including one cache-warming run if cold-cache is the cause
-- [ ] **REL-03**: The macOS binary passes a smoke check from the extracted tarball, and its signature remains valid after any strip or debug-profile change
+- [x] **REL-02**: Both macOS targets (aarch64 and x86_64) produce tarballs inside the job timeout, including one cache-warming run if cold-cache is the cause
+- [x] **REL-03**: The macOS binary passes a smoke check from the extracted tarball, and its signature remains valid after any strip or debug-profile change
 - [ ] **REL-04**: The GHCR image is built, published, and pulled from a throwaway pre-release tag
 - [ ] **REL-05**: The container image runs a real headless tool-executing turn with the documented run flags that keep the sandbox on, and the README states the image is headless-only with the mounts it needs
 - [ ] **REL-06**: `install.sh` is proven against a real pre-release tag, and the unpinned `latest` path's actual behaviour is established rather than assumed from the fake-tree harness
@@ -190,15 +190,15 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | SESS-03 | Phase 2 — Loop-Item Verification | Complete |
 | SESS-04 | Phase 2 — Loop-Item Verification | Complete |
 | REL-01 | Phase 3 — Pipeline Decoupling & Version | Complete |
-| REL-02 | Phase 3 — Pipeline Decoupling & Version | Pending |
-| REL-03 | Phase 3 — Pipeline Decoupling & Version | Pending |
+| REL-02 | Phase 3 — Pipeline Decoupling & Version | Complete (run 45724842211, 2026-11-26: macOS 47.8 / 61.5 min vs the 240 min budget) |
+| REL-03 | Phase 3 — Pipeline Decoupling & Version | Complete (both macOS legs verify the ad-hoc signature on the extracted tarball and print 0.1.0-proof1 (b14d28eb2bc7)) |
 | REL-07 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | REL-08 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-01 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-02 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-03 | Phase 3 — Pipeline Decoupling & Version | Complete |
 | PKG-04 | Phase 4 — Distribution Proof | Pending |
-| REL-04 | Phase 4 — Distribution Proof | Pending |
+| REL-04 | Phase 4 — Distribution Proof | Partial — image built, published and verified registry-side (index sha256:8f5c484e…); the pull is environment-blocked (no Docker daemon) and deferred to 04-04 |
 | REL-05 | Phase 4 — Distribution Proof | Pending |
 | REL-06 | Phase 4 — Distribution Proof | Pending |
 | WIN-01 | Phase 5 — Windows Support | Pending |
@@ -236,4 +236,4 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 
 ---
 *Requirements defined: 2026-11-21*
-*Last updated: 2026-11-26 — added Windows Support (WIN-01…06, Phase 5), the Homebrew tap (PKG-04, Phase 4), and renumbered Documentation Truth & Freeze to Phase 6*
+*Last updated: 2026-11-26 — added Windows Support (WIN-01…06, Phase 5), the Homebrew tap (PKG-04, Phase 4), and renumbered Documentation Truth & Freeze to Phase 6; REL-02/REL-03 closed by the Phase-4 tag run, REL-04 recorded as Partial*

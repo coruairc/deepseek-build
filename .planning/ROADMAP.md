@@ -34,8 +34,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Truth Baseline** - Sandbox stops aborting, cost and default model stop lying, and the suite is provably green (completed 2026-11-23)
 - [x] **Phase 2: Loop-Item Verification** - Permissions, resume and plan mode proven against a real session, with the egress boundary measured (completed 2026-11-25)
-- [x] **Phase 3: Pipeline Decoupling & Version** - A slow macOS leg can no longer erase the image and the tag shape is settled (completed 2026-11-25; REL-02's macOS-timeout proof lands in Phase 4's tag run)
-- [ ] **Phase 4: Distribution Proof** - Image, installer and macOS artifacts proven from a throwaway tag
+- [x] **Phase 3: Pipeline Decoupling & Version** - A slow macOS leg can no longer erase the image and the tag shape is settled (completed 2026-11-25; REL-02 closed by Phase 4's tag run 45724842211 on 2026-11-26: macOS legs 47.8 / 61.5 min against the 240 min budget)
+- [ ] **Phase 4: Distribution Proof** - Image, installer and macOS artifacts proven from a throwaway tag (in progress: 04-01 complete — tag pushed, run green, release verified)
 - [ ] **Phase 5: Documentation Truth & Freeze** - Docs match the tree, the author signs off, and the freeze marker moves no published tag
 
 ## Phase Details
@@ -112,10 +112,10 @@ Plans:
   2. The pulled image runs a real headless turn that executes a shell command, with the documented run flags that keep the sandbox on, and the README states the image is headless-only with the mounts it needs.
   3. `install.sh` installs a pinned `VERSION=` from the real release and prints that version, and the unpinned `latest` path's actual behaviour is established by checking the real URL rather than the fake-tree harness.
   4. The throwaway tag, its release and the image tag it created are cleaned up, with no `:latest` left pointing at a throwaway build and the dry-run evidence committed.
-**Plans**: 5 plans
+**Plans**: 1/5 plans complete
 
 Plans:
-- [ ] 04-01: Throwaway tag `v0.1.0-proof1` — push, green run, release assets and prerelease classification
+- [x] 04-01: Throwaway tag `v0.1.0-proof1` — pushed once (tag-only, target `b14d28eb`); run 45724842211 green (7/7 jobs, macOS 47.8 / 61.5 min, container success, two prerelease image tags, no `:latest`); release is a pre-release with exactly six assets, every byte matching `SHA256SUMS` and GitHub's digest. REL-02 and the macOS half of REL-03 closed. REL-04 stays PARTIAL (pull environment-blocked, 04-04)
 - [ ] 04-02: Installer proof against the real release — pinned, then the real `latest` behaviour; README install truth
 - [ ] 04-03: Homebrew formula with real URLs and SHA-256 values, plus the tap activation doc
 - [ ] 04-04: Registry-side image proof (digest, manifest, tags); the in-image run recorded as environment-blocked with exact commands; README container truth
