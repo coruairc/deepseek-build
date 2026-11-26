@@ -1,0 +1,28 @@
+prove-install: latest
+  repository: coruairc/deepseek-build
+  host:       Linux/x86_64 -> x86_64-unknown-linux-gnu
+  network:    github.com only (fake-tree hooks unset)
+  scratch:    <TMP>/dsb-latest2.2Pd9TM
+  disk free:  13286812 KiB
+PASS: scratch filesystem has at least 400 MiB free (13286812 KiB)
+
+PASS: releases/latest/download/SHA256SUMS returns 404
+PASS: releases/latest/download/install.sh returns 404
+PASS: releases/latest resolves to the release index, not a stable tag page (https://github.com/coruairc/deepseek-build/releases)
+PASS: the REST endpoint repos/coruairc/deepseek-build/releases/latest returns 404
+
+running the released installer with no VERSION:
+  HOME=<TMP>/dsb-latest2.2Pd9TM/home INSTALL_DIR=<TMP>/dsb-latest2.2Pd9TM/bin sh $asset/install.sh
+
+==> Resolving the latest release
+curl: (22) The requested URL returned error: 404
+
+PASS: unpinned installer exits non-zero (exit 22)
+PASS: nothing was installed into the scratch INSTALL_DIR
+PASS: installer log shows it took the latest-resolution branch
+PASS: installer failure is a 404
+PASS: probe.log names the SHA256SUMS URL and its 404
+
+prove-install: 10/10 PASS
+
+transcript: <TMP>/dsb-latest2.2Pd9TM/install-latest.log

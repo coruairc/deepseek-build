@@ -9,15 +9,15 @@
 # scratch HOME/INSTALL_DIR. No fake-tree hook is set; github.com is the only
 # host contacted. The loopback harness scripts/test-install.sh was not used.
 # ---------------------------------------------------------------------------
-# Section 1: sh scripts/prove-install.sh --version v0.0.1-rc5 --workdir <TMP>/dsb-rc5b.FLvQ19
+# Section 1: sh scripts/prove-install.sh --version v0.0.1-rc5 --workdir <TMP>/dsb-rc5c.Pa6RVM
 # ---------------------------------------------------------------------------
 prove-install: version
   repository: coruairc/deepseek-build
   host:       Linux/x86_64 -> x86_64-unknown-linux-gnu
   network:    github.com only (fake-tree hooks unset)
-  scratch:    <TMP>/dsb-rc5b.FLvQ19
-  disk free:  14531180 KiB
-PASS: scratch filesystem has at least 400 MiB free (14531180 KiB)
+  scratch:    <TMP>/dsb-rc5c.Pa6RVM
+  disk free:  13286708 KiB
+PASS: scratch filesystem has at least 400 MiB free (13286708 KiB)
 
 pinned proof
   tag:        v0.0.1-rc5
@@ -37,16 +37,16 @@ PASS: downloaded size equals the GitHub asset size (212380839 bytes)
 PASS: sha256sum -c against the release SHA256SUMS is OK
 
 running the downloaded release asset:
-  HOME=<TMP>/dsb-rc5b.FLvQ19/home INSTALL_DIR=<TMP>/dsb-rc5b.FLvQ19/bin VERSION=v0.0.1-rc5 sh $asset/install.sh
+  HOME=<TMP>/dsb-rc5c.Pa6RVM/home INSTALL_DIR=<TMP>/dsb-rc5c.Pa6RVM/bin VERSION=v0.0.1-rc5 sh $asset/install.sh
 
 ==> Downloading deepseek-build-0.0.1-rc5-x86_64-unknown-linux-gnu.tar.gz
 ==> Downloading SHA256SUMS
 ==> Checksum OK (ba13c8bcc43a05ec26de490b5c4ffabedd5cba6ce6a702907eccc3c998396ed8)
-==> Installed shortcut <TMP>/dsb-rc5b.FLvQ19/bin/dsb -> deepseek-build
-!!  <TMP>/dsb-rc5b.FLvQ19/bin is not in your PATH.
-!!  Add it, e.g.:  export PATH="<TMP>/dsb-rc5b.FLvQ19/bin:$PATH"
+==> Installed shortcut <TMP>/dsb-rc5c.Pa6RVM/bin/dsb -> deepseek-build
+!!  <TMP>/dsb-rc5c.Pa6RVM/bin is not in your PATH.
+!!  Add it, e.g.:  export PATH="<TMP>/dsb-rc5c.Pa6RVM/bin:$PATH"
 !!  Make it permanent in ~/.profile or your shell's rc file.
-==> Installed v0.0.1-rc5 to <TMP>/dsb-rc5b.FLvQ19/bin/deepseek-build
+==> Installed v0.0.1-rc5 to <TMP>/dsb-rc5c.Pa6RVM/bin/deepseek-build
 ==> Run it as: dsb   (shortcut; full name: deepseek-build)
 deepseek-build 0.0.1-rc5 (4b305bd0c1ab)
 Independent project, not affiliated with DeepSeek.
@@ -61,18 +61,18 @@ PASS: installed binary reports: deepseek-build 0.0.1-rc5 (4b305bd0c1ab)
 
 prove-install: 13/13 PASS
 
-transcript: <TMP>/dsb-rc5b.FLvQ19/install.log
+transcript: <TMP>/dsb-rc5c.Pa6RVM/install.log
 
 # ---------------------------------------------------------------------------
-# Section 2: sh scripts/prove-install.sh --version v0.1.0-proof1 --workdir <TMP>/dsb-proof1.3T82SU
+# Section 2: sh scripts/prove-install.sh --version v0.1.0-proof1 --workdir <TMP>/dsb-proof1c.3kbDzq
 # ---------------------------------------------------------------------------
 prove-install: version
   repository: coruairc/deepseek-build
   host:       Linux/x86_64 -> x86_64-unknown-linux-gnu
   network:    github.com only (fake-tree hooks unset)
-  scratch:    <TMP>/dsb-proof1.3T82SU
-  disk free:  13487368 KiB
-PASS: scratch filesystem has at least 400 MiB free (13487368 KiB)
+  scratch:    <TMP>/dsb-proof1c.3kbDzq
+  disk free:  12242896 KiB
+PASS: scratch filesystem has at least 400 MiB free (12242896 KiB)
 
 pinned proof
   tag:        v0.1.0-proof1
@@ -92,16 +92,16 @@ PASS: downloaded size equals the GitHub asset size (55967373 bytes)
 PASS: sha256sum -c against the release SHA256SUMS is OK
 
 running the downloaded release asset:
-  HOME=<TMP>/dsb-proof1.3T82SU/home INSTALL_DIR=<TMP>/dsb-proof1.3T82SU/bin VERSION=v0.1.0-proof1 sh $asset/install.sh
+  HOME=<TMP>/dsb-proof1c.3kbDzq/home INSTALL_DIR=<TMP>/dsb-proof1c.3kbDzq/bin VERSION=v0.1.0-proof1 sh $asset/install.sh
 
 ==> Downloading deepseek-build-0.1.0-proof1-x86_64-unknown-linux-gnu.tar.gz
 ==> Downloading SHA256SUMS
 ==> Checksum OK (298c9f275d695fa43872bd44a0fe9da25ee66bd86a6051ac233689063ccbdaf3)
-==> Installed shortcut <TMP>/dsb-proof1.3T82SU/bin/dsb -> deepseek-build
-!!  <TMP>/dsb-proof1.3T82SU/bin is not in your PATH.
-!!  Add it, e.g.:  export PATH="<TMP>/dsb-proof1.3T82SU/bin:$PATH"
+==> Installed shortcut <TMP>/dsb-proof1c.3kbDzq/bin/dsb -> deepseek-build
+!!  <TMP>/dsb-proof1c.3kbDzq/bin is not in your PATH.
+!!  Add it, e.g.:  export PATH="<TMP>/dsb-proof1c.3kbDzq/bin:$PATH"
 !!  Make it permanent in ~/.profile or your shell's rc file.
-==> Installed v0.1.0-proof1 to <TMP>/dsb-proof1.3T82SU/bin/deepseek-build
+==> Installed v0.1.0-proof1 to <TMP>/dsb-proof1c.3kbDzq/bin/deepseek-build
 ==> Run it as: dsb   (shortcut; full name: deepseek-build)
 deepseek-build 0.1.0-proof1 (b14d28eb2bc7)
 Independent project, not affiliated with DeepSeek.
@@ -116,4 +116,4 @@ PASS: installed binary reports: deepseek-build 0.1.0-proof1 (b14d28eb2bc7)
 
 prove-install: 13/13 PASS
 
-transcript: <TMP>/dsb-proof1.3T82SU/install.log
+transcript: <TMP>/dsb-proof1c.3kbDzq/install.log

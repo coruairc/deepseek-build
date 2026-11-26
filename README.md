@@ -8,13 +8,13 @@ shell commands, and manages long-running tasks, driven by DeepSeek's
 OpenAI-compatible Chat Completions API. It is a work in progress (see
 [Status](#status) and [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)).
 
-> A release pipeline is in place that builds binaries for linux-x86_64,
-> linux-aarch64, darwin-arm64, and darwin-x86_64, with a checksum file and an
-> installer script attached to each GitHub release. **No release has been
-> published yet** — no `v*` tag has been pushed, so
-> [Releases](https://github.com/coruairc/deepseek-build/releases) is currently
-> empty. Until the first tag, build from source (see
-> [Building from source](#building-from-source)).
+> Release [`v0.1.0-proof1`](https://github.com/coruairc/deepseek-build/releases/tag/v0.1.0-proof1)
+> is published as a **pre-release** and is installable today: tarballs for
+> linux-x86_64, linux-aarch64, darwin-arm64 and darwin-x86_64, a `SHA256SUMS`
+> file, and the `install.sh` installer. **`v0.1.0` is not published**, and
+> GitHub's `releases/latest` resolves only stable releases, so install with
+> `VERSION=v0.1.0-proof1` (see [Install](#install)). Build from source if you
+> prefer (see [Building from source](#building-from-source)).
 
 ## Status
 
@@ -25,23 +25,19 @@ OpenAI-compatible Chat Completions API. It is a work in progress (see
 | Phase 2 - DeepSeek adapter | Core done: Chat Completions-only backend (`Responses`/`Messages` deleted), `thinking` control, `reasoning_content` round-trip + sanitizer, typographic-quote repair, cache helpers, DeepSeek catalog (default `deepseek-flash`), wiremock suite. Live smoke run 8/8 PASS (2026-10-07, author's machine). |
 | Phase 3 - TUI | Implemented: reasoning fold (`e`/`E`/`Ctrl+E`), collapsible thinking, optional status line (off by default; enable `[ui.status_line]` to show cwd, model, context), `/model` `/effort` `/think` `/theme`, Monokai default theme + whale logo. |
 | Phase 4 - harden existing features | Partial: runtime read-before-write guard and dangerous-command warnings are in; plan mode, permissions, resume, subagents, MCP, `AGENTS.md`, and checkpoints exist and need an end-to-end pass. A full `cargo test --workspace` run is **not green yet** (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). |
-| Phase 5 - testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. Linux-only prerelease [`v0.0.1-rc4`](https://github.com/coruairc/deepseek-build/releases/tag/v0.0.1-rc4) is published (x86_64 + aarch64 tarballs, installer); no macOS builds and no container image yet. |
+| Phase 5 - testable product | In progress: release build, `TESTING.md`, `KNOWN-ISSUES.md`, `SECURITY.md`, and the sandbox/egress scripts are in place. Pre-release [`v0.1.0-proof1`](https://github.com/coruairc/deepseek-build/releases/tag/v0.1.0-proof1) ships all four tarballs (two Linux, two macOS), `SHA256SUMS`, `install.sh`, and a multi-arch GHCR image (`sha256:8f5c484e…`, linux/amd64 + linux/arm64). The pinned installer is proven end to end against that release; the image is **registry-verified only** — this build host has no container runtime, so the `docker pull` / `docker run` check is still owed (see [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)). `v0.1.0` is not published. |
 
 See [`AGENTS.md`](AGENTS.md) for a precise resume-from-here handoff.
 
 ## Install
 
-> **No release has been published yet** (checked 2026-10-09): the `curl | sh`
-> and release-asset steps below describe the installer and the intended flow,
-> but they cannot run until the first `v*` tag is pushed. Build from source in
-> the meantime (see [Building from source](#building-from-source)); the installer
-> itself has been exercised against a local fake release
-> (`sh scripts/test-install.sh`, 39/39 assertions).
-
-Once a release exists:
+Release [`v0.1.0-proof1`](https://github.com/coruairc/deepseek-build/releases/tag/v0.1.0-proof1)
+is a **pre-release** and installs today. It is a proof build, not `v0.1.0`, and
+because GitHub's `releases/latest` excludes pre-releases, **pin the version**.
 
 ```sh
-curl -fsSL https://github.com/coruairc/deepseek-build/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-proof1/install.sh \
+  | VERSION=v0.1.0-proof1 sh
 ```
 
 Piping curl to `sh` executes whatever that URL serves, at download time, with no
@@ -49,9 +45,9 @@ chance to review it first. The slower, recommended alternative: download,
 inspect, then run.
 
 ```sh
-curl -fsSLO https://github.com/coruairc/deepseek-build/releases/latest/download/install.sh
+curl -fsSLO https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-proof1/install.sh
 less install.sh        # inspect it
-sh install.sh
+VERSION=v0.1.0-proof1 sh install.sh
 ```
 
 The installer is plain POSIX `sh`. It:
@@ -68,6 +64,28 @@ The installer is plain POSIX `sh`. It:
 - makes no network requests other than those two GitHub downloads - no
   telemetry.
 
+This exact path is proven against the published release:
+`sh scripts/prove-install.sh --version v0.1.0-proof1` downloads the release
+asset `install.sh`, checks that it is byte-identical to `install.sh` in the
+source tree, compares the tarball's SHA-256 against both `SHA256SUMS` and
+GitHub's own asset digest, runs the installer into a scratch directory, and
+checks that the installed binary prints `deepseek-build 0.1.0-proof1
+(b14d28eb2bc7)`. The recorded transcript is in
+[`docs/evidence/04-distribution-proof/installer-proof/`](docs/evidence/04-distribution-proof/installer-proof/).
+
+### Why `VERSION=` is required today
+
+`https://github.com/coruairc/deepseek-build/releases/latest/...` resolves
+GitHub's newest **stable** release; pre-releases are excluded from `latest` by
+definition. Only pre-releases exist (`v0.1.0-proof1`, `v0.0.1-rc5`, …), so as of
+2026-11-26 `releases/latest/download/SHA256SUMS` and
+`releases/latest/download/install.sh` both return **404**, the REST endpoint
+`repos/coruairc/deepseek-build/releases/latest` returns **404**, and
+`releases/latest` itself redirects (302) to the release index instead of a tag
+page. Running `install.sh` with no `VERSION` therefore stops at
+`Resolving the latest release` with `curl: (22) … 404` and installs nothing.
+Until a stable release is published, pin `VERSION=v0.1.0-proof1`.
+
 After installing, launch it with the short name `dsb` (the canonical name
 `deepseek-build` still works):
 
@@ -75,20 +93,22 @@ After installing, launch it with the short name `dsb` (the canonical name
 dsb
 ```
 
-Pin a version with `VERSION`:
+The `VERSION` pin, in both forms:
 
 ```sh
-VERSION=v0.1.0 sh install.sh
-curl -fsSL .../install.sh | VERSION=v0.1.0 sh
+VERSION=v0.1.0-proof1 sh install.sh
+curl -fsSL https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-proof1/install.sh \
+  | VERSION=v0.1.0-proof1 sh
 ```
 
-(This works because `VERSION=v0.1.0` before a command is a POSIX env assignment,
-not shell syntax embedded in the script.)
+(This works because `VERSION=v0.1.0-proof1` before a command is a POSIX env
+assignment, not shell syntax embedded in the script.)
 
 Uninstall:
 
 ```sh
-curl -fsSL .../install.sh | sh -s -- --uninstall
+curl -fsSL https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-proof1/install.sh \
+  | sh -s -- --uninstall
 # or, after downloading:
 sh install.sh --uninstall
 ```
@@ -120,9 +140,15 @@ Manual install, if you prefer to drive every step:
 
 macOS builds come from macOS 15 runners; the listed minimums are conservative.
 The macOS binaries are **ad-hoc signed** (`codesign --sign -`) so Apple silicon
-will execute them, **not notarized**, and carry **no Developer ID**, so first
-launch may need a right-click **Open**, or
-`xattr -d com.apple.quarantine <path-to-binary>`.
+will execute them, and they are **not notarized** and carry **no Developer ID**.
+A tarball fetched with `curl` (or by `install.sh`) is not quarantined by macOS,
+so the installed binary runs directly. A tarball downloaded through a **browser**
+may carry the quarantine attribute; if the first launch is blocked, right-click
+**Open**, or clear the attribute yourself:
+
+```sh
+xattr -d com.apple.quarantine /path/to/deepseek-build
+```
 
 > Independent project, not affiliated with DeepSeek. "DeepSeek" is a trademark
 > of its respective owner; this project merely uses their public API.
@@ -214,8 +240,8 @@ To watch runtime egress, run the binary through
 
 ## Building from source
 
-Until the first release is published (see [Install](#install)), this is the only
-way to get the binary:
+Build from source if you prefer, or if you are on a platform without a release
+asset:
 
 ```sh
 # One-time: install the pinned toolchain

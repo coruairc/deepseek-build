@@ -11,8 +11,8 @@ script logic. Nothing in this item touched 127.0.0.1.
 ## Commands
 
 ```sh
-sh scripts/prove-install.sh --version v0.1.0-proof1 --workdir <TMP>/dsb-proof1.3T82SU
-sh scripts/prove-install.sh --version v0.0.1-rc5    --workdir <TMP>/dsb-rc5b.FLvQ19
+sh scripts/prove-install.sh --version v0.1.0-proof1 --workdir <TMP>/dsb-proof1c.3kbDzq
+sh scripts/prove-install.sh --version v0.0.1-rc5    --workdir <TMP>/dsb-rc5c.Pa6RVM
 ```
 
 `install.log` holds both transcripts: Section 1 is the thin slice against
@@ -25,6 +25,12 @@ present in the environment, so it cannot silently certify a local fake tree.
 Its names are assembled from a suffix and never written out in the file; the
 plan's guard (`grep` for a hook name in `scripts/prove-install.sh` returns
 nothing) holds. The URL is printed and asserted to be on `github.com`.
+
+The transcripts were produced by `scripts/prove-install.sh` at sha256
+`e3e52a26c750203f908b51643a6b7e63fa95740e1df31c9824c5b0c74db2d61a`, which is
+the committed file (the report's `the committed prove-install.sh produced these
+transcripts` step pins it). Two separate runs of the pinned proof produced the
+same three-way hashes.
 
 ## The release URL and the three hashes (host x86_64 linux)
 
@@ -58,7 +64,7 @@ the bytes a user downloads.
 The downloaded asset was executed as
 
 ```sh
-HOME=<TMP>/dsb-proof1.3T82SU/home INSTALL_DIR=<TMP>/dsb-proof1.3T82SU/bin \
+HOME=<TMP>/dsb-proof1c.3kbDzq/home INSTALL_DIR=<TMP>/dsb-proof1c.3kbDzq/bin \
     VERSION=v0.1.0-proof1 sh <asset>/install.sh
 ```
 

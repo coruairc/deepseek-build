@@ -1,0 +1,62 @@
+{
+  "item": "installer-latest",
+  "requirements": [
+    "REL-06"
+  ],
+  "date": "2026-11-26T06:20:25Z",
+  "host": "Linux/x86_64",
+  "command": "sh scripts/prove-install.sh --latest-behaviour --workdir <TMP>/dsb-latest2.2Pd9TM; python3 scripts/check-readme-distribution.py --stage install",
+  "steps": [
+    {
+      "name": "latest/download/SHA256SUMS returns 404",
+      "ok": true,
+      "detail": "exit 0: https://github.com/coruairc/deepseek-build/releases/latest/download/SHA256SUMS 404  https://github.com/coruairc/deepseek-build/releases/latest/download/SHA256SUMS"
+    },
+    {
+      "name": "latest/download/install.sh returns 404",
+      "ok": true,
+      "detail": "exit 0: https://github.com/coruairc/deepseek-build/releases/latest/download/install.sh 404  https://github.com/coruairc/deepseek-build/releases/latest/download/install.sh"
+    },
+    {
+      "name": "releases/latest redirects to the index, not a stable tag page",
+      "ok": true,
+      "detail": "exit 0: https://github.com/coruairc/deepseek-build/releases/latest 200  https://github.com/coruairc/deepseek-build/releases"
+    },
+    {
+      "name": "the REST releases/latest endpoint returns 404",
+      "ok": true,
+      "detail": "exit 0: https://api.github.com/repos/coruairc/deepseek-build/releases/latest 404  (REST 'latest' = newest non-draft, non-prerelease)"
+    },
+    {
+      "name": "an unpinned install exits non-zero and installs nothing",
+      "ok": true,
+      "detail": "exit 0: failed as expected, nothing installed; failure line: curl: (22) The requested URL returned error: 404"
+    },
+    {
+      "name": "the released installer log carries the 404 failure line",
+      "ok": true,
+      "detail": "exit 0: curl: (22) The requested URL returned error: 404"
+    },
+    {
+      "name": "README points at the same asset this probe downloaded",
+      "ok": true,
+      "detail": "exit 0: curl -fsSL https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-proof1/install.sh \\"
+    },
+    {
+      "name": "prove-install reports 10/10 PASS for the latest probe",
+      "ok": true,
+      "detail": "exit 0: prove-install: 10/10 PASS"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/04-distribution-proof/installer-latest/probe.log",
+      "sha256": "2cb3e6d3e7b5cd4bcc2ae074bd9c6474cd123467cfc27860b103648dde4b347a"
+    },
+    {
+      "path": "docs/evidence/04-distribution-proof/installer-latest/install-latest.log",
+      "sha256": "921f0ad7b946673f9d07fbf29f8e76e408f62f3925465e54693ffd219371177f"
+    }
+  ],
+  "result": "ok"
+}

@@ -3,9 +3,9 @@
   "requirements": [
     "REL-06"
   ],
-  "date": "2026-11-26T06:17:31Z",
+  "date": "2026-11-26T06:22:06Z",
   "host": "Linux/x86_64",
-  "command": "sh scripts/prove-install.sh --version v0.1.0-proof1 --workdir <TMP>/dsb-proof1.3T82SU (plus the v0.0.1-rc5 thin slice) — real github.com release assets, scratch HOME/INSTALL_DIR, no fake-tree hook",
+  "command": "sh scripts/prove-install.sh --version v0.1.0-proof1 --workdir <TMP>/dsb-proof1c.3kbDzq (plus the v0.0.1-rc5 thin slice) — real github.com release assets, scratch HOME/INSTALL_DIR, no fake-tree hook",
   "steps": [
     {
       "name": "install.sh asset matches the working tree and GitHub digest",
@@ -48,6 +48,11 @@
       "detail": "exit 0: no literal fake-tree hook name in scripts/prove-install.sh"
     },
     {
+      "name": "the committed prove-install.sh produced these transcripts",
+      "ok": true,
+      "detail": "exit 0: committed prove-install.sh sha256 e3e52a26c750203f908b51643a6b7e63fa95740e1df31c9824c5b0c74db2d61a"
+    },
+    {
       "name": "shellcheck is clean",
       "ok": true,
       "detail": "exit 0: shellcheck --shell=sh: clean"
@@ -61,11 +66,11 @@
   "artifacts": [
     {
       "path": "docs/evidence/04-distribution-proof/installer-proof/install.log",
-      "sha256": "03d911a41fb04f8c2d8a0e5534ebc5da3accd03c33fef44dbb7d6d6f3afc42a5"
+      "sha256": "55866ba92a3f611479f9f026c2c9503eb8c356b2cfd4484c875ae49ad8a968bd"
     },
     {
       "path": "docs/evidence/04-distribution-proof/installer-proof/checksum-comparison.log",
-      "sha256": "f584a53a5a03f671344e7d77beb29f0502af73dfd86b3a873fe0faa06000b6c2"
+      "sha256": "89151d41fa099ee31a664caef5fe2aec559a3486557b486ee24acb1ecbe9af00"
     }
   ],
   "result": "ok"
