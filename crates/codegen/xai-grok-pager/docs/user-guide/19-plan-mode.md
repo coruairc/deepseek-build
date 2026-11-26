@@ -46,6 +46,14 @@ You can enter plan mode yourself in two ways:
 
 After a plan exists, run **`/view-plan`** (aliases `/show-plan`, `/plan-view`) to reopen its saved preview.
 
+### Headless and ACP
+
+`--permission-mode plan` arms plan mode before the turn. The headless path sends
+`session/set_mode` with `plan`, the turn's request carries the plan-mode reminder,
+`plan_mode.json` is persisted with `state: "Active"`, and the edit gate stays armed. Resuming
+the session restores that state.
+Evidence: `docs/evidence/02-loop-item-verification/permission-mode/`.
+
 ---
 
 ## The Plan File

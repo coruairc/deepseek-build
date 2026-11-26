@@ -8,7 +8,9 @@ deepseek-build connects to custom model endpoints for alternative providers, sel
 
 By default, deepseek-build uses models hosted by DeepSeek, and new sessions start with `deepseek-flash`. Default models require no configuration. Set `DEEPSEEK_API_KEY`, then start a session.
 
-`deepseek-flash` is the default because it is cheaper and faster. On the 21-task eval set both models pass 63/63, so that set is at its ceiling and cannot prove Flash is sufficient for harder work; switch to `deepseek-v4-pro` with `/model deepseek-v4-pro` or `-m deepseek-v4-pro` when a task needs more reasoning. Measurements are in `docs/TUNING.md`.
+`deepseek-flash` is the default because it is cheaper and faster. On the 21-task eval set both models pass 63/63, so that set is at its ceiling and cannot prove Flash is sufficient for harder work; switch to `deepseek-v4-pro` with `/model deepseek-v4-pro` or `-m deepseek-v4-pro` when a task needs more reasoning.
+
+The other measured cost lever is reasoning effort: `--effort low` on `deepseek-v4-pro` cut cost by 9% and reasoning tokens by 63% at the same 63/63 pass rate. The shipped default stays `high` because harder work benefits from more thinking; `--effort none` is the cheapest floor (−12% cost) and removes the reasoning trace. Measurements and caveats are in `docs/TUNING.md`.
 
 List all available models:
 

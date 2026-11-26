@@ -112,6 +112,19 @@ deepseek-build -p "Build the project" --allow "Bash"
 
 `--allow` and `--deny` can be repeated. Deny rules take precedence over allow rules.
 
+### When a tool cannot be approved
+
+Headless mode has no terminal to prompt on. A call that would ask for approval is cancelled,
+stderr carries one line, and the exit is non-zero:
+
+```
+Error: permission-gated tool cancelled; re-run with --always-approve, or choose a non-interactive permission mode such as --permission-mode auto.
+```
+
+The JSON error path carries the same hint. For unattended turns, choose a non-interactive mode
+explicitly: `--always-approve` (or `--permission-mode bypassPermissions`) for full access, or
+`--permission-mode auto` to keep the safety check. Deny rules and hooks still apply in both.
+
 ---
 
 ## Output Formats
@@ -627,6 +640,26 @@ For containers or CI, mount `~/.deepseek-build` read-only:
 export DEEPSEEK_API_KEY="sk-..."
 deepseek-build -p "..." --no-auto-update
 ```
+
+## Container image
+
+Official releases publish a multi-arch image to GHCR. It is headless-only: one `-p` prompt per
+invocation. Pass the key through the environment, mount the repository at `/work` and the config
+directory at the image user's home, and pin the digest rather than a movable tag:
+
+```bash
+docker run --rm --user "$(id -u):$(id -g)" \
+  -e DEEPSEEK_API_KEY \
+  -e DEEPSEEK_BUILD_HOME=/home/app/.deepseek-build \
+  -v "$PWD":/work -w /work \
+  -v "$HOME/.deepseek-build":/home/app/.deepseek-build \
+  ghcr.io/coruairc/deepseek-build@sha256:8f5c484ed067143aab93aa90b1441101fd643a37924f1868eeaaa103d1f199be \
+  -p "Run one shell command and report its stdout." \
+  --output-format json --permission-mode auto
+```
+
+Do **not** add `--sandbox`: the image ships no `bubblewrap`, so the in-process sandbox cannot be
+applied inside it — the container boundary is the isolation. See [Sandbox](18-sandbox.md#platform-support).
 
 ---
 

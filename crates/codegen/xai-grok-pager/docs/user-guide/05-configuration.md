@@ -112,6 +112,17 @@ respect_gitignore = false              # default: false; set true to make every 
 # max_parallel_video_gen_calls = 4
 ```
 
+#### Default model and cost levers
+
+`deepseek-flash` is the default because it is cheaper and faster, not because the eval set
+proves it sufficient for hard work: on the 21-task set both models pass 63/63, so that set is
+at its ceiling. Switch per session with `/model deepseek-v4-pro` in the TUI or
+`-m deepseek-v4-pro` headless when a task needs more reasoning. The measured cost lever is
+`--effort low` on `deepseek-v4-pro` (−9% cost and −63% reasoning at the same 63/63 pass rate);
+the shipped default stays `high` because harder work benefits from more thinking. The `cost`
+figure is an estimate, not a bill (see [Status line](25-status-line.md#pricing)). Measurements
+are in `docs/TUNING.md`.
+
 ### Default agent
 
 Interactive `deepseek-build` uses `[agent]` in `config.toml` when you do not pass `--plan`, `--ask-user`, or `--agent-profile`:

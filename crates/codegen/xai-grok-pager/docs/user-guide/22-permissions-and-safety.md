@@ -52,6 +52,11 @@ deepseek-build --permission-mode auto
 deepseek-build agent --always-approve stdio
 ```
 
+**Headless:** there is no terminal to prompt on, so a call that would ask is cancelled with a
+non-zero exit. stderr names both escape hatches — `--always-approve` and
+`--permission-mode auto` — and the JSON error path carries the same hint. Choose one explicitly
+for unattended runs; deny rules and hooks still apply.
+
 **Config:**
 
 ```toml
@@ -79,7 +84,7 @@ Skips ordinary permission prompts so tools run without waiting for a click. `den
 Keep always-approve for automation, and add deny rules for paths or commands you never want run:
 
 ```toml
-# project .grok/config.toml
+# project .deepseek/config.toml (legacy .grok/config.toml is read as a fallback)
 [ui]
 permission_mode = "always-approve"
 

@@ -195,24 +195,28 @@ Files ignored by `.gitignore` are skipped during discovery. To keep personal ove
 CLAUDE.local.md
 ```
 
-As top-level instruction files, deepseek-build discovers only the recognized filenames listed under [Supported File Names](#supported-file-names) — not custom names such as `AGENTS.local.md` or `notes.md`. (Inside a rules directory such as `.grok/rules/`, every `*.md` file is loaded regardless of name.)
+As top-level instruction files, deepseek-build discovers only the recognized filenames listed under [Supported File Names](#supported-file-names) — not custom names such as `AGENTS.local.md` or `notes.md`. (Inside a rules directory such as `.deepseek/rules/` — or the legacy `.grok/rules/` — every `*.md` file is loaded regardless of name.)
 
 ---
 
-## The .grok/ Project Directory
+## The .deepseek/ Project Directory
 
-Beyond AGENTS.md files, the `.grok/` directory in your project root can contain additional project-level configuration:
+Beyond AGENTS.md files, the `.deepseek/` directory in your project root can contain additional project-level configuration:
 
 | Path | Purpose |
 |------|---------|
-| `.grok/config.toml` | Project-scoped MCP servers, plugins, and permission rules (other settings load only from `~/.deepseek-build/config.toml`) |
-| `.grok/skills/` | Project-scoped skill definitions |
-| `.grok/plugins/` | Project-scoped plugins |
-| `.grok/agents/` | Project-scoped agent definitions |
-| `.grok/hooks/` | Project-scoped lifecycle hooks |
-| `.grok/lsp.json` | LSP server configuration |
+| `.deepseek/config.toml` | Project-scoped MCP servers, plugins, and permission rules (other settings load only from `~/.deepseek-build/config.toml`) |
+| `.deepseek/skills/` | Project-scoped skill definitions |
+| `.deepseek/plugins/` | Project-scoped plugins |
+| `.deepseek/agents/` | Project-scoped agent definitions |
+| `.deepseek/hooks/` | Project-scoped lifecycle hooks |
+| `.deepseek/lsp.json` | LSP server configuration |
 
 These are all optional. See the respective guides for details on each.
+
+`.deepseek/` wins when a repository has both; the legacy `.grok/` directory is still read as a
+compatibility fallback, and writes go to `.deepseek/`. An existing `.grok/` checkout keeps
+working without migration.
 
 ---
 

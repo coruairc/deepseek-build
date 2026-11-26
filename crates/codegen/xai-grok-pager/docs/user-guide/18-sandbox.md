@@ -64,7 +64,7 @@ A symlinked `$DEEPSEEK_BUILD_HOME` or a `hooks-paths` entry with a symlink compo
 
 ## Custom Profiles
 
-Create custom sandbox profiles in `~/.deepseek-build/sandbox.toml` (global) or `.grok/sandbox.toml` (per-project):
+Create custom sandbox profiles in `~/.deepseek-build/sandbox.toml` (global) or `.deepseek/sandbox.toml` (per-project; the legacy `.grok/sandbox.toml` is still read as a fallback):
 
 ```toml
 [profiles.project]
@@ -227,6 +227,15 @@ before any tool runs. With no explicit request the session runs with the sandbox
 limit is enforced on Windows, so do not treat a Windows session as sandboxed.
 
 If the sandbox cannot be applied (e.g., unsupported kernel, missing entitlements), deepseek-build logs a warning and continues without enforcement. The exception is an explicitly-requested **custom profile**: on **both macOS and Linux**, if it cannot be applied (unknown profile, malformed `sandbox.toml`, or — on Linux — `bubblewrap` unavailable for a non-empty `deny`), deepseek-build refuses to start rather than run with its denied paths exposed.
+
+### Containers
+
+The published GHCR image ships **no `bubblewrap`**, so the in-process sandbox cannot be applied
+inside it: `--sandbox` is accepted but not enforced there, and the container boundary is the
+isolation. Do not add `--sandbox` to a `docker run` command and do not treat an in-image session
+as sandboxed. Adding bwrap would need user namespaces (`--cap-add SYS_ADMIN` or `--privileged`),
+which weakens the container's own isolation; that trade-off is deliberately not made. Run flags
+are in [Headless mode](14-headless-mode.md#container-image).
 
 ---
 
