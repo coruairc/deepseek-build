@@ -1,3 +1,6 @@
+#![cfg(unix)]
+// Unix-only fixtures (permissions, symlinks); this module does not compile on Windows.
+
 use std::path::Path;
 
 use super::{MAX_COMPACTION_IMAGE_PATHS, retain_session_asset_files};
