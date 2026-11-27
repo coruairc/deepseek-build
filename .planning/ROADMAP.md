@@ -179,7 +179,7 @@ Plans:
 **Goal:** As the author, I want the docs to describe the tree that exists, my own acceptance session signed off, and the DeepSeek entity cut onto a `deepseek-build` branch with a non-triggering marker tag that moves no published ref, so that the freeze is defensible.
 **Mode:** mvp
 **Depends on**: Phase 5
-**Requirements**: DOCS-01, DOCS-02, DOCS-03, DOCS-04, ACC-01, FREEZE-01, FREEZE-02, FREEZE-03
+**Requirements**: DOCS-01, DOCS-02, DOCS-03, DOCS-04, ACC-01, FREEZE-01, FREEZE-02, FREEZE-03, FREEZE-04
 **Success Criteria** (what must be TRUE):
   1. `DECISIONS.md` §E/§F is rewritten from the tree, keeping D9's personal-tool intent while recording that the release pipeline exists; `TESTING.md` §2/§6 has no OIDC test counts and no stale sign-in line; `KNOWN-ISSUES.md` records the superseded `deepseek-v0.1-snapshot` tag, the `--permission-mode plan` correction, the sandbox findings and the Windows tier.
   2. The user guide covers the Flash default with its caveat and revert path, the estimate labelling, headless permission failure, container run flags, the measured cost levers (`/model`, `--effort low`) and the Windows tier.
@@ -192,8 +192,8 @@ Plans:
 - [x] 06-01: `DECISIONS.md` §E/§F rewritten from the tree; `TESTING.md` §2/§6 corrected
 - [x] 06-02: `KNOWN-ISSUES.md` reconciled — superseded snapshot tag, plan-mode correction, sandbox findings, Windows tier
 - [x] 06-03: User guide — Flash default with caveat and revert path, estimate label, headless denial, container flags, cost levers, Windows tier
-- [ ] 06-04: Human acceptance — 20–30 minutes in the TUI on a real repo clone, signed note committed (blocks 06-05)
-- [ ] 06-05: Pre-freeze checklist, branch `deepseek-build`, non-triggering marker tag verified against the branch tip, snapshot refs untouched
+- [x] 06-04: Human acceptance — 20–30 minutes in the TUI on a real repo clone, signed note committed (`docs/acceptance-2026-11-26.md`; follow-up verified 2026-11-27)
+- [ ] 06-05: Refresh the stale Phase-1/Phase-2 verification records, run the pre-freeze checklist on the final tree, cut `deepseek-build` + a non-triggering marker tag, then create `open-build` from `main`
 
 ## Sequencing Constraints
 
@@ -222,4 +222,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6
 | 5. Windows Support | 4/5 | WIN-01/02/04 closed (zip published on v0.1.0-proof2); WIN-05 installer published but not executed; WIN-03/WIN-06 need a Windows host | - |
 | 5.1 Project Directory Rebrand (INSERTED) | 2/2 | Complete | 2026-11-26 |
 | 5.2 API Key Entry (INSERTED) | 1/1 | Complete — masked prompt + 0600 store (unit/dispatch tested) | 2026-11-26 |
-| 6. Documentation Truth & Freeze | 3/5 | Docs reconciled; ACC-01 (author) blocks 06-04/06-05 | - |
+| 6. Documentation Truth & Freeze | 4/5 | Docs reconciled; ACC-01 signed; 06-05 = verification refresh + checklist + freeze refs + `open-build` | - |

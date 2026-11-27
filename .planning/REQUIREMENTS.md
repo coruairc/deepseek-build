@@ -116,13 +116,14 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 ### Human Acceptance
 
-- [ ] **ACC-01**: The author uses the TUI for 20–30 minutes on a clone of a real repo, reports back, and signs off; the acceptance note is committed and the freeze does not proceed without it
+- [x] **ACC-01**: The author uses the TUI for 20–30 minutes on a clone of a real repo, reports back, and signs off; the acceptance note is committed and the freeze does not proceed without it
 
 ### Freeze
 
 - [ ] **FREEZE-01**: Branch `deepseek-build` exists at the freeze commit on `main`
 - [ ] **FREEZE-02**: A non-triggering freeze marker tag sits on that commit, and the pre-existing `deepseek` branch plus `deepseek-v0.1-snapshot` tag at `4b305bd0` are recorded as superseded rather than moved
 - [ ] **FREEZE-03**: The pre-freeze checklist passes — clean suite, egress gate, branding surface, key-leak check, deny check, runtime proof artifacts, and the release dry-run evidence — after the author's sign-off
+- [ ] **FREEZE-04**: Branch `open-build` is created from `main` as the next entity's starting point, after `deepseek-build` and its marker tag exist
 
 ## v2 Requirements
 
@@ -226,14 +227,15 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | DOCS-02 | Phase 6 — Documentation Truth & Freeze | Complete |
 | DOCS-03 | Phase 6 — Documentation Truth & Freeze | Complete |
 | DOCS-04 | Phase 6 — Documentation Truth & Freeze | Complete |
-| ACC-01 | Phase 6 — Documentation Truth & Freeze | Pending |
+| ACC-01 | Phase 6 — Documentation Truth & Freeze | Complete — signed 2026-11-26, follow-up verified 2026-11-27 |
 | FREEZE-01 | Phase 6 — Documentation Truth & Freeze | Pending |
 | FREEZE-02 | Phase 6 — Documentation Truth & Freeze | Pending |
 | FREEZE-03 | Phase 6 — Documentation Truth & Freeze | Pending |
+| FREEZE-04 | Phase 6 — Documentation Truth & Freeze | Pending |
 
 **Coverage:**
-- v1 requirements: 54 total
-- Mapped to phases: 54
+- v1 requirements: 55 total
+- Mapped to phases: 55
 - Unmapped: 0 ✓
 - Duplicates: 0 ✓
 
@@ -248,7 +250,7 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | 5 — Windows Support | WIN-01, WIN-02, WIN-03, WIN-04, WIN-05, WIN-06 | 6 |
 | 5.1 — Project Directory Rebrand (INSERTED) | BRAND-01, BRAND-02, BRAND-03 | 3 |
 | 6 — Documentation Truth & Freeze | DOCS-01, DOCS-02, DOCS-03, DOCS-04, ACC-01, FREEZE-01, FREEZE-02, FREEZE-03 | 8 |
-| **Total** | | **54** |
+| **Total** | | **55** |
 
 ---
 *Requirements defined: 2026-11-21*

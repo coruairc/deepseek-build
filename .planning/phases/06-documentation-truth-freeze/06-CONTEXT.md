@@ -110,3 +110,17 @@ precede the sign-off.
 - A Windows sandbox backend — open-build.
 
 </deferred>
+
+## Freeze continuation decisions (2026-11-27)
+
+- The author accepted Windows as **left for a Windows user to test**. WIN-03 (ConPTY), WIN-05
+  (installer executed) and WIN-06 (acceptance record) stay open; the audit must say so.
+- REL-05 stays **partial**: the in-image turn runs; the image ships no `bwrap`, so `--sandbox` is
+  not enforceable there (already recorded in README, KNOWN-ISSUES and the evidence index).
+- The freeze branch is **`deepseek-build`**; the marker tag is **`deepseek-build-freeze-2026-11-27`**
+  (must not match `v*`); `open-build` is created **from `main`** afterwards.
+- The two verification records (Phase 1 stale, Phase 2 `gaps_found` for a since-closed gap) are
+  refreshed rather than hand-edited.
+- `/gsd-autonomous` is the supported way to run this: Phase 5 is listed under **Deferred
+  Verification** in `STATE.md` so the run skips it, and Phase 6 runs 06-05 to completion (the
+  pushes are approved by the author's invocation of the plan).

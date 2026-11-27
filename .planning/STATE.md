@@ -1,13 +1,13 @@
 ---
 gsd_state_version: "1.0"
 milestone: v0.1.0
-current_phase: 4
-current_phase_name: Distribution Proof
-status: executing
-stopped_at: Phase 4 plan 04-05 complete (5/5 executed) — the evidence is sealed: `scripts/check-distribution-evidence.py` validates nine reports against the eight-key schema and recomputed hashes (self-test 4/4, 9/9 PASS, no file over 1 MiB), the nine-item index carries each item's requirements/result/re-run command, `DEVIATION-keep-prerelease.md` records the retained `v0.1.0-proof1` release against ROADMAP Phase 4 Success Criteria item 4, leak scans over `docs/evidence` and the phase directory exit 0, and `:latest`/`v0.1.0`/`deepseek`/`deepseek-v0.1-snapshot` are unchanged read-only; REL-04 stays Partial (pull not executed) and REL-05 stays blocked, so Phase 4 is not fully complete
-last_updated: "2026-11-26T07:10:00.000Z"
-last_activity: 2026-11-26
-last_activity_desc: 04-05 sealed the Phase 4 evidence and recorded the keep-prerelease deviation; 9/9 reports validate, leak scans green, retention invariants re-asserted; REL-04 Partial and REL-05 blocked remain open
+current_phase: 6
+current_phase_name: Documentation Truth & Freeze
+status: ready-for-freeze
+stopped_at: ACC-01 signed (docs/acceptance-2026-11-26.md); docs reconciled; 06-05 (verification refresh + pre-freeze checklist + deepseek-build + marker + open-build) is the last plan
+last_updated: "2026-11-27T13:30:00.000Z"
+last_activity: 2026-11-27
+last_activity_desc: Freeze ready — Phases 1-4, 5.1, 5.2 and the Phase 6 docs are done; ACC-01 signed; 06-05 remains
 state_head: 13002b2f0d6657870e7b18d42583114825237df2
 progress:
   total_phases: 6
@@ -27,12 +27,17 @@ See: .planning/PROJECT.md (updated 2026-11-23)
 
 ## Current Position
 
-Phase: 4 — Distribution Proof
-Plan: 04-05 of 5 complete (5/5 plans executed). Phase 4 is **not fully complete**: REL-04 is Partial and REL-05 is blocked.
-Status: Plan 04-05 complete — the **evidence is sealed**. `scripts/check-distribution-evidence.py` re-read all nine reports against the eight-key contract, refused the four self-test mutations (`self-test: 4/4 PASS`) and recomputed every artifact sha256 (`distribution-evidence: 9/9 PASS`, `9 reports validated`); every artifact is relative, UTF-8 text at most 1 MiB, and no file over 1 MiB is committed. `docs/evidence/04-distribution-proof/README.md` indexes the nine items with requirement ids, results, one sentence each and the verbatim re-run command from `report.json`. `DEVIATION-keep-prerelease.md` names **ROADMAP Phase 4 Success Criteria item 4** and `04-CONTEXT.md` §Cleanup, lists the retained tag `v0.1.0-proof1`, its six-asset pre-release and its two GHCR tags (the milestone's only macOS artifact), and records the invariants: `v0.1.0` unpublished, no stable release (`releases/latest` 404), `:latest` absent before and after. Leak scans over `docs/evidence/04-distribution-proof`, over `docs/evidence` + the phase planning directory, and over all of `docs/evidence` exit 0. `seal/retention-check.sh` re-asserted read-only that `:latest` is absent, no `v0.1.0` tag/release exists, and the `deepseek` branch and `deepseek-v0.1-snapshot` tag are still `4b305bd0`. **No cleanup was performed.** REL-04 stays **Partial** (the pull did not happen), REL-05 stays **blocked** (no daemon).
-Last activity: 2026-11-26 07:10 UTC — 04-05 added the evidence checker and nine-item index, the keep-prerelease deviation, the seal item and the five `scripts/README.md` entries.
+Phase: 6 — Documentation Truth & Freeze
+Plan: 06-04 complete (acceptance signed); **06-05 is the last plan** — refresh the two stale
+verification records, run the pre-freeze checklist on the final tree, cut `deepseek-build` and the
+non-triggering marker `deepseek-build-freeze-2026-11-27`, then create `open-build` from `main`.
+Status: Ready for the freeze. Phases 1–4 are complete (REL-04 closed; REL-05 partial on its
+in-image sandbox clause); Phase 5 is deferred to a Windows tester (WIN-03/05/06 open); 5.1 and 5.2
+are complete; Phase 6 docs are done and the acceptance is signed.
+Last activity: 2026-11-27 — `/agent` in-place switching fixed (router omission, issue #1), picker
+closes on selection, thinking expanded by default, key popup and hook `${n}` fix landed.
 
-Progress: [██████████] 100% plans executed (Phase 4 remains open on REL-04's pull and REL-05)
+Progress: [████████░] 8 of 9 roadmap phases complete or deferred; Phase 6 awaits 06-05.
 
 ## Performance Metrics
 
@@ -181,6 +186,16 @@ None yet.
   `DEEPSEEK_BUILD_API_KEY` (as does the sampling-error helper). The shell lib suite now passes with an
   ambient key exported (`6205 passed, 0 failed`) and the captured log contains zero occurrences of the
   key. The Phase-2 key remains rotated per the 02-03 attestation.
+
+## Deferred Verification
+
+| Phase | State | Resume |
+|-------|-------|--------|
+| 5 | verification_deferred_human | needs a Windows user for WIN-03/05/06; the zip is published on `v0.1.0-proof2` |
+
+Phase 5 is skipped by `/gsd-autonomous` while it appears here. Remove the row once a Windows
+tester has run `install.ps1`, the in-image ConPTY check and recorded the result.
+
 
 ## Deferred Items
 
