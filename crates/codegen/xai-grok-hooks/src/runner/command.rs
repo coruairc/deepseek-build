@@ -572,6 +572,61 @@ fn find_unresolved_env_vars(
     out
 }
 
+/// Byte range of the identifier ending just before `before`, skipping spaces/tabs.
+fn prev_identifier_range(bytes: &[u8], before: usize) -> Option<(usize, usize)> {
+    let mut end = before;
+    while end > 0 && bytes.get(end - 1).is_some_and(|&b| b == b' ' || b == b'\t') {
+        end -= 1;
+    }
+    let mut start = end;
+    while start > 0
+        && bytes
+            .get(start - 1)
+            .is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_')
+    {
+        start -= 1;
+    }
+    (start < end).then_some((start, end))
+}
+
+fn ident_at(bytes: &[u8], range: (usize, usize)) -> &str {
+    bytes
+        .get(range.0..range.1)
+        .and_then(|s| std::str::from_utf8(s).ok())
+        .unwrap_or("")
+}
+
+/// Shell keywords after which a command word begins, so `while read line` / `do for x in ...`
+/// put `read` / `for` in command position just like `;` or a newline does.
+fn is_command_introducing_keyword(word: &str) -> bool {
+    matches!(
+        word,
+        "while" | "until" | "if" | "then" | "else" | "elif" | "do" | "time" | "coproc"
+    )
+}
+
+/// Byte range of an assignment prefix name ending just before `before`
+/// (`IFS` in `while IFS= read -r line`), which also puts the next word in command position.
+fn prev_assignment_prefix_range(bytes: &[u8], before: usize) -> Option<(usize, usize)> {
+    let mut eq = before;
+    while eq > 0 && bytes.get(eq - 1).is_some_and(|&b| b == b' ' || b == b'\t') {
+        eq -= 1;
+    }
+    if eq == 0 || bytes.get(eq - 1).copied() != Some(b'=') {
+        return None;
+    }
+    let mut start = eq - 1;
+    while start > 0
+        && bytes
+            .get(start - 1)
+            .is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_')
+    {
+        start -= 1;
+    }
+    let first = bytes.get(start)?;
+    (start + 1 < eq && (first.is_ascii_alphabetic() || *first == b'_')).then_some((start, eq - 1))
+}
+
 fn find_local_shell_assignments(command_str: &str) -> std::collections::HashSet<String> {
     let mut names = std::collections::HashSet::new();
     let bytes = command_str.as_bytes();
@@ -595,6 +650,15 @@ fn find_local_shell_assignments(command_str: &str) -> std::collections::HashSet<
             return matches!(c, b';' | b'&' | b'|' | b'\n' | b'(' | b'{');
         }
         true
+    };
+    // A word is in command position after `;`/newline/etc., after a shell keyword
+    // (`while read`, `do for`), or after an assignment prefix (`IFS= read`).
+    let is_command_position = |idx: usize| -> bool {
+        is_statement_start(idx)
+            || prev_identifier_range(bytes, idx)
+                .map(|r| ident_at(bytes, r))
+                .is_some_and(is_command_introducing_keyword)
+            || prev_assignment_prefix_range(bytes, idx).is_some()
     };
     while i < bytes.len() {
         let Some(&c) = bytes.get(i) else {
@@ -622,7 +686,41 @@ fn find_local_shell_assignments(command_str: &str) -> std::collections::HashSet<
             names.insert(ident.to_string());
             continue;
         }
-        if ident == "read" && is_statement_start(start) {
+        // `for NAME in ...`, `for NAME; do`, and `select NAME in ...`: the first word after
+        // the keyword is the loop variable, which the shell assigns at loop entry.
+        if (ident == "for" || ident == "select") && is_command_position(start) {
+            let mut j = i;
+            while bytes
+                .get(j)
+                .is_some_and(|&b| b == b' ' || b == b'\t' || b == b'\n')
+            {
+                j += 1;
+            }
+            if bytes
+                .get(j)
+                .is_some_and(|&b| b.is_ascii_alphabetic() || b == b'_')
+            {
+                let var_start = j;
+                while bytes
+                    .get(j)
+                    .is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_')
+                {
+                    j += 1;
+                }
+                let name = bytes
+                    .get(var_start..j)
+                    .and_then(|s| std::str::from_utf8(s).ok())
+                    .unwrap_or("");
+                if !name.is_empty() && name != "in" {
+                    names.insert(name.to_string());
+                }
+                i = j;
+            }
+            continue;
+        }
+        // `read NAME` also appears mid-statement in `while read line` / `while IFS= read -r line`,
+        // where `read` is in command position but not after a `;`.
+        if ident == "read" && is_command_position(start) {
             while bytes.get(i).is_some_and(|&b| b == b' ' || b == b'\t') {
                 i += 1;
             }
@@ -2255,6 +2353,66 @@ mod tests {
     }
 
     #[test]
+    fn find_local_shell_assignments_collects_loop_and_read_vars() {
+        let cases = [
+            ("for n in a b; do echo ${n}; done", "n"),
+            ("for f; do echo $f; done", "f"),
+            ("select opt in one two; do echo $opt; done", "opt"),
+            ("while read line; do echo $line; done < /dev/null", "line"),
+            (
+                "while IFS= read -r row; do echo $row; done < /dev/null",
+                "row",
+            ),
+            ("if true; then read answer; fi; echo $answer", "answer"),
+            ("do for inner in x; do echo $inner; done", "inner"),
+        ];
+        for (cmd, want) in cases {
+            let names = find_local_shell_assignments(cmd);
+            assert!(
+                names.contains(want),
+                "`{cmd}` should treat `{want}` as a shell-local name, got {names:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn find_unresolved_skips_loop_and_read_vars() {
+        let env = std::collections::HashMap::new();
+        for cmd in [
+            "for n in a b; do echo ${n}; done",
+            "for f; do echo $f; done",
+            "select opt in one two; do echo ${opt}; done",
+            "while read line; do echo ${line}; done < /dev/null",
+            "while IFS= read -r row; do echo ${row}; done < /dev/null",
+        ] {
+            let v = find_unresolved_env_vars(cmd, &env);
+            assert!(
+                v.is_empty(),
+                "`{cmd}` loops over/localises its variable and should not flag any var, got {v:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn find_unresolved_still_reports_unset_var_alongside_loop_var() {
+        let env = std::collections::HashMap::new();
+        assert_eq!(
+            find_unresolved_env_vars(
+                "for n in a b; do echo ${n} ${DEFINITELY_UNSET_GB1183}; done",
+                &env,
+            ),
+            vec!["DEFINITELY_UNSET_GB1183".to_string()],
+        );
+        assert_eq!(
+            find_unresolved_env_vars(
+                "while read line; do echo ${line} ${DEFINITELY_UNSET_GB1183}; done",
+                &env
+            ),
+            vec!["DEFINITELY_UNSET_GB1183".to_string()],
+        );
+    }
+
+    #[test]
     fn find_unresolved_skips_parameter_expansion_modifiers() {
         let env = std::collections::HashMap::new();
         let cases = [
@@ -2321,6 +2479,24 @@ mod tests {
                 );
             }
             other => panic!("expected Failed, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn loop_variables_are_not_treated_as_missing_env_vars() {
+        for command in [
+            "for n in a b; do echo ${n}; done",
+            "while IFS= read -r line; do echo ${line}; done < /dev/null",
+        ] {
+            let spec = make_shell_spec(command);
+            let envelope = make_envelope();
+            let ctx = make_ctx();
+            let (result, _, _) = run_command_hook(&spec, &envelope, &ctx, GateKind::Observe).await;
+            assert!(
+                matches!(result, HookRunnerResult::Success),
+                "`{command}` should run (shell-local loop var), got {result:?}"
+            );
         }
     }
 
