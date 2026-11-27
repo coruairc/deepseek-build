@@ -57,11 +57,6 @@ impl SessionActor {
         &self,
         conversation: &mut Vec<ConversationItem>,
     ) -> Option<xai_grok_tools::types::skill_discovery_tracker::SkillUpdateEffects> {
-        let bridge = self.agent.borrow().tool_bridge().clone();
-        let is_cursor = self.is_cursor_harness();
-        if is_cursor {
-            bridge.set_skill_listing_xml_format(true).await;
-        }
         conversation.retain(|item| {
             !matches!(
                 item,
@@ -70,6 +65,20 @@ impl SessionActor {
                         == xai_grok_sampling_types::SyntheticReason::SystemReminder
             )
         });
+        self.append_baseline_skill_reminder(conversation).await
+    }
+    /// Append this agent's skill/workflow listing as a system reminder WITHOUT stripping the
+    /// conversation's existing reminders. Used by the mid-session agent switch, where earlier
+    /// reminders are part of the preserved history.
+    pub(super) async fn append_baseline_skill_reminder(
+        &self,
+        conversation: &mut Vec<ConversationItem>,
+    ) -> Option<xai_grok_tools::types::skill_discovery_tracker::SkillUpdateEffects> {
+        let bridge = self.agent.borrow().tool_bridge().clone();
+        let is_cursor = self.is_cursor_harness();
+        if is_cursor {
+            bridge.set_skill_listing_xml_format(true).await;
+        }
         let effects = bridge.apply_pending_skill_update().await;
         let skill_text = effects.as_ref().and_then(|update| {
             if is_cursor && update.kind == SkillUpdateKind::BaselineChange {

@@ -483,6 +483,15 @@ pub enum SessionCommand {
         system_prompt_label: String,
         responds_to: oneshot::Sender<Result<(), acp::Error>>,
     },
+    /// Mid-session agent switch (`/agent`): build the requested `AgentDefinition` from the same
+    /// `AgentRebuildSpec` and swap it in, keeping model, effort, permissions, plan state, MCP
+    /// connections, and the whole conversation. Only the leading system message is replaced.
+    /// Refused while a turn is running or cancelling (see the actor handler).
+    SwitchAgentDefinition {
+        definition: xai_grok_agent::AgentDefinition,
+        system_prompt_label: String,
+        responds_to: oneshot::Sender<Result<String, acp::Error>>,
+    },
     /// Signals then report the override model rather than the agent-level default.
     /// `SetSessionModel` does NOT update `primaryModelId` in signals; the resolved model is already tracked via inference responses.
     /// Keeps the existing base_url, api_key, and other config; only the `model` field in the `x-deepseek-build-model-override` header changes.

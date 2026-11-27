@@ -46,6 +46,7 @@ pub(crate) async fn handle(agent: &MvpAgent, args: &acp::ExtRequest) -> ExtResul
         "deepseek-build/session/rename" => handle_session_rename(agent, args).await,
         "deepseek-build/session/delete" => handle_session_delete(agent, args).await,
         "deepseek-build/session/update_mcp_servers" => handle_update_mcp_servers(agent, args).await,
+        "deepseek-build/session/switch_agent" => handle_switch_agent(agent, args).await,
         #[cfg(feature = "local-workspace")]
         "deepseek-build/session/add_local_workspace" => {
             handle_add_local_workspace(agent, args).await
@@ -372,6 +373,107 @@ async fn handle_update_mcp_servers(agent: &MvpAgent, args: &acp::ExtRequest) -> 
         .map_err(|e| acp::Error::internal_error().data(e.to_string()))?;
 
     ExtMethodResult::success(serde_json::json!({ "ok": true }))
+        .to_ext_response()
+        .map_err(|e| acp::Error::internal_error().data(e.to_string()))
+}
+
+// session/switch_agent
+
+/// Structured switch error: the client classifies `code` into "refuse" vs "relaunch fallback".
+fn switch_agent_error(code: &str, message: impl Into<String>) -> acp::Error {
+    acp::Error::invalid_params().data(serde_json::json!({
+        "code": code,
+        "message": message.into(),
+    }))
+}
+
+/// Resolve a switch target by name in the session's workspace, then apply the operator's CLI
+/// overrides exactly as session spawn does. Pure apart from the filesystem read.
+fn switch_definition_for(
+    cwd: &Path,
+    name: &str,
+    overrides: &crate::agent::config::CliAgentOverrides,
+) -> Result<xai_grok_agent::AgentDefinition, acp::Error> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return Err(switch_agent_error(
+            "unknown_agent",
+            "an agent name is required",
+        ));
+    }
+    let mut definition = xai_grok_agent::discovery::by_name_in_cwd(trimmed, cwd)
+        .ok_or_else(|| switch_agent_error("unknown_agent", format!("Unknown agent '{trimmed}'")))?;
+    overrides.apply_to_definition(&mut definition);
+    Ok(definition)
+}
+
+/// `deepseek-build/session/switch_agent`: swap the session's harness without restarting the UI.
+/// Params `{ sessionId, agent }`; the agent is resolved by name in the session cwd, exactly like
+/// `--agent` at spawn. The actor refuses mid-turn, so a parked approval or pending question can
+/// never be orphaned by the swap.
+async fn handle_switch_agent(agent: &MvpAgent, args: &acp::ExtRequest) -> ExtResult {
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Params {
+        session_id: acp::SessionId,
+        agent: String,
+    }
+
+    let params: Params = parse_params(args)?;
+    let handle = agent
+        .resident_handle(&params.session_id)
+        .ok_or_else(|| switch_agent_error("unknown_session", "This session isn't ready yet."))?;
+    let cwd = std::path::PathBuf::from(&handle.info.cwd);
+    let overrides = agent.cfg.borrow().cli_agent_overrides.clone();
+    let definition = switch_definition_for(&cwd, &params.agent, &overrides)?;
+
+    // An agent that pins a model needs that model. Applying one here would fight the model-switch
+    // rebuild path, so report it and let the client relaunch (which applies the pin at spawn).
+    if let xai_grok_agent::config::ModelOverride::Override(pinned) = &definition.model
+        && pinned != handle.model_id.0.as_ref()
+    {
+        return Err(switch_agent_error(
+            "agent_pins_model",
+            format!(
+                "Agent '{}' pins model '{pinned}'; restarting is required to apply it.",
+                definition.name
+            ),
+        ));
+    }
+
+    let system_prompt_label = {
+        let model = agent.resolve_model_id(&handle.model_id).ok();
+        let cfg = agent.cfg.borrow();
+        crate::util::config::resolve_system_prompt_label(
+            &cfg,
+            handle.model_id.0.as_ref(),
+            model.as_ref().map(|entry| entry.info()),
+        )
+    };
+
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    if handle
+        .cmd_tx
+        .send(SessionCommand::SwitchAgentDefinition {
+            definition,
+            system_prompt_label,
+            responds_to: tx,
+        })
+        .is_err()
+    {
+        return Err(switch_agent_error("session_closed", "session closed"));
+    }
+    let switched = rx
+        .await
+        .map_err(|_| switch_agent_error("session_closed", "session closed"))??;
+
+    agent.with_resident_mut(&params.session_id, |handle| {
+        handle.agent_name = switched.clone();
+        // A later model switch resolves "the session's agent" from this field first.
+        handle.session_default_agent_profile = Some(switched.clone());
+    });
+
+    ExtMethodResult::success(serde_json::json!({ "agent": switched, "switched": true }))
         .to_ext_response()
         .map_err(|e| acp::Error::internal_error().data(e.to_string()))
 }
@@ -851,5 +953,60 @@ mod sanitize_rename_title_tests {
             v.pointer("/update/session_summary"),
             Some(&serde_json::json!("raw & title"))
         );
+    }
+}
+
+#[cfg(test)]
+mod switch_agent_tests {
+    use super::{switch_agent_error, switch_definition_for};
+    use crate::agent::config::CliAgentOverrides;
+    use std::path::Path;
+
+    #[test]
+    fn builtin_agent_resolves_by_name() {
+        let cwd = tempfile::tempdir().expect("tempdir");
+        let def = switch_definition_for(cwd.path(), "explore", &CliAgentOverrides::default())
+            .expect("built-in explore resolves without any agent file");
+        assert_eq!(def.name, "explore");
+    }
+
+    #[test]
+    fn unknown_agent_reports_a_stable_code() {
+        let cwd = tempfile::tempdir().expect("tempdir");
+        let err = switch_definition_for(cwd.path(), "not-an-agent", &CliAgentOverrides::default())
+            .expect_err("unknown name must not resolve");
+        let data = err.data.expect("structured error data");
+        assert_eq!(data["code"], "unknown_agent");
+        assert!(
+            data["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("not-an-agent")
+        );
+    }
+
+    #[test]
+    fn blank_name_is_rejected() {
+        let cwd = tempfile::tempdir().expect("tempdir");
+        assert!(switch_definition_for(cwd.path(), "   ", &CliAgentOverrides::default()).is_err());
+    }
+
+    #[test]
+    fn cli_overrides_reach_the_switched_definition() {
+        let cwd = tempfile::tempdir().expect("tempdir");
+        let overrides = CliAgentOverrides {
+            tools: Some(vec!["read_file".to_string()]),
+            ..CliAgentOverrides::default()
+        };
+        let def = switch_definition_for(Path::new(cwd.path()), "explore", &overrides)
+            .expect("override-applied definition");
+        assert_eq!(def.name, "explore");
+        assert_eq!(def.tools, vec!["read_file".to_string()]);
+    }
+
+    #[test]
+    fn error_codes_are_machine_readable() {
+        let err = switch_agent_error("agent_busy", "busy");
+        assert_eq!(err.data.unwrap()["code"], "agent_busy");
     }
 }

@@ -1,6 +1,20 @@
 use super::*;
 use crate::agent::config::DEFAULT_CONTEXT_WINDOW;
 use xai_chat_state::conversation_util::replace_or_insert_system_head;
+
+/// Refusal text shared with the pager's relaunch path, so both switch paths refuse identically.
+pub(crate) const AGENT_SWITCH_TURN_BUSY_REFUSAL: &str =
+    "Finish or cancel the running turn before switching agents.";
+
+/// How much of the stored conversation a harness rebuild may rewrite.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RebuildConversation {
+    /// No user turn has run yet (model switch): rewrite the startup prefix and re-seed skills.
+    ZeroTurn,
+    /// The session already has history (agent switch): replace only the system head, append skills.
+    PreserveHistory,
+}
+
 impl SessionActor {
     pub(super) async fn handle_set_session_model(
         self: &std::sync::Arc<Self>,
@@ -279,6 +293,61 @@ impl SessionActor {
         definition: xai_grok_agent::AgentDefinition,
         system_prompt_label: String,
     ) -> Result<(), acp::Error> {
+        self.rebuild_agent_for_definition(
+            definition,
+            system_prompt_label,
+            RebuildConversation::ZeroTurn,
+        )
+        .await
+    }
+    /// Handle [`SessionCommand::SwitchAgentDefinition`]: `/agent` swaps the harness in place, mid-conversation.
+    /// Refuses while a turn (or its cancellation) is in flight, so no parked approval can be orphaned.
+    /// The conversation keeps every stored item except the leading system message, which becomes the new
+    /// agent's prompt. Model, effort, permission mode, plan file, MCP connections, and session id stay put.
+    pub(super) async fn handle_switch_agent_definition(
+        &self,
+        definition: xai_grok_agent::AgentDefinition,
+        system_prompt_label: String,
+    ) -> Result<String, acp::Error> {
+        let name = definition.name.clone();
+        if self.state.lock().await.running_task.is_some() {
+            tracing::warn!(
+                session_id = %self.session_info.id.0,
+                new_agent = %name,
+                "handle_switch_agent_definition: turn in flight, refusing agent switch"
+            );
+            return Err(acp::Error::internal_error().data(serde_json::json!({
+                "code": "agent_busy",
+                "message": AGENT_SWITCH_TURN_BUSY_REFUSAL,
+            })));
+        }
+        self.rebuild_agent_for_definition(
+            definition,
+            system_prompt_label,
+            RebuildConversation::PreserveHistory,
+        )
+        .await?;
+        // Persist the selection so the summary names the harness that is actually running.
+        if let Some(cfg) = self.chat_state_handle.get_sampling_config().await {
+            let _ = self
+                .notifications
+                .persistence_tx
+                .send(PersistenceMsg::CurrentModel {
+                    model_id: acp::ModelId::new(cfg.model),
+                    agent: crate::session::persistence::PersistedAgent::Named(name.clone()),
+                    reasoning_effort: Some(cfg.reasoning_effort),
+                    context_window: None,
+                });
+        }
+        Ok(name)
+    }
+    /// The shared harness rebuild. `conversation` decides how much of the stored chat is rewritten.
+    async fn rebuild_agent_for_definition(
+        &self,
+        definition: xai_grok_agent::AgentDefinition,
+        system_prompt_label: String,
+        conversation_policy: RebuildConversation,
+    ) -> Result<(), acp::Error> {
         {
             let state = self.state.lock().await;
             if state.running_task.is_some() {
@@ -415,30 +484,50 @@ impl SessionActor {
         }
         self.re_register_mcp_tools_on_rebuilt_bridge().await;
         self.run_mcp_init_with_claim(claim).await;
-        self.deferred_prefix.cancel();
-        let new_user_prefix = self
-            .build_prefix_after_mcp_wait(self.requires_full_mcp_wait())
-            .await;
-        {
-            let mut conversation = self.chat_state_handle.get_conversation().await;
-            let _ = replace_or_insert_system_head(&mut conversation, &new_system_prompt);
-            let drop_startup_skill_reminder = false;
-            Self::rewrite_zero_turn_prefix(
-                &mut conversation,
-                new_user_prefix,
-                drop_startup_skill_reminder,
-            );
-            if !conversation_has_project_instructions(&conversation)
-                && let Some(agents_md_reminder) = self.agent.borrow().agents_md_user_reminder()
-            {
-                let agents_md_at = conversation.len().min(2);
-                conversation.insert(
-                    agents_md_at,
-                    ConversationItem::project_instructions(agents_md_reminder),
+        match conversation_policy {
+            RebuildConversation::ZeroTurn => {
+                self.deferred_prefix.cancel();
+                let new_user_prefix = self
+                    .build_prefix_after_mcp_wait(self.requires_full_mcp_wait())
+                    .await;
+                let mut conversation = self.chat_state_handle.get_conversation().await;
+                let _ = replace_or_insert_system_head(&mut conversation, &new_system_prompt);
+                let drop_startup_skill_reminder = false;
+                Self::rewrite_zero_turn_prefix(
+                    &mut conversation,
+                    new_user_prefix,
+                    drop_startup_skill_reminder,
                 );
+                if !conversation_has_project_instructions(&conversation)
+                    && let Some(agents_md_reminder) = self.agent.borrow().agents_md_user_reminder()
+                {
+                    let agents_md_at = conversation.len().min(2);
+                    conversation.insert(
+                        agents_md_at,
+                        ConversationItem::project_instructions(agents_md_reminder),
+                    );
+                }
+                self.inject_baseline_skill_reminder(&mut conversation).await;
+                self.chat_state_handle.replace_conversation(conversation);
             }
-            self.inject_baseline_skill_reminder(&mut conversation).await;
-            self.chat_state_handle.replace_conversation(conversation);
+            RebuildConversation::PreserveHistory => {
+                // Mid-conversation: swap ONLY the system head. The startup prefix and every
+                // user/assistant/tool item are history and must survive verbatim; the new agent's
+                // skill listing is appended rather than re-seeded over the old reminders.
+                let mut conversation = self.chat_state_handle.get_conversation().await;
+                let _ = replace_or_insert_system_head(&mut conversation, &new_system_prompt);
+                if !conversation_has_project_instructions(&conversation)
+                    && let Some(agents_md_reminder) = self.agent.borrow().agents_md_user_reminder()
+                {
+                    let agents_md_at = conversation.len().min(2);
+                    conversation.insert(
+                        agents_md_at,
+                        ConversationItem::project_instructions(agents_md_reminder),
+                    );
+                }
+                self.append_baseline_skill_reminder(&mut conversation).await;
+                self.chat_state_handle.replace_conversation(conversation);
+            }
         }
         save_prompt_context(&self.session_info, &new_prompt_context);
         save_system_prompt(&self.session_info, &new_system_prompt);

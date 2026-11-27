@@ -1471,6 +1471,9 @@ fn load_prompt_context_from_dir(
         .ok()
 }
 #[cfg(test)]
+#[path = "acp_session_tests/agent_switch_tests.rs"]
+mod agent_switch_tests;
+#[cfg(test)]
 #[path = "acp_session_tests/client_hooks_tests.rs"]
 mod client_hooks_tests;
 #[cfg(test)]
