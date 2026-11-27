@@ -1274,6 +1274,7 @@ pub(super) fn dispatch_task_result(result: TaskResult, app: &mut AppView) -> Vec
             vec![]
         }
         TaskResult::SessionAgentSwitched { agent_id, name } => {
+            record_agent_switch("ok-in-place", &name, "");
             if let Some(agent) = app.agents.get_mut(&agent_id) {
                 agent.session_agent_name = Some(name.clone());
                 if let Some(modal) = agent.agents_modal.as_mut() {
@@ -1299,8 +1300,16 @@ pub(super) fn dispatch_task_result(result: TaskResult, app: &mut AppView) -> Vec
         } => {
             // The TUI is about to be replaced when the relaunch runs, so record the reason where
             // it survives: ~/.deepseek-build/logs/unified.jsonl.
+            record_agent_switch(
+                if fallback {
+                    "failed-fallback"
+                } else {
+                    "failed-refused"
+                },
+                &name,
+                &format!("reason={error:?}"),
+            );
             tracing::warn!(
-                target: "agent_switch",
                 agent = %name,
                 fallback,
                 reason = %error,
@@ -1946,5 +1955,19 @@ pub(super) fn dispatch_task_result(result: TaskResult, app: &mut AppView) -> Vec
         TaskResult::FeatureOverridePersisted { feature, result } => {
             settings::handle_feature_override_persisted(app, feature, result)
         }
+    }
+}
+
+/// A switch that triggers a relaunch destroys the TUI, and so its scrollback. Write the outcome
+/// somewhere that survives `exec` so a repeat can be diagnosed without guessing.
+fn record_agent_switch(outcome: &str, name: &str, detail: &str) {
+    let path = std::env::temp_dir().join("deepseek-build-agent-switch.log");
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        use std::io::Write as _;
+        let _ = writeln!(file, "{outcome} name={name:?} {detail}");
     }
 }
