@@ -9,7 +9,6 @@ pub struct ConfigAgentsCommand;
 impl SlashCommand for ConfigAgentsCommand {
     slash_meta! {
         name: "config-agents",
-        aliases: ["agents"],
         description: "Manage agent definitions",
         usage: "/config-agents",
     }

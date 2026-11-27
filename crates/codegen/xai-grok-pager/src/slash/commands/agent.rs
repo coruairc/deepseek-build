@@ -13,6 +13,7 @@ pub struct AgentCommand;
 impl SlashCommand for AgentCommand {
     slash_meta! {
         name: "agent",
+        aliases: ["agents"],
         description: "Switch the active agent (restarts the TUI into this session)",
         usage: "/agent [name]",
         takes_args: true,
