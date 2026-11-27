@@ -405,7 +405,7 @@ Switch the agent running this session, keeping the conversation. Bare `/agent` o
 
 `/agent <name>` switches straight to that agent; an unknown name lists the valid names. The same switch is available in the agents modal with `u` ("Switch to this agent").
 
-A switch restarts the TUI into the resumed session under the new agent — a brief flicker — and history is preserved. It is refused while a turn is running or cancelling; finish or cancel the turn first. Headless (`-p`) keeps `--agent` instead.
+A switch happens in place: the shell rebuilds the agent's prompt and toolset between turns and the UI, session id, model, permission mode, and full history stay put. The scrollback records "Switched to agent … in place". If the shell cannot do it (an older shell in leader mode, or an agent that pins a different model), the TUI restarts into the resumed session under the new agent — a brief flicker — with history preserved. It is refused while a turn is running or cancelling; finish or cancel the turn first. Headless (`-p`) keeps `--agent` instead.
 
 ### `/personas`
 

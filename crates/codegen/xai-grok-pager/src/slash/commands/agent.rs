@@ -1,8 +1,9 @@
 //! `/agent`: pick an agent interactively, or switch straight to a named one.
 //!
-//! A switch is a relaunch into the same session under the new agent (`--resume <id> --agent <name>`),
-//! because the agent's prompt and tool bridge are built at session create. The pager refuses while a
-//! turn is running or cancelling so the relaunch never races a turn.
+//! The shell can swap a session's agent in place (`deepseek-build/session/switch_agent`), so the
+//! switch keeps the UI, model, permissions, and history. The pager falls back to a relaunch
+//! (`--resume <id> --agent <name>`) when the shell refuses or does not implement the method.
+//! Either way it refuses while a turn is running or cancelling so the swap never races a turn.
 
 use crate::app::actions::Action;
 use crate::slash::command::{CommandExecCtx, CommandResult, SlashCommand, slash_meta};
@@ -14,7 +15,7 @@ impl SlashCommand for AgentCommand {
     slash_meta! {
         name: "agent",
         aliases: ["agents"],
-        description: "Switch the active agent (restarts the TUI into this session)",
+        description: "Switch the active agent (in place when the shell supports it)",
         usage: "/agent [name]",
         takes_args: true,
         session_scoped: true,

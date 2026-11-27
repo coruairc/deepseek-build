@@ -1,8 +1,8 @@
 //! Relaunch the pager into the same session under a different agent.
 //!
-//! `/agent <name>` and the "Switch to this agent" action in the agents modal do not swap the
-//! agent in process (the prompt and tool bridge are built at session create). Instead the event
-//! loop quits, the terminal is restored, and this module re-execs the binary with
+//! This is the **fallback** for `/agent`: the shell normally swaps the harness in place
+//! (`deepseek-build/session/switch_agent`). When the swap is unavailable or fails, the event loop
+//! quits, the terminal is restored, and this module re-execs the binary with
 //! `--resume <session> --agent <name>`; the new process replays the conversation under the
 //! requested agent.
 //!

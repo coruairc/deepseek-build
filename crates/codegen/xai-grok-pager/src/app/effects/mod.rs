@@ -3433,6 +3433,65 @@ pub(crate) fn execute(
                     }
                 });
         }
+        Effect::SwitchSessionAgent {
+            agent_id,
+            session_id,
+            name,
+        } => {
+            let tx = acp_tx.clone();
+            tasks.spawn(async move {
+                #[derive(serde::Deserialize, serde::Serialize)]
+                struct Switched {
+                    agent: String,
+                }
+                let params = serde_json::json!({
+                    "sessionId": session_id.0.to_string(),
+                    "agent": name,
+                });
+                let request = acp::ExtRequest::new(
+                    "deepseek-build/session/switch_agent",
+                    serde_json::value::to_raw_value(&params)
+                        .expect("serialize switch_agent params")
+                        .into(),
+                );
+                let outcome: Result<String, (bool, String)> =
+                    match acp_send(request, &tx).await {
+                        Err(e) => Err(classify_switch_agent_error(&e)),
+                        Ok(resp) => match serde_json::from_str::<ExtMethodResult<Switched>>(
+                            resp.0.get(),
+                        ) {
+                            Ok(envelope) => match (envelope.error, envelope.result) {
+                                (Some(err), _) => Err((
+                                    true,
+                                    err.as_str()
+                                        .map(String::from)
+                                        .unwrap_or_else(|| err.to_string()),
+                                )),
+                                (None, Some(result)) => Ok(result.agent),
+                                (None, None) => {
+                                    Err((true, "switch_agent response missing result".to_string()))
+                                }
+                            },
+                            Err(e) => {
+                                Err((true, format!("invalid switch_agent response: {e}")))
+                            }
+                        },
+                    };
+                match outcome {
+                    Ok(switched) => TaskResult::SessionAgentSwitched {
+                        agent_id,
+                        name: switched,
+                    },
+                    Err((fallback, error)) => TaskResult::SessionAgentSwitchFailed {
+                        agent_id,
+                        session_id,
+                        name,
+                        error,
+                        fallback,
+                    },
+                }
+            });
+        }
         Effect::FetchSessionAgentName { agent_id, session_id } => {
             let tx = acp_tx.clone();
             tasks
@@ -5112,5 +5171,37 @@ fn build_interject_params(
     }
     params
 }
+
+/// Map a `switch_agent` failure to `(fallback_to_relaunch, message)`.
+/// A busy/unknown/closed session is a deliberate refusal: relaunching would race the same state.
+/// Everything else (old shell without the method, a failed rebuild, an agent that pins a model)
+/// falls back to the proven re-exec path.
+fn classify_switch_agent_error(err: &acp::Error) -> (bool, String) {
+    let code = err
+        .data
+        .as_ref()
+        .and_then(|data| data.get("code"))
+        .and_then(|code| code.as_str());
+    let message = err
+        .data
+        .as_ref()
+        .and_then(|data| data.get("message"))
+        .and_then(|message| message.as_str())
+        .map(str::to_owned)
+        .unwrap_or_else(|| err.message.clone());
+    match code {
+        Some(
+            "agent_busy" | "unknown_agent" | "unknown_session" | "chat_session"
+            | "session_closed",
+        ) => (false, message),
+        Some(_) => (true, message),
+        None if err.code == acp::Error::method_not_found().code => (
+            true,
+            "this shell cannot switch agents in place".to_string(),
+        ),
+        None => (true, message),
+    }
+}
+
 #[cfg(test)]
 mod tests;

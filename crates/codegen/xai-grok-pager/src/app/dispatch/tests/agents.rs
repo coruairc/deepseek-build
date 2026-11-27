@@ -1,7 +1,7 @@
 //! `/agent` switch and picker dispatch tests.
 
 use super::{test_agent_mut, test_app_with_agent};
-use crate::app::actions::{Action, Effect};
+use crate::app::actions::{Action, Effect, TaskResult};
 use crate::app::agent::AgentState;
 use crate::app::app_view::ActiveView;
 use crate::app::dispatch::dispatch;
@@ -52,17 +52,102 @@ fn picker_opens_on_the_active_agent() {
 }
 
 #[test]
-fn switch_to_a_named_agent_arms_the_relaunch() {
+fn switch_to_a_named_agent_requests_an_in_process_swap() {
     let mut app = isolated_agent(Some("default"));
     let effects = dispatch(Action::SwitchAgent("explore".to_string()), &mut app);
+    assert_eq!(effects.len(), 1, "one request, got {effects:?}");
+    match &effects[0] {
+        Effect::SwitchSessionAgent {
+            agent_id,
+            session_id,
+            name,
+        } => {
+            assert_eq!(*agent_id, crate::app::agent::AgentId(0));
+            assert_eq!(session_id.0.to_string(), "test-session");
+            assert_eq!(name, "explore");
+        }
+        other => panic!("expected SwitchSessionAgent, got {other:?}"),
+    }
+    assert!(
+        app.pending_agent_switch.is_none(),
+        "the relaunch is only the fallback"
+    );
+    assert!(app.agent_relaunch.is_none(), "event loop arms the relaunch");
+}
+
+#[test]
+fn successful_in_place_swap_updates_identity_and_says_so() {
+    let mut app = isolated_agent(Some("default"));
+    let effects = dispatch(
+        Action::TaskComplete(TaskResult::SessionAgentSwitched {
+            agent_id: crate::app::agent::AgentId(0),
+            name: "explore".to_string(),
+        }),
+        &mut app,
+    );
+    assert!(effects.is_empty());
+    let agent = app.agents.get(&crate::app::agent::AgentId(0)).unwrap();
+    assert_eq!(agent.session_agent_name.as_deref(), Some("explore"));
+    assert!(
+        scrollback_has_system_text(&app, "in place"),
+        "the notice records the in-process path"
+    );
+    assert_eq!(
+        app.agent_override,
+        Some(serde_json::json!("explore")),
+        "a later load keeps the chosen agent, like --agent does"
+    );
+    assert!(app.pending_agent_switch.is_none());
+}
+
+#[test]
+fn failed_in_place_swap_falls_back_to_the_relaunch() {
+    let mut app = isolated_agent(Some("default"));
+    let effects = dispatch(
+        Action::TaskComplete(TaskResult::SessionAgentSwitchFailed {
+            agent_id: crate::app::agent::AgentId(0),
+            session_id: agent_client_protocol::SessionId::new("test-session"),
+            name: "explore".to_string(),
+            error: "this shell cannot switch agents in place".to_string(),
+            fallback: true,
+        }),
+        &mut app,
+    );
     assert!(effects.is_empty());
     let request = app
         .pending_agent_switch
         .as_ref()
-        .expect("switch request queued");
+        .expect("fallback relaunch queued");
     assert_eq!(request.agent, "explore");
     assert_eq!(request.session_id, "test-session");
-    assert!(app.agent_relaunch.is_none(), "event loop arms the relaunch");
+    assert!(
+        scrollback_has_system_text(&app, "Couldn't switch in place"),
+        "the notice records the fallback path"
+    );
+}
+
+#[test]
+fn deliberate_refusal_does_not_fall_back_to_the_relaunch() {
+    let mut app = isolated_agent(Some("default"));
+    let effects = dispatch(
+        Action::TaskComplete(TaskResult::SessionAgentSwitchFailed {
+            agent_id: crate::app::agent::AgentId(0),
+            session_id: agent_client_protocol::SessionId::new("test-session"),
+            name: "explore".to_string(),
+            error: "Finish or cancel the running turn before switching agents.".to_string(),
+            fallback: false,
+        }),
+        &mut app,
+    );
+    assert!(effects.is_empty());
+    assert!(
+        app.pending_agent_switch.is_none(),
+        "a refusal must not race the turn with a relaunch"
+    );
+    assert!(scrollback_has_system_text(
+        &app,
+        "Finish or cancel the running turn"
+    ));
 }
 
 #[test]

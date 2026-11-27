@@ -1698,6 +1698,14 @@ pub enum Effect {
         agent_id: AgentId,
         session_id: acp::SessionId,
     },
+    /// Ask the shell to swap this session's harness in place (`deepseek-build/session/switch_agent`).
+    /// Falls back to [`super::app_view::AgentSwitchRequest`] + relaunch when the shell refuses or
+    /// does not implement the method (old/leader shell).
+    SwitchSessionAgent {
+        agent_id: AgentId,
+        session_id: acp::SessionId,
+        name: String,
+    },
     /// Send AuthenticateRequest to the agent.
     Authenticate {
         request_seq: u64,
@@ -2573,6 +2581,19 @@ pub enum TaskResult {
     SessionAgentNameResolved {
         agent_id: AgentId,
         agent_name: Option<String>,
+    },
+    /// The shell swapped the session's agent in place; history was preserved.
+    SessionAgentSwitched {
+        agent_id: AgentId,
+        name: String,
+    },
+    /// The in-place swap did not happen. `fallback` means the relaunch path should take over.
+    SessionAgentSwitchFailed {
+        agent_id: AgentId,
+        session_id: acp::SessionId,
+        name: String,
+        error: String,
+        fallback: bool,
     },
     /// Authentication completed successfully.
     AuthComplete {

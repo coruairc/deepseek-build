@@ -623,7 +623,8 @@ pub(super) fn dispatch_open_agent_picker(app: &mut AppView) -> Vec<Effect> {
         .collect()
 }
 
-/// `/agent <name>` and the agents-modal switch action: validate, then arm the relaunch.
+/// `/agent <name>` and the agents-modal switch action: validate, then ask the shell to swap the
+/// harness in place. A refusal or an unsupported method falls back to the relaunch path.
 pub(super) fn dispatch_switch_agent(app: &mut AppView, name: String) -> Vec<Effect> {
     use crate::views::agents_modal::switchable_agents;
 
@@ -644,7 +645,7 @@ pub(super) fn dispatch_switch_agent(app: &mut AppView, name: String) -> Vec<Effe
         show_agent_switch_refusal(app, id, TURN_BUSY_SWITCH_REFUSAL);
         return vec![];
     }
-    let Some(session_id) = session_id.map(|sid| sid.0.to_string()) else {
+    let Some(session_id) = session_id else {
         show_agent_switch_refusal(
             app,
             id,
@@ -665,11 +666,11 @@ pub(super) fn dispatch_switch_agent(app: &mut AppView, name: String) -> Vec<Effe
         );
         return vec![];
     }
-    app.pending_agent_switch = Some(crate::app::app_view::AgentSwitchRequest {
+    vec![Effect::SwitchSessionAgent {
+        agent_id: id,
         session_id,
-        agent: name,
-    });
-    vec![]
+        name,
+    }]
 }
 
 /// A local turn, `/compact`, or a streaming wake is running.
@@ -681,7 +682,7 @@ pub(super) const TURN_BUSY_SWITCH_REFUSAL: &str =
     "Finish or cancel the running turn before switching agents.";
 
 /// Show a refusal in the open agents modal when there is one, and in the scrollback.
-fn show_agent_switch_refusal(app: &mut AppView, id: AgentId, msg: &str) {
+pub(super) fn show_agent_switch_refusal(app: &mut AppView, id: AgentId, msg: &str) {
     if let Some(modal) = app
         .agents
         .get_mut(&id)

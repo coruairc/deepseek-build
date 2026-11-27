@@ -3155,3 +3155,33 @@ async fn hydrate_team_capability_adapter_maps_every_reply_to_the_asking_identity
         );
 }
 
+
+#[test]
+fn switch_agent_method_not_found_falls_back_to_relaunch() {
+    let err = acp::Error::method_not_found();
+    let (fallback, message) = classify_switch_agent_error(&err);
+    assert!(fallback, "an old shell must fall back to the re-exec path");
+    assert!(message.contains("cannot switch agents in place"), "{message}");
+}
+
+#[test]
+fn switch_agent_busy_refusal_never_relaunches() {
+    let err = acp::Error::internal_error().data(serde_json::json!({
+        "code": "agent_busy",
+        "message": "Finish or cancel the running turn before switching agents.",
+    }));
+    let (fallback, message) = classify_switch_agent_error(&err);
+    assert!(!fallback, "a refusal must not race the turn with a relaunch");
+    assert!(message.contains("Finish or cancel"), "{message}");
+}
+
+#[test]
+fn switch_agent_model_pin_falls_back_to_relaunch() {
+    let err = acp::Error::invalid_params().data(serde_json::json!({
+        "code": "agent_pins_model",
+        "message": "Agent 'x' pins model 'deepseek-v4-pro'.",
+    }));
+    let (fallback, message) = classify_switch_agent_error(&err);
+    assert!(fallback, "the relaunch applies the pinned model at spawn");
+    assert!(message.contains("pins model"), "{message}");
+}

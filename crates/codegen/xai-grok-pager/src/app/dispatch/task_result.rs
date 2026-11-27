@@ -50,6 +50,7 @@ use super::status::{
 use super::transcript::{
     handle_hooks_list_loaded, handle_marketplace_list_loaded, handle_marketplace_updates_available,
     handle_mcp_toggle_done, handle_plugins_list_loaded, handle_skills_toggle_done,
+    show_agent_switch_refusal,
 };
 use super::turn::{clear_pending_kill, handle_bg_task_killed};
 use crate::app::acp_handler::task_view_by_session_id;
@@ -1269,6 +1270,52 @@ pub(super) fn dispatch_task_result(result: TaskResult, app: &mut AppView) -> Vec
                 if let Some(modal) = agent.agents_modal.as_mut() {
                     modal.active_agent = agent_name;
                 }
+            }
+            vec![]
+        }
+        TaskResult::SessionAgentSwitched { agent_id, name } => {
+            if let Some(agent) = app.agents.get_mut(&agent_id) {
+                agent.session_agent_name = Some(name.clone());
+                if let Some(modal) = agent.agents_modal.as_mut() {
+                    modal.active_agent = Some(name.clone());
+                }
+                push_and_page_flip(
+                    &mut agent.scrollback,
+                    RenderBlock::system(format!(
+                        "Switched to agent '{name}' in place · history preserved"
+                    )),
+                );
+            }
+            // Keep a later load/new session under the same agent, mirroring `--agent` on a relaunch.
+            app.agent_override = Some(serde_json::Value::String(name));
+            vec![]
+        }
+        TaskResult::SessionAgentSwitchFailed {
+            agent_id,
+            session_id,
+            name,
+            error,
+            fallback,
+        } => {
+            if fallback {
+                if let Some(agent) = app.agents.get_mut(&agent_id) {
+                    push_and_page_flip(
+                        &mut agent.scrollback,
+                        RenderBlock::system(format!(
+                            "Couldn't switch in place ({error}); restarting the session under '{name}'…"
+                        )),
+                    );
+                }
+                app.pending_agent_switch = Some(crate::app::app_view::AgentSwitchRequest {
+                    session_id: session_id.0.to_string(),
+                    agent: name,
+                });
+            } else {
+                show_agent_switch_refusal(
+                    app,
+                    agent_id,
+                    &format!("Couldn't switch to agent '{name}': {error}"),
+                );
             }
             vec![]
         }
