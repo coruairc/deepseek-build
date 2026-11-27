@@ -325,6 +325,31 @@ reported two follow-ups, both being fixed after the sign-off:
   deliberately swallowed by the input-flow contract; the fix returns focus to the prompt when `Esc`
   actually dismisses a selection, and leaves the double-Esc rewind and the mid-turn swallow alone.
 
+## Fixed regressions (recorded, 2026-11-27)
+
+Fixed bugs are kept here for a short while because the *way* they were missed matters more than
+the fix.
+
+### `/agent` always restarted the TUI even though in-place switching existed
+
+- **Symptom:** `/agent` → pick → the notice appeared and `dsb` closed and reopened, every time.
+- **Root cause:** the handler was reachable in tests but not in production. `acp_agent.rs` routes
+  ext methods through an **explicit match list** that forwards a subset to
+  `extensions::session_admin::handle`. `deepseek-build/session/switch_agent` was missing from that
+  list, so every request answered `method_not_found`; the pager correctly classified that as
+  "this shell cannot switch in place" and took its relaunch fallback.
+- **Why the tests missed it:** `switch_agent_tests` called `session_admin::handle` directly, so the
+  handler was green while the top-level router 404'd. The pager's fallback test also used a
+  synthetic error, so it never exercised the real method either.
+- **Fix:** `b7296ca6` adds the method to the router arm. The pager also records every switch
+  outcome to `$TMPDIR/deepseek-build-agent-switch.log` (`ok-in-place` / `failed-fallback reason=…`),
+  which is what identified the 404 after two earlier guesses were wrong.
+- **Remaining gap:** there is still no test at the router level. `ext_method` is a trait method
+  (`E0449` forbids a visibility qualifier on it), so the pragmatic follow-up is a table-driven
+  router — one list consumed by both the dispatcher and a test — rather than a new test per method.
+- **Related UX:** the picker now closes on selection (`bbe4c24b`), so the prompt is ready instead
+  of leaving the modal open.
+
 ## Container image (2026-11-26)
 
 - **The image runs, and the sandbox cannot apply inside it.** `ghcr.io/coruairc/deepseek-build@sha256:8f5c484e…`
