@@ -440,6 +440,9 @@ pub fn build_agent_list(
             definition: def,
         });
     }
+    // A discovered definition whose frontmatter has no `name` parses with an empty one; a blank
+    // row cannot be selected meaningfully, so drop it rather than let a switch send "".
+    entries.retain(|entry| !entry.name.trim().is_empty());
     let subagent_names: Vec<String> = BuiltinAgentName::subagent_variants()
         .iter()
         .map(|b| b.definition().name)

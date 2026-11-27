@@ -632,6 +632,10 @@ pub(super) fn dispatch_switch_agent(app: &mut AppView, name: String) -> Vec<Effe
         toast_session_only_slash(app, "agent");
         return vec![];
     };
+    if name.trim().is_empty() {
+        show_agent_switch_refusal(app, id, "Choose an agent to switch to.");
+        return vec![];
+    }
     let Some((busy, session_id, cwd)) = app.agents.get(&id).map(|agent| {
         (
             agent_turn_busy(agent),

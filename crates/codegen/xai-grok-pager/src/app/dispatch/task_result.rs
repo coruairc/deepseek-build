@@ -1297,7 +1297,16 @@ pub(super) fn dispatch_task_result(result: TaskResult, app: &mut AppView) -> Vec
             error,
             fallback,
         } => {
-            if fallback {
+            // The TUI is about to be replaced when the relaunch runs, so record the reason where
+            // it survives: ~/.deepseek-build/logs/unified.jsonl.
+            tracing::warn!(
+                target: "agent_switch",
+                agent = %name,
+                fallback,
+                reason = %error,
+                "agent switch failed"
+            );
+            if fallback && !name.trim().is_empty() {
                 if let Some(agent) = app.agents.get_mut(&agent_id) {
                     push_and_page_flip(
                         &mut agent.scrollback,
