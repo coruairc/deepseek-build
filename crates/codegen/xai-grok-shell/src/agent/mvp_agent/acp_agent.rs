@@ -1644,7 +1644,8 @@ impl acp::Agent for MvpAgent {
             }
             "deepseek-build/session/rename" | "deepseek-build/session/delete"
             | "deepseek-build/session/update_mcp_servers" | "deepseek-build/session/fork"
-            | "deepseek-build/plugins/reload" | "deepseek-build/commands/list" => {
+            | "deepseek-build/session/switch_agent" | "deepseek-build/plugins/reload"
+            | "deepseek-build/commands/list" => {
                 crate::extensions::session_admin::handle(self, &args).await
             }
             m if InternalMethod::from_name(m).is_some() => {
