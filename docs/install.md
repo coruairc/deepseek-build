@@ -49,10 +49,11 @@ below.
 | macOS | Apple silicon (`arm64`), Intel (`x86_64`) | `.tar.gz` |
 | Windows | `x86_64` | None yet (see [Windows](#windows)) |
 
-The Linux artifacts are built for glibc (`*-unknown-linux-gnu`); musl-based
-distributions such as Alpine are not supported by these artifacts. The tree
-does not record a minimum glibc or macOS version, and neither is tested here —
-treat older systems as untested.
+The Linux artifacts are built for glibc (`*-unknown-linux-gnu`) on the
+`ubuntu-22.04` runner, so **glibc 2.35 is the practical floor**; musl-based
+distributions such as Alpine are not supported by these artifacts. No macOS
+minimum is recorded in the tree, and neither floor is exercised here — treat
+older systems as untested.
 
 ## Linux
 
@@ -72,8 +73,10 @@ curl -fsSL https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-p
    nothing.
 3. Extracts the binary to `${INSTALL_DIR:-$HOME/.local/bin}` (creating the
    directory if needed) and marks it executable.
-4. Creates the `dsb` symlink. It never replaces a real file or a symlink that
-   points somewhere else.
+4. Creates the `dsb` symlink. A real `dsb` file is never replaced, and a
+   symlink that points somewhere unrelated is left alone; a `dsb` symlink whose
+   target contains `deepseek-build` (or is dangling) is repointed at the
+   installed binary.
 5. Prints the installed version, and warns if the install directory is not on
    your `PATH`.
 
@@ -113,7 +116,9 @@ curl -fsSL "https://github.com/coruairc/deepseek-build/releases/download/$VER/in
 ```
 
 The rerun overwrites `deepseek-build` in place and leaves the `dsb` shortcut
-working. No newer tag is published yet, so there is nothing to upgrade to.
+working. `v0.1.0-proof2` exists as a **tag only** (no GitHub release or assets),
+so the newest installable release is still `v0.1.0-proof1`; there is nothing to
+upgrade to yet.
 
 ### Uninstall
 
@@ -131,9 +136,9 @@ curl -fsSL https://github.com/coruairc/deepseek-build/releases/download/v0.1.0-p
 
 `--uninstall` makes no network calls of its own; the `curl` only fetches the
 script. If you saved a copy, `sh install.sh --uninstall` works offline. It
-removes `$INSTALL_DIR/deepseek-build` and the `dsb` symlink when that points at
-the installed binary; a `dsb` file, or a symlink pointing elsewhere, is left in
-place. Configuration and saved credentials are **not** removed — see
+removes `$INSTALL_DIR/deepseek-build` and a `dsb` symlink whose target contains
+`deepseek-build` (or is dangling); a real `dsb` file, or a symlink to an
+unrelated path, is left in place. Configuration and saved credentials are **not** removed — see
 [Uninstall completely](#uninstall-completely).
 
 ## macOS
