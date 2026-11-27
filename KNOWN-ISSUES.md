@@ -309,8 +309,9 @@ distribution, container and Windows notes were refreshed 2026-11-26.
   `build-macos (aarch64-apple-darwin)` job three times to
   `The job was not acquired by Runner of type hosted` (capacity). `publish` waits for all four
   builds, so no release was created; the image still published, because `container` depends on
-  `build-linux` only. Retry with `gh run rerun 45846745156 --failed`. The Windows zip exists as a
-  workflow artifact (`release-x86_64-pc-windows-msvc`).
+  `build-linux` only. A retry acquired a runner, and `v0.1.0-proof2` is now published with all five artifacts
+  (four tarballs + the Windows zip) plus `SHA256SUMS` and both installers; the zip verifies
+  against `SHA256SUMS`.
 
 ## Acceptance findings (2026-11-26)
 

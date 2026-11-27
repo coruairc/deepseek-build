@@ -94,7 +94,7 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 ### Windows Support
 
-- [ ] **WIN-01**: A `build-windows` job on `windows-latest` builds `x86_64-pc-windows-msvc` and produces a `.zip` containing the binary and the license files, published as `release-x86_64-pc-windows-msvc`. **Authored and gated; no tag run has produced the artifact yet**
+- [x] **WIN-01**: A `build-windows` job on `windows-latest` builds `x86_64-pc-windows-msvc` and produces a `.zip` containing the binary and the license files, published as `release-x86_64-pc-windows-msvc` (published on `v0.1.0-proof2`; checksum verified against the release's `SHA256SUMS`)
 - [x] **WIN-02**: The compile spike (`cargo check --workspace --all-targets --target x86_64-pc-windows-msvc`) runs on a Windows runner and its errors are triaged into real gaps, missing `cfg`s and test-only failures, with the definitive file list recorded
 - [ ] **WIN-03**: The TUI runs under ConPTY on a real Windows terminal: a shell command and a file edit complete through the pager
 - [x] **WIN-04**: The sandbox is honest on Windows — only `off` is accepted, any other `--sandbox` value is a hard error naming the unsupported platform, and the README and sandbox guide state the tier; no artifact claims "sandboxed"
@@ -213,7 +213,7 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | REL-04 | Phase 4 — Distribution Proof | Complete — pulled by index digest and run in-image on 2026-11-26 |
 | REL-05 | Phase 4 — Distribution Proof | Partial — the turn is proven; the sandbox clause is unmet (no bwrap in the image) |
 | REL-06 | Phase 4 — Distribution Proof | Complete — pinned install of `v0.1.0-proof1` from the real release (asset `install.sh` byte-identical, tarball sha256 three-way equal, installed binary reports `0.1.0-proof1 (b14d28eb2bc7)`); unpinned `latest` observed: both `latest/download` URLs 404, installer exits 22 and installs nothing (`docs/evidence/04-distribution-proof/installer-{proof,latest}/`) |
-| WIN-01 | Phase 5 — Windows Support | Partial — job and zip authored/gated; no artifact produced |
+| WIN-01 | Phase 5 — Windows Support | Complete — zip published on v0.1.0-proof2 and checksum-verified |
 | WIN-02 | Phase 5 — Windows Support | Complete — compile spike green on windows-latest |
 | WIN-03 | Phase 5 — Windows Support | Pending — needs a Windows host |
 | WIN-04 | Phase 5 — Windows Support | Complete — non-off profiles refused; UI reports unsupported |

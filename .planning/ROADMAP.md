@@ -219,7 +219,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6
 | 2. Loop-Item Verification | 6/6 | Complete | 2026-11-25 |
 | 3. Pipeline Decoupling & Version | 4/4 | Complete (REL-02 proof deferred to Phase 4) | 2026-11-25 |
 | 4. Distribution Proof | 5/5 | REL-04 closed (pulled by digest + run); REL-05 turn proven, sandbox clause unmet | - |
-| 5. Windows Support | 4/5 | WIN-02/WIN-04 closed; WIN-01/WIN-05 authored not proven; WIN-03/WIN-06 need a Windows host | - |
+| 5. Windows Support | 4/5 | WIN-01/02/04 closed (zip published on v0.1.0-proof2); WIN-05 installer published but not executed; WIN-03/WIN-06 need a Windows host | - |
 | 5.1 Project Directory Rebrand (INSERTED) | 2/2 | Complete | 2026-11-26 |
 | 5.2 API Key Entry (INSERTED) | 0/1 | In progress | - |
 | 6. Documentation Truth & Freeze | 3/5 | Docs reconciled; ACC-01 (author) blocks 06-04/06-05 | - |
