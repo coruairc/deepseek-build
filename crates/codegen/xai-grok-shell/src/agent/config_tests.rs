@@ -1494,6 +1494,8 @@ fn auth_scheme_defaults_to_bearer_when_not_set_in_config() {
 }
 #[test]
 fn has_own_credentials_guards_session_vs_external_key() {
+    let _branded = EnvGuard::unset("DEEPSEEK_API_KEY");
+    let _branded_alt = EnvGuard::unset("DEEPSEEK_BUILD_API_KEY");
     let endpoints = EndpointsConfig::default();
     for (model_id, entry) in default_model_entries(&endpoints) {
         assert!(
@@ -7075,6 +7077,9 @@ async fn process_key_from_model_env_key() {
     const TOKEN: &str = "model-env-token";
     let _xai = EnvGuard::unset("XAI_API_KEY");
     let _legacy = EnvGuard::unset("GROK_CODE_XAI_API_KEY");
+    // The branded vars are read too; an ambient key would win over the model's env_key.
+    let _branded = EnvGuard::unset("DEEPSEEK_API_KEY");
+    let _branded_alt = EnvGuard::unset("DEEPSEEK_BUILD_API_KEY");
     let _tok = EnvGuard::set(ENV, TOKEN);
     let dm = xai_grok_models::default_model();
     let cfg = Config::new_from_toml_cfg(
@@ -7096,12 +7101,11 @@ async fn process_key_from_model_env_key() {
     let mgr = Arc::new(AuthManager::new(dir.path(), GrokComConfig::default()));
     assert!(mgr.current().is_none());
     mgr.set_process_static_api_key(Some(key));
-    assert_eq!(
-        shared_api_key_provider(mgr)
-            .current_api_key_async()
-            .await
-            .as_deref(),
-        Some(TOKEN)
+    // Compare without printing either side: a failure here must never echo a key.
+    let resolved = shared_api_key_provider(mgr).current_api_key_async().await;
+    assert!(
+        resolved.as_deref() == Some(TOKEN),
+        "the provider did not resolve the model's env_key"
     );
 }
 #[test]

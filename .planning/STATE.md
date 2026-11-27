@@ -173,12 +173,14 @@ None yet.
 - **Egress gate is red at base (Phase 5 owner):** `scripts/check-egress.sh --strict` exits 1 on three
   committed test fixtures — `crates/codegen/xai-grok-shell-base/src/util/mod.rs:422-423`
   (`api.x.ai`, `grok.com`) and `crates/codegen/xai-grok-shell/src/agent/config_tests.rs:2768`
-  (`gs://bucket`). Not caused by Phase 1; it must be green for FREEZE-03.
-- **Credential test prints an exported key (hygiene):** with `DEEPSEEK_API_KEY` exported, an
-  `xai-grok-shell` credential assertion prints the key in its failure message. It reached only a local
-  log, which was redacted; nothing was committed. The gate now unsets the key vars; the assertion should
-  be redacted too. The key used for the Phase-2 live runs is rotated/revoked per the author's
-  02-03 attestation.
+  (`gs://bucket`). **FIXED 2026-11-27:** the gate supports a line-scoped, reasoned
+  `egress-allow:` marker (verified non-vacuous) and the three test-only lines use it;
+  `scripts/check-egress.sh --strict` now exits 0.
+- ~~**Credential test prints an exported key (hygiene)**~~ **FIXED 2026-11-27:** the assertion now
+  compares without printing either side, and the affected tests unset `DEEPSEEK_API_KEY` /
+  `DEEPSEEK_BUILD_API_KEY` (as does the sampling-error helper). The shell lib suite now passes with an
+  ambient key exported (`6205 passed, 0 failed`) and the captured log contains zero occurrences of the
+  key. The Phase-2 key remains rotated per the 02-03 attestation.
 
 ## Deferred Items
 

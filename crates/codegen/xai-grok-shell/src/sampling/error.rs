@@ -729,10 +729,14 @@ mod tests {
     fn with_api_key_env<F: FnOnce()>(key: Option<&str>, f: F) {
         let prev = std::env::var("XAI_API_KEY").ok();
         let prev_legacy = std::env::var("GROK_CODE_XAI_API_KEY").ok();
+        let prev_branded = std::env::var("DEEPSEEK_API_KEY").ok();
+        let prev_branded_alt = std::env::var("DEEPSEEK_BUILD_API_KEY").ok();
         // SAFETY: serial_test ensures no concurrent env mutation.
         unsafe {
             std::env::remove_var("XAI_API_KEY");
             std::env::remove_var("GROK_CODE_XAI_API_KEY");
+            std::env::remove_var("DEEPSEEK_API_KEY");
+            std::env::remove_var("DEEPSEEK_BUILD_API_KEY");
             if let Some(k) = key {
                 std::env::set_var("XAI_API_KEY", k);
             }
@@ -742,11 +746,19 @@ mod tests {
         unsafe {
             std::env::remove_var("XAI_API_KEY");
             std::env::remove_var("GROK_CODE_XAI_API_KEY");
+            std::env::remove_var("DEEPSEEK_API_KEY");
+            std::env::remove_var("DEEPSEEK_BUILD_API_KEY");
             if let Some(v) = prev {
                 std::env::set_var("XAI_API_KEY", v);
             }
             if let Some(v) = prev_legacy {
                 std::env::set_var("GROK_CODE_XAI_API_KEY", v);
+            }
+            if let Some(v) = prev_branded {
+                std::env::set_var("DEEPSEEK_API_KEY", v);
+            }
+            if let Some(v) = prev_branded_alt {
+                std::env::set_var("DEEPSEEK_BUILD_API_KEY", v);
             }
         }
         if let Err(e) = result {
