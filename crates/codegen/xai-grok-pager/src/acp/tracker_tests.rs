@@ -1960,8 +1960,8 @@ fn pinned_thinking_keeps_user_mode_across_finish_triggers() {
     assert!(!entry.is_running);
     assert_eq!(
         entry.display_mode,
-        DisplayMode::Collapsed,
-        "unpinned thinking still auto-collapses"
+        DisplayMode::Expanded,
+        "unpinned thinking follows the expanded-by-default policy"
     );
 }
 #[test]
@@ -2031,8 +2031,8 @@ fn respect_manual_folds_off_bypasses_finish_pin_guard() {
     tracker.handle_update(agent_chunk("answer"), &meta(), &mut sb);
     assert_eq!(
         sb.get(0).unwrap().display_mode,
-        DisplayMode::Collapsed,
-        "flag off: finish applies the sticky mode to a pinned non-Expanded entry"
+        DisplayMode::Expanded,
+        "flag off: finish applies the sticky mode (expanded by default) to a pinned non-Expanded entry"
     );
 }
 /// Helper: build a NotificationMeta with a specific stream_start_ms.

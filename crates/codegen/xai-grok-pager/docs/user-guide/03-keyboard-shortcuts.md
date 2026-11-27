@@ -62,7 +62,7 @@ Control how entries are displayed in the scrollback.
 | `l` | `Right` | Expand selected entry |
 | `e` | | Toggle fold on selected entry |
 | `⇧E` | | Expand all / collapse all entries |
-| `Ctrl+E` | | Expand/collapse the selected thought (all thinking blocks when nothing is selected) |
+| `Ctrl+E` | | Expand/collapse the selected thought (all thinking blocks when nothing is selected). Thinking starts **expanded**, so the first press collapses it and the next reopens it. |
 | `r` | | Toggle raw markdown on selected entry |
 
 Setting `respect_manual_folds = true` under `[scrollback.scroll]` in

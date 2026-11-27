@@ -327,6 +327,9 @@ mod tests {
         agent.hovered_entry = Some(0);
         agent.hovered_prompt = true;
         agent.hit_context.hovered = true;
+        // Thinking is expanded by default; Ctrl+E once puts the fullscreen policy at Collapsed so
+        // minimal's Expanded stamp is observable when it is refolded on the way back.
+        agent.scrollback.expand_all_thinking();
 
         reseed_screen_mode(&mut app, ScreenMode::Minimal);
         reseed_screen_mode(&mut app, ScreenMode::Fullscreen);

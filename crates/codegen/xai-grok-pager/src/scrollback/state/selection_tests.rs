@@ -2077,6 +2077,8 @@ fn expanded_group_shows_all_entries_including_first() {
 #[test]
 fn reapply_thinking_fold_policy_refolds_minimal_expanded_thought() {
     let mut state = ScrollbackState::new();
+    // Thinking is expanded by default; Ctrl+E once puts the sticky mode back to Collapsed.
+    state.expand_all_thinking();
     let thought = push_thought(&mut state, "reasoning body");
     let answer = state.push_block(RenderBlock::stub_non_groupable("answer", Color::Blue));
     state
@@ -2151,6 +2153,8 @@ fn reapply_thinking_fold_policy_skips_pinned_and_running_thoughts() {
 #[test]
 fn reapply_thinking_fold_policy_preserves_expanded_tool_groups() {
     let mut state = ScrollbackState::new();
+    // Thinking is expanded by default; Ctrl+E once puts the sticky mode back to Collapsed.
+    state.expand_all_thinking();
     let mut appearance = AppearanceConfig::default();
     appearance.scrollback.display.group_max_visible = 3;
     state.set_appearance(appearance);

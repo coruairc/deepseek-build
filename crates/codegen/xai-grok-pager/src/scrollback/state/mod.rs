@@ -256,7 +256,7 @@ impl ScrollbackState {
             last_width: 0,
             layout_cache: None,
             structural_scroll_anchor: None,
-            thinking_display_mode: DisplayMode::Collapsed,
+            thinking_display_mode: DisplayMode::Expanded,
             tick: 0,
             appearance: AppearanceConfig::default(),
             batch_depth: 0,
@@ -3234,7 +3234,7 @@ mod tests {
     }
 
     #[test]
-    fn untouched_running_thinking_collapses_on_finish() {
+    fn untouched_running_thinking_expands_on_finish() {
         let mut state = ScrollbackState::new();
         let id = state.push_block(RenderBlock::thinking_streaming());
         state.set_last_running(true);
@@ -3248,12 +3248,13 @@ mod tests {
 
         assert_eq!(
             state.get_by_id(id).unwrap().display_mode,
-            DisplayMode::Collapsed
+            DisplayMode::Expanded,
+            "thinking is expanded by default, so a finished thought stays open"
         );
     }
 
     #[test]
-    fn running_thinking_toggled_back_to_truncated_collapses_on_finish() {
+    fn running_thinking_toggled_back_to_truncated_adopts_the_sticky_mode_on_finish() {
         let mut state = ScrollbackState::new();
         let id = state.push_block(RenderBlock::thinking_streaming());
         state.set_last_running(true);
@@ -3272,7 +3273,8 @@ mod tests {
 
         assert_eq!(
             state.get_by_id(id).unwrap().display_mode,
-            DisplayMode::Collapsed
+            DisplayMode::Expanded,
+            "a per-block toggle does not change the sticky mode, which is Expanded by default"
         );
     }
 
