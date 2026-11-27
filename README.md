@@ -1,4 +1,3 @@
-<!-- generated-by: gsd-doc-writer -->
 # deepseek-build
 
 An independent, DeepSeek-first terminal coding agent — a full-screen TUI plus
@@ -43,7 +42,7 @@ This does not delete `~/.deepseek-build` (config and saved key). Remove it with 
 ## Quick start
 
 ```sh
-export DEEPSEEK_API_KEY=sk-...   # or DEEPSEEK_BUILD_API_KEY
+export DEEPSEEK_API_KEY=<your-key>   # or DEEPSEEK_BUILD_API_KEY
 cd your-repo && dsb
 ```
 
@@ -86,7 +85,7 @@ Rust 1.94.0 is pinned by `rust-toolchain.toml`; see [docs/development.md](docs/d
 
 ## Documentation
 
-- [`docs/`](docs/) — index of [install](docs/install.md), [configuration](docs/configuration.md), [container](docs/container.md), and [development](docs/development.md) notes.
+- [`docs/README.md`](docs/README.md) — index of [install](docs/install.md), [configuration](docs/configuration.md), [container](docs/container.md), and [development](docs/development.md) notes.
 - [User guide](crates/codegen/xai-grok-pager/docs/user-guide/README.md) — commands, configuration, sandbox, MCP, and headless mode.
 - [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) — known gaps and unexercised surfaces.
 - [`TESTING.md`](TESTING.md) — test plan and safe local runs.
