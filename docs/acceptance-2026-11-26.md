@@ -29,3 +29,18 @@ that follow it are listed in `KNOWN-ISSUES.md` and are re-checked before the fre
 - It does not claim the API-key popup (added after this build) was exercised.
 - It does not claim Windows or container behaviour; those are covered separately.
 - It does not claim the two findings above are fixed.
+
+## Follow-up (2026-11-27)
+
+The author kept using later builds of the same tree and confirmed the fixes that followed the
+sign-off:
+
+- `/agent` switches **in place** (no restart) after the router fix, and the picker closes on
+  selection;
+- `Ctrl+E` toggles the thinking blocks, which now start **expanded** — "great exactly what i
+  invisioned, using it now, to review this repo and works fine";
+- the `session_start` hook no longer reports `${n}` as a missing environment variable.
+
+This is recorded as a continuation of the same acceptance, not a new one. The signed session above
+remains the build `0.1.0 (bc95bc47)`; the follow-ups were verified by the author on
+`0.1.0 (c4eb34d8)`.
