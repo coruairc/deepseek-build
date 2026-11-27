@@ -76,6 +76,9 @@ impl AgentView {
                 InputOutcome::Changed
             }
             crate::views::agents_modal::AgentsModalOutcome::SwitchAgent { name } => {
+                // Close the picker so the prompt is focused and the user can type immediately;
+                // the switch notice (or refusal) lands in the scrollback.
+                self.agents_modal = None;
                 InputOutcome::Action(Action::SwitchAgent(name))
             }
             crate::views::agents_modal::AgentsModalOutcome::EditInEditor { path, tab } => {

@@ -8213,3 +8213,29 @@ fn popup_dashboard_button_dismisses_the_popup_not_the_dashboard() {
         "the dashboard itself stays open"
     );
 }
+
+/// Choosing an agent must leave the user at the prompt: the picker closes as it requests the switch.
+#[test]
+fn picker_switch_closes_the_modal_so_the_prompt_is_ready() {
+    let (mut app, id) = neutral_overlay_app();
+    {
+        let agent = app.agents.get_mut(&id).unwrap();
+        agent.active_pane = crate::app::agent_view::AgentPane::Prompt;
+        let mut modal = open_agents_modal();
+        modal.open_switch_mode(None);
+        agent.agents_modal = Some(modal);
+    }
+    let outcome = app.handle_input(&key_event(KeyCode::Enter, KeyModifiers::NONE));
+    assert!(
+        matches!(outcome, InputOutcome::Action(Action::SwitchAgent(_))),
+        "Enter in the picker must request a switch, got {outcome:?}"
+    );
+    assert!(
+        app.agents
+            .get(&id)
+            .unwrap_or_else(|| panic!("missing map entry"))
+            .agents_modal
+            .is_none(),
+        "the picker must close so the user can type to the new agent"
+    );
+}
