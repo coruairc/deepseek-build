@@ -895,8 +895,23 @@ pub fn user_config_path() -> PathBuf {
     config_path()
 }
 
+/// Where `mcp add/remove --scope project` reads and writes.
+///
+/// The branded project directory wins, but an existing legacy `.grok/config.toml` stays
+/// authoritative: writing `.deepseek/config.toml` next to it would shadow the file the user
+/// already has and hide the server they just added.
 pub fn project_config_path(dir: &std::path::Path) -> PathBuf {
-    dir.join(".grok").join("config.toml")
+    let preferred = dir
+        .join(xai_grok_brand::PROJECT_DIR_NAME)
+        .join("config.toml");
+    if preferred.exists() {
+        return preferred;
+    }
+    let legacy = dir.join(".grok").join("config.toml");
+    if legacy.exists() {
+        return legacy;
+    }
+    preferred
 }
 
 /// Checks raw key presence rather than deserializing, so malformed entries (the ones users most need `mcp remove` for) are still reported.
@@ -948,6 +963,27 @@ pub fn use_leader_from_toml_opt(root: &TomlValue) -> Option<bool> {
 
 pub fn use_leader_from_toml(root: &TomlValue) -> bool {
     use_leader_from_toml_opt(root).unwrap_or(false)
+}
+
+#[test]
+fn project_config_path_prefers_deepseek_and_keeps_an_existing_legacy_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path();
+    let branded = dir.join(".deepseek").join("config.toml");
+    let legacy = dir.join(".grok").join("config.toml");
+
+    // Nothing yet: write the branded location.
+    assert_eq!(project_config_path(dir), branded);
+
+    // A legacy file the user already has stays authoritative (writing beside it would shadow it).
+    std::fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+    std::fs::write(&legacy, "").unwrap();
+    assert_eq!(project_config_path(dir), legacy);
+
+    // Once the branded file exists it wins.
+    std::fs::create_dir_all(branded.parent().unwrap()).unwrap();
+    std::fs::write(&branded, "").unwrap();
+    assert_eq!(project_config_path(dir), branded);
 }
 
 #[cfg(test)]
