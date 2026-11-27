@@ -427,26 +427,19 @@ async fn handle_switch_agent(agent: &MvpAgent, args: &acp::ExtRequest) -> ExtRes
     let overrides = agent.cfg.borrow().cli_agent_overrides.clone();
     let definition = switch_definition_for(&cwd, &params.agent, &overrides)?;
 
-    // An agent that pins a model needs that model. Applying one here would fight the model-switch
-    // rebuild path, so report it and let the client relaunch (which applies the pin at spawn).
-    if let xai_grok_agent::config::ModelOverride::Override(pinned) = &definition.model
-        && pinned != handle.model_id.0.as_ref()
-    {
-        return Err(switch_agent_error(
-            "agent_pins_model",
-            format!(
-                "Agent '{}' pins model '{pinned}'; restarting is required to apply it.",
-                definition.name
-            ),
-        ));
-    }
-
+    // An agent that pins a model switches in place too: the handler applies the pin to the
+    // sampling config after the rebuild, so no restart is needed.
+    let effective_model = match &definition.model {
+        xai_grok_agent::config::ModelOverride::Override(pinned) => pinned.clone(),
+        _ => handle.model_id.0.to_string(),
+    };
     let system_prompt_label = {
-        let model = agent.resolve_model_id(&handle.model_id).ok();
+        let model_id = acp::ModelId::new(effective_model.clone());
+        let model = agent.resolve_model_id(&model_id).ok();
         let cfg = agent.cfg.borrow();
         crate::util::config::resolve_system_prompt_label(
             &cfg,
-            handle.model_id.0.as_ref(),
+            effective_model.as_str(),
             model.as_ref().map(|entry| entry.info()),
         )
     };

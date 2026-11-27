@@ -310,6 +310,10 @@ impl SessionActor {
         system_prompt_label: String,
     ) -> Result<String, acp::Error> {
         let name = definition.name.clone();
+        let pinned_model = match &definition.model {
+            xai_grok_agent::config::ModelOverride::Override(model) => Some(model.clone()),
+            _ => None,
+        };
         if self.state.lock().await.running_task.is_some() {
             tracing::warn!(
                 session_id = %self.session_info.id.0,
@@ -327,6 +331,14 @@ impl SessionActor {
             RebuildConversation::PreserveHistory,
         )
         .await?;
+        // An agent that pins a model gets that model without a restart; the rebuild kept the
+        // previous sampling config on purpose, so apply the pin explicitly here.
+        if let Some(model) = pinned_model
+            && let Some(mut cfg) = self.chat_state_handle.get_sampling_config().await
+        {
+            cfg.model = model;
+            self.chat_state_handle.update_sampling_config(cfg);
+        }
         // Persist the selection so the summary names the harness that is actually running.
         if let Some(cfg) = self.chat_state_handle.get_sampling_config().await {
             let _ = self

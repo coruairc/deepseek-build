@@ -174,3 +174,34 @@ async fn switch_is_refused_while_a_turn_runs() {
         })
         .await;
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn switch_applies_an_agent_pinned_model_without_a_restart() {
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let (actor, _gateway_rx) = build_actor().await;
+            let mut definition = xai_grok_agent::AgentDefinition::explore();
+            definition.model =
+                xai_grok_agent::config::ModelOverride::Override("deepseek-v4-pro".to_owned());
+
+            let switched = actor
+                .handle_switch_agent_definition(
+                    definition,
+                    xai_grok_agent::DEFAULT_SYSTEM_PROMPT_LABEL.to_owned(),
+                )
+                .await
+                .expect("an agent that pins a model switches in place");
+            assert_eq!(switched, "explore");
+
+            let cfg = actor
+                .chat_state_handle
+                .get_sampling_config()
+                .await
+                .expect("test actor has a sampling config");
+            assert_eq!(
+                cfg.model, "deepseek-v4-pro",
+                "the pinned model is applied to the live session"
+            );
+        })
+        .await;
+}
