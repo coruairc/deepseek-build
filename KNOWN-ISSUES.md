@@ -328,7 +328,8 @@ reported two follow-ups, both being fixed after the sign-off:
 ## Fixed regressions (recorded, 2026-11-27)
 
 Fixed bugs are kept here for a short while because the *way* they were missed matters more than
-the fix.
+the fix. Issues are enabled again; this one is tracked as
+[#1](https://github.com/coruairc/deepseek-build/issues/1).
 
 ### `/agent` always restarted the TUI even though in-place switching existed
 
