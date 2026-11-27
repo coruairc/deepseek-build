@@ -103,9 +103,9 @@ Requirements for the v0.1.0 freeze. Each maps to exactly one roadmap phase.
 
 ### API Key Entry (INSERTED 2026-11-26)
 
-- [ ] **AUTH-01**: When no key is available (neither `DEEPSEEK_API_KEY` nor `DEEPSEEK_BUILD_API_KEY` and no saved key), the interactive TUI opens a modal with a masked input field; Esc cancels with the existing message, Enter saves and continues without a restart, and headless mode never prompts
-- [ ] **AUTH-02**: A submitted key is stored at `~/.deepseek-build/credentials.json` with mode 0600, written atomically, read only as a fallback after both environment variables, and refused with a `chmod 600` hint if the file is group/other-readable
-- [ ] **AUTH-03**: The key never appears in logs, saved sessions, evidence, panic text or committed files; `Debug` redacts it, errors name only the path, and `scripts/key-leak-check.sh --scan` stays green
+- [x] **AUTH-01**: When no key is available (neither `DEEPSEEK_API_KEY` nor `DEEPSEEK_BUILD_API_KEY` and no saved key), the interactive TUI opens a modal with a masked input field; Esc cancels with the existing message, Enter saves and continues without a restart, and headless mode never prompts
+- [x] **AUTH-02**: A submitted key is stored at `~/.deepseek-build/credentials.json` with mode 0600, written atomically, read only as a fallback after both environment variables, and refused with a `chmod 600` hint if the file is group/other-readable
+- [x] **AUTH-03**: The key never appears in logs, saved sessions, evidence, panic text or committed files; `Debug` redacts it, errors name only the path, and `scripts/key-leak-check.sh --scan` stays green
 
 ### Documentation Truth
 
@@ -219,9 +219,9 @@ Which phases cover which requirements. One phase per requirement, no duplicates,
 | WIN-04 | Phase 5 — Windows Support | Complete — non-off profiles refused; UI reports unsupported |
 | WIN-05 | Phase 5 — Windows Support | Partial — authored, not executed |
 | WIN-06 | Phase 5 — Windows Support | Pending — needs a Windows host and a tag run |
-| AUTH-01 | Phase 5.2 — API Key Entry (INSERTED) | Pending |
-| AUTH-02 | Phase 5.2 — API Key Entry (INSERTED) | Pending |
-| AUTH-03 | Phase 5.2 — API Key Entry (INSERTED) | Pending |
+| AUTH-01 | Phase 5.2 — API Key Entry (INSERTED) | Complete |
+| AUTH-02 | Phase 5.2 — API Key Entry (INSERTED) | Complete |
+| AUTH-03 | Phase 5.2 — API Key Entry (INSERTED) | Complete |
 | DOCS-01 | Phase 6 — Documentation Truth & Freeze | Complete |
 | DOCS-02 | Phase 6 — Documentation Truth & Freeze | Complete |
 | DOCS-03 | Phase 6 — Documentation Truth & Freeze | Complete |

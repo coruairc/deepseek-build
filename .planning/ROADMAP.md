@@ -38,7 +38,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 4: Distribution Proof** - Image, installer and macOS artifacts proven from a throwaway tag (5/5 plans executed; REL-04 closed after the image was pulled by digest and run; REL-05's turn is proven but its sandbox clause is unmet because the image ships no bwrap; the pre-release is kept by recorded deviation)
 - [ ] **Phase 5: Windows Support** - Builds, installs and runs on Windows at a named tier, with the sandbox refusing honestly instead of no-opping
 - [x] **Phase 5.1: Project Directory Rebrand (INSERTED)** - Project-local config is `.deepseek/`, `.grok` stays as a compatibility fallback, and one constant flips to `.ob` for open-build (completed 2026-11-26)
-- [ ] **Phase 5.2: API Key Entry (INSERTED)** - A masked popup stores a key in a 0600 file when none is set, with the env var still winning
+- [x] **Phase 5.2: API Key Entry (INSERTED)** - A masked popup stores a key in a 0600 file when none is set, with the env var still winning (completed 2026-11-26)
 - [ ] **Phase 6: Documentation Truth & Freeze** - Docs match the tree, the author signs off, and the freeze marker moves no published tag
 
 ## Phase Details
@@ -221,5 +221,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6
 | 4. Distribution Proof | 5/5 | REL-04 closed (pulled by digest + run); REL-05 turn proven, sandbox clause unmet | - |
 | 5. Windows Support | 4/5 | WIN-01/02/04 closed (zip published on v0.1.0-proof2); WIN-05 installer published but not executed; WIN-03/WIN-06 need a Windows host | - |
 | 5.1 Project Directory Rebrand (INSERTED) | 2/2 | Complete | 2026-11-26 |
-| 5.2 API Key Entry (INSERTED) | 0/1 | In progress | - |
+| 5.2 API Key Entry (INSERTED) | 1/1 | Complete — masked prompt + 0600 store (unit/dispatch tested) | 2026-11-26 |
 | 6. Documentation Truth & Freeze | 3/5 | Docs reconciled; ACC-01 (author) blocks 06-04/06-05 | - |
